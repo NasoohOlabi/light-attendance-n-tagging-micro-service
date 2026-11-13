@@ -1,3 +1,4 @@
+import { LogOut, RefreshCw, Settings2, UserRound } from 'lucide-react'
 import { LanguageProvider, LanguageSwitch, useLanguage, type TranslationKey } from './i18n'
 import { useEffect, useState } from 'react'
 import type { Access } from '../shared/access'
@@ -299,14 +300,28 @@ function Notebook({
           )}
           {neon?.teacher.role === 'administrator' && (
             <button
-              className="secondary"
+              className="icon-button"
+              aria-label={language === 'ar' ? 'الإدارة' : 'Administration'}
+              title={language === 'ar' ? 'الإدارة' : 'Administration'}
               onClick={() => setQuery({ view: 'administration' }, true)}
             >
-              {language === 'ar' ? 'الإدارة' : 'Administration'}
+              <Settings2 size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
             </button>
           )}
-          <button disabled={ledger.busy} className="secondary" onClick={leave}>
-            {neon ? t('Sign out') : t('Close session')}
+          <button
+            disabled={ledger.busy}
+            className="icon-button"
+            aria-label={neon ? t('Sign out') : t('Close session')}
+            title={neon ? t('Sign out') : t('Close session')}
+            onClick={leave}
+          >
+            <LogOut
+              className="icon-directional"
+              size={20}
+              strokeWidth={1.6}
+              aria-hidden="true"
+              focusable="false"
+            />
           </button>
         </div>
         <header className="workspace-welcome">
@@ -369,11 +384,13 @@ function Notebook({
           )}
           {!demo && (
             <button
-              className="secondary"
+              className="icon-button"
+              aria-label={t('Refresh')}
+              title={t('Refresh')}
               disabled={ledger.busy}
               onClick={() => void ledger.refresh()}
             >
-              {t('Refresh')}
+              <RefreshCw size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
             </button>
           )}
         </div>
@@ -859,10 +876,12 @@ function RosterView({
                 )}
               </span>
               <button
-                className="secondary"
+                className="icon-button"
+                aria-label={t('Open student')}
+                title={t('Open student')}
                 onClick={() => setQuery({ student: student.studentId, tab: 'attendance' }, true)}
               >
-                {t('Open student')}
+                <UserRound size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
               </button>
             </div>
           ) : (
