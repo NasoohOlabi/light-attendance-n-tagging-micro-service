@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { spawn, type ChildProcess } from 'node:child_process'
 
 test.use({ trace: 'off' })
@@ -90,6 +90,7 @@ test('Arabic authentication keeps mobile input semantics and localized feedback'
   await expect(page.getByRole('alert')).toContainText('Invalid email or password')
   await page.getByRole('button', { name: 'Create account', exact: true }).click()
   await expect(page.getByLabel('Name', { exact: true })).toHaveAttribute('autocomplete', 'name')
+  await expect(page.getByRole('combobox')).toHaveCount(0)
   await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute(
     'autocomplete',
     'new-password',
@@ -179,13 +180,15 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
     const selected = users.find((user) => bearer === `Bearer ${token(user.id)}`)
     if (!selected) return route.fulfill({ status: 401, json: { error: 'Unauthorized' }, headers })
     const teacher = {
+      role: 'teacher',
       id: selected.id,
       name: selected.name,
       canRead: true,
       canWrite: true,
       expiresAt: null,
     }
-    if (request.url().endsWith('/api/me')) return route.fulfill({ json: { teacher }, headers })
+    if (request.url().endsWith('/api/me'))
+      return route.fulfill({ json: { account: teacher, teacher }, headers })
     if (request.method() === 'POST') {
       writes++
       events[selected.id] = [...(events[selected.id] ?? []), ...request.postDataJSON().events]

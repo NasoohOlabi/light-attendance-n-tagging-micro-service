@@ -17,6 +17,8 @@ import { WartaqIcon, WartaqLogo } from './brand/components'
 import './workspace.css'
 import { useLedger } from './useLedger'
 import { NeonAuth } from './NeonAuth'
+import { AdminConsole } from './AdminConsole'
+import { StudentAttendance } from './StudentAttendance'
 import { authClient } from './neon'
 import type { NeonTeacher } from '../shared/neon'
 
@@ -111,15 +113,26 @@ function AppContent({
             </>
           }
         >
-          {(userId, teacher, signOut) => (
-            <Notebook
-              key={userId}
-              access={null}
-              demo={null}
-              neon={{ userId, teacher }}
-              leave={signOut}
-            />
-          )}
+          {(userId, account, signOut) =>
+            account.role === 'student' ? (
+              <StudentAttendance key={userId} userId={userId} signOut={signOut} />
+            ) : account.role === 'administrator' && query.view === 'administration' ? (
+              <AdminConsole
+                key={userId}
+                userId={userId}
+                signOut={signOut}
+                openNotebook={() => setQuery({ view: 'notebook' }, true)}
+              />
+            ) : (
+              <Notebook
+                key={userId}
+                access={null}
+                demo={null}
+                neon={{ userId, teacher: account }}
+                leave={signOut}
+              />
+            )
+          }
         </NeonAuth>
       </>
     )
@@ -263,6 +276,25 @@ function Notebook({
             {t(tabs.find((tab) => tab.id === query.tab)?.label ?? 'Attendance')}
           </span>
           <LanguageSwitch />
+          {neon && (
+            <span>
+              {neon.teacher.role === 'administrator'
+                ? language === 'ar'
+                  ? 'مسؤول'
+                  : 'Administrator'
+                : language === 'ar'
+                  ? 'معلم'
+                  : 'Teacher'}
+            </span>
+          )}
+          {neon?.teacher.role === 'administrator' && (
+            <button
+              className="secondary"
+              onClick={() => setQuery({ view: 'administration' }, true)}
+            >
+              {language === 'ar' ? 'الإدارة' : 'Administration'}
+            </button>
+          )}
           <button disabled={ledger.busy} className="secondary" onClick={leave}>
             {neon ? t('Sign out') : t('Close session')}
           </button>

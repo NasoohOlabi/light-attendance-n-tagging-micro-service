@@ -1,8 +1,8 @@
 import { LanguageSwitch, useLanguage } from './i18n'
 import { useEffect, useState } from 'react'
-import type { NeonTeacher } from '../shared/neon'
+import type { NeonAccount } from '../shared/neon'
 import { z } from 'zod'
-import { authClient, getTeacher, NeonRequestError } from './neon'
+import { authClient, getAccount, NeonRequestError } from './neon'
 import { WartaqLogo } from './brand/components'
 
 function AuthHeader() {
@@ -31,7 +31,7 @@ export function NeonAuth({
   onSignOut: () => void
   onResetComplete: () => void
   samples: React.ReactNode
-  children: (userId: string, teacher: NeonTeacher, signOut: () => void) => React.ReactNode
+  children: (userId: string, teacher: NeonAccount, signOut: () => void) => React.ReactNode
 }) {
   if (!authClient) return null
   return (
@@ -57,14 +57,14 @@ function ConfiguredAuth({
   onSignOut: () => void
   onResetComplete: () => void
   samples: React.ReactNode
-  children: (userId: string, teacher: NeonTeacher, signOut: () => void) => React.ReactNode
+  children: (userId: string, teacher: NeonAccount, signOut: () => void) => React.ReactNode
 }) {
   const { t, errorMessage } = useLanguage()
   // The parent only renders this component when the client exists.
   const client = authClient!
   const session = client.useSession()
   const userId = session.data?.user.id
-  const [teacher, setTeacher] = useState<{ userId: string; value: NeonTeacher } | null>(null)
+  const [teacher, setTeacher] = useState<{ userId: string; value: NeonAccount } | null>(null)
   const [approval, setApproval] = useState<{ userId: string; message: string } | null>(null)
   const [mode, setMode] = useState<'sign-in' | 'sign-up' | 'forgot' | 'reset'>(() =>
     initialResetToken ? 'reset' : 'sign-in',
@@ -77,7 +77,7 @@ function ConfiguredAuth({
   useEffect(() => {
     let cancelled = false
     if (userId)
-      getTeacher(userId)
+      getAccount(userId)
         .then((value) => {
           if (!cancelled) setTeacher({ userId, value })
         })
@@ -88,12 +88,25 @@ function ConfiguredAuth({
               message:
                 cause instanceof NeonRequestError
                   ? cause.message
-                  : 'Could not load your teacher account. Please try again.',
+                  : 'Could not load your account. Please try again.',
             })
         })
     return () => {
       cancelled = true
     }
+  }, [userId])
+  useEffect(() => {
+    const denied = (event: Event) => {
+      if (userId && event instanceof CustomEvent) {
+        setTeacher(null)
+        setApproval({
+          userId,
+          message: new NeonRequestError(event.detail === 401 ? 401 : 403).message,
+        })
+      }
+    }
+    window.addEventListener('neon-access-denied', denied)
+    return () => window.removeEventListener('neon-access-denied', denied)
   }, [userId])
   const signOut = () => {
     setTeacher(null)

@@ -1,0 +1,84 @@
+﻿.role-page {
+  max-width: 80rem;
+  margin: auto;
+  padding: 1.5rem;
+  min-height: 100svh;
+  overflow-wrap: anywhere;
+}
+.role-header,
+.role-heading,
+.role-row,
+.role-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.role-header {
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #cde1df;
+}
+.role-heading {
+  margin: 2rem 0;
+}
+.role-heading h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 600;
+}
+.role-heading span {
+  color: #007d8d;
+  font-weight: 600;
+}
+.role-section {
+  margin-block: 1.5rem;
+}
+.role-account,
+.role-row {
+  padding: 1.25rem 0;
+  border-top: 1px solid #dce9e8;
+}
+.role-account {
+  display: grid;
+  gap: 1rem;
+}
+.role-fields {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.role-fields label {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.role-actions {
+  justify-content: flex-start;
+}
+.role-editor {
+  padding: 1rem;
+  background: #eef8f7;
+  margin-block: 1rem;
+}
+.role-editor .role-actions {
+  margin-top: 1rem;
+}
+.role-table {
+  width: 100%;
+  text-align: start;
+  border-collapse: collapse;
+}
+.role-table th,
+.role-table td {
+  text-align: start;
+  padding: 0.8rem;
+  border-bottom: 1px solid #dce9e8;
+}
+@media (max-width: 40rem) {
+  .role-page {
+    padding: 1rem;
+  }
+  .role-header {
+    padding-bottom: 1rem;
+  }
+}
