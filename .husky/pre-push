@@ -1,0 +1,2 @@
+bun run verify
+bun run security:history

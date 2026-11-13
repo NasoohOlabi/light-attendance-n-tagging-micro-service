@@ -9,6 +9,9 @@ lerna-debug.log*
 
 node_modules
 .local/
+.artifacts/
+playwright-report/
+test-results/
 dist
 dist-ssr
 *.local

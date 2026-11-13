@@ -1,6 +1,6 @@
-# Architecture and decisions
+﻿# Architecture and decisions
 
-This describes the preserved WIP prototype, not an approved final architecture. Development is stopped. [Feasibility](feasibility.md), [specification](specification.md) and [implementation plan](implementation-plan.md) identify the remaining provider questions and prototype gaps, and take precedence where assumptions differ.
+This describes the version-one implementation. Development/publication was authorized on 2026-11-13; historical prototype `2d8fbe5` remains preserved. [Feasibility](feasibility.md), [specification](specification.md) and [implementation plan](implementation-plan.md) identify the remaining provider questions and prototype gaps, and take precedence where assumptions differ.
 
 ## Scope and inheritance
 
@@ -16,23 +16,23 @@ One endpoint per teacher is the intended capability boundary. All endpoints shar
 
 `shared/ledger.ts` is authoritative. Sheet columns:
 
-| Column | Meaning |
-| --- | --- |
-| id | UUID of this event, stable across retries |
-| actor | Username from the access link |
-| client_time | Device ISO datetime for context |
+| Column      | Meaning                                        |
+| ----------- | ---------------------------------------------- |
+| id          | UUID of this event, stable across retries      |
+| actor       | Username from the access link                  |
+| client_time | Device ISO datetime for context                |
 | received_at | Provider DATETIME sentinel requested on append |
-| payload | Validated JSON discriminated by kind |
+| payload     | Validated JSON discriminated by kind           |
 
 Payload kinds: `student` (studentId, name, group, active), `attendance` (studentId, date, status), `note` (studentId or empty for general, date, tags, text), `reversal` (targetId, reason). Student snapshots permit future name/group changes without destructive writes. A feature can put structured data inside a tagged note now; if it becomes a formal feature, add a validated payload kind and define its projection and correction semantics.
 
-Projection scans rows in returned sheet order. First occurrence of an event ID wins; duplicates are ignored. Reversals only affect an existing preceding non-reversal event. Duplicate reversals are harmless. Forward references and reversal-of-reversal are counted as invalid. The latest surviving student snapshot and latest surviving attendance per student/date determine current state. Notes remain separate events. Undoing a later snapshot reveals the preceding one. Corrections and original rows stay available in audit history.
+Projection scans rows in returned sheet order. First occurrence of an event ID wins; duplicates count once and conflicting actor/client time/payload values are flagged. New payloads include `version: 1`; unversioned legacy payloads remain readable and future versions are counted invalid. Reversals only affect an existing preceding non-reversal event. Duplicate reversals are harmless. Forward references and reversal-of-reversal are counted as invalid. The latest surviving student snapshot and latest surviving attendance per student/date determine current state. Notes remain separate events. Undoing a later snapshot reveals the preceding one. Corrections and original rows stay available in audit history.
 
 Malformed/unknown rows are skipped and counted visibly. Client timestamps are never ordering inputs. Never sort the physical Events sheet. Concurrent edits use append order; this is intentional last-append-wins behavior, not transactional conflict detection.
 
 ## Delivery and cache behavior
 
-`src/useLedger.ts` persists pending events before sending. New submissions remain blocked until an uncertain batch is resolved. Reads before retry eliminate already visible IDs, and projection deduplicates if a request races or the provider returns stale data. The system offers idempotent *projection*, not exactly-once physical writes. SheetDB does not document an idempotency key here.
+`src/useLedger.ts` persists pending events before sending. New submissions remain blocked until an uncertain batch is resolved. Browser Web Locks serialize save/discard operations for the same pending key across tabs, including read, append and cleanup. Unsupported browsers and corrupt/unavailable storage fail closed with persistent guidance. Pending data for another link blocks new saves until reconciled. Reads before retry eliminate already visible IDs, and projection deduplicates if a request races or the provider returns stale data. The system offers idempotent _projection_, not exactly-once physical writes. SheetDB does not document an idempotency key here.
 
 Transport checks headers before POST, sends `mode=RAW`, checks created row count, times out and never automatically retries a POST. It does not surface provider response bodies containing credentials. App reads request `ignore_cache=1`; verify this against account behavior during live setup. Reads happen on entry, explicit refresh and save/retry, not continuous polling. On confirmation the local view merges submitted events; the next read supplies provider timestamps. General form drafts are memory-only. Pending batches are local to endpoint/tab/username; rotating endpoint IDs requires reconciliation of old pending storage.
 
@@ -42,7 +42,7 @@ The whole ledger is read into memory. This is appropriate for the stated small t
 
 `manager/server.ts` serves a loopback-only HTML/JS interface. Its whitelist of server-side endpoints accepts only known JSON schemas and hard-codes SheetDB hosts. Host and Origin checks, Sec-Fetch-Site handling and a custom header guard browser-originated mutations. A single in-process writer serializes operations against one local state file; writes use a temp file plus rename. Account keys stay in process memory. Teacher tokens are plaintext in ignored `.local/manager.json`. These are access controls for a trusted local computer, not a multiuser hosted admin service.
 
-The manager verifies authenticated reads, exact required headers and anonymous denial before saving a profile. Permission confirmation is explicitly manual because proving Delete/Update denial by actually trying them would risk changing data. Endpoint deletion is supported by the provider's management API; bearer rotation is a documented dashboard handoff. Tokens and manager source are excluded from the static artifact.
+The manager verifies authenticated reads, required headers and anonymous denial before saving a profile; it cannot prove that independently imported endpoints target the same workbook. Revocation intent is persisted before remote calls and blocks links across restart; retired endpoint metadata is retained. Manual 404/410 is advisory rather than proof of append denial. Permission confirmation is explicitly manual because proving Delete/Update denial by actually trying them would risk changing data. Endpoint deletion is supported by the provider's management API; bearer rotation is a documented dashboard handoff. Tokens and manager source are excluded from the static artifact.
 
 ## Visual design
 

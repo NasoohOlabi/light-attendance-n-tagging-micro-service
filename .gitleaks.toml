@@ -1,0 +1,14 @@
+title = "Public attendance notebook secret policy"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "teacher-capability-link"
+description = "Private teacher access link"
+regex = '''#access=[A-Za-z0-9_-]{80,}'''
+
+[[rules]]
+id = "sheetdb-global-url"
+description = "Global account credentials embedded in URL"
+regex = '''https://sheetdb\.io/api/v1/[A-Za-z0-9_-]+/[A-Za-z0-9_-]{20,}/(?:list|create|delete)'''

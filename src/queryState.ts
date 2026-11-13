@@ -19,17 +19,31 @@ export function useQueryState() {
     date: z.iso.date().safeParse(query.get('date')).data ?? today(),
     from: z.iso.date().safeParse(query.get('from')).data ?? today().slice(0, 7) + '-01',
     to: z.iso.date().safeParse(query.get('to')).data ?? today(),
-    q: query.get('q') ?? '', group: query.get('group') ?? '', tag: query.get('tag') ?? '',
-    student: query.get('student') ?? '', all: query.get('all') === '1',
+    q: query.get('q') ?? '',
+    group: query.get('group') ?? '',
+    tag: query.get('tag') ?? '',
+    student: query.get('student') ?? '',
+    all: query.get('all') === '1',
   }
 }
+const allowedKeys = new Set(['tab', 'date', 'from', 'to', 'q', 'group', 'tag', 'student', 'all'])
+export function sanitizedSearch(search: string) {
+  const query = new URLSearchParams(search)
+  for (const key of [...query.keys()]) if (!allowedKeys.has(key)) query.delete(key)
+  return query
+}
 export function setQuery(values: Record<string, string>, push = false) {
-  const query = new URLSearchParams(window.location.search)
+  const query = sanitizedSearch(window.location.search)
   for (const [key, value] of Object.entries(values)) {
+    if (!allowedKeys.has(key)) continue
     if (value) query.set(key, value)
     else query.delete(key)
   }
   const search = query.toString()
-  window.history[push ? 'pushState' : 'replaceState'](null, '', window.location.pathname + (search ? `?${search}` : ''))
+  window.history[push ? 'pushState' : 'replaceState'](
+    null,
+    '',
+    window.location.pathname + (search ? `?${search}` : ''),
+  )
   window.dispatchEvent(new PopStateEvent('popstate'))
 }

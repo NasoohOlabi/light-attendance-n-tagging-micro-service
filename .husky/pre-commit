@@ -1,0 +1,5 @@
+bunx lint-staged
+bun run security:staged
+bun run typecheck
+bun run test
+bun run lint

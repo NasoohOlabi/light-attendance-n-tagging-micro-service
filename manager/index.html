@@ -1,27 +1,185 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>Halaqa · Local access manager</title><link rel="stylesheet" href="/styles.css"></head>
-<body><main>
-  <header><div><span class="symbol" aria-hidden="true">◈</span><h1>Access manager</h1><p class="muted">Your five teachers. Their links. Your notebook.</p></div><span class="badge">Running on your computer</span></header>
-  <div id="feedback" role="status" hidden></div>
-  <section class="intro"><h2>Set up the shared notebook</h2><p>Create a dedicated spreadsheet with an <strong>Events</strong> tab. Paste these five headers into its first row:</p><pre>id	actor	client_time	received_at	payload</pre><button id="copy-headers" class="secondary">Copy sheet headers</button><a href="/setup.md" target="_blank" rel="noreferrer">Open the complete setup guide</a><p class="muted">Use one SheetDB endpoint per teacher, pointing to the same spreadsheet. Enable bearer authentication and only Read + Create permissions. Keep Update, Delete and tab management disabled. Spreadsheet access remains with your SheetDB account.</p></section>
-  <section><h2>Where teachers open the app</h2><form id="site-form" class="inline"><label class="grow">GitHub Pages URL (or local development URL)<input name="siteUrl" id="site-url" type="url" required placeholder="https://your-name.github.io/light-attendance-n-tagging-micro-service/"></label><button>Save URL</button></form><p class="muted">Generated links put credentials after #, then the app removes them from the address bar.</p></section>
-  <section><h2>Teachers & access links</h2><p class="muted">Saving a user checks authenticated reads, sheet headers and anonymous denial. Confirm permissions in SheetDB; this manager never tests destructive operations.</p><div id="profiles"></div>
-    <details id="profile-details" open><summary>Add a teacher or replace their token</summary><form id="profile-form" class="form-grid">
-      <label>Username / teacher name<input name="username" required maxlength="100" autocomplete="off"></label>
-      <label>SheetDB endpoint ID<input name="apiId" required pattern="[a-zA-Z0-9_-]{5,100}" placeholder="The ID after /api/v1/"></label>
-      <label>Bearer token<input name="token" type="password" required autocomplete="new-password"></label>
-      <label>Sheet tab<input name="sheet" value="Events" required maxlength="100"></label>
-      <label class="check full"><input name="permissionsConfirmed" type="checkbox" required>I enabled bearer authentication and only Read + Create. Update, Delete and tab operations are disabled.</label>
-      <div class="full"><button>Check access & save user</button></div>
-    </form></details>
-    <p class="muted">To rotate a token: change it in SheetDB first, then save the new token here and send a new link. Editing this form alone cannot invalidate old links. To replace an endpoint, revoke its old access first.</p>
-  </section>
-  <section id="link-panel" hidden><h2 id="link-title">Personal link</h2><textarea id="link-value" rows="4" readonly aria-label="Personal access link"></textarea><div class="actions"><button id="copy-link">Copy link</button><button id="hide-link" class="secondary">Hide link</button></div><p class="muted">Send this privately. It carries the teacher's name and SheetDB credential. The link remains reusable until you revoke or rotate that credential.</p></section>
-  <section id="revoke-panel" hidden><h2>Revoke access</h2><p id="revoke-description"></p><form id="revoke-form"><input type="hidden" name="username"><label>Type the endpoint ID to confirm<input name="confirmApiId" required autocomplete="off"></label><label class="check"><input name="manual" type="checkbox">I already revoked this endpoint or token in the SheetDB dashboard. Check that the old credential is rejected.</label><div class="actions"><button class="danger">Revoke access</button><button id="cancel-revoke" type="button" class="secondary">Cancel</button></div></form></section>
-  <section><details><summary>SheetDB account tools (optional)</summary><p class="muted">These tools require a plan with the Global API. Without it, create endpoints and rotate tokens in the SheetDB dashboard, then add them above. Account keys stay in this server process's memory and are cleared when it stops.</p><p><a href="https://sheetdb.io/app/api-keys" target="_blank" rel="noreferrer">Open SheetDB API keys</a> · <a href="https://sheetdb.io/app" target="_blank" rel="noreferrer">Open SheetDB dashboard</a></p>
-    <form id="connect-form" class="form-grid"><label>App ID<input name="appId" required autocomplete="off"></label><label>Management API key<input name="apiKey" type="password" required autocomplete="new-password"></label><div class="actions full"><button>Load management credentials</button><button type="button" id="disconnect" class="secondary">Clear credentials</button></div></form><p id="connection" class="muted"></p>
-    <button id="list-apis" class="secondary">List account endpoints</button><pre id="api-list" hidden></pre>
-    <h3>Create a Read + Create endpoint</h3><form id="create-form"><label>Existing Google spreadsheet URL<input type="url" name="spreadsheetUrl" required placeholder="https://docs.google.com/spreadsheets/d/…/edit"></label><button>Create endpoint</button></form><pre id="create-result" hidden></pre><p class="muted">The new endpoint still needs bearer authentication enabled in SheetDB. Copy its bearer token there, then check and save the teacher above. The documented Global API cannot configure or refresh bearer tokens.</p>
-  </details></section>
-  <footer>Teacher credentials are saved only in this project's ignored <code>.local/manager.json</code>. Keep this file private and backed up. No account key or manager code is included in the GitHub Pages build.</footer>
-</main><script type="module" src="/app.js"></script></body></html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Halaqa · Local access manager</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <span class="symbol" aria-hidden="true">◈</span>
+          <h1>Access manager</h1>
+          <p class="muted">Your five teachers. Their links. Your notebook.</p>
+        </div>
+        <span class="badge">Running on your computer</span>
+      </header>
+      <div id="feedback" role="status" hidden></div>
+      <section class="intro">
+        <h2>Set up the shared notebook</h2>
+        <p>
+          Create a dedicated spreadsheet with an <strong>Events</strong> tab. Paste these five
+          headers into its first row:
+        </p>
+        <pre>id	actor	client_time	received_at	payload</pre>
+        <button id="copy-headers" class="secondary">Copy sheet headers</button
+        ><a href="/setup.md" target="_blank" rel="noreferrer">Open the complete setup guide</a>
+        <p class="muted">
+          Use one SheetDB endpoint per teacher, pointing to the same spreadsheet. Enable bearer
+          authentication and only Read + Create permissions. Keep Update, Delete and tab management
+          disabled. Spreadsheet access remains with your SheetDB account.
+        </p>
+      </section>
+      <section>
+        <h2>Where teachers open the app</h2>
+        <form id="site-form" class="inline">
+          <label class="grow"
+            >GitHub Pages URL (or local development URL)<input
+              name="siteUrl"
+              id="site-url"
+              type="url"
+              required
+              placeholder="https://your-name.github.io/light-attendance-n-tagging-micro-service/" /></label
+          ><button>Save URL</button>
+        </form>
+        <p class="muted">
+          Generated links put credentials after #, then the app removes them from the address bar.
+        </p>
+      </section>
+      <section>
+        <h2>Teachers & access links</h2>
+        <p class="muted">
+          Saving a user checks authenticated reads, sheet headers and anonymous denial. Confirm
+          permissions in SheetDB; this manager never tests destructive operations.
+        </p>
+        <div id="profiles"></div>
+        <details id="profile-details" open>
+          <summary>Add a teacher or replace their token</summary>
+          <form id="profile-form" class="form-grid">
+            <label
+              >Username / teacher name<input
+                name="username"
+                required
+                maxlength="100"
+                autocomplete="off"
+            /></label>
+            <label
+              >SheetDB endpoint ID<input
+                name="apiId"
+                required
+                pattern="[a-zA-Z0-9_-]{5,100}"
+                placeholder="The ID after /api/v1/"
+            /></label>
+            <label
+              >Bearer token<input name="token" type="password" required autocomplete="new-password"
+            /></label>
+            <label>Sheet tab<input name="sheet" value="Events" required maxlength="100" /></label>
+            <label class="check full"
+              ><input name="permissionsConfirmed" type="checkbox" required />I enabled bearer
+              authentication and only Read + Create. Update, Delete and tab operations are
+              disabled.</label
+            >
+            <div class="full"><button>Check access & save user</button></div>
+          </form>
+        </details>
+        <p class="muted">
+          To rotate a token: change it in SheetDB first, then save the new token here and send a new
+          link. Editing this form alone cannot invalidate old links. To replace an endpoint, revoke
+          its old access first.
+        </p>
+      </section>
+      <section id="link-panel" hidden>
+        <h2 id="link-title">Personal link</h2>
+        <textarea id="link-value" rows="4" readonly aria-label="Personal access link"></textarea>
+        <div class="actions">
+          <button id="copy-link">Copy link</button
+          ><button id="hide-link" class="secondary">Hide link</button>
+        </div>
+        <p class="muted">
+          Send this privately. It carries the teacher's name and SheetDB credential. The link
+          remains reusable until you revoke or rotate that credential.
+        </p>
+      </section>
+      <section id="revoke-panel" hidden>
+        <h2>Revoke access</h2>
+        <p id="revoke-description"></p>
+        <form id="revoke-form">
+          <input type="hidden" name="username" /><label
+            >Type the endpoint ID to confirm<input
+              name="confirmApiId"
+              required
+              autocomplete="off" /></label
+          ><label class="check"
+            ><input name="manual" type="checkbox" />I already deleted this endpoint in the SheetDB
+            dashboard. Check for 404/410 (this alone does not prove writes are disabled).</label
+          >
+          <div class="actions">
+            <button class="danger">Revoke access</button
+            ><button id="cancel-revoke" type="button" class="secondary">Cancel</button>
+          </div>
+        </form>
+      </section>
+      <section>
+        <details>
+          <summary>SheetDB account tools (optional)</summary>
+          <p class="muted">
+            These tools require a plan with the Global API. Without it, create endpoints and rotate
+            tokens in the SheetDB dashboard, then add them above. Account keys stay in this server
+            process's memory and are cleared when it stops.
+          </p>
+          <p>
+            <a href="https://sheetdb.io/app/api-keys" target="_blank" rel="noreferrer"
+              >Open SheetDB API keys</a
+            >
+            ·
+            <a href="https://sheetdb.io/app" target="_blank" rel="noreferrer"
+              >Open SheetDB dashboard</a
+            >
+          </p>
+          <form id="connect-form" class="form-grid">
+            <label>App ID<input name="appId" required autocomplete="off" /></label
+            ><label
+              >Management API key<input
+                name="apiKey"
+                type="password"
+                required
+                autocomplete="new-password"
+            /></label>
+            <div class="actions full">
+              <button>Load management credentials</button
+              ><button type="button" id="disconnect" class="secondary">Clear credentials</button>
+            </div>
+          </form>
+          <p id="connection" class="muted"></p>
+          <button id="list-apis" class="secondary">List account endpoints</button>
+          <pre id="api-list" hidden></pre>
+          <h3>Create a Read + Create endpoint</h3>
+          <form id="create-form">
+            <label
+              >Existing Google spreadsheet URL<input
+                type="url"
+                name="spreadsheetUrl"
+                required
+                placeholder="https://docs.google.com/spreadsheets/d/…/edit" /></label
+            ><button>Create endpoint</button>
+          </form>
+          <pre id="create-result" hidden></pre>
+          <p class="muted">
+            The new endpoint still needs bearer authentication enabled in SheetDB. Copy its bearer
+            token there, then check and save the teacher above. The documented Global API cannot
+            configure or refresh bearer tokens.
+          </p>
+        </details>
+      </section>
+      <footer>
+        Teacher credentials are saved only in this project's ignored
+        <code>.local/manager.json</code>. Keep this file private and backed up. No account key or
+        manager code is included in the GitHub Pages build.
+      </footer>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

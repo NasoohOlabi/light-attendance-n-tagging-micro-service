@@ -1,6 +1,6 @@
-# Product and technical specification
+﻿# Product and technical specification
 
-Status: proposed version one; no additional implementation authorized. Read [feasibility](feasibility.md) first. The prototype is preserved for reuse only after the provider validation gates pass.
+Status: version-one acceptance target. Implementation/publication authorized 2026-11-13. Read [feasibility](feasibility.md) and the [task list](implementation-plan.md) for implemented software versus unrun live-account gates; not every target manager requirement is complete.
 
 ## Users and accepted constraints
 
@@ -14,20 +14,20 @@ Status: proposed version one; no additional implementation authorized. Read [fea
 
 ## Teacher experience and acceptance criteria
 
-| ID | Requirement | Acceptance |
-| --- | --- | --- |
-| T1 | Consume a personal access link | Username/endpoint/token/tab validate; malformed link gives recovery instructions; no Google popup |
-| T2 | Keep credentials out of normal sharing | Access fragment consumed before ordinary UI; navigation URLs contain no bearer; no third-party scripts; session close forgets browser credential |
-| T3 | Stamp the issuing username | No teacher selector; every event receives the session username; UI identifies this as trusted attribution |
-| T4 | Read one shared notebook | All five endpoints render the same current roster and projections after refresh |
-| T5 | Mark attendance by date and student/group | Save only intended changes; unmarked is distinct from absent; same date/student has one effective status |
-| T6 | Record tagged notes | Student-specific or general; at least one tag; comma/Arabic-comma entry; preserve Arabic and structured text as data |
-| T7 | Filter notes and summaries | Shareable search/group/tag/date state; filters do not contain credentials; date bounds clearly defined |
-| T8 | Maintain roster | Stable student IDs; rename/group/active changes append snapshots and preserve history |
-| T9 | Correct a mistake | A reason and reference to a prior event are appended; original remains in history; derived views recompute |
-| T10 | Survive uncertain delivery | Persist pending IDs before sending, reconcile on retry, deduplicate projection, never create fresh IDs merely to retry |
-| T11 | Show actionable access failures | Distinguish revoked/unauthorized, quota/rate limit, connectivity and malformed data without leaking secrets |
-| T12 | Separate demo and real data | Sample notebook makes no SheetDB requests and cannot be merged into a real notebook implicitly |
+| ID  | Requirement                               | Acceptance                                                                                                                                       |
+| --- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| T1  | Consume a personal access link            | Username/endpoint/token/tab validate; malformed link gives recovery instructions; no Google popup                                                |
+| T2  | Keep credentials out of normal sharing    | Access fragment consumed before ordinary UI; navigation URLs contain no bearer; no third-party scripts; session close forgets browser credential |
+| T3  | Stamp the issuing username                | No teacher selector; every event receives the session username; UI identifies this as trusted attribution                                        |
+| T4  | Read one shared notebook                  | All five endpoints render the same current roster and projections after refresh                                                                  |
+| T5  | Mark attendance by date and student/group | Save only intended changes; unmarked is distinct from absent; same date/student has one effective status                                         |
+| T6  | Record tagged notes                       | Student-specific or general; at least one tag; comma/Arabic-comma entry; preserve Arabic and structured text as data                             |
+| T7  | Filter notes and summaries                | Shareable search/group/tag/date state; filters do not contain credentials; date bounds clearly defined                                           |
+| T8  | Maintain roster                           | Stable student IDs; rename/group/active changes append snapshots and preserve history                                                            |
+| T9  | Correct a mistake                         | A reason and reference to a prior event are appended; original remains in history; derived views recompute                                       |
+| T10 | Survive uncertain delivery                | Persist pending IDs before sending, reconcile on retry, deduplicate projection, never create fresh IDs merely to retry                           |
+| T11 | Show actionable access failures           | Distinguish revoked/unauthorized, quota/rate limit, connectivity and malformed data without leaking secrets                                      |
+| T12 | Separate demo and real data               | Sample notebook makes no SheetDB requests and cannot be merged into a real notebook implicitly                                                   |
 
 Attendance statuses proposed: present, early, late, absent, excused. Dates are calendar dates, not UTC-midnight timestamps; validate real ISO dates. Use local session date by default and store explicit dates for stable shared views. Missing attendance is not a negative vote. Corrections to attendance either append a replacement status, or reverse an earlier event; reversing the newest status reveals the last surviving prior status.
 
@@ -35,15 +35,15 @@ Roster editing is allowed to these trusted users in the proposed baseline. If th
 
 ## Proposed event contract
 
-Use one ordered **Events** tab, with headers `id`, `actor`, `client_time`, `received_at`, `payload`. Keep the ledger physically unsorted. JSON payload is the canonical extensible data; add an explicit schema version before production. The prototype currently relies on an implicit version-one schema; the eventual compatibility/migration rule must be decided first.
+Use one ordered **Events** tab, with headers `id`, `actor`, `client_time`, `received_at`, `payload`. Keep the ledger physically unsorted. JSON payload is canonical. New payloads include `version: 1`; legacy unversioned payloads remain readable as version one. Unknown versions are isolated and counted; no automatic row migration.
 
-| Field | Contract |
-| --- | --- |
-| id | Generated UUID for a logical event; retries reuse it |
-| actor | Issued username asserted by client |
-| client_time | Device ISO time for context, never ordering authority |
+| Field       | Contract                                                                            |
+| ----------- | ----------------------------------------------------------------------------------- |
+| id          | Generated UUID for a logical event; retries reuse it                                |
+| actor       | Issued username asserted by client                                                  |
+| client_time | Device ISO time for context, never ordering authority                               |
 | received_at | Provider timestamp requested through supported sentinel; not guaranteed unforgeable |
-| payload | Validated discriminated object; strings are written with RAW mode |
+| payload     | Validated discriminated object; strings are written with RAW mode                   |
 
 Payload variants:
 
@@ -54,22 +54,22 @@ Payload variants:
 
 Process physical sheet order, not client timestamps. Keep the first occurrence of each event ID and visibly count duplicate deliveries. Invalid JSON/unknown kinds are isolated and counted; never erase them. A reversal targeting a nonexistent/later event is invalid. Different repeated reversal IDs targeting the same valid record have one effective exclusion. Retain original and correction records in history.
 
-No claim of atomic uniqueness, exactly-once delivery, multi-row transactions or server-enforced actor binding. If a malicious caller reuses another event ID with conflicting data, the app cannot establish which is authentic; flag the conflict for owner inspection. Detecting conflicting duplicate payloads is a future acceptance criterion beyond the current prototype's simple first-ID-wins behavior.
+No claim of atomic uniqueness, exactly-once delivery, multi-row transactions or server-enforced actor binding. If a malicious caller reuses another event ID with conflicting data, the app cannot establish which is authentic; flag the conflict for owner inspection. Conflicting actor/client time/payload duplicates are flagged while the first occurrence wins; provider receipt-time changes alone are not a conflict.
 
 ## Local owner-manager requirements
 
-| ID | Requirement | Acceptance |
-| --- | --- | --- |
-| M1 | Configure frontend URL and notebook | Valid HTTPS Pages URL or explicit loopback dev URL; endpoint binding restricted to this notebook |
-| M2 | Inventory five users | Username, endpoint ID, credential version/reference, lifecycle state and last verified time; no routine secret exposure |
-| M3 | Import provisioned credentials | Verify authenticated read, expected headers, anonymous denial; record manual permission confirmation |
-| M4 | Issue private links | Encode only that user's bearer capability; copying is explicit; no automatic messages |
-| M5 | Revoke real access | Provider operation succeeds and old credential is checked; local deletion alone never displays 'revoked' |
-| M6 | Replace access | Reconcile pending batches, record retired endpoint, configure replacement and issue new link; show limited-slot downtime |
-| M7 | Optional Global lifecycle operations | List/create/delete with explicit permissions and scoped registry; support configured additional authentication factor |
-| M8 | Honest unsupported features | Token refresh/expiry shown only after supported provider operation is verified; no made-up endpoints |
-| M9 | Local boundary | Loopback binding, same-origin mutations, Host checks, JSON/custom-header gate, no public manager bundle |
-| M10 | Protect/recover local data | Explicit storage policy, sanitized logs, backup instructions, durable state updates; no account secrets in Git |
+| ID  | Requirement                          | Acceptance                                                                                                               |
+| --- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| M1  | Configure frontend URL and notebook  | Valid HTTPS Pages URL or explicit loopback dev URL; endpoint binding restricted to this notebook                         |
+| M2  | Inventory five users                 | Username, endpoint ID, credential version/reference, lifecycle state and last verified time; no routine secret exposure  |
+| M3  | Import provisioned credentials       | Verify authenticated read, expected headers, anonymous denial; record manual permission confirmation                     |
+| M4  | Issue private links                  | Encode only that user's bearer capability; copying is explicit; no automatic messages                                    |
+| M5  | Revoke real access                   | Provider operation succeeds and old credential is checked; local deletion alone never displays 'revoked'                 |
+| M6  | Replace access                       | Reconcile pending batches, record retired endpoint, configure replacement and issue new link; show limited-slot downtime |
+| M7  | Optional Global lifecycle operations | List/create/delete with explicit permissions and scoped registry; support configured additional authentication factor    |
+| M8  | Honest unsupported features          | Token refresh/expiry shown only after supported provider operation is verified; no made-up endpoints                     |
+| M9  | Local boundary                       | Loopback binding, same-origin mutations, Host checks, JSON/custom-header gate, no public manager bundle                  |
+| M10 | Protect/recover local data           | Explicit storage policy, sanitized logs, backup instructions, durable state updates; no account secrets in Git           |
 
 Lifecycle should distinguish draft, awaiting provider configuration, verified active, revocation pending, verified revoked, and uncertain outcome. Record operation intent and result without secret values. A failed local save after a successful remote revoke must not leave an apparently active usable credential; reconciliation is required. The prototype has simpler states and needs review before reuse.
 
@@ -85,8 +85,8 @@ Read refresh must account for multiple APIs over the same spreadsheet; provider 
 
 The public GitHub repository/deployed assets contain application code, not roster data, links, bearer values or manager state. A dedicated spreadsheet contains only data all trusted users may read. Browsers can cache/read what their bearer allows; revocation cannot retract copies already obtained. Keep independent spreadsheet snapshots and record owner recovery steps.
 
-Deploy only the teacher build to GitHub Pages. Keep manager and Global credentials local. Test repository-subpath assets and CORS with the final origin. Do not import existing production records without an explicit mapping and migration request. Publication and account configuration are not part of the current planning authorization.
+Deploy only the teacher build to GitHub Pages. Keep manager and Global credentials local. Test repository-subpath assets and CORS with the final origin. Do not import existing production records without an explicit mapping and migration request. Public software publication is authorized. Provider account acceptance remains unrun and no production migration is authorized.
 
 ## Definition of ready for implementation
 
-Feasibility gates resolved, expiry expectations accepted, management approach selected, account plan confirmed, schema version strategy chosen and unknown provider controls verified or removed from scope. Implementation resumes only after a new user instruction. These documents specify intended behavior, not a claim that the preserved prototype satisfies every requirement.
+Feasibility gates resolved, expiry expectations accepted, management approach selected, account plan confirmed, schema version strategy chosen and unknown provider controls verified or removed from scope. Implementation/publication was authorized on 2026-11-13; live acceptance is tracked separately. These documents specify intended behavior, not a claim that the preserved prototype satisfies every requirement.
