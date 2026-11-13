@@ -95,6 +95,18 @@ function cors(requestedHeaders: string | undefined) {
   }
 }
 
+async function utilityIcon(page: Page, name: string) {
+  const button = page.getByRole('button', { name, exact: true })
+  await expect(button).toBeVisible()
+  await expect(button).toHaveText('')
+  await expect(button).toHaveAttribute('title', /\S/)
+  await expect(button.locator('svg[aria-hidden="true"]')).toHaveClass(/lucide/)
+  const box = await button.boundingBox()
+  expect(box?.width).toBeGreaterThanOrEqual(44)
+  expect(box?.height).toBeGreaterThanOrEqual(44)
+  return button
+}
+
 test('student sees only their attendance and loses it after access is denied', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 })
   await mockAuth(page, studentUserId)
@@ -160,6 +172,7 @@ test('student sees only their attendance and loses it after access is denied', a
 test('administrator assigns roles and creates an assigned student', async ({ page }) => {
   await mockAuth(page, adminId)
   const posts: { path: string; body: unknown }[] = []
+  let notebookReads = 0
   const board = {
     accounts: [
       {
@@ -201,6 +214,32 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     const headers = cors(req.headers()['access-control-request-headers'])
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
     const path = new URL(req.url()).pathname
+    if (path === '/api/notebook') {
+      notebookReads++
+      return route.fulfill({
+        headers,
+        json: {
+          teacher: {
+            role: 'administrator',
+            id: adminId,
+            name: 'Synthetic Admin',
+            canRead: true,
+            canWrite: true,
+            expiresAt: null,
+          },
+          students: [
+            {
+              kind: 'student',
+              studentId,
+              name: 'Synthetic Student',
+              group: 'Group A',
+              active: true,
+            },
+          ],
+          events: [],
+        },
+      })
+    }
     if (path === '/api/me')
       return route.fulfill({
         headers,
@@ -269,4 +308,33 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   )
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({ path: '.artifacts/verification/role-administration.png', fullPage: true })
+  await utilityIcon(page, 'Sign out')
+  await utilityIcon(page, 'Refresh')
+  await page.getByRole('button', { name: 'Open notebook', exact: true }).click()
+  await expect(page.locator('.workspace')).toBeVisible()
+  await page.getByRole('button', { name: 'Students', exact: true }).click()
+  await utilityIcon(page, 'Administration')
+  await utilityIcon(page, 'Sign out')
+  await utilityIcon(page, 'العربية')
+  const refresh = await utilityIcon(page, 'Refresh')
+  await expect(refresh).toBeEnabled()
+  const readsBeforeRefresh = notebookReads
+  await refresh.click()
+  await expect.poll(() => notebookReads).toBeGreaterThan(readsBeforeRefresh)
+  await utilityIcon(page, 'Open student')
+  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await utilityIcon(page, 'الإدارة')
+  await utilityIcon(page, 'تسجيل الخروج')
+  await utilityIcon(page, 'تحديث')
+  await utilityIcon(page, 'فتح الطالب')
+  await page.screenshot({ path: '.artifacts/verification/utility-icons-ar.png', fullPage: true })
+  await page.getByRole('button', { name: 'English', exact: true }).click()
+  const openStudent = await utilityIcon(page, 'Open student')
+  await openStudent.focus()
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(new RegExp(`student=${studentId}`))
+  await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
+  await page.getByRole('button', { name: 'Administration', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Accounts and students' })).toBeVisible()
+  expect(posts).toHaveLength(3)
 })

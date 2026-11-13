@@ -6,7 +6,7 @@ Version-two links with separate read-only roster and event credentials, teacher-
 
 ## How to get to it (user POV)
 
-Open an owner-issued assigned-teacher link. Attendance shows only your students; Students lists the read-only roster. Use Open student to focus a student, All my students to return, and Notes/Summary/History for that assignment. The owner issues teacher/student links from the local manager after loading roster teachers.
+Open an owner-issued assigned-teacher link. Attendance shows only your students; Students lists the read-only roster. Use the Open student icon (localized tooltip/accessibility label) to focus a student, All my students to return, and Notes/Summary/History for that assignment. Refresh, language and session-exit utilities are also icon-only; notebook navigation and save actions remain visibly labelled. The owner issues teacher/student links from the local manager after loading roster teachers.
 
 ## Driving it with Playwright
 

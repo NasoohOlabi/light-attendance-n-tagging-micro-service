@@ -1,3 +1,4 @@
+import { Globe } from 'lucide-react'
 import { createContext, useContext, useEffect, useState } from 'react'
 
 const arabic = {
@@ -258,15 +259,13 @@ export function LanguageSwitch() {
     <div className="language-switch" role="group" aria-label="Language / اللغة">
       <button
         type="button"
+        className="icon-button"
         lang={target}
+        aria-label={target === 'ar' ? 'العربية' : 'English'}
         title={target === 'ar' ? 'التبديل إلى العربية' : 'Switch to English'}
         onClick={() => setLanguage(target)}
       >
-        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9S9.5 5.5 12 3Z" />
-        </svg>
-        {target === 'ar' ? 'العربية' : 'English'}
+        <Globe size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
       </button>
     </div>
   )
