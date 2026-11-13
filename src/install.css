@@ -1,0 +1,40 @@
+﻿.install-strip {
+  background: #eaf7f7;
+  border-block-end: 1px solid #c6e4e4;
+  color: #005761;
+  padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right));
+}
+
+.install-strip-inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  max-width: 90rem;
+  margin-inline: auto;
+}
+
+.install-button,
+.install-close {
+  min-height: 44px;
+  padding-inline: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.install-button:focus-visible,
+.install-close:focus-visible {
+  outline: 3px solid #007d8d;
+  outline-offset: -3px;
+}
+
+.install-guidance {
+  max-width: 90rem;
+  margin: 0 auto;
+  padding-block: 0 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}

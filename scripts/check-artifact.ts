@@ -12,9 +12,9 @@ async function walk(directory: string): Promise<string[]> {
 }
 const files = await walk('dist')
 for (const file of files) {
-  if (!/\.(html|css|js|png|ico|svg)$/.test(file))
+  if (!/\.(html|css|js|png|ico|svg|woff2|txt|webmanifest)$/.test(file))
     throw new Error(`Unexpected deployment file: ${file}`)
-  if (/\.(png|ico)$/.test(file)) continue
+  if (/\.(png|ico|woff2)$/.test(file)) continue
   const text = await Bun.file(file).text()
   for (const secret of [
     process.env.DATABASE_URL,

@@ -1,0 +1,73 @@
+﻿.wartaq-drafts .wartaq-review-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid #d3e6e9;
+}
+.wartaq-drafts .wartaq-review-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wartaq-drafts .wartaq-skip-link {
+  position: absolute;
+  z-index: 10;
+  inset-block-start: 8px;
+  inset-inline-start: 8px;
+  padding: 12px;
+  color: #fff;
+  background: #004d57;
+  transform: translateY(-200%);
+}
+.wartaq-drafts .wartaq-skip-link:focus {
+  transform: translateY(0);
+}
+.wartaq-drafts .wartaq-review-heading span {
+  font-size: 0.8rem;
+  color: #47676b;
+}
+.wartaq-drafts .wartaq-review-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  min-width: 0;
+}
+.wartaq-drafts .wartaq-review-switch {
+  display: inline-flex;
+  border: 1px solid #b8d5d9;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.wartaq-drafts .wartaq-review-switch button {
+  min-height: 44px;
+  border: 0;
+  padding: 8px 12px;
+  color: #004d57;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.wartaq-drafts .wartaq-review-switch button[aria-pressed='true'] {
+  color: #fff;
+  background: #004d57;
+}
+.wartaq-drafts .wartaq-review-controls a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #004d57;
+  font-size: 0.875rem;
+  text-underline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .wartaq-drafts .wartaq-review-bar {
+    padding-inline: 16px;
+  }
+}

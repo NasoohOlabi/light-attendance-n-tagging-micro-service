@@ -72,6 +72,7 @@ test('Arabic authentication keeps mobile input semantics and localized feedback'
     return route.fulfill({ headers, json: null })
   })
   await page.goto(origin)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByRole('button', { name: 'العربية', exact: true }).click()
   const email = page.getByLabel('البريد الإلكتروني', { exact: true })
   const password = page.getByLabel('كلمة المرور', { exact: true })
@@ -208,7 +209,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
       headers,
     })
   })
-  await page.goto(origin)
+  await page.goto(`${origin}/?page=app`)
   await page.getByLabel('Email').fill(users[0].email)
   await page.getByLabel('Password').fill('synthetic-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -223,9 +224,41 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.reload()
   await expect(page.getByText('Alpha Student')).toBeVisible()
   await page.getByRole('button', { name: 'Sign out' }).click()
+  await expect(page.getByRole('heading', { name: /Your halaqa/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByLabel('Email').fill(users[1].email)
   await page.getByLabel('Password').fill('synthetic-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByText('Beta Student')).toBeVisible()
   await expect(page.getByText('Alpha Student')).toHaveCount(0)
+})
+
+test('reset link opens the app and consumes its token without retaining it in the URL', async ({
+  page,
+}) => {
+  let reset: unknown
+  await page.route(`${auth}/**`, async (route) => {
+    const request = route.request()
+    const headers = {
+      'access-control-allow-origin': origin,
+      'access-control-allow-credentials': 'true',
+      'access-control-allow-methods': 'GET, POST, OPTIONS',
+      'access-control-allow-headers':
+        request.headers()['access-control-request-headers'] ?? 'content-type',
+    }
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
+    if (new URL(request.url()).pathname.endsWith('/reset-password')) {
+      reset = request.postDataJSON()
+      return route.fulfill({ headers, json: { status: true } })
+    }
+    return route.fulfill({ headers, json: null })
+  })
+  await page.goto(`${origin}/?token=synthetic-reset-link`)
+  await expect(page.getByRole('heading', { name: 'Reset password', exact: true })).toBeVisible()
+  await expect(page).not.toHaveURL(/token=/)
+  await page.getByLabel('Password', { exact: true }).fill('synthetic-new-password')
+  await page.getByRole('button', { name: 'Update password', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
+  expect(reset).toEqual({ newPassword: 'synthetic-new-password', token: 'synthetic-reset-link' })
+  await expect(page).toHaveURL(/page=app/)
 })
