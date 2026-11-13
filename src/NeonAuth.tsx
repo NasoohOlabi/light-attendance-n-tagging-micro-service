@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from 'react'
+import { useLanguage } from './i18n'
+import { useEffect, useState } from 'react'
 import type { NeonTeacher } from '../shared/neon'
 import { z } from 'zod'
 import { authClient, getTeacher, NeonRequestError } from './neon'
@@ -21,6 +22,7 @@ function ConfiguredAuth({
   samples: React.ReactNode
   children: (userId: string, teacher: NeonTeacher, signOut: () => void) => React.ReactNode
 }) {
+  const { t, errorMessage } = useLanguage()
   // The parent only renders this component when the client exists.
   const client = authClient!
   const session = client.useSession()
@@ -61,39 +63,57 @@ function ConfiguredAuth({
     setApproval(null)
     void client.signOut()
   }
-  if (session.isPending) return <p>Loading your session…</p>
+  if (session.isPending)
+    return (
+      <main id="main-content" tabIndex={-1}>
+        <p role="status">{t('Loading your session…')}</p>
+      </main>
+    )
   if (userId) {
     if (approval?.userId === userId)
       return (
-        <div className="panel space-y-3">
-          <p role="alert">{approval.message}</p>
+        <main id="main-content" tabIndex={-1} className="panel space-y-3">
+          <p role="alert">{errorMessage(approval.message)}</p>
           <button className="secondary" onClick={signOut}>
-            Sign out
+            {t('Sign out')}
           </button>
-        </div>
+        </main>
       )
-    if (!teacher || teacher.userId !== userId) return <p>Loading your notebook…</p>
+    if (!teacher || teacher.userId !== userId)
+      return (
+        <main id="main-content" tabIndex={-1}>
+          <p role="status">{t('Loading your notebook…')}</p>
+        </main>
+      )
     if (!teacher.value.canRead)
       return (
-        <div className="panel space-y-3">
+        <main id="main-content" tabIndex={-1} className="panel space-y-3">
           <p>
-            Your account has write-only access. The notebook requires read access; contact your
-            manager.
+            {t(
+              'Your account has write-only access. The notebook requires read access; contact your manager.',
+            )}
           </p>
           <button className="secondary" onClick={signOut}>
-            Sign out
+            {t('Sign out')}
           </button>
-        </div>
+        </main>
       )
     return children(userId, teacher.value, signOut)
   }
   return (
-    <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center gap-6 px-6">
-      <h1 className="text-4xl font-semibold tracking-tight">Your halaqa, one shared notebook.</h1>
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="mx-auto flex min-h-svh max-w-lg flex-col justify-center gap-6 px-6"
+    >
+      <h1 className="text-4xl font-semibold tracking-tight">
+        {t('Your halaqa, one shared notebook.')}
+      </h1>
       <p className="text-lg leading-relaxed text-slate-600">
-        Record attendance. Leave a note. Keep the next teacher in the loop.
+        {t('Record attendance. Leave a note. Keep the next teacher in the loop.')}
       </p>
       <form
+        aria-busy={busy}
         className="panel space-y-3"
         onSubmit={async (event) => {
           event.preventDefault()
@@ -146,23 +166,35 @@ function ConfiguredAuth({
       >
         <h2 className="title">
           {mode === 'sign-up'
-            ? 'Create an account'
+            ? t('Create an account')
             : mode === 'forgot' || mode === 'reset'
-              ? 'Reset password'
-              : 'Sign in'}
+              ? t('Reset password')
+              : t('Sign in')}
         </h2>
         {mode === 'sign-up' && (
           <label>
-            Name
-            <input required value={name} onChange={(e) => setName(e.target.value)} />
+            {t('Name')}
+            <input
+              required
+              autoComplete="name"
+              enterKeyHint="next"
+              dir="auto"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </label>
         )}
         {mode !== 'reset' && (
           <label>
-            Email
+            {t('Email')}
             <input
               required
               type="email"
+              dir="ltr"
+              autoCapitalize="none"
+              spellCheck={false}
+              inputMode="email"
+              enterKeyHint={mode === 'forgot' ? 'go' : 'next'}
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -171,10 +203,12 @@ function ConfiguredAuth({
         )}
         {mode !== 'forgot' && (
           <label>
-            Password
+            {t('Password')}
             <input
               required
               type="password"
+              dir="ltr"
+              enterKeyHint="go"
               autoComplete={
                 mode === 'sign-up' || mode === 'reset' ? 'new-password' : 'current-password'
               }
@@ -183,17 +217,17 @@ function ConfiguredAuth({
             />
           </label>
         )}
-        {error && <p role="alert">{error}</p>}
+        {error && <p role="alert">{errorMessage(error)}</p>}
         <button className="primary" disabled={busy}>
           {busy
-            ? 'Please wait…'
+            ? t('Please wait…')
             : mode === 'sign-up'
-              ? 'Create account'
+              ? t('Create account')
               : mode === 'forgot'
-                ? 'Send reset email'
+                ? t('Send reset email')
                 : mode === 'reset'
-                  ? 'Update password'
-                  : 'Sign in'}
+                  ? t('Update password')
+                  : t('Sign in')}
         </button>
         <div className="flex flex-wrap gap-2">
           <button
@@ -204,7 +238,7 @@ function ConfiguredAuth({
               setError('')
             }}
           >
-            {mode === 'sign-up' ? 'Sign in' : 'Create account'}
+            {mode === 'sign-up' ? t('Sign in') : t('Create account')}
           </button>
           <button
             type="button"
@@ -214,12 +248,12 @@ function ConfiguredAuth({
               setError('')
             }}
           >
-            Forgot password?
+            {t('Forgot password?')}
           </button>
         </div>
         {mode === 'sign-up' && (
           <p className="muted">
-            Your manager must approve your account before you can open the notebook.
+            {t('Your manager must approve your account before you can open the notebook.')}
           </p>
         )}
       </form>

@@ -50,6 +50,56 @@ test.afterAll(() => {
   server?.kill()
 })
 
+test('Arabic authentication keeps mobile input semantics and localized feedback', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 568 })
+  await page.route(`${auth}/**`, async (route) => {
+    const headers = {
+      'access-control-allow-origin': origin,
+      'access-control-allow-credentials': 'true',
+      'access-control-allow-methods': 'GET, POST, OPTIONS',
+      'access-control-allow-headers':
+        route.request().headers()['access-control-request-headers'] ?? 'content-type',
+    }
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
+    if (route.request().url().includes('/sign-in/email'))
+      return route.fulfill({
+        status: 401,
+        headers,
+        json: { code: 'INVALID_EMAIL_OR_PASSWORD', message: 'Invalid email or password' },
+      })
+    return route.fulfill({ headers, json: null })
+  })
+  await page.goto(origin)
+  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  const email = page.getByLabel('البريد الإلكتروني', { exact: true })
+  const password = page.getByLabel('كلمة المرور', { exact: true })
+  await expect(email).toHaveAttribute('type', 'email')
+  await expect(email).toHaveAttribute('autocomplete', 'email')
+  await expect(password).toHaveAttribute('autocomplete', 'current-password')
+  await email.fill('synthetic@example.test')
+  await password.fill('synthetic-password')
+  await page.getByRole('button', { name: 'تسجيل الدخول', exact: true }).click()
+  await expect(page.getByRole('alert')).not.toContainText('Invalid')
+  await expect(page.getByRole('alert')).toBeVisible()
+  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await expect(email).toHaveCount(0)
+  await expect(page.getByLabel('Email', { exact: true })).toHaveValue('synthetic@example.test')
+  await expect(page.getByRole('alert')).toContainText('Invalid email or password')
+  await page.getByRole('button', { name: 'Create account', exact: true }).click()
+  await expect(page.getByLabel('Name', { exact: true })).toHaveAttribute('autocomplete', 'name')
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute(
+    'autocomplete',
+    'new-password',
+  )
+  await page.getByRole('button', { name: 'Forgot password?', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Reset password', exact: true })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  )
+})
+
 test('sign in, reload and switch teacher without mixing notebook data', async ({
   context,
   page,

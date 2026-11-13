@@ -8,6 +8,8 @@ Teachers sign up/sign in, then an owner approves their account through the priva
 
 Choose **Explore with sample students** to review attendance, Arabic-capable notes and append-only corrections without a provider account. Legacy SheetDB links remain compatible; their broader capability limitations do not apply to the Neon API.
 
+Use **English / العربية** to switch the complete teacher interface, including sign-in and feedback. Arabic uses right-to-left layout; your language choice is remembered when browser storage is available. The local manager has its own language switch. See the [mobile and language audit](docs/mobile-and-languages.md) for behavior, verification and device limits.
+
 ## Run and verify
 
 ```powershell

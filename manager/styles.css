@@ -10,11 +10,19 @@
 }
 body {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 main {
   max-width: 1060px;
   margin: auto;
-  padding: 32px 24px 60px;
+  padding: max(32px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+    max(60px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+}
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }
 header {
   display: flex;
@@ -47,8 +55,8 @@ p {
 .symbol {
   color: #4338ca;
   font-size: 32px;
-  float: left;
-  margin-right: 14px;
+  float: inline-start;
+  margin-inline-end: 14px;
 }
 section {
   padding: 26px;
@@ -58,7 +66,7 @@ section {
   border-radius: 12px;
 }
 section.intro {
-  border-left: 4px solid #4338ca;
+  border-inline-start: 4px solid #4338ca;
 }
 .muted,
 footer {
@@ -81,8 +89,13 @@ label {
   font-weight: 600;
 }
 input,
-textarea {
-  font: inherit;
+textarea,
+select {
+  font:
+    400 16px/1.5 'Segoe UI',
+    Tahoma,
+    Arial,
+    sans-serif;
   width: 100%;
   min-width: 0;
   border: 1px solid #b6c1d1;
@@ -92,6 +105,7 @@ textarea {
   background: white;
 }
 button {
+  min-height: 44px;
   border: 1px solid transparent;
   border-radius: 7px;
   padding: 10px 16px;
@@ -119,6 +133,9 @@ button.danger {
 a {
   color: #4338ca;
   margin-inline: 8px;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
 }
 :focus-visible {
   outline: 3px solid #818cf8;
@@ -142,12 +159,14 @@ a {
 }
 .grow {
   flex: 1;
+  min-width: 0;
 }
 .check {
   flex-direction: row;
   align-items: start;
   font-weight: 400;
   margin: 16px 0;
+  min-height: 44px;
 }
 .check input {
   width: 18px;
@@ -180,8 +199,12 @@ summary {
   cursor: pointer;
   font-weight: 650;
   padding: 10px 0;
+  min-height: 44px;
 }
 pre {
+  direction: ltr;
+  text-align: start;
+  unicode-bidi: isolate;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   border-radius: 6px;
@@ -190,9 +213,6 @@ pre {
   font-size: 13px;
 }
 #feedback {
-  position: sticky;
-  top: 8px;
-  z-index: 5;
   background: #ecfdf5;
   color: #166534;
   border: 1px solid #bbf7d0;
@@ -212,7 +232,8 @@ footer {
 }
 @media (max-width: 640px) {
   main {
-    padding: 20px 14px;
+    padding: max(20px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+      max(20px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
   }
   header {
     align-items: start;
@@ -232,5 +253,14 @@ footer {
   }
   .inline button {
     margin-top: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }

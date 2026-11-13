@@ -1,3 +1,4 @@
+import { useLanguage } from './i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 import type { Access } from '../shared/access'
@@ -21,6 +22,7 @@ export function useLedger(
   assignedDemo = false,
   neon?: { userId: string; teacher: NeonTeacher },
 ) {
+  const { t } = useLanguage()
   const neonUserId = neon?.userId
   const key = neon
     ? `halaqa-pending-neon:${apiUrl}:${neon.teacher.id}`
@@ -269,7 +271,9 @@ export function useLedger(
   async function discard() {
     if (
       !window.confirm(
-        'Stop retrying this batch? It may already exist in the sheet. Refresh and inspect history before entering it again.',
+        t(
+          'Stop retrying this batch? It may already exist in the sheet. Refresh and inspect history before entering it again.',
+        ),
       )
     )
       return

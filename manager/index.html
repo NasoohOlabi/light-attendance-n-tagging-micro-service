@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="referrer" content="no-referrer" />
     <title>Halaqa · Local access manager</title>
     <link rel="stylesheet" href="/styles.css" />
@@ -15,7 +15,10 @@
           <h1>Access manager</h1>
           <p class="muted">Your five teachers. Their links. Your notebook.</p>
         </div>
-        <span class="badge">Running on your computer</span>
+        <div class="header-actions">
+          <span class="badge">Running on your computer</span>
+          <button id="language-toggle" class="secondary" type="button" lang="ar">العربية</button>
+        </div>
       </header>
       <div id="feedback" role="status" hidden></div>
       <section class="intro">
@@ -122,7 +125,13 @@
             </select></label
           ><button id="get-student-link" type="button">Get selected link</button>
         </div>
-        <textarea id="link-value" rows="4" readonly aria-label="Personal access link"></textarea>
+        <textarea
+          id="link-value"
+          rows="4"
+          readonly
+          dir="ltr"
+          aria-label="Personal access link"
+        ></textarea>
         <div class="actions">
           <button id="copy-link">Copy link</button
           ><button id="hide-link" class="secondary">Hide link</button>
