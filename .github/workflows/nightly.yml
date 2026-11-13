@@ -27,6 +27,7 @@ jobs:
       - run: bun audit
       - run: bun run format:check
       - run: bun run verify
+      - run: bun run security:files
       - run: bunx playwright install --with-deps chromium
       - run: bun run verify:ui
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

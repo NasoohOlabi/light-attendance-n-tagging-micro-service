@@ -13,7 +13,7 @@
     "format:check": "prettier --check .",
     "verify": "bun run test && bun run lint && bun run build && bun run check:artifact",
     "verify:ui": "playwright test",
-    "verify:release": "bun run verify && bun run format:check && bun run verify:ui && bun run security:history && bun audit",
+    "verify:release": "bun run verify && bun run security:files && bun run format:check && bun run verify:ui && bun run security:history && bun audit",
     "check:artifact": "bun scripts/check-artifact.ts",
     "setup:security": "bun scripts/setup-security.ts",
     "security:staged": "bun scripts/security.ts staged",
