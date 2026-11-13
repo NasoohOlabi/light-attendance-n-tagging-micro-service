@@ -51,14 +51,13 @@
   gap: 4px;
 }
 .home-header .language-switch button {
-  color: white;
-  border-color: #60939a;
-  background: transparent;
+  color: #e3f3f4;
 }
-.home-header .language-switch button[aria-pressed='true'] {
-  background: #d9f1f3;
-  color: #004d57;
-  border-color: #d9f1f3;
+.home-header .language-switch button:hover {
+  background: #17636c;
+}
+.home-header .language-switch button:focus-visible {
+  outline-color: #e3f3f4;
 }
 .home-sign-in {
   min-height: 44px;

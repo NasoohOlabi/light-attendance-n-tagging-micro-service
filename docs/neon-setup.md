@@ -101,7 +101,13 @@ Students file shape:
 ]
 ```
 
-Preserve existing IDs when refreshing a roster. Import students with nonblank teacher assignments; ignore the unmaintained old/former source flag. Real roster data and teacher emails remain outside Git. This setup did not import real roster/SheetDB data or approve real teachers.
+Preserve existing IDs when refreshing a roster. Import students with nonblank teacher assignments; ignore the unmaintained old/former source flag. Real roster data and teacher emails remain outside Git. The initial migration did not import real roster data or approve real teachers; subsequent private imports are recorded in the work log.
+
+### Imported teachers awaiting sign-in identities
+
+An owner-authorized roster import may preserve assignments before teachers sign up. These placeholders use the existing `teachers` table, source-stable IDs and provisional source display labels, with `active=false`, `access_mode=read_only` and a reserved `auth_user_id` of `pending-roster:<teacher-uuid>`. They have no managed Auth user or `app_accounts` grant and cannot sign in or access the notebook. This does not create an additional table or a teacher login.
+
+Keep the source-to-ID mapping and import receipt under ignored `.local`. Once a teacher has a real signup, the owner must reconcile that identity privately, replace only the matching placeholder's reserved identity while preserving its teacher ID, then use the existing teacher/account grant CLI. A normal grant alone cannot claim a placeholder ID; do not create a duplicate teacher and strand the students. Until linked and approved, placeholders do not appear in the approved-teacher selector; student assignments remain owner-managed. Never grant access merely by matching a display name. The November 13 private import and its actual verification are recorded in the work log.
 
 ## Verification and publication
 

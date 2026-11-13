@@ -1,3 +1,4 @@
+import { LogOut, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import {
@@ -77,8 +78,19 @@ export function AdminConsole({
       <header className="role-header">
         <WartaqLogo />
         <LanguageSwitch />
-        <button className="secondary" onClick={signOut}>
-          {t('Sign out')}
+        <button
+          className="icon-button"
+          aria-label={t('Sign out')}
+          title={t('Sign out')}
+          onClick={signOut}
+        >
+          <LogOut
+            className="icon-directional"
+            size={20}
+            strokeWidth={1.6}
+            aria-hidden="true"
+            focusable="false"
+          />
         </button>
       </header>
       <div className="role-heading">
@@ -87,8 +99,13 @@ export function AdminConsole({
           <h1>{ar ? 'إدارة الحسابات والطلاب' : 'Accounts and students'}</h1>
         </div>
         <div className="role-actions">
-          <button className="secondary" onClick={() => setRevision((n) => n + 1)}>
-            {t('Refresh')}
+          <button
+            className="icon-button"
+            aria-label={t('Refresh')}
+            title={t('Refresh')}
+            onClick={() => setRevision((n) => n + 1)}
+          >
+            <RefreshCw size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
           </button>
           <button className="primary" onClick={openNotebook}>
             {ar ? 'فتح الدفتر' : 'Open notebook'}

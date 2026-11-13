@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from 'react'
+import { LogOut, RefreshCw } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { neonStudentAttendanceSchema } from '../shared/neon'
 import { LanguageSwitch, useLanguage } from './i18n'
@@ -45,8 +46,19 @@ export function StudentAttendance({ userId, signOut }: { userId: string; signOut
       <header className="role-header">
         <WartaqLogo />
         <LanguageSwitch />
-        <button className="secondary" onClick={signOut}>
-          {t('Sign out')}
+        <button
+          className="icon-button"
+          aria-label={t('Sign out')}
+          title={t('Sign out')}
+          onClick={signOut}
+        >
+          <LogOut
+            className="icon-directional"
+            size={20}
+            strokeWidth={1.6}
+            aria-hidden="true"
+            focusable="false"
+          />
         </button>
       </header>
       <div className="role-heading">
@@ -61,14 +73,16 @@ export function StudentAttendance({ userId, signOut }: { userId: string; signOut
           )}
         </div>
         <button
-          className="secondary"
+          className="icon-button"
+          aria-label={t('Refresh')}
+          title={t('Refresh')}
           disabled={loading}
           onClick={() => {
             setLoading(true)
             setRevision((n) => n + 1)
           }}
         >
-          {t('Refresh')}
+          <RefreshCw size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
         </button>
       </div>
       {loading && <p role="status">{ar ? 'جارٍ التحميل…' : 'Loading…'}</p>}
