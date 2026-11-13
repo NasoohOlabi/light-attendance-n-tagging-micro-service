@@ -5,7 +5,8 @@
 - [x] Replace the attendance-tool marketing page with an Arabic/English course introduction, proposed outcomes/curriculum and explicit teacher/schedule/enrollment/contact placeholders.
 - [x] Keep plain root public even with a stored legacy capability; preserve explicit private links and the separate `?page=app` entry.
 - [x] Verify course anchors, sample isolation, mobile/RTL layouts and existing app/PWA flows.
-- [ ] Publish the course-focused homepage through nightly and main-only Pages, then verify the actual public root.
+- [x] Publish the course-focused homepage through nightly and main-only Pages: main `e482fb3`, successful Stable Pages run `43460220354`; the actual public course content and placeholders were observed at root.
+- [ ] Finish the route-aware localized browser-title follow-up found during public verification, then repeat public-root proof.
 
 ## Three application roles
 

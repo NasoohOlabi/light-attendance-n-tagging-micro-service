@@ -39,6 +39,7 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   await expect(page.locator('.wartaq-logo')).toHaveText(['وارتق', 'وارتق'])
   await expect(page.locator('.wartaq-logo img')).toHaveCount(0)
   await expect(page.locator('.workspace')).toHaveCount(0)
+  await expect(page).toHaveTitle('Wartaq · Quran recitation course')
   await expect(
     page.getByRole('heading', { name: 'Recite with care. Grow with every verse.' }),
   ).toBeVisible()
@@ -52,6 +53,7 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   for (const language of ['العربية', 'English']) {
     await page.getByRole('button', { name: language, exact: true }).click()
     if (language === 'العربية') {
+      await expect(page).toHaveTitle('وارتق · دورة تلاوة القرآن')
       await expect(
         page.getByRole('heading', { name: 'تلاوة بعناية، ونمو مع كل آية.' }),
       ).toBeVisible()
@@ -79,6 +81,7 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
   await expect(page).toHaveURL(/page=app/)
   await expect(page.locator('.workspace')).toBeVisible()
+  await expect(page).toHaveTitle('Wartaq · Halaqa notebook')
   await expect(page.getByRole('group', { name: 'Language / اللغة' })).toHaveCount(1)
   await page.goBack()
   await expect(page.locator('.wartaq-home')).toBeVisible()
