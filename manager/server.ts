@@ -2,11 +2,13 @@ import { mkdir, rename } from 'node:fs/promises'
 import { resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
-import { apiIdSchema, createAccessLink } from '../shared/access'
+import { apiIdSchema, createAccessLink, endpointSchema } from '../shared/access'
 import {
   globalCredentialsSchema,
   globalRequest,
   profileLink,
+  readRoster,
+  rosterTeachers,
   publicState,
   saveProfileSchema,
   spreadsheetSchema,
@@ -111,31 +113,70 @@ const server = Bun.serve({
           return json({ message: 'Management credentials cleared' })
         case '/api/list': {
           if (!credentials) throw new Error('Load management credentials first')
-          return json(await globalRequest(credentials, 'list'))
+          const result = z
+            .array(z.object({ id: z.union([z.string(), z.number()]) }))
+            .parse(await globalRequest(credentials, 'list'))
+          return json(result.map(({ id }) => ({ id })))
         }
         case '/api/create': {
           if (!credentials) throw new Error('Load management credentials first')
           const { spreadsheetUrl } = z.object({ spreadsheetUrl: spreadsheetSchema }).parse(input)
-          return json(await globalRequest(credentials, 'create', spreadsheetUrl))
+          await globalRequest(credentials, 'create', spreadsheetUrl)
+          return json({ message: 'Endpoint created. Find its ID in the SheetDB dashboard.' })
         }
         case '/api/profile': {
           const profile = saveProfileSchema.parse(input)
           const existing = state.profiles.find((item) => item.username === profile.username)
+          if (
+            existing &&
+            !existing.revoked &&
+            existing.version === 2 &&
+            profile.version === 2 &&
+            existing.teacherId !== profile.teacherId
+          )
+            throw new Error('This endpoint belongs to another active user with the same name.')
           if (existing?.revokePending)
             throw new Error('Resolve the pending revocation before replacing access.')
-          if (existing && !existing.revoked && existing.apiId !== profile.apiId)
+          if (
+            existing &&
+            !existing.revoked &&
+            (existing.apiId !== profile.apiId ||
+              (existing.version === 2 &&
+                (profile.version !== 2 || existing.roster.apiId !== profile.roster.apiId)))
+          )
             throw new Error(
               'Revoke the old endpoint first, then save its replacement. This keeps old access from being forgotten.',
             )
-          if (
-            state.profiles.some(
-              (item) =>
-                item.apiId === profile.apiId && item.username !== profile.username && !item.revoked,
+          for (const item of state.profiles) {
+            if (item.username === profile.username || item.revoked) continue
+            const shared =
+              item.apiId === profile.apiId ||
+              (item.version === 2 &&
+                (item.roster.apiId === profile.apiId ||
+                  (profile.version === 2 && item.roster.apiId === profile.roster.apiId))) ||
+              (profile.version === 2 && item.apiId === profile.roster.apiId)
+            if (item.version === 2 && profile.version === 2 && item.teacherId === profile.teacherId)
+              throw new Error(
+                'This endpoint belongs to another active user with the same teacher assignment.',
+              )
+            if (!shared) continue
+            if (
+              item.version !== 2 ||
+              profile.version !== 2 ||
+              item.teacherId === profile.teacherId ||
+              item.apiId !== profile.apiId ||
+              item.token !== profile.token ||
+              item.sheet !== profile.sheet ||
+              item.roster.apiId !== profile.roster.apiId ||
+              item.roster.token !== profile.roster.token ||
+              item.roster.sheet !== profile.roster.sheet
             )
-          )
-            throw new Error(
-              'This endpoint belongs to another active user. Use a separate endpoint for individual revocation.',
-            )
+              throw new Error(
+                'This endpoint belongs to another active user with incompatible access or teacher assignment.',
+              )
+          }
+          if (profile.version === 2 && profile.apiId === profile.roster.apiId)
+            throw new Error('Events and Roster must use separate endpoints.')
           await verifyProfile(profile)
           await persist({
             ...state,
@@ -152,8 +193,27 @@ const server = Bun.serve({
           })
           return json({ message: 'Authenticated read and anonymous denial verified. User saved.' })
         }
-        case '/api/link':
-          return json({ link: profileLink(state, usernameSchema.parse(input).username) })
+        case '/api/teachers': {
+          const endpoint = endpointSchema.parse(input)
+          return json({ teachers: await rosterTeachers(endpoint) })
+        }
+        case '/api/students': {
+          const { username } = usernameSchema.parse(input)
+          const profile = state.profiles.find(
+            (item) => item.username === username && !item.revoked && !item.revokePending,
+          )
+          if (!profile || profile.version !== 2) throw new Error('Active profile not found')
+          const students = (await readRoster(profile.roster)).filter(
+            (student) => student.active && student.teacherId === profile.teacherId,
+          )
+          return json({ students: students.map(({ studentId, name }) => ({ studentId, name })) })
+        }
+        case '/api/link': {
+          const { username, studentId } = usernameSchema
+            .extend({ studentId: z.uuid().optional() })
+            .parse(input)
+          return json({ link: await profileLink(state, username, studentId) })
+        }
         case '/api/revoke': {
           const { username, confirmApiId, manual } = usernameSchema
             .extend({ confirmApiId: apiIdSchema, manual: z.boolean() })
@@ -161,6 +221,19 @@ const server = Bun.serve({
           const profile = state.profiles.find((item) => item.username === username && !item.revoked)
           if (!profile || profile.apiId !== confirmApiId)
             throw new Error('The endpoint ID does not match the selected active user')
+          const endpointIds =
+            profile.version === 2 ? [profile.apiId, profile.roster.apiId] : [profile.apiId]
+          const affected = state.profiles.filter(
+            (item) =>
+              item.username !== username &&
+              !item.revoked &&
+              (endpointIds.includes(item.apiId) ||
+                (item.version === 2 && endpointIds.includes(item.roster.apiId))),
+          )
+          if (affected.length)
+            throw new Error(
+              `Shared endpoint also affects: ${affected.map((item) => item.username).join(', ')}. Individual revocation is unavailable.`,
+            )
           if (!manual && !credentials)
             throw new Error(
               'Load management credentials, or delete the endpoint in SheetDB and choose manual confirmation',
@@ -225,7 +298,7 @@ const server = Bun.serve({
         {
           error:
             error instanceof Error &&
-            /^(Active profile|The endpoint ID|Revoke the old|This endpoint belongs|Resolve the pending|Load management|Endpoint deletion|Authenticated read failed|Missing Events headers|This endpoint did not|SheetDB management)/.test(
+            /^(Active profile|The endpoint ID|Revoke the old|This endpoint belongs|Resolve the pending|Load management|Endpoint deletion|Authenticated read failed|Missing Events headers|This endpoint did not|SheetDB management|Shared endpoint|Roster does not|Roster has|Student is not|Student links|Events and Roster|Missing Roster)/.test(
               error.message,
             )
               ? error.message

@@ -1,6 +1,8 @@
-﻿# light-attendance-n-tagging-micro-service
+# light-attendance-n-tagging-micro-service
 
-An account-independent attendance and tagged-note notebook for five trusted teachers. The teacher app is static React/TypeScript on GitHub Pages; the owner access manager runs locally with Bun. Each private magic link supplies its teacher name, SheetDB endpoint, bearer and tab. No account or credential is built into the deployed site.
+An account-independent attendance and tagged-note notebook for trusted teachers. The teacher app is static React/TypeScript on GitHub Pages; the owner access manager runs locally with Bun. Each private magic link supplies its teacher name, SheetDB endpoint, bearer and tab. No account or credential is built into the deployed site.
+
+The current [assigned-student workflow](docs/assigned-roster.md) uses a separate read-only roster and append-only records. Teachers see and work with only their assigned students in the app. The owner copies students with a teacher assignment from the source inventory; the old/former flag is ignored. Shared raw API capabilities remain broader, as explicitly accepted by the owner. Version-two links carry both endpoint credentials; student entry links are teacher navigation, not student accounts.
 
 [Open the stable notebook](https://nasooholabi.github.io/light-attendance-n-tagging-micro-service/) · [Public source](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service)
 

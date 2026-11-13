@@ -8,12 +8,19 @@ import {
   type LedgerEvent,
   type Payload,
 } from '../shared/ledger'
-import { appendEvents, readEvents } from './sheetdb'
+import { appendEvents, readEvents, readRoster } from './sheetdb'
+import { assignedEvents, assignedStudents, validateAssignedPayloads } from '../shared/roster'
+import type { Student } from '../shared/ledger'
 import { demoEvents } from './demo'
 
-export function useLedger(access: Access | null, demo: boolean) {
-  const key = access ? `halaqa-pending-v1:${access.apiId}:${access.sheet}:${access.username}` : ''
+export function useLedger(access: Access | null, demo: boolean, assignedDemo = false) {
+  const key = access
+    ? `halaqa-pending-v1:${access.apiId}:${access.sheet}:${access.username}${access.version === 2 ? `:${access.teacherId}:${access.roster.apiId}:${access.roster.sheet}` : ''}`
+    : ''
   const [events, setEvents] = useState<LedgerEvent[]>(() => (demo ? demoEvents() : []))
+  const [roster, setRoster] = useState<Student[]>(() =>
+    assignedDemo ? projectEvents(events).students.slice(0, 1) : [],
+  )
   const [pending, setPending] = useState<LedgerEvent[]>([])
   const [storageBlocked, setStorageBlocked] = useState(() =>
     access && !navigator.locks
@@ -47,10 +54,14 @@ export function useLedger(access: Access | null, demo: boolean) {
       )
     }
     let cancelled = false
-    readEvents(access)
-      .then((result) => {
+    Promise.all([
+      readEvents(access),
+      access.version === 2 ? readRoster(access.roster) : Promise.resolve([]),
+    ])
+      .then(([result, rows]) => {
         if (!cancelled) {
           setEvents(result.events)
+          if (access.version === 2) setRoster(assignedStudents(rows, access.teacherId))
           setInvalid(result.invalid)
           setLoaded(true)
         }
@@ -68,7 +79,11 @@ export function useLedger(access: Access | null, demo: boolean) {
     locked.current = true
     setBusy(true)
     try {
-      const result = await readEvents(access)
+      const [result, rows] = await Promise.all([
+        readEvents(access),
+        access.version === 2 ? readRoster(access.roster) : Promise.resolve([]),
+      ])
+      if (access.version === 2) setRoster(assignedStudents(rows, access.teacherId))
       setEvents(result.events)
       setInvalid(result.invalid)
       setLoaded(true)
@@ -118,7 +133,19 @@ export function useLedger(access: Access | null, demo: boolean) {
             throw new Error(reason)
           }
           setPending(batch)
-          const current = await readEvents(access)
+          const [current, rows] = await Promise.all([
+            readEvents(access),
+            access.version === 2 ? readRoster(access.roster) : Promise.resolve([]),
+          ])
+          if (access.version === 2) {
+            const currentRoster = assignedStudents(rows, access.teacherId)
+            setRoster(currentRoster)
+            validateAssignedPayloads(
+              batch.map((event) => event.payload),
+              currentRoster,
+              current.events,
+            )
+          }
           if (
             projectEvents([...current.events, ...batch]).conflicts >
             projectEvents(current.events).conflicts
@@ -136,8 +163,15 @@ export function useLedger(access: Access | null, demo: boolean) {
           return true
         })
         if (!saved) return false
-      } else if (demo) setEvents((previous) => [...previous, ...batch])
-      else throw new Error('Open your access link first.')
+      } else if (demo) {
+        if (assignedDemo)
+          validateAssignedPayloads(
+            batch.map((event) => event.payload),
+            roster,
+            events,
+          )
+        setEvents((previous) => [...previous, ...batch])
+      } else throw new Error('Open your access link first.')
       setPending([])
       setMessage(
         `${batch.length} record${batch.length === 1 ? '' : 's'} saved${demo ? ' in this demo' : ''}.`,
@@ -196,7 +230,8 @@ export function useLedger(access: Access | null, demo: boolean) {
   }
 
   return {
-    events,
+    events: access?.version === 2 || assignedDemo ? assignedEvents(events, roster) : events,
+    roster,
     pending,
     storageBlocked,
     loaded,

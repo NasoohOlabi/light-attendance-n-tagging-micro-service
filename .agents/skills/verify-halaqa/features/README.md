@@ -2,6 +2,8 @@
 
 Every user entry point below needs proof when affected. The runnable harness is `e2e/notebook.spec.ts` plus `tests/manager.test.ts`; consult the skill for launch/isolation/evidence.
 
+Current assigned-teacher workflow: [assigned students and links](assigned.md), driven by `e2e/assigned.spec.ts`. The editable roster/general-note entries below describe legacy/demo mode; assigned mode keeps the roster read-only and requires student-specific records.
+
 | Feature                                   | Entry points and proof                                          |
 | ----------------------------------------- | --------------------------------------------------------------- |
 | [Attendance and summary](attendance.md)   | Individual status, mark displayed group, date, summary bounds   |

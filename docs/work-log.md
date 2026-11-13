@@ -89,3 +89,15 @@
 **Fix:** Keep strict pinning enabled. Replace that composite with the same native GNU tar layout and an explicitly SHA-pinned upload-artifact action named github-pages. Add built-file Gitleaks checks to all release/build workflows and local verify:release, complementing history scans and structural artifact checks. This is a bounded repository-tooling fix by the orchestrator, not a teacher feature. Use a protected-branch PR; do not bypass protection or weaken the security setting.
 
 **Verification:** Local release gate and native tar/content check run before committing; GitHub PR checks and post-merge Pages deployment are observed before final release. No secret, credential, account or data path changed.
+
+## 2026-11-13 15:23 — recovered assigned-roster baseline, Asia/Damascus (UTC+03:00)
+
+**Request/reason:** User authorized preserving the already staged assigned-roster work as a separate baseline before migrating this app to Neon Postgres and managed authentication.
+
+**Starting state/provenance:** `feat/assigned-roster-candidate` at `ad4963a`, with 25 staged files and no unstaged changes. These changes came from another task; this task does not claim authorship or complete design review. Preserve the historical prototype and the staged implementation without rewriting history or creating a worktree.
+
+**Recovered changes:** Assignment-scoped teacher working views, separate canonical read-only roster capability, assigned-link manager workflow, schemas, synthetic tests, verification map and behavior/security documentation. Included only after the user's explicit baseline authorization.
+
+**Verification:** `bun run verify` passed: 24 tests, 81 assertions, lint, strict type checks, production build and 10-file deployment boundary. Staged whitespace check passed; commit hooks run normally. No new live SheetDB verification is claimed.
+
+**Limits/next work:** WIP migration baseline, not a Neon implementation or release. Neon CLI 9.4.0 installed successfully. Initial PowerShell service-list argument required quoting; the corrected initialization installed agent guidance but failed on an expired stored OAuth grant. A fresh browser login is pending. No account service deployment, data migration, production publication or push has occurred.

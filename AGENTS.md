@@ -2,7 +2,9 @@
 
 Implementation and public publication were authorized on 2026-11-13. Preserve historical prototype `2d8fbe5`. Current direction and task status: `docs/implementation-plan.md`; acceptance: `docs/specification.md`. Provider feasibility constraints in `docs/feasibility.md` and `docs/sheetdb-research.md` still apply. Local and synthetic tests never prove live provider behavior.
 
-Independent attendance and tagged-note app for five trusted teachers. Static React/TypeScript + Vite frontend; direct SheetDB access. Local Bun access manager is never deployed. See `docs/setup.md` for account setup, deployment, permissions and rotation; `docs/architecture.md` before changing access links, event semantics or retries.
+Independent attendance and tagged-note app for trusted teachers. Static React/TypeScript + Vite frontend; direct SheetDB access. Local Bun access manager is never deployed. See `docs/setup.md` for account setup, deployment, permissions and rotation; `docs/architecture.md` before changing access links, event semantics or retries.
+
+Current teacher use case: `docs/assigned-roster.md`. Eligibility is a nonblank teacher assignment, ignoring the unmaintained old/former source flag. Version-two links use a separate GET-only canonical roster and append-only Events; every teacher working view is assignment-scoped. The user accepts broader raw API capabilities, so do not claim provider-enforced row authorization. Keep real roster data and links outside Git.
 
 For agent-driven local profile import, link generation or requested revocation, read `.agents/skills/manage-halaqa-access/SKILL.md`. It uses the existing loopback API and keeps capabilities in private files rather than tool output.
 

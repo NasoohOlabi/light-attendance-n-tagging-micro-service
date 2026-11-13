@@ -1,8 +1,14 @@
-﻿# Architecture and decisions
+# Architecture and decisions
 
 This describes the version-one implementation. Development/publication was authorized on 2026-11-13; historical prototype `2d8fbe5` remains preserved. [Feasibility](feasibility.md), [specification](specification.md) and [implementation plan](implementation-plan.md) identify the remaining provider questions and prototype gaps, and take precedence where assumptions differ.
 
-## Scope and inheritance
+## Current assigned-teacher flow
+
+See [assigned-roster.md](assigned-roster.md) for the current contract. A version-two link contains a teacher UUID, the Read/Create Events capability and a separate Read-only Roster capability. The source inventory is never mutated; its assigned students are copied into a normalized roster with stable student/teacher IDs. The current published roster is authoritative, not ledger student snapshots. Reads combine roster and ledger; the app filters records before projection, blocks student/general-note writes in assigned mode, revalidates assignment before a pending retry and remounts on replacement fragments.
+
+Teacher working views do not expose other assignments; raw shared provider credentials remain broader by explicit agreement. These application checks are not signed identity or row authorization. Shared endpoints cannot support independent provider revocation, so the manager refuses a single-profile revoke that affects others. The details below also describe retained version-one/demo behavior; editable roster/general notes apply only to that compatibility path.
+
+## Legacy scope and inheritance
 
 The user's revised scope is attendance and tag-based notes for five trusted users, shared stats and roster reads, static GitHub hosting, no hosted login/backend, and a local access manager. The source working tree was preserved in commit `f6fee1d` with permission, including pre-existing changes whose authorship was not established. The new app retains the React/TypeScript/Vite/Bun stack, Tailwind styling, Arabic-capable inputs and query-state convention. Google/Firebase auth, Google Sheets clients, old data schemas and page-specific screens are replaced.
 

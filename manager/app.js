@@ -1,5 +1,7 @@
 const $ = (selector) => document.querySelector(selector)
 let busy = false
+let selectedProfile = null
+let rosterTeachers = []
 function feedback(text, error = false) {
   const box = $('#feedback')
   box.hidden = false
@@ -68,6 +70,8 @@ async function load() {
     edit.textContent = profile.revoked ? 'Set replacement access' : 'Replace token'
     edit.onclick = () => {
       const form = $('#profile-form')
+      form.elements.accessType.value = String(profile.version)
+      updateAccessType()
       form.elements.username.value = profile.username
       form.elements.apiId.value = profile.apiId
       form.elements.sheet.value = profile.sheet
@@ -83,7 +87,17 @@ async function load() {
       link.textContent = 'Get link'
       link.onclick = () =>
         run(async () => {
+          hideLink()
+          selectedProfile = profile
           const result = await api('link', { username: profile.username })
+          const controls = $('#student-link-controls')
+          controls.hidden = profile.version !== 2
+          if (profile.version === 2) {
+            const { students } = await api('students', { username: profile.username })
+            const select = $('#student-id')
+            select.replaceChildren(new Option('Teacher link', ''))
+            for (const student of students) select.add(new Option(student.name, student.studentId))
+          }
           $('#link-title').textContent = `Personal link for ${profile.username}`
           $('#link-value').value = result.link
           $('#link-panel').hidden = false
@@ -121,17 +135,63 @@ form('#site-form', async (data) => {
   feedback(result.message)
   await load()
 })
-form('#profile-form', async (data, element) => {
-  const result = await api('profile', {
-    ...data,
-    version: 1,
-    permissionsConfirmed: data.permissionsConfirmed === 'on',
+function updateAccessType() {
+  const assigned = $('#access-type').value === '2'
+  $('#roster-fields').hidden = !assigned
+  $('#teacher-choice').hidden = !assigned
+  $('#username-field').hidden = assigned
+  $('#profile-form').elements.username.required = !assigned
+}
+$('#access-type').onchange = updateAccessType
+$('#load-teachers').onclick = () =>
+  run(async () => {
+    const form = $('#profile-form')
+    const { teachers } = await api('teachers', {
+      apiId: form.elements.rosterApiId.value,
+      token: form.elements.rosterToken.value,
+      sheet: form.elements.rosterSheet.value,
+    })
+    rosterTeachers = teachers
+    const select = $('#teacher-id')
+    select.replaceChildren(new Option('Select a teacher', ''))
+    for (const teacher of teachers) select.add(new Option(teacher.username, teacher.teacherId))
+    feedback('Roster checked. Select a teacher.')
   })
+form('#profile-form', async (data, element) => {
+  const assigned = data.accessType === '2'
+  const teacher = rosterTeachers.find((item) => item.teacherId === data.teacherId)
+  if (assigned && !teacher) throw new Error('Load the roster and select a teacher first.')
+  const payload = {
+    version: assigned ? 2 : 1,
+    username: assigned ? teacher.username : data.username,
+    apiId: data.apiId,
+    token: data.token,
+    sheet: data.sheet,
+    permissionsConfirmed: data.permissionsConfirmed === 'on',
+  }
+  if (assigned) {
+    payload.teacherId = teacher.teacherId
+    payload.roster = { apiId: data.rosterApiId, token: data.rosterToken, sheet: data.rosterSheet }
+  }
+  const result = await api('profile', payload)
   element.reset()
+  rosterTeachers = []
+  updateAccessType()
   hideLink()
   feedback(result.message)
   await load()
 })
+$('#get-student-link').onclick = () =>
+  run(async () => {
+    if (!selectedProfile) return
+    const studentId = $('#student-id').value
+    const result = await api('link', {
+      username: selectedProfile.username,
+      ...(studentId ? { studentId } : {}),
+    })
+    $('#link-value').value = result.link
+  })
+updateAccessType()
 form('#connect-form', async (data, element) => {
   const result = await api('connect', data)
   element.reset()

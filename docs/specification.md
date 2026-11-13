@@ -1,8 +1,12 @@
-﻿# Product and technical specification
+# Product and technical specification
 
 Status: version-one acceptance target. Implementation/publication authorized 2026-11-13. Read [feasibility](feasibility.md) and the [task list](implementation-plan.md) for implemented software versus unrun live-account gates; not every target manager requirement is complete.
 
-## Users and accepted constraints
+## Current assigned workflow
+
+The 2026-11-13 real-use-case clarification supersedes the legacy shared working view below. See [assigned-roster.md](assigned-roster.md): use only students with a teacher assignment, ignore the unmaintained old/former flag, keep the canonical roster read-only, and scope attendance/notes/summary/history to the teacher in the normal app. Version-two links carry separate Roster and Events capabilities. Broader raw API access remains an explicitly accepted trust limit; a student entry link is navigation for its teacher.
+
+## Legacy version-one users and constraints
 
 - Five trusted teachers, each with an issued username and personal reusable access link.
 - All five can read shared roster, attendance, notes and summaries; no private per-teacher records.

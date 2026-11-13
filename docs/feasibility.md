@@ -1,8 +1,12 @@
-﻿# Feasibility and recommended decision
+# Feasibility and recommended decision
 
 Status: provider feasibility reference; implementation and publication authorized on 2026-11-13. See the current task list for local completion and live-account gates. Evidence checked 2026-11-13, Asia/Damascus. The preserved prototype is `2d8fbe5`; it is not proof of live SheetDB behavior. Detailed citations and the OpenAPI audit are in [SheetDB research](sheetdb-research.md).
 
-## Recommendation
+## Current assigned-workflow choice
+
+The owner now accepts application-only teacher scoping over shared raw capabilities. The current [assigned roster](assigned-roster.md) design uses two shared, separately authenticated endpoints: Read-only canonical roster and Read/Create events in different workbooks. It does not promise individual teacher revocation or provider row authorization. The one-endpoint-per-teacher recommendation below is the earlier independently revocable variant, not a requirement to purchase multiple endpoints for this first test. Confirm actual account capacity before provisioning; no paid plan is selected.
+
+## Earlier independently revocable recommendation
 
 Proceed with the design **if reusable, manually revocable links are acceptable**. Use a dedicated spreadsheet and a separate Read + Create API endpoint for each of the five trusted teachers. Host the teacher app on GitHub Pages. Start the local manager as a credential inventory and link generator; make account-level automation optional. Use official OAuth MCP for agent data access, and give a local management adapter a Global key only when lifecycle automation is explicitly needed.
 

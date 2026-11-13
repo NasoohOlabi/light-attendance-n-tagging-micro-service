@@ -2,7 +2,20 @@
 
 Updated 2026-11-13, Asia/Damascus (UTC+03:00). The user explicitly authorized setup, implementation and public publication, replacing the earlier planning-only stop. Preserve source snapshot `f6fee1d` and prototype `2d8fbe5`. Current delivery is the account-independent software and sample notebook; live-account readiness requires separate evidence, not credentials in Git.
 
-## Direction
+## Current assigned-student delivery
+
+- [x] Select source students by nonblank teacher assignment; ignore the unmaintained old/former flag.
+- [x] Create and read back a private normalized copy with stable IDs; keep source read-only and personal data outside Git.
+- [x] Implement version-two links with separate roster/event capabilities, read-only Students and teacher-scoped views/writes.
+- [x] Validate pending retries against current assignment and replace same-page sessions safely.
+- [x] Extend local manager to verify both endpoint reads, select roster teachers, issue teacher/student links and refuse shared collateral revocation.
+- [x] Add synthetic unit, HTTP and desktop/mobile proof for teacher isolation in the app, malformed roster and same-page link switching.
+- [ ] Configure and verify actual private SheetDB Roster Read-only and Events Read/Create capabilities; no usable API endpoints or bearer values have been supplied to this run.
+- [ ] Issue actual private teacher/student entry links and perform a live append/read-back after provider setup. OAuth login alone does not supply endpoint bearers or attach missing tools to this running chat.
+
+See [assigned-roster.md](assigned-roster.md) for the authoritative current contract. Shared raw capabilities remain broader by explicit user agreement; the older five-user independently revocable rollout matrix below is an alternative and is not claimed by the new shared-endpoint mode.
+
+## Original baseline direction
 
 Serve five trusted teachers with static Pages, private self-contained links, shared attendance/notes/roster, append-only corrections and resilient pending delivery. Run the access manager only on loopback. Prefer manual-first provider credential import; account-level automation is optional. The deployed app is agnostic to the owner's SheetDB account and contains no baked-in endpoint or token. Account management keys never enter teacher links.
 

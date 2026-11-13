@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Access } from '../shared/access'
 import {
   projectEvents,
@@ -8,7 +8,7 @@ import {
   type Payload,
   type Student,
 } from '../shared/ledger'
-import { clearSession } from './session'
+import { clearSession, loadSession } from './session'
 import { setQuery, useQueryState, type Tab } from './queryState'
 import { useLedger } from './useLedger'
 
@@ -27,8 +27,19 @@ export function App({
 }: {
   initialSession: { access: Access | null; error: string }
 }) {
-  const [access, setAccess] = useState(initialSession.access)
-  const [demo, setDemo] = useState(false)
+  const [session, setSession] = useState({ ...initialSession, revision: 0 })
+  const [demo, setDemo] = useState<'legacy' | 'assigned' | null>(null)
+  const { access } = session
+  useEffect(() => {
+    function onHashChange() {
+      if (!new URLSearchParams(window.location.hash.slice(1)).has('access')) return
+      const next = loadSession()
+      setSession((previous) => ({ ...next, revision: previous.revision + 1 }))
+      setDemo(null)
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
   if (!access && !demo)
     return (
       <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center gap-6 px-6">
@@ -50,26 +61,29 @@ export function App({
             open it whenever you return.
           </p>
         </div>
-        {initialSession.error && (
+        {session.error && (
           <p role="alert" className="text-red-700">
-            {initialSession.error}
+            {session.error}
           </p>
         )}
-        <button className="secondary self-start" onClick={() => setDemo(true)}>
+        <button className="secondary self-start" onClick={() => setDemo('legacy')}>
           Explore with sample students
+        </button>
+        <button className="secondary self-start" onClick={() => setDemo('assigned')}>
+          Explore assigned teacher sample
         </button>
         <p className="muted">الحضور والملاحظات · Arabic names, notes and tags are supported.</p>
       </main>
     )
   return (
     <Notebook
-      key={access?.apiId ?? 'demo'}
+      key={session.revision}
       access={access}
       demo={demo}
       leave={() => {
         clearSession()
-        setAccess(null)
-        setDemo(false)
+        setSession((previous) => ({ access: null, error: '', revision: previous.revision + 1 }))
+        setDemo(null)
       }}
     />
   )
@@ -81,18 +95,21 @@ function Notebook({
   leave,
 }: {
   access: Access | null
-  demo: boolean
+  demo: 'legacy' | 'assigned' | null
   leave: () => void
 }) {
   const query = useQueryState()
-  const ledger = useLedger(access, demo)
-  const projected = projectEvents(ledger.events)
+  const ledger = useLedger(access, demo !== null, demo === 'assigned')
+  const assigned = access?.version === 2 || demo === 'assigned'
+  const baseProjection = projectEvents(ledger.events)
+  const projected = assigned ? { ...baseProjection, students: ledger.roster } : baseProjection
   const groups = [
     ...new Set(projected.students.map((student) => student.group).filter(Boolean)),
   ].sort()
   const students = projected.students.filter(
     (student) =>
       (query.all || student.active) &&
+      (!assigned || !query.student || student.studentId === query.student) &&
       (!query.group || student.group === query.group) &&
       student.name.toLocaleLowerCase().includes(query.q.toLocaleLowerCase()),
   )
@@ -119,8 +136,8 @@ function Notebook({
       </header>
       {demo && (
         <p className="mb-5 rounded-lg bg-amber-100 p-3 text-amber-900">
-          Sample notebook. Changes stay in memory and disappear when you leave. No SheetDB requests
-          are made.
+          {demo === 'assigned' ? 'Assigned teacher sample notebook.' : 'Sample notebook.'} Changes
+          stay in memory and disappear when you leave. No SheetDB requests are made.
         </p>
       )}
       <nav aria-label="Notebook" className="mb-6 flex flex-wrap gap-2">
@@ -129,7 +146,9 @@ function Notebook({
             key={tab.id}
             className={query.tab === tab.id ? 'primary' : 'secondary'}
             aria-current={query.tab === tab.id ? 'page' : undefined}
-            onClick={() => setQuery({ tab: tab.id, student: '', tag: '' }, true)}
+            onClick={() =>
+              setQuery({ tab: tab.id, ...(assigned ? {} : { student: '' }), tag: '' }, true)
+            }
           >
             {tab.label}
           </button>
@@ -153,14 +172,21 @@ function Notebook({
             ))}
           </select>
         </label>
-        <label className="mb-3 flex-row items-center">
-          <input
-            type="checkbox"
-            checked={query.all}
-            onChange={(event) => setQuery({ all: event.target.checked ? '1' : '' })}
-          />
-          Include inactive
-        </label>
+        {!assigned && (
+          <label className="mb-3 flex-row items-center">
+            <input
+              type="checkbox"
+              checked={query.all}
+              onChange={(event) => setQuery({ all: event.target.checked ? '1' : '' })}
+            />
+            Include inactive
+          </label>
+        )}
+        {assigned && query.student && (
+          <button className="secondary" onClick={() => setQuery({ student: '' }, true)}>
+            All my students
+          </button>
+        )}
         {!demo && (
           <button
             className="secondary"
@@ -231,12 +257,24 @@ function Notebook({
           />
         )}
         {query.tab === 'notes' && (
-          <NotesView students={students} projected={projected} save={ledger.save} />
+          <NotesView
+            students={students}
+            projected={projected}
+            save={ledger.save}
+            assigned={assigned}
+          />
         )}
-        {query.tab === 'roster' && <RosterView students={students} save={ledger.save} />}
+        {query.tab === 'roster' && (
+          <RosterView students={students} save={ledger.save} assigned={assigned} />
+        )}
         {query.tab === 'summary' && <Summary students={students} projected={projected} />}
         {query.tab === 'history' && (
-          <History projected={projected} students={students} save={ledger.save} />
+          <History
+            projected={projected}
+            students={students}
+            save={ledger.save}
+            assigned={assigned}
+          />
         )}
       </fieldset>
       <footer className="mt-8 border-t border-slate-200 py-5 text-sm text-slate-500">
@@ -357,16 +395,19 @@ function NotesView({
   students,
   projected,
   save,
+  assigned,
 }: {
   students: Student[]
   projected: Projection
   save: Save
+  assigned: boolean
 }) {
   const query = useQueryState()
   const [text, setText] = useState('')
   const [tags, setTags] = useState('')
-  const [studentId, setStudentId] = useState('')
+  const [studentId, setStudentId] = useState(query.student)
   const ids = new Set(students.map((student) => student.studentId))
+  const selectedStudentId = assigned && !ids.has(studentId) ? '' : studentId
   const notes = projected.notes.filter(
     ({ value }) =>
       (!value.studentId || ids.has(value.studentId)) &&
@@ -390,7 +431,17 @@ function NotesView({
                 .filter(Boolean),
             ),
           ]
-          if (await save([{ kind: 'note', studentId, date: query.date, tags: normalized, text }])) {
+          if (
+            await save([
+              {
+                kind: 'note',
+                studentId: selectedStudentId,
+                date: query.date,
+                tags: normalized,
+                text,
+              },
+            ])
+          ) {
             setText('')
             setTags('')
           }
@@ -399,8 +450,12 @@ function NotesView({
         <h2 className="title">Leave a note</h2>
         <label>
           Student
-          <select value={studentId} onChange={(event) => setStudentId(event.target.value)}>
-            <option value="">General note</option>
+          <select
+            required={assigned}
+            value={selectedStudentId}
+            onChange={(event) => setStudentId(event.target.value)}
+          >
+            <option value="">{assigned ? 'Choose a student' : 'General note'}</option>
             {students.map((student) => (
               <option key={student.studentId} value={student.studentId}>
                 {student.name}
@@ -442,7 +497,9 @@ function NotesView({
         <p className="muted">
           Plain text or your own structured format. Tags make it easy to find later.
         </p>
-        <button className="primary">Save note</button>
+        <button className="primary" disabled={assigned && !selectedStudentId}>
+          Save note
+        </button>
       </form>
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -506,55 +563,88 @@ function NotesView({
   )
 }
 
-function RosterView({ students, save }: { students: Student[]; save: Save }) {
+function RosterView({
+  students,
+  save,
+  assigned,
+}: {
+  students: Student[]
+  save: Save
+  assigned: boolean
+}) {
   const [name, setName] = useState('')
   const [group, setGroup] = useState('')
   return (
     <section className="panel">
       <h2 className="title mb-5">Your students</h2>
-      <form
-        className="mb-6 flex flex-wrap items-end gap-3"
-        onSubmit={async (event) => {
-          event.preventDefault()
-          if (
-            await save([
-              { kind: 'student', studentId: crypto.randomUUID(), name, group, active: true },
-            ])
-          )
-            setName('')
-        }}
-      >
-        <label className="grow">
-          Student name
-          <input
-            dir="auto"
-            required
-            maxLength={200}
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-        <label>
-          Group
-          <input
-            dir="auto"
-            maxLength={100}
-            value={group}
-            onChange={(event) => setGroup(event.target.value)}
-          />
-        </label>
-        <button className="primary">Add student</button>
-      </form>
+      {!assigned && (
+        <form
+          className="mb-6 flex flex-wrap items-end gap-3"
+          onSubmit={async (event) => {
+            event.preventDefault()
+            if (
+              await save([
+                { kind: 'student', studentId: crypto.randomUUID(), name, group, active: true },
+              ])
+            )
+              setName('')
+          }}
+        >
+          <label className="grow">
+            Student name
+            <input
+              dir="auto"
+              required
+              maxLength={200}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <label>
+            Group
+            <input
+              dir="auto"
+              maxLength={100}
+              value={group}
+              onChange={(event) => setGroup(event.target.value)}
+            />
+          </label>
+          <button className="primary">Add student</button>
+        </form>
+      )}
       <div className="divide-y divide-slate-100">
-        {students.map((student) => (
-          <StudentEditor
-            key={`${student.studentId}:${student.name}:${student.group}:${student.active}`}
-            student={student}
-            save={save}
-          />
-        ))}
+        {students.map((student) =>
+          assigned ? (
+            <div key={student.studentId} className="flex items-center justify-between py-4">
+              <span>
+                {student.name}
+                {student.group ? ` ? ${student.group}` : ''}
+              </span>
+              <button
+                className="secondary"
+                onClick={() => setQuery({ student: student.studentId, tab: 'attendance' }, true)}
+              >
+                Open student
+              </button>
+            </div>
+          ) : (
+            <StudentEditor
+              key={`${student.studentId}:${student.name}:${student.group}:${student.active}`}
+              student={student}
+              save={save}
+            />
+          ),
+        )}
       </div>
-      {!students.length && <Empty text="No students yet. Add a name and optional group above." />}
+      {!students.length && (
+        <Empty
+          text={
+            assigned
+              ? 'No assigned students match this view.'
+              : 'No students yet. Add a name and optional group above.'
+          }
+        />
+      )}
     </section>
   )
 }
@@ -709,10 +799,12 @@ function History({
   projected,
   students,
   save,
+  assigned,
 }: {
   projected: Projection
   students: Student[]
   save: Save
+  assigned: boolean
 }) {
   const [target, setTarget] = useState('')
   const [reason, setReason] = useState('')
@@ -720,6 +812,17 @@ function History({
   const ids = new Set(students.map((student) => student.studentId))
   const visible = projected.events.filter((event) => {
     const payload = event.payload
+    if (assigned && query.student) {
+      if (payload.kind === 'reversal') {
+        const target = projected.events.find((item) => item.id === payload.targetId)
+        return (
+          !!target &&
+          target.payload.kind !== 'reversal' &&
+          target.payload.studentId === query.student
+        )
+      }
+      return payload.studentId === query.student
+    }
     return (
       (!query.q && !query.group) ||
       payload.kind === 'reversal' ||

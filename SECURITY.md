@@ -8,7 +8,13 @@ The deployed teacher app has no embedded account, roster, API ID, bearer or mana
 
 The owner runs `bun run manager` on `http://127.0.0.1:4174/`, supplies the frontend URL and each provider endpoint/bearer in input fields, then generates private links. Optional SheetDB App ID/Global key are process-local account tools. They are not required for manual credential import or normal teacher use and never enter `dist`. `.local/manager.json` holds plaintext teacher capabilities: protect it with OS permissions/device encryption and keep backups outside Git. No production credential is needed for code development, demo or synthetic HTTP tests.
 
-## Trust boundary
+## Current assigned-teacher boundary
+
+For version-two links, the app shows only the current teacher's active assigned students and related records across every working view. Roster data is fetched with GET through a separate Read-only endpoint/workbook; events append through the Events capability. Incoming ledger student snapshots cannot mutate the canonical roster, pending retries check current assignment, and replacement links clear the old working session. Teacher/student data and source/copy IDs stay in private Drive/local files.
+
+The owner explicitly accepts optimistic application restrictions: shared bearer capabilities can read broader records and submit direct requests. Do not describe these filters as server authorization or confidentiality between untrusted teachers. Student entry links carry the teacher capability and are not student accounts. Individual provider revocation is unavailable on shared endpoints; the manager refuses collateral revocation, and a sole Events revoke does not also revoke its Roster credential. See [assigned workflow](docs/assigned-roster.md). The shared editable behavior below is retained only for legacy/demo mode.
+
+## Legacy trust boundary
 
 Five trusted teachers share the intended notebook data. Client usernames, dates and IDs are assertions; there is no provider-enforced actor identity or per-row ownership. Dedicated SheetDB endpoints must enforce authenticated Read/Create access; browser code cannot establish those permissions. Use a dedicated workbook without unrelated tabs. Validate provider CORS, authentication, denied mutation/import routes, cross-endpoint freshness and revocation on disposable data before real use. Hard expiry, automatic bearer provisioning and rotation are not promised. The local manager's manual 404/410 observation is not proof that writes are revoked; verify deletion in the provider. Pending revocations block new link issuance across restarts.
 
