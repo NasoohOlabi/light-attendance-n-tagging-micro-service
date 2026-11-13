@@ -1,4 +1,4 @@
-﻿# Implementation plan and task list
+# Implementation plan and task list
 
 Updated 2026-11-13, Asia/Damascus (UTC+03:00). The user explicitly authorized setup, implementation and public publication, replacing the earlier planning-only stop. Preserve source snapshot `f6fee1d` and prototype `2d8fbe5`. Current delivery is the account-independent software and sample notebook; live-account readiness requires separate evidence, not credentials in Git.
 
@@ -18,9 +18,9 @@ Serve five trusted teachers with static Pages, private self-contained links, sha
 - [x] Attendance change/correction guidance, date-filtered tagged notes, roster, summaries, history and sanitized view URLs.
 - [x] Manager: loopback/CSRF boundary, isolated test state, durable save-before-remote revocation intent, blocked uncertain links and retired endpoint metadata.
 - [x] Verification skill and feature map with executable real browser proof and retained synthetic evidence.
-- [ ] Publication acceptance: public GitHub repository, protections, stable deployment HTTP/UI check and release tag. Record actual remote/build result in the work log.
+- [x] Publication acceptance: public GitHub repository, protections, stable deployment HTTP/UI check and release tag. Record actual remote/build result in the work log.
 
-Completed checkboxes describe implemented and locally tested software. Publication status is finalized in the work log after remote checks; account tasks below remain open until observed.
+Completed checkboxes describe implemented and locally tested software. Publication passed GitHub validation/nightly/Pages workflows and deployed desktop/mobile sample checks; see the work log. Account tasks below remain open until observed.
 
 ## Live SheetDB acceptance — blocked on private account access
 
