@@ -1,81 +1,50 @@
-# Implementation plan and validation gates
+﻿# Implementation plan and task list
 
-Status: future work only. The user explicitly stopped implementation and asked to preserve the base. No stage below is authorization to execute it now. Current Git contains source snapshot `f6fee1d` and WIP prototype `2d8fbe5`.
+Updated 2026-11-13, Asia/Damascus (UTC+03:00). The user explicitly authorized setup, implementation and public publication, replacing the earlier planning-only stop. Preserve source snapshot `f6fee1d` and prototype `2d8fbe5`. Current delivery is the account-independent software and sample notebook; live-account readiness requires separate evidence, not credentials in Git.
 
-## Stage 0 — settle provider feasibility
+## Direction
 
-Use the public evidence in [research](sheetdb-research.md), then separately authorized account inspection/disposable tests. Resolve actual bearer enablement/rotation controls, absence or presence of native expiry, Global-key scopes and additional auth factor, five endpoints for one spreadsheet, plan limits and agent OAuth scope.
+Serve five trusted teachers with static Pages, private self-contained links, shared attendance/notes/roster, append-only corrections and resilient pending delivery. Run the access manager only on loopback. Prefer manual-first provider credential import; account-level automation is optional. The deployed app is agnostic to the owner's SheetDB account and contains no baked-in endpoint or token. Account management keys never enter teacher links.
 
-**Exit:** Record observed settings, sanitized response shapes and provider answers. Choose reusable manual links or a supported stronger alternative. If hard expiry or fully automatic protected credential issuance is required but unsupported, stop and revise the design rather than emulate security in JavaScript. No production data is involved.
+## Delivery tasks
 
-## Stage 1 — validate the minimum data path
+- [x] Audit plans/source/history and replace contradictory planning-only instructions with current authorization.
+- [x] Canonical `AGENTS.md`, thin host pointers, bounded Terra feature delegation, atomic commit/PR etiquette and dated work log.
+- [x] Bun hooks: staged formatting/secret checks/typecheck/tests/lint; pre-push verification and full-history scan.
+- [x] CI: frozen install, dependency audit, pinned actions, formatting, lint, typechecks, tests, artifact boundary and desktop/mobile Playwright paths.
+- [x] Stable main-only Pages workflow; nightly branch artifacts; documented promotion and rollback.
+- [x] Teacher event schema version 1 writes with legacy compatibility; unknown versions isolated; conflicting duplicate IDs flagged.
+- [x] Persistent pending batches, stable IDs, reconciliation, fail-closed storage errors and cross-tab Web Locks.
+- [x] Attendance change/correction guidance, date-filtered tagged notes, roster, summaries, history and sanitized view URLs.
+- [x] Manager: loopback/CSRF boundary, isolated test state, durable save-before-remote revocation intent, blocked uncertain links and retired endpoint metadata.
+- [x] Verification skill and feature map with executable real browser proof and retained synthetic evidence.
+- [ ] Publication acceptance: public GitHub repository, protections, stable deployment HTTP/UI check and release tag. Record actual remote/build result in the work log.
 
-On a disposable spreadsheet, configure two Read/Create endpoints and distinct bearer credentials. Establish correct headers, browser CORS and a controlled append/read/revoke experiment. Check all permitted Create surfaces, including JSON import; test denied mutation routes only on disposable data. Confirm one endpoint can be removed without affecting the other or deleting sheet data.
+Completed checkboxes describe implemented and locally tested software. Publication status is finalized in the work log after remote checks; account tasks below remain open until observed.
 
-**Exit:** Capture the validation matrix below, with failures and unknowns. Confirm a fresh client using the revoked credential cannot append. A successful GET denial alone is not proof that Create is disabled. Prefer confirmed endpoint deletion when proving revocation. Never run destructive-permission probes on production.
+## Live SheetDB acceptance — blocked on private account access
 
-## Stage 2 — review and reuse the stopped prototype
+No credentials are required for local development or sample publication. Before distributing real links, an authorized agent uses account access outside source/history and runs these on a dedicated disposable workbook. No paid subscription or production migration has been selected.
 
-Inspect the committed base against [the specification](specification.md), preserving existing work. Do not assume passing unit tests establish account behavior. Resolve the following known gaps in coherent units:
+| Task                                       | Proof required                                                                                                                       | Current state |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| A1: endpoint capacity and notebook binding | Two independently authenticated APIs point to the same workbook; capacity for five confirmed                                         | Unrun         |
+| A2: permissions and import                 | Authenticated Read/Create work; anonymous requests and forbidden update/delete/tab/import overwrite routes fail; sentinels preserved | Unrun         |
+| A3: CORS and freshness                     | Final Pages origin reads/appends; endpoint B sees endpoint A writes with fresh reads                                                 | Unrun         |
+| A4: independent revocation                 | Provider deletion succeeds; old bearer fails reads and appends while another endpoint still works                                    | Unrun         |
+| A5: provider RAW/timestamps                | Arabic/formula strings remain data; actual timestamp substitution observed                                                           | Unrun         |
+| A6: account lifecycle                      | Supported bearer setup/replacement, plan limits and optional Global auth factor inspected                                            | Unrun         |
+| A7: recovery                               | Export independent sheet snapshot; reconcile old pending IDs before endpoint replacement                                             | Unrun         |
 
-- Global keys with optional bearer/Basic second-factor authentication are not handled in the prototype manager.
-- New endpoint authentication enablement and bearer retrieval are manual and not verified against an account.
-- Browser workflow/mobile/accessibility checks were not completed; preview used localhost while manager accepts only 127.0.0.1.
-- Event schema versioning and conflicting duplicate-ID detection are not implemented.
-- Pending-storage failures, partial writes, corrupted saved batches, rotated endpoint reconciliation and cross-tab session replacement need explicit tests.
-- The manager's local state update and remote-operation failure/reconciliation behavior need review; do not conflate local state and actual provider access.
-- Attendance 'Not marked' selection for a previously marked student needs an unambiguous correction flow.
-- Direct-call validation is a trust limitation; permissions must be proven in SheetDB, including import/cross-tab surfaces.
-- Documentation still contains prototype operation guidance; reconcile it only against confirmed provider capabilities.
+Manual 404/410 observations are advisory, not proof of Create denial. A generic read denial never establishes revocation. Client dates/usernames are not signed identity. No expiry guarantee, exactly-once physical write or per-teacher data privacy is claimed.
 
-**Exit:** A short gap report with retained/replaced components and concrete failing examples where relevant. Unit tests must target actual semantics rather than mirror implementation.
+## Bounded follow-up tasks
 
-## Stage 3 — finish the teacher application
+- [ ] M6/M7: optional Global bearer/Basic second factor after real account requirements are known. Current local form supports App ID/key only; use manual import when a second factor is required.
+- [ ] M1: prove all imported endpoints share the intended workbook. Current imports validate headers/auth but cannot establish notebook identity; do not claim stronger binding.
+- [ ] Manager lifecycle: reconcile provider deletion after process/disk failure using live account evidence; local restart path is covered synthetically.
+- [ ] Pending recovery: guided sanitized export/import for changed endpoint IDs. Current version deliberately blocks cross-link pending work and requires reconciling the old link.
+- [ ] Measure ledger size/quota before pagination or archival. Keep physical ordering semantics explicit.
+- [ ] Full Arabic translation and wider browser/device coverage if requested; Arabic content and mobile Chromium paths already work.
 
-Implement T1–T12 and versioned event parsing/projection. Finish attendance, tagged-note and roster flows, query-state navigation, recovery from uncertain saves, corrected history and responsive Arabic-capable inputs. Isolate credentials to session handling; keep generated view URLs safe to share.
-
-**Exit:** Type checks, lint and focused tests pass. Drive actual rendered attendance save, note save/filter, roster change, correction, summary and reload/retry paths. Prove only GET/POST append traffic from the app, no secrets in assets/console/referrers, and correct revocation behavior with disposable endpoints.
-
-## Stage 4 — finish the local manager, manual-first
-
-Implement M1–M6 and M8–M10. The owner imports credentials created through confirmed dashboard controls; manager validates and issues links. Treat rotation as 'replace provider credential' only when actual provider support is known. Otherwise replace endpoints using the documented lifecycle. Retain retired-access metadata without presenting stale keys as active.
-
-**Exit:** User can issue and revoke two independent test users, restart/recover manager state and distinguish uncertain operations. Local-only routes reject cross-origin/incorrect-host mutations. Teacher build contains no manager code or credentials. Audit and backup behavior is documented.
-
-## Stage 5 — optional Global/agent automation
-
-Only if the paid tier and automation benefit are accepted: add supported list/create/delete operations and the narrow local agent interface in [agent access](agent-access.md). Include optional additional management authentication and endpoint registry restrictions. Keep bearer setup manual unless a provider-supported automation mechanism has been established. Official MCP remains the preferred interface for authorized data tasks.
-
-**Exit:** Global keys remain outside prompts/frontend/log URLs; creation passes explicit read/create permissions; endpoint deletion is targeted and observed; unsupported refresh/expiry cannot be invoked. Connection/key revocation behavior is tested independently of teacher endpoint revocation.
-
-## Stage 6 — provision and publish only when requested
-
-Choose a new GitHub remote; confirm source history and ignored files contain no secrets. Configure Pages and run the existing workflow after reviewing it. Configure final SheetDB CORS origins and issue actual teacher links. If five API slots are occupied, document replacement downtime or obtain extra capacity. Provide an owner method for recording data under their own name without impersonating a teacher.
-
-**Exit:** Deployed repository-subpath app works on two devices; second session sees a first-session save; correction preserves originals; one teacher endpoint can be revoked independently; quota and backup procedures are recorded. No existing production migration without separate instruction.
-
-## Proposed validation matrix
-
-| Test | Evidence to capture | Fail condition |
-| --- | --- | --- |
-| Separate endpoint credentials | Two distinct endpoints against same disposable sheet; both auth/read/append | Credentials cannot be separated or account capacity differs |
-| Provider permissions | Before/after disposable sheet snapshot plus denied update/delete/tab operations | Any supposedly denied operation changes data |
-| Append/import surface | Existing sentinel rows unchanged after allowed append/import experiments | Create permission can overwrite/delete existing content |
-| Authentication requirement | Unauthenticated requests denied; valid bearer accepted | Public access remains possible |
-| Protected provisioning | Actual create response and auth defaults, dashboard controls | Link issued before auth is actually enabled |
-| Individual revocation | Old bearer fails reads and append; other endpoint continues | Shared credential or unexpected persistence |
-| Expiry | Provider-defined TTL plus actual late direct-call rejection, if supported | Only frontend refuses while REST still accepts |
-| Freshness | Endpoint A append followed by B cached/fresh reads | Stale reads conceal acknowledged changes without recovery |
-| Concurrent attendance | Controlled submissions with reversed device clocks | Projection depends on wall clocks or loses audit rows |
-| Uncertain delivery | Drop response after accepted append, then retry same IDs | Duplicate effective records or silent loss |
-| Partial batch | Simulated partial acknowledgement followed by reconciliation | Entire batch recreated with new IDs |
-| RAW and timestamp fields | Formula strings, Arabic, DATETIME/TIMESTAMP literals and requested sentinels | Unintended formulas or unsupported timestamp assumptions |
-| Key lifecycle | Global-key scope, second factor and revocation inspected | Agent gets broader undocumented powers or secrets leak |
-| Manager recovery | Restart, local write failure after remote success, stale profiles | UI claims an operation's opposite state |
-| Static artifact | Inspect dist and deployed URL/network trace | Credentials, manager code, broken relative asset paths |
-
-Any live writes require a later authorized test. The matrix is a specification, not a record of tests already run.
-
-## Git and documentation discipline
-
-Keep the initial source snapshot and WIP history. Current work is documentation-only and must not modify the prototype. For future implementation, commit each verified unit with its reason/checks; update `docs/work-log.md` with date/timezone and limits. Keep no account secrets or generated links in commits. Before handing back, inspect staged diff, run `git diff --cached --check`, verify commit and status, report push state. The current repository has no remote and has not been pushed.
+Use [CONTRIBUTING](../CONTRIBUTING.md) for implementation/PR steps and the [verification feature map](../.agents/skills/verify-halaqa/features/README.md) for acceptance proof. Maintain this one task list rather than parallel model-specific plans. Update statuses with observed evidence and record limitations in [work-log.md](work-log.md).

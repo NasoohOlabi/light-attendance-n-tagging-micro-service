@@ -1,4 +1,4 @@
-# SheetDB feasibility research
+﻿# SheetDB feasibility research
 
 Retrieved **2026-11-13** (Asia/Damascus). Research only: official SheetDB documentation, first-party guides/pricing, and its OpenAPI specification. No login, credentials, account inspection, API experiments, or live writes. The stopped prototype is not evidence of supported behavior.
 
@@ -8,15 +8,15 @@ Retrieved **2026-11-13** (Asia/Damascus). Research only: official SheetDB docume
 
 ## Three separate credential systems
 
-| Mechanism | Documented purpose and scope | Consequence |
-| --- | --- | --- |
-| Spreadsheet bearer | `Authorization: Bearer …` for one `/api/v1/{API_ID}`; obtained from that API's settings. Authentication must be enabled. | Appropriate teacher credential; five independently managed identities suggest five APIs, not five invented tokens on one API. [Source](https://docs.sheetdb.io/authentication) |
-| Global App ID + API key | Account management through `/api/v1/{APP_ID}/{API_KEY}/…`; keys have configurable permissions. | Keep exclusively in the local manager's server process; never distribute in teacher links. [Source](https://docs.sheetdb.io/global-api/authentication) |
-| Official MCP OAuth | `https://sheetdb.io/mcp`, Streamable HTTP, OAuth 2.1, PKCE, dynamic registration, scope `mcp:use`; Google sign-in and consent. | A separate agent connection, requiring neither teacher bearer nor Global key. [Source](https://docs.sheetdb.io/ai-agents/mcp-server) |
+| Mechanism               | Documented purpose and scope                                                                                                   | Consequence                                                                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Spreadsheet bearer      | `Authorization: Bearer â€¦` for one `/api/v1/{API_ID}`; obtained from that API's settings. Authentication must be enabled.     | Appropriate teacher credential; five independently managed identities suggest five APIs, not five invented tokens on one API. [Source](https://docs.sheetdb.io/authentication) |
+| Global App ID + API key | Account management through `/api/v1/{APP_ID}/{API_KEY}/â€¦`; keys have configurable permissions.                               | Keep exclusively in the local manager's server process; never distribute in teacher links. [Source](https://docs.sheetdb.io/global-api/authentication)                         |
+| Official MCP OAuth      | `https://sheetdb.io/mcp`, Streamable HTTP, OAuth 2.1, PKCE, dynamic registration, scope `mcp:use`; Google sign-in and consent. | A separate agent connection, requiring neither teacher bearer nor Global key. [Source](https://docs.sheetdb.io/ai-agents/mcp-server)                                           |
 
-**Lifetime:** the spreadsheet-authentication and Global-authentication guides specify no token lifetime, refresh protocol, expiry selection, or rotation/revocation API. Do not translate this into “never expires” or “cannot rotate.” The precise dashboard behavior needs confirmation. Disabling authentication is not revocation: it removes the credential requirement. [Spreadsheet authentication](https://docs.sheetdb.io/authentication), [Global authentication](https://docs.sheetdb.io/global-api/authentication).
+**Lifetime:** the spreadsheet-authentication and Global-authentication guides specify no token lifetime, refresh protocol, expiry selection, or rotation/revocation API. Do not translate this into â€œnever expiresâ€‌ or â€œcannot rotate.â€‌ The precise dashboard behavior needs confirmation. Disabling authentication is not revocation: it removes the credential requirement. [Spreadsheet authentication](https://docs.sheetdb.io/authentication), [Global authentication](https://docs.sheetdb.io/global-api/authentication).
 
-For OAuth, the public MCP documentation does not specify access-token lifetime or refresh-token behavior. It does document immediate sign-out when an Agent connection is revoked in the panel. Pending-action expiry—five minutes for chat approval, fifteen for panel approval—is a different mechanism, not credential expiry. [MCP overview](https://sheetdb.io/mcp).
+For OAuth, the public MCP documentation does not specify access-token lifetime or refresh-token behavior. It does document immediate sign-out when an Agent connection is revoked in the panel. Pending-action expiryâ€”five minutes for chat approval, fifteen for panel approvalâ€”is a different mechanism, not credential expiry. [MCP overview](https://sheetdb.io/mcp).
 
 ## Management capabilities and OpenAPI audit
 
@@ -28,7 +28,7 @@ Documented Global operations, relative to `/api/v1/{APP_ID}/{API_KEY}`:
 
 **OpenAPI inspection:** version 3.1.0 contains 22 paths and 28 operations. Beyond the inspected guide chapters it exposes `GET /`, query-form `DELETE /{api_id}`, `DELETE /{api_id}/row_index/{row}`, and `POST /{api_id}/import/url`. None supplies credential management. Global keys may separately allow list/create/delete and require an additional bearer or Basic factor. `CreateApiBody` contains only `url` and `permissions`; creation/list schemas expose no bearer. No credential issue/read/rotate/revoke/refresh/settings route, or credential expiry field such as `expires_at`/`expires_in`, appears. This establishes absence from the published contract, not absence from the service. Import uses create permission, broadening the allowed write surface beyond the ordinary append route. [OpenAPI](https://sheetdb.io/openapi.json), [delete guide](https://docs.sheetdb.io/sheetdb-api/delete), [other-methods guide](https://docs.sheetdb.io/sheetdb-api/other).
 
-Recommendation: make the first local manager an inventory/link generator with manual token entry. Add Global list/create/delete only if useful enough to justify its tier, and retain dashboard steps for bearer enablement and retrieval until a supported automation interface is demonstrated. Local “disabled” or “expires” flags cannot block direct requests to SheetDB; actual expiry needs an enforced provider operation or an always-online enforcement service. This is a design inference from the documented authentication boundary. [Authentication](https://docs.sheetdb.io/authentication), [Global deletion](https://docs.sheetdb.io/global-api/delete-api).
+Recommendation: make the first local manager an inventory/link generator with manual token entry. Add Global list/create/delete only if useful enough to justify its tier, and retain dashboard steps for bearer enablement and retrieval until a supported automation interface is demonstrated. Local â€œdisabledâ€‌ or â€œexpiresâ€‌ flags cannot block direct requests to SheetDB; actual expiry needs an enforced provider operation or an always-online enforcement service. This is a design inference from the documented authentication boundary. [Authentication](https://docs.sheetdb.io/authentication), [Global deletion](https://docs.sheetdb.io/global-api/delete-api).
 
 ## Official agent recommendation
 
@@ -60,7 +60,7 @@ Cached reads still count; batch appends reduce request count. The dedicated limi
 
 Reads default to a fifteen-second cache; direct Sheet edits wait for expiry, while SheetDB writes clear cache. `ignore_cache=1` bypasses it. Cross-API invalidation for a shared spreadsheet is not explicitly guaranteed. The cache and limits pages disagree about underlying Google quotas; do not base capacity promises on those figures without clarification. [Cache](https://docs.sheetdb.io/cache), [limits](https://docs.sheetdb.io/limits).
 
-## Proposed live validation — not performed or authorized
+## Proposed live validation â€” not performed or authorized
 
 On a disposable spreadsheet, after separate authorization:
 

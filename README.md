@@ -1,39 +1,38 @@
-# light-attendance-n-tagging-micro-service
+﻿# light-attendance-n-tagging-micro-service
 
-**Status: planning complete; implementation stopped.** Implementation started before the user clarified the scope. At the user's request, the base prototype is preserved in commit `2d8fbe5`. It is not production-ready or approved for deployment. Do not resume coding without a new instruction.
+An account-independent attendance and tagged-note notebook for five trusted teachers. The teacher app is static React/TypeScript on GitHub Pages; the owner access manager runs locally with Bun. Each private magic link supplies its teacher name, SheetDB endpoint, bearer and tab. No account or credential is built into the deployed site.
 
-The proposed product is attendance and tagged notes for five trusted teachers: a static GitHub Pages frontend, direct SheetDB reads and append-only writes, reusable personal access links, and a local access manager. No teacher Google login or hosted application backend.
+[Open the stable notebook](https://nasooholabi.github.io/light-attendance-n-tagging-micro-service/) · [Public source](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service)
 
-## Plans and specifications
+Choose **Explore with sample students** to review attendance, Arabic-capable tagged notes, roster changes, summaries and append-only corrections. The sample makes no SheetDB requests and resets on reload. Real use needs owner-supplied private links and the provider acceptance checks below; sample success does not certify a live account.
 
-Read in this order:
-
-1. [Feasibility and recommendation](docs/feasibility.md) — what is feasible, what is unproven, costs and decision gates.
-2. [SheetDB capability research](docs/sheetdb-research.md) — cited official docs/OpenAPI findings, revocation and expiry limits.
-3. [Agent access](docs/agent-access.md) — OAuth MCP versus Global management keys, tool coverage and proposed local adapter.
-4. [Product and technical specification](docs/specification.md) — requirements, data contract and acceptance criteria.
-5. [Implementation plan](docs/implementation-plan.md) — sequenced future work, provider validation matrix and prototype gaps.
-
-Recommendation: manual provisioning first; one independently protected Read/Create endpoint per teacher. Official MCP handles agent data tasks without a management key. Global keys enable optional endpoint lifecycle automation. Native teacher-token expiry and automatic bearer issuance/rotation are **not documented**, so they are not promised.
-
-## Preserved prototype
+## Run and verify
 
 ```powershell
-bun install
-bun run dev       # teacher app: http://127.0.0.1:5173
-bun run manager   # separate terminal: http://127.0.0.1:4174
-bun run verify    # tests, lint, type checks, production build
+bun install --frozen-lockfile
+bun run setup:security
+bunx playwright install chromium
+bun run dev       # http://127.0.0.1:5173/
+bun run manager   # separate terminal; http://127.0.0.1:4174/
+bun run verify:release
 ```
 
-[Prototype setup notes](docs/setup.md) describe what was built before the stop. They are not authorization to provision accounts or deploy. No environment variables are needed for the local sample notebook. The manager remains unverified against a live SheetDB account.
+No production credentials are needed for development. Enter provider settings only in the local manager. It verifies authenticated reads and anonymous denial before issuing self-contained links; optional Global account keys stay in process memory. Teacher capabilities are stored in ignored `.local/manager.json`, never GitHub. See [security](SECURITY.md) and [setup](docs/setup.md).
 
-- Attendance per student and date, including group marking.
-- Tagged notes with free text or your own structured text format; Arabic supported.
-- Roster and group changes stored as additional events.
-- Shared summaries and a permanent correction history.
-- Pending batch recovery with stable IDs after uncertain network outcomes.
-- Local user/link management, manual token rotation, optional SheetDB Global API creation and revocation.
+## Direction and tasks
 
-This is a separate Git repository derived from `pages-micro-service`. Its first commit preserves the authorized source working copy. The current app focuses on attendance and notes; the original Quran page/points/finals screens and Google/Firebase integrations are not carried into the new UI. Existing production sheets are not migrated or modified.
+- [Implementation plan and task list](docs/implementation-plan.md): completed work, live-account gates and bounded follow-ups.
+- [Specification](docs/specification.md): T1–T12 teacher acceptance, manager requirements and trust limits.
+- [Architecture](docs/architecture.md): event order, retries, projections and extension points.
+- [Feasibility](docs/feasibility.md), [provider research](docs/sheetdb-research.md), [agent access](docs/agent-access.md): supported capabilities versus unverified provider behavior.
+- [Contributor/Git workflow](CONTRIBUTING.md), [agent instructions](AGENTS.md), [releases](docs/releases.md), [verification skill](.agents/skills/verify-halaqa/SKILL.md), [work log](docs/work-log.md).
 
-Read [prototype architecture](docs/architecture.md), [URL state](docs/url-state.md), and [work log](docs/work-log.md). The repo has Git initialized on `main`, no remote and no push/publication. It is registered in T3 Code as light-attendance-n-tagging-micro-service. Both prototype servers are stopped. The original production repository was not edited by this task.
+`main` publishes stable Pages after release checks. `nightly` produces tested candidate artifacts and never deploys the stable site. Every new feature is assigned to Terra with explicit file ownership; the orchestrator reviews and commits coherent units.
+
+## Data and security
+
+Teachers share one intended notebook through independently revocable Read/Create provider endpoints. Writes append versioned events; corrections reference originals, projections follow sheet row order, duplicate IDs count once and conflicting IDs are flagged. Pending batches retain IDs through uncertain delivery and use browser Web Locks to coordinate tabs. All external data is validated with Zod.
+
+This is trusted attribution, not server-verified identity or per-user private records. Magic links are reusable secrets and have no enforced expiry. Live CORS, endpoint permissions/import behavior, revocation and cross-endpoint freshness must pass on disposable provider data before real use. Never sort the raw Events ledger or commit personal records.
+
+History preserves the authorized original-source snapshot `f6fee1d` (including pre-existing work of unknown authorship) and stopped prototype `2d8fbe5`. Implementation/publication was newly authorized on 2026-11-13. The original Firebase app and production data are not migrated or deployed by this fork.

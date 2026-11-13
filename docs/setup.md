@@ -1,6 +1,6 @@
-# Setup: Halaqa notebook with SheetDB
+﻿# Setup: Halaqa notebook with SheetDB
 
-**Preserved prototype notes, not a deployment-ready runbook.** Development stopped at the user's request. Read [feasibility](feasibility.md), [agent access](agent-access.md) and [implementation plan](implementation-plan.md) before using these instructions. Provider provisioning, bearer rotation and browser workflows have not been verified against a live account. These instructions do not authorize executing them now.
+**Software setup runbook.** Implementation/publication authorized 2026-11-13. The sample and synthetic browser paths are verified locally; actual provider permissions, CORS, rotation and revocation require the disposable-account gates in [implementation plan](implementation-plan.md). The deployed website has no built-in provider credentials; the local manager takes input values and generates self-contained teacher links.
 
 ## What you run
 
@@ -57,7 +57,7 @@ In the local manager:
 4. Select **Check access & save user**. This checks authenticated reads, the five headers, and rejection of unauthenticated reads. It does not attempt deletes or updates to probe permissions.
 5. Select **Get link**, copy it and send it privately yourself. The manager does not send messages.
 
-A link contains the username, endpoint ID, bearer token and tab in `#access=…`. The fragment is not sent to the GitHub Pages server. It is removed from the address bar before rendering, and the credential is kept in session storage for reloads in that tab. The original message/link remains a credential; keep it private. Base64url is encoding, not encryption. Closing the session removes the browser's saved credential. Reopen the original link to return.
+A link contains the username, endpoint ID, bearer token and tab in `#access=â€¦`. The fragment is not sent to the GitHub Pages server. It is removed from the address bar before rendering, and the credential is kept in session storage for reloads in that tab. The original message/link remains a credential; keep it private. Base64url is encoding, not encryption. Closing the session removes the browser's saved credential. Reopen the original link to return.
 
 The app stamps the username on every submitted event and offers no teacher picker. As agreed, this is a trust-based identity: someone able to modify the link or call SheetDB directly can forge the actor. It is not signed identity, a one-use email login or a server-enforced expiry system.
 
@@ -79,7 +79,7 @@ SheetDB's published Global API exposes list/create/delete API operations; it doe
 
 **Rotate a token on the same endpoint, if supported:** first verify that the SheetDB dashboard provides a rotation/regeneration control and invalidates the old bearer. Public documentation does not establish that control. If verified, use it, then choose Replace token for the teacher, paste the new token, confirm permissions and save. Send the newly generated link. Merely changing the manager's saved copy does not revoke anything. A currently open teacher tab continues using the old credential until it opens the new link. If rotation is unavailable, replace the API endpoint instead.
 
-**Revoke one teacher:** use Revoke with a loaded Global API key, type the endpoint ID, and confirm. This deletes the SheetDB API endpoint, not the spreadsheet or its rows. Without Global API access, delete the endpoint in SheetDB first, then select the manager's manual confirmation checkbox. Manual confirmation accepts only a response demonstrating rejected credentials or a missing endpoint (401/404/410); a generic 403 might mean only reads were disabled, so it is not sufficient evidence of revocation.
+**Revoke one teacher:** use Revoke with a loaded Global API key, type the endpoint ID, and confirm. This deletes the SheetDB API endpoint, not the spreadsheet or its rows. Without Global API access, delete the endpoint in SheetDB first, then select the manager's manual confirmation checkbox. Manual confirmation accepts only missing-endpoint 404/410 observations and explicitly warns that this is not conclusive proof of write revocation. A 401 or 403 read denial is insufficient. Confirm actual provider deletion and denial of appends on disposable data. Revocation intent is saved first and uncertain outcomes block links across restart.
 
 **Replace the endpoint:** revoke the old endpoint first, create/configure a new one and save it for the same username. History remains in the same spreadsheet. A new endpoint means pending batches in the old browser session are not automatically migrated; inspect and reconcile them before retiring that session.
 
@@ -89,14 +89,7 @@ References: [list APIs](https://docs.sheetdb.io/global-api/get-all-apis), [creat
 
 ## 7. Publish on GitHub Pages
 
-The repository is local and has no remote. Create a new GitHub repository under the intended account, then attach it and push. Do not reuse the original production remote.
-
-```powershell
-git remote add origin https://github.com/YOUR-ACCOUNT/light-attendance-n-tagging-micro-service.git
-git push -u origin main
-```
-
-In GitHub **Settings → Pages → Build and deployment**, choose **GitHub Actions**. Run the GitHub Pages workflow, or push to main after enabling Pages. The workflow installs the locked Bun dependencies, runs tests/lint/build, and uploads only `dist`. The Vite relative base supports repository subpaths. No SheetDB credentials are configured in GitHub secrets or source files. The manager, `.local` directory and work logs are outside the deployment artifact.
+Stable software is published under NasoohOlabi/light-attendance-n-tagging-micro-service. The canonical [release runbook](releases.md) governs main-only Pages, nightly artifacts, gates and rollback. The workflow deploys only dist, with no provider credentials. The original Firebase workflow is historical and is not used.
 
 Use the resulting HTTPS site URL in the local manager and regenerate links. Reopen one on a separate device to confirm CORS and credentials. Complete one real attendance save, read it back in another session, append a correction and verify the raw sheet still contains both. This live check needs your actual SheetDB account and is not replaced by the sample notebook or mocked transport tests.
 
@@ -108,4 +101,4 @@ Events include `client_time` and `received_at`. The app requests SheetDB's `DATE
 
 For an incident, revoke the affected endpoint, copy the sheet, identify the suspicious append range, and restore the intended view using explicit reversals or an owner-maintained clean copy. Never sort the primary ledger or rely solely on a timestamp cutoff to prove authenticity.
 
-Read [architecture.md](architecture.md) for schema, ordering, extension points and verification. No live SheetDB credentials or GitHub destination were supplied during implementation, so provisioning and publication remain account setup steps.
+Read [architecture.md](architecture.md) for schema, ordering, extension points and verification. No live SheetDB credentials were used for local development; real-account acceptance remains unrun. GitHub publication is authorized separately from provider provisioning.

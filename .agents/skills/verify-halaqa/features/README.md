@@ -1,0 +1,13 @@
+# Halaqa verification features
+
+Every user entry point below needs proof when affected. The runnable harness is `e2e/notebook.spec.ts` plus `tests/manager.test.ts`; consult the skill for launch/isolation/evidence.
+
+| Feature                                   | Entry points and proof                                          |
+| ----------------------------------------- | --------------------------------------------------------------- |
+| [Attendance and summary](attendance.md)   | Individual status, mark displayed group, date, summary bounds   |
+| [Tagged notes](notes.md)                  | General/student notes, tags, date bounds, shared feed           |
+| [Student roster](roster.md)               | Add, rename/group, inactive/active, search/group filters        |
+| [History and corrections](corrections.md) | Undo with reason, original record retained, projection restored |
+| [Access and delivery](access.md)          | Magic link/session, demo, retry/storage/tabs, local manager     |
+
+The bootstrap suite covers one path through each area and delivery failure cases. Entries explicitly identify additional manual/agent browser variants; passing one sample scenario is not proof of every mapped control. No live-account certification is implied.

@@ -1,0 +1,19 @@
+name: Implementation task
+description: A bounded change with observable acceptance criteria
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: User outcome and scope
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Observable acceptance and verification feature
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Dependencies, privacy and release risks

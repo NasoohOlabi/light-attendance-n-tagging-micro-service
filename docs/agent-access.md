@@ -1,4 +1,4 @@
-# How agents should access SheetDB
+﻿# How agents should access SheetDB
 
 Status: proposal, not installed or connected. Research date: 2026-11-13. No credentials are needed to read these plans or work on local code.
 
@@ -8,23 +8,23 @@ Status: proposal, not installed or connected. Research date: 2026-11-13. No cred
 
 MCP uses OAuth 2.1, PKCE and dynamic client registration. Its operation permissions intersect with each underlying API's permissions. For this notebook, leave update/delete disabled on both sides and enable append only when explicitly needed. This does not imply the OAuth connection is limited to one selected notebook: documentation says agents see the APIs visible to the signed-in account/team. Inspect that exposure before authorizing a connection. [MCP scope and access checks](https://docs.sheetdb.io/ai-agents/mcp-server).
 
-**For account lifecycle automation, SheetDB does offer management keys.** Generate one at its API-keys page with only the needed Global permissions. Use it inside the local manager's process or a narrow local agent adapter; the model need not receive the raw key. The Global routes include the App ID/key in their URL path, so redact full outbound URLs from logs, traces and error reports. The OpenAPI also permits an optional bearer/Basic second factor for these keys. Support that if configured; the stopped prototype currently does not. [Global authentication](https://docs.sheetdb.io/global-api/authentication), [OpenAPI](https://sheetdb.io/openapi.json).
+**For account lifecycle automation, SheetDB does offer management keys.** Generate one at its API-keys page with only the needed Global permissions. Use it inside the local manager's process or a narrow local agent adapter; the model need not receive the raw key. The Global routes include the App ID/key in their URL path, so redact full outbound URLs from logs, traces and error reports. The OpenAPI also permits an optional bearer/Basic second factor for these keys. Support that if configured; the current local manager does not; use manual profile import if a Global second factor is required. [Global authentication](https://docs.sheetdb.io/global-api/authentication), [OpenAPI](https://sheetdb.io/openapi.json).
 
 Never give teacher browsers an account management key. It is a separate privilege from a teacher endpoint bearer. Nothing in this planning phase requires you to supply either.
 
 ## Capability coverage
 
-| Task | Official MCP | Global API / dashboard |
-| --- | --- | --- |
-| List connected spreadsheet APIs | Yes | Global list |
-| Inspect headers, read/search rows | Yes | Per-API REST reads; Global API is not the row API |
-| Append rows | Yes, if agent and API permissions allow | Per-API REST Create |
-| Create an API for a spreadsheet | Documented MCP tool | Global create; verify plan-specific MCP behavior |
-| Delete a SheetDB API endpoint | No documented tool | Global delete, or provider dashboard |
-| Read or mint teacher bearer secrets | No documented tool | No published Global operation; dashboard inspection required |
-| Set endpoint permissions/authentication after creation | No documented tool | Global create accepts initial permission list; later settings API undocumented |
-| Set native bearer expiry or refresh bearer | No documented tool | No published operation/field |
-| Revoke an agent OAuth connection | Owner uses AI agents panel | Separate from teacher endpoint revocation |
+| Task                                                   | Official MCP                            | Global API / dashboard                                                         |
+| ------------------------------------------------------ | --------------------------------------- | ------------------------------------------------------------------------------ |
+| List connected spreadsheet APIs                        | Yes                                     | Global list                                                                    |
+| Inspect headers, read/search rows                      | Yes                                     | Per-API REST reads; Global API is not the row API                              |
+| Append rows                                            | Yes, if agent and API permissions allow | Per-API REST Create                                                            |
+| Create an API for a spreadsheet                        | Documented MCP tool                     | Global create; verify plan-specific MCP behavior                               |
+| Delete a SheetDB API endpoint                          | No documented tool                      | Global delete, or provider dashboard                                           |
+| Read or mint teacher bearer secrets                    | No documented tool                      | No published Global operation; dashboard inspection required                   |
+| Set endpoint permissions/authentication after creation | No documented tool                      | Global create accepts initial permission list; later settings API undocumented |
+| Set native bearer expiry or refresh bearer             | No documented tool                      | No published operation/field                                                   |
+| Revoke an agent OAuth connection                       | Owner uses AI agents panel              | Separate from teacher endpoint revocation                                      |
 
 Source of tool coverage: [MCP tool list](https://docs.sheetdb.io/ai-agents/mcp-server). Source of Global coverage: [create](https://docs.sheetdb.io/global-api/create-new-api), [delete](https://docs.sheetdb.io/global-api/delete-api), [OpenAPI](https://sheetdb.io/openapi.json). An MCP `delete_records` tool deletes rows; it is not endpoint revocation.
 
