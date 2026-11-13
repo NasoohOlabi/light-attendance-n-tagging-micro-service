@@ -59,6 +59,9 @@
   padding: 0 38px 40px;
 }
 .workspace-topline {
+  direction: ltr;
+  flex-direction: row-reverse;
+  justify-content: space-between;
   min-height: 70px;
   display: flex;
   align-items: center;
@@ -67,8 +70,10 @@
   color: #608087;
   font-size: 13px;
 }
-.workspace-topline > span {
-  margin-inline-end: auto;
+.workspace-context {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 .workspace-welcome {
   display: flex;
@@ -149,6 +154,8 @@
   padding: 5rem 1.5rem 2rem;
 }
 .workspace-auth-header {
+  direction: ltr;
+  flex-direction: row-reverse;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -296,7 +303,7 @@
   .workspace-main {
     padding-bottom: calc(90px + env(safe-area-inset-bottom));
   }
-  .workspace-topline > span {
+  .workspace-context > span:first-child {
     display: none;
   }
   .workspace-topline {

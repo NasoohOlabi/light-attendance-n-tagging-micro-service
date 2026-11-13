@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { compactHeader } from './headerLayout'
 import { spawn, type ChildProcess } from 'node:child_process'
 
 test.use({ trace: 'off' })
@@ -73,7 +74,9 @@ test('Arabic authentication keeps mobile input semantics and localized feedback'
   })
   await page.goto(origin)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await compactHeader(page, '.workspace-auth-header')
   await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await compactHeader(page, '.workspace-auth-header')
   const email = page.getByLabel('البريد الإلكتروني', { exact: true })
   const password = page.getByLabel('كلمة المرور', { exact: true })
   await expect(email).toHaveAttribute('type', 'email')

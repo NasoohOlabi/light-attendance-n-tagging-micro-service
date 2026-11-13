@@ -18,6 +18,8 @@ For language, layout, form semantics or typography changes, run `e2e/mobile.spec
 
 The shared homepage/app language control is one icon-only Lucide globe button with the destination language as its accessible name. `e2e/home.spec.ts` checks its single-button structure, decorative Lucide icon, absence of visible text and keyboard activation. `e2e/roles.spec.ts` checks icon-only language, administration, sign-out, refresh and open-student utilities in both languages, their tooltips and 44px targets, refresh reads, keyboard student entry and return to administration. Retain `.artifacts/verification/utility-icons-ar.png` using synthetic data only. The language/mobile/Auth cases above cover switching and preserved state across shared app surfaces.
 
+`e2e/headerLayout.ts` checks actual header geometry: actions sit at physical left on one row with no more than 8px between targets, and role/Auth brands sit at right. Role and authentication cases run this proof in both languages, including 320/390/844px notebook/account layouts. Retain the synthetic `.artifacts/verification/compact-role-header-ar.png` capture; never use the owner's real account screenshot as evidence.
+
 If port 4173 belongs to another preview, preserve it and set `$env:PLAYWRIGHT_PORT='4273'` before `bun run verify:ui`. The harness still refuses to reuse an existing server.
 
 | Feature                                   | Entry points and proof                                          |
