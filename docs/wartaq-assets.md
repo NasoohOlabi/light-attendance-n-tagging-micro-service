@@ -4,9 +4,11 @@ The review drafts use the user-supplied `wartaq-svg-assets.zip` and the referenc
 
 ## Selected
 
-`public/brand/wartaq/` contains the supplied symbol, arch, pattern tile, Quran book, corner ornament, and hero illustration. They were inspected for scripts, event handlers, external references, and embedded content (the hero uses local gradient IDs only) before inclusion. The symbol appears beside live Arabic text **وارتق** in the draft logo. This is a typeset placeholder, not final bespoke lettering. The kit's `brand-horizontal.svg` says **ورتق**, so it is deliberately excluded. Remaining illustrations, media/course graphics and decorative assets are deferred until a notebook use calls for them.
+`public/brand/wartaq/` contains the supplied arch, pattern tile, Quran book, corner ornament, and hero illustration. They were inspected for scripts, event handlers, external references, and embedded content (the hero uses local gradient IDs only) before inclusion. The owner rejected the symbol on 2026-11-13: the brand now uses **وارتق** alone, without a symbol, badge or Latin subtitle. The symbol file has been removed. The kit's `brand-horizontal.svg` says **ورتق**, so it remains excluded. Remaining illustrations, media/course graphics and decorative assets are deferred until a notebook use calls for them.
 
 The scoped tokens in `src/brand/index.css` preserve the supplied deep teal, teal, turquoise, sky, cloud and sand palette, with 8px spacing and 12/18px radii. Dark teal is the main text color; white on teal can be used for primary controls. Draft controls should be at least 44px and use logical properties for both directions. Decorative assets should be hidden from assistive technology.
+
+After Midad selection, the same foundation also scopes `.wartaq-site`. The favicon and 180px Apple home-screen icon contain only the Arabic word **وارتق** on deep teal, replacing the rejected symbol. The PNG uses the locally licensed Plex font; the SVG favicon uses system Arabic font fallbacks. No third-party image service is used.
 
 ## Type
 

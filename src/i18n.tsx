@@ -204,7 +204,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = language
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr'
-    document.title = language === 'ar' ? 'دفتر الحلقة' : 'Halaqa notebook'
+    document.title = language === 'ar' ? 'وارتق · دفتر الحلقة' : 'Wartaq · Halaqa notebook'
     try {
       localStorage.setItem('halaqa-language', language)
     } catch {

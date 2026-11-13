@@ -1,6 +1,20 @@
 # Wartaq: two design drafts
 
-Status: interactive design review, awaiting the owner's choice. These drafts adapt the supplied Wartaq 5 identity to the existing teacher attendance/tagged-note notebook. They are not a new course platform and do not replace the live application.
+Status: **B / Midad selected by the owner on 2026-11-13.** The current application implements that direction with a public advertising homepage and a separate authenticated notebook. Branding uses **وارتق** alone; the owner rejected the supplied symbol, which has been removed from both the UI and phone/favicon assets. The earlier review routes remain isolated samples for reference.
+
+## Current site structure
+
+- Root `/`: public bilingual homepage with a labelled illustrative register, features, account/approval steps, native FAQ disclosures and sample/sign-in actions. No provider requests are made here.
+- `/?page=app`: real managed sign-in, sign-up, password reset, approval/loading states, then the assigned teacher notebook. Managed sessions resume here; closing a sample or signing out returns home.
+- Legacy private access fragments/session storage still enter their notebook directly. View state remains in `src/queryState.ts`; changing a teacher resets working forms while preserving the selected view.
+- Desktop: deep-teal Midad rail, actual student/date/note counts and latest-note context beside the real attendance register. Other sections retain student notes, roster, summaries and correction history.
+- Phone: compact identity/header, five labelled bottom destinations with safe-area spacing, native date/select/email/password fields, 44px targets and 16px input text. All working content can scroll above the bar.
+
+`src/HomePage.tsx` and `src/home.css` own public presentation; `src/App.tsx` and `src/workspace.css` own notebook composition; `src/NeonAuth.tsx` owns managed account flows. Shared fonts/tokens/logo stay in `src/brand/` and base controls in `src/index.css`. No routing or animation dependency was added. The reset capability is captured once in memory before URL sanitization and consumed by the existing Auth client.
+
+Current proof is `e2e/home.spec.ts`, `e2e/mobile.spec.ts` and `e2e/neon.spec.ts`, plus the existing notebook/assigned/provider tests. The full suite has 40 desktop/touch-emulated cases. Synthetic screenshots are retained under `.artifacts/wartaq-final/`; physical-device and live-provider certification remain separate.
+
+## Earlier comparison
 
 Run `bun run dev`, then open `/?design=a` or `/?design=b`. The review bar switches designs and Arabic/English. Both routes use local sample data only, skip session loading, and make no Auth/API requests. Reload or switching directions resets that direction's demonstration state; changing language preserves its current input. The normal URL still opens the existing notebook.
 
@@ -36,13 +50,13 @@ e2e/wartaq.spec.ts        real browser actions, responsive and isolation checks
 
 Each CSS layer has one job: foundation, review controls, then the selected direction. No draft style is added to the existing notebook's classes. Source boards and duplicate archives remain reference material outside Git; asset provenance and the provisional wordmark decision are in [wartaq-assets.md](wartaq-assets.md).
 
-## Component sequence after selection
+## Integration sequence
 
-1. Confirm logo/type/palette, then finish the chosen navigation and page frame.
-2. Integrate the real sign-in/loading/approval states.
-3. Replace the real attendance rows and save states while retaining append/retry behavior.
-4. Integrate student-specific notes/tags, roster, summary and correction history.
-5. Verify real desktop/mobile flows and promote through the existing release process.
+1. Selected shared logo/type/palette and Midad navigation/page frame.
+2. Integrated real sign-in/loading/approval states.
+3. Styled real attendance rows and saves while retaining append/retry behavior.
+4. Retained student notes/tags, roster, summary and correction history in the new frame.
+5. Verified desktop/mobile flows; publication follows the existing release process.
 
 The samples' welcome email field, schedule and save feedback are explicitly demonstrations. There is no registration, course playback, published schedule, offline write promise or production data persistence in these drafts.
 

@@ -1,19 +1,7 @@
-﻿import { brandAsset } from './assets'
-
-export function WartaqLogo({ compact = false }: { compact?: boolean }) {
+export function WartaqLogo() {
   return (
-    <span className="wartaq-logo" role="img" aria-label="وارتق 5 — WARTAQ">
-      <img src={brandAsset('brand-symbol.svg')} alt="" />
-      {!compact && (
-        <span className="wartaq-logo-wordmark" aria-hidden="true">
-          <span className="wartaq-logo-arabic" lang="ar" dir="rtl">
-            وارتق <span className="wartaq-logo-badge">5</span>
-          </span>
-          <span className="wartaq-logo-english" lang="en" dir="ltr">
-            WARTAQ
-          </span>
-        </span>
-      )}
+    <span className="wartaq-logo" lang="ar" dir="rtl">
+      وارتق
     </span>
   )
 }

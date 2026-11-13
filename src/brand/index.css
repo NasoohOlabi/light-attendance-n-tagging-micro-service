@@ -29,7 +29,7 @@
   font-display: swap;
   unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+FB50-FDFF, U+FE70-FEFF;
 }
-.wartaq-drafts {
+:is(.wartaq-drafts, .wartaq-site) {
   --wartaq-deep: #004d57;
   --wartaq-teal: #007d8d;
   --wartaq-turquoise: #00a7b5;
@@ -42,45 +42,16 @@
   color: var(--wartaq-deep);
   font-family: 'Wartaq Plex Arabic', 'Wartaq Plex', sans-serif;
 }
-.wartaq-drafts .wartaq-logo {
+:is(.wartaq-drafts, .wartaq-site) .wartaq-logo {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   color: var(--wartaq-deep);
-  font-size: 1.5rem;
+  min-height: 44px;
+  font-size: 2rem;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.4;
 }
-.wartaq-drafts .wartaq-logo img {
-  width: 48px;
-  height: 48px;
-}
-.wartaq-drafts .wartaq-logo-wordmark {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.wartaq-drafts .wartaq-logo-arabic {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.wartaq-drafts .wartaq-logo-badge {
-  display: inline-grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  color: #fff;
-  background: #007d8d;
-  font-size: 0.7rem;
-}
-.wartaq-drafts .wartaq-logo-english {
-  font-size: 0.55rem;
-  letter-spacing: 0.14em;
-}
-.wartaq-drafts :focus-visible {
+:is(.wartaq-drafts, .wartaq-site) :focus-visible {
   outline: 3px solid #007d8d;
   outline-offset: 3px;
 }

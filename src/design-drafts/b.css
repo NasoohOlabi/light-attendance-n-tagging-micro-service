@@ -1,4 +1,4 @@
-﻿.wartaq-b {
+.wartaq-b {
   --wb-ink: #133f46;
   --wb-teal: #004d57;
   --wb-aqua: #007d8d;
@@ -531,9 +531,6 @@
 
 .wartaq-b .wb-brand .wartaq-logo {
   color: #fff;
-}
-.wartaq-b .wb-brand .wartaq-logo img {
-  filter: brightness(0) invert(1);
 }
 .wartaq-b input,
 .wartaq-b select,

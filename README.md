@@ -1,10 +1,12 @@
-# light-attendance-n-tagging-micro-service
+# Wartaq — Halaqa notebook
 
 An attendance and tagged-note notebook with a static React/TypeScript frontend, Neon managed authentication and a small Neon Function API backed by Postgres. The database has three application tables: teachers, students and events. No ORM or separate server host is required.
 
 Teachers sign up/sign in, then an owner approves their account through the private CLI. The API checks identity, assignment, read/write mode and optional access expiry on every request. Teachers see only their assigned students and related history. The old/former source flag remains ignored when importing assigned students. See [Neon setup](docs/neon-setup.md) for dashboard-free provisioning, schema, approval and verification.
 
-[Open the stable notebook](https://nasooholabi.github.io/light-attendance-n-tagging-micro-service/) · [Public source](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service)
+[Wartaq homepage](https://nasooholabi.github.io/light-attendance-n-tagging-micro-service/) · [Open the app](https://nasooholabi.github.io/light-attendance-n-tagging-micro-service/?page=app) · [Public source](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service)
+
+The public homepage introduces the notebook, shows an illustrative register, explains teacher approval and answers common questions. **Sign in** opens the separate app at `?page=app`, where an existing managed session resumes automatically. Signing out returns home. Legacy private links still open their notebook directly. Both pages use the selected Midad identity and self-hosted fonts; phones have five labelled app destinations in a safe-area-aware bottom bar.
 
 Choose **Explore with sample students** to review attendance, Arabic-capable notes and append-only corrections without a provider account. Legacy SheetDB links remain compatible; their broader capability limitations do not apply to the Neon API.
 
@@ -12,7 +14,7 @@ Use **English / العربية** to switch the complete teacher interface, inclu
 
 ## Run and verify
 
-Wartaq rebrand drafts are available locally at `/?design=a` (Rihab) and `/?design=b` (Midad). Use their review bar to compare Arabic/English layouts. See the [draft design system](docs/wartaq-design-system.md); the live notebook remains the normal entry until a direction is chosen.
+Midad (B) is the selected design. The earlier `/?design=a` and `/?design=b` review samples remain isolated references; they never open accounts or save production data. See the [design system](docs/wartaq-design-system.md) for component ownership and entry behavior.
 
 ```powershell
 bun install --frozen-lockfile
