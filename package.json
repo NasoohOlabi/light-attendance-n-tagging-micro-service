@@ -1,5 +1,5 @@
 {
-  "name": "pages-sheetdb", "private": true, "version": "0.1.0", "type": "module",
+  "name": "light-attendance-n-tagging-micro-service", "private": true, "version": "0.1.0", "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1", "build": "tsc -b && vite build",
     "lint": "oxlint src shared manager tests vite.config.ts", "test": "bun test",

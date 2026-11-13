@@ -1,4 +1,4 @@
-# Pages SheetDB
+# light-attendance-n-tagging-micro-service
 
 Current scope is research and planning only. Preserve stopped prototype `2d8fbe5`; do not extend, deploy, provision accounts or resume implementation unless the user asks. Start with `docs/feasibility.md`, `docs/specification.md` and `docs/implementation-plan.md`. For agent credentials, revocation or expiry, read `docs/agent-access.md` and `docs/sheetdb-research.md`. These planning docs take precedence over prototype setup/architecture notes when they identify an unverified assumption.
 

@@ -1,4 +1,4 @@
-# Halaqa notebook
+# light-attendance-n-tagging-micro-service
 
 **Status: planning complete; implementation stopped.** Implementation started before the user clarified the scope. At the user's request, the base prototype is preserved in commit `2d8fbe5`. It is not production-ready or approved for deployment. Do not resume coding without a new instruction.
 
@@ -36,4 +36,4 @@ bun run verify    # tests, lint, type checks, production build
 
 This is a separate Git repository derived from `pages-micro-service`. Its first commit preserves the authorized source working copy. The current app focuses on attendance and notes; the original Quran page/points/finals screens and Google/Firebase integrations are not carried into the new UI. Existing production sheets are not migrated or modified.
 
-Read [prototype architecture](docs/architecture.md), [URL state](docs/url-state.md), and [work log](docs/work-log.md). The repo has Git initialized on `main`, no remote and no push/publication. It is registered in T3 Code as Pages SheetDB. Both prototype servers are stopped. The original production repository was not edited by this task.
+Read [prototype architecture](docs/architecture.md), [URL state](docs/url-state.md), and [work log](docs/work-log.md). The repo has Git initialized on `main`, no remote and no push/publication. It is registered in T3 Code as light-attendance-n-tagging-micro-service. Both prototype servers are stopped. The original production repository was not edited by this task.

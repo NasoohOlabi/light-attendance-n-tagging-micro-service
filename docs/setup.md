@@ -6,21 +6,21 @@
 
 Teachers use one static website on GitHub Pages. Their browsers talk directly to SheetDB. You run the access manager on your Windows computer only when managing users. Closing the manager does not affect teacher access. Google login is only needed by you when connecting your spreadsheet to SheetDB; teachers never sign into Google.
 
-The new repository is `D:\Masjid\main-production-work\pages-sheetdb`. The original project remains separate and unchanged by this task. Its current working copy, including authorized uncommitted improvements, is preserved in this repository's first commit. Private environment files, credentials and student CSVs were excluded. This fork's active feature set is attendance, tagged notes and roster management.
+The new repository is `D:\Masjid\main-production-work\light-attendance-n-tagging-micro-service`. The original project remains separate and unchanged by this task. Its current working copy, including authorized uncommitted improvements, is preserved in this repository's first commit. Private environment files, credentials and student CSVs were excluded. This fork's active feature set is attendance, tagged notes and roster management.
 
 ## 1. Run locally
 
 Install Bun if needed, then in PowerShell:
 
 ```powershell
-Set-Location D:\Masjid\main-production-work\pages-sheetdb
+Set-Location D:\Masjid\main-production-work\light-attendance-n-tagging-micro-service
 bun install
 bun run dev
 ```
 
 Open `http://127.0.0.1:5173/`. Choose **Explore with sample students** to exercise attendance, notes, students, summaries and corrections without network access to SheetDB. The demo is memory-only and never combines with a real session. In another terminal, run `bun run manager` and open **http://127.0.0.1:4174/**. Use exactly that address; the manager intentionally rejects other hosts and cross-origin requests.
 
-No `.env.local`, Firebase project, OAuth client or Google API key is needed. T3 Code has this folder registered as **Pages SheetDB**, with Teacher app, Access manager and Verify scripts.
+No `.env.local`, Firebase project, OAuth client or Google API key is needed. T3 Code has this folder registered as **light-attendance-n-tagging-micro-service**, with Teacher app, Access manager and Verify scripts.
 
 ## 2. Create a dedicated spreadsheet
 
@@ -92,7 +92,7 @@ References: [list APIs](https://docs.sheetdb.io/global-api/get-all-apis), [creat
 The repository is local and has no remote. Create a new GitHub repository under the intended account, then attach it and push. Do not reuse the original production remote.
 
 ```powershell
-git remote add origin https://github.com/YOUR-ACCOUNT/pages-sheetdb.git
+git remote add origin https://github.com/YOUR-ACCOUNT/light-attendance-n-tagging-micro-service.git
 git push -u origin main
 ```
 

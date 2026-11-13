@@ -25,3 +25,15 @@
 **Verification:** Documentation links, staged whitespace, and prototype immutability are checked before this documentation commit. The earlier successful 12-test/build/lint run applies only to the frozen prototype; no new live-provider or browser verification is claimed. Original repository was inspected read-only; later source changes/commits, if any, are external to this task.
 
 **Limitations and next step:** No credential request, login, API connection installation, provider support message, live data mutation, account provisioning, billing action, deployment or push. Hard teacher-token expiry and completely automatic protected credential issuance remain unestablished. Future implementation requires a new user instruction and the provider validation gates described in the plan. Git remote remains unset.
+
+## 2026-11-13 10:28 — repository rename, Asia/Damascus (UTC+03:00)
+
+**Request/reason:** User selected `light-attendance-n-tagging-micro-service` as the new repository name before starting work there.
+
+**Starting state:** Clean working tree at `3656704`. No unrelated changes present.
+
+**Changes:** Renamed the separate directory from `pages-sheetdb` to `D:\Masjid\main-production-work\light-attendance-n-tagging-micro-service`; updated its existing T3 project title, workspace and favicon path; updated package/lockfile identity, README, agent instructions, setup paths and example GitHub URLs. Preserved Git history, plans and the stopped prototype. Earlier log entries retain the historical name accurately.
+
+**Verification:** `bun run verify` passed after the move: 12 tests/32 assertions, lint, strict type checks and production build. Project registration reports the new path. Staged diff/whitespace and final Git status checked before handback.
+
+**Limitations:** Local rename only; no remote configured, no push or deployment. Implementation remains stopped pending a new instruction in the renamed project.
