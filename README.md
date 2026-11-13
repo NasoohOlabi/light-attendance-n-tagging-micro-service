@@ -1,8 +1,8 @@
 # Wartaq — Halaqa notebook
 
-An attendance and tagged-note notebook with a static React/TypeScript frontend, Neon managed authentication and a small Neon Function API backed by Postgres. The database has three application tables: teachers, students and events. No ORM or separate server host is required.
+An attendance and tagged-note notebook with a static React/TypeScript frontend, Neon managed authentication and a small Neon Function API backed by Postgres. Four application tables hold accounts, teachers, students and events. No ORM or separate server host is required.
 
-Teachers sign up/sign in, then an owner approves their account through the private CLI. The API checks identity, assignment, read/write mode and optional access expiry on every request. Teachers see only their assigned students and related history. The old/former source flag remains ignored when importing assigned students. See [Neon setup](docs/neon-setup.md) for dashboard-free provisioning, schema, approval and verification.
+Users sign up/sign in, then an Administrator approves their application role. Administrators manage other accounts and roster assignments; Teachers see their assigned students and related notebook; Students can only read their own attendance. The API checks role, identity, active state and expiry on every request, plus Teacher assignment/read-write mode. Signup cannot self-approve or choose a role. The first Administrator is granted through private CLI input. The old/former source flag remains ignored when importing assigned students. See [role permissions](docs/roles.md) and [Neon setup](docs/neon-setup.md) for provisioning and verification.
 
 [Wartaq homepage](https://nasooholabi.github.io/light-attendance-n-tagging-micro-service/) · [Open the app](https://nasooholabi.github.io/light-attendance-n-tagging-micro-service/?page=app) · [Public source](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service)
 
@@ -42,6 +42,6 @@ Neon CLI pulls private variables into ignored `.env.local`. Vite exposes only th
 
 Writes append versioned events; corrections reference originals, projections follow database sequence order, and event primary keys prevent duplicate physical rows. Conflicting reused IDs are rejected. Pending batches retain IDs through uncertain delivery and use browser Web Locks to coordinate tabs. External data is validated with Zod.
 
-Neon authorizes teachers server-side; users cannot self-approve, impersonate another teacher or alter the canonical roster through the API. The legacy SheetDB integration retains its original trusted-attribution limits. Never commit personal records or credentials.
+Neon authorizes application roles server-side; users cannot self-approve or impersonate another teacher. Only Administrators manage the canonical roster through the API. Students never receive notes or raw ledger history. The legacy SheetDB integration retains its original trusted-attribution limits. Never commit personal records or credentials.
 
 History preserves the authorized original-source snapshot `f6fee1d` (including pre-existing work of unknown authorship) and stopped prototype `2d8fbe5`. Implementation/publication was newly authorized on 2026-11-13. The original Firebase app and production data are not migrated or deployed by this fork.

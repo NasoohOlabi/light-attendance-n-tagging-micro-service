@@ -16,6 +16,8 @@ export function useQueryState() {
   const query = new URLSearchParams(search)
   return {
     page: z.enum(['home', 'app']).safeParse(query.get('page')).data ?? 'home',
+    view:
+      z.enum(['administration', 'notebook']).safeParse(query.get('view')).data ?? 'administration',
     tab: tabSchema.safeParse(query.get('tab')).data ?? 'attendance',
     date: z.iso.date().safeParse(query.get('date')).data ?? today(),
     from: z.iso.date().safeParse(query.get('from')).data ?? today().slice(0, 7) + '-01',
@@ -30,6 +32,7 @@ export function useQueryState() {
 const allowedKeys = new Set([
   'page',
   'tab',
+  'view',
   'date',
   'from',
   'to',

@@ -1,6 +1,7 @@
 ﻿import { describe, expect, test } from 'bun:test'
 import type { Pool } from 'pg'
 import { createHandler } from '../functions/notebook-service'
+import type { LedgerEvent } from '../shared/ledger'
 
 const teacherId = '11111111-1111-4111-8111-111111111111'
 const studentId = '22222222-2222-4222-8222-222222222222'
@@ -11,19 +12,39 @@ const event = {
   clientTime: '2026-11-13T12:00:00.000Z',
   receivedAt: '',
   payload: { kind: 'attendance', studentId, date: '2026-11-13', status: 'present' },
-}
+} satisfies LedgerEvent
 function setup(
-  options: { active?: boolean; expires?: Date; mode?: string; assigned?: boolean } = {},
+  options: {
+    active?: boolean
+    expires?: Date
+    mode?: string
+    assigned?: boolean
+    role?: 'student' | 'teacher' | 'administrator'
+  } = {},
 ) {
   const rows: Array<{
     id: string
     actor: string
     client_time: Date
     received_at: Date
-    payload: typeof event.payload
+    payload: LedgerEvent['payload']
   }> = []
   const client = {
     async query(sql: string, values: unknown[] = []) {
+      if (sql.startsWith('SELECT role, teacher_id'))
+        return {
+          rows: [
+            {
+              role: options.role ?? 'teacher',
+              teacher_id: options.role === 'student' ? null : teacherId,
+              student_id: options.role === 'student' ? studentId : null,
+              active: true,
+              expires_at: null,
+            },
+          ],
+        }
+      if (sql.startsWith('SELECT id, name, group_name'))
+        return { rows: [{ id: studentId, name: 'Student', group_name: '', active: true }] }
       if (sql.startsWith('SELECT id, name, active'))
         return {
           rows: [
@@ -36,7 +57,7 @@ function setup(
             },
           ],
         }
-      if (sql.startsWith('SELECT id, name, group_name'))
+      if (sql.startsWith('SELECT s.id, s.name, s.group_name'))
         return {
           rows:
             options.assigned === false
@@ -130,6 +151,53 @@ describe('Neon API boundary', () => {
           events: [
             { ...event, payload: { kind: 'reversal', targetId: eventId, reason: 'Correction' } },
           ],
+        })
+      ).status,
+    ).toBe(403)
+  })
+  test('student sees only projected attendance and cannot access staff routes', async () => {
+    const { call, rows } = setup({ role: 'student' })
+    rows.push({
+      id: eventId,
+      actor: 'Private teacher',
+      client_time: new Date(event.clientTime),
+      received_at: new Date(),
+      payload: event.payload,
+    })
+    const response = await call('/api/student/attendance')
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      student: { studentId, name: 'Student', group: '' },
+      attendance: [{ date: '2026-11-13', status: 'present' }],
+    })
+    rows.push({
+      id: '44444444-4444-4444-8444-444444444444',
+      actor: 'Private teacher',
+      client_time: new Date(event.clientTime),
+      received_at: new Date(),
+      payload: { kind: 'reversal', targetId: eventId, reason: 'private reason' },
+    })
+    expect((await (await call('/api/student/attendance')).json()).attendance).toEqual([])
+    expect((await call('/api/notebook')).status).toBe(403)
+    expect((await call('/api/events', 'valid', { events: [event] })).status).toBe(403)
+    expect((await call('/api/admin')).status).toBe(403)
+  })
+  test('teachers cannot manage accounts and admins cannot change themselves', async () => {
+    expect((await setup().call('/api/admin')).status).toBe(403)
+    expect(
+      (
+        await setup({ role: 'administrator' }).call('/api/admin/accounts/disable', 'valid', {
+          authUserId: 'subject',
+        })
+      ).status,
+    ).toBe(403)
+    expect(
+      (
+        await setup({ role: 'administrator' }).call('/api/admin/accounts/grant', 'valid', {
+          authUserId: 'subject',
+          role: 'teacher',
+          name: 'Name',
+          expiresAt: null,
         })
       ).status,
     ).toBe(403)

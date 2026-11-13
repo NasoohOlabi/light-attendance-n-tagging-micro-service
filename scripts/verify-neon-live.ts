@@ -5,7 +5,11 @@ import { chromium, expect } from '@playwright/test'
 import { Pool } from 'pg'
 import { functionBaseUrl } from '@neon/env'
 import { z } from 'zod'
-import { neonSnapshotSchema } from '../shared/neon'
+import {
+  neonAdminBoardSchema,
+  neonSnapshotSchema,
+  neonStudentAttendanceSchema,
+} from '../shared/neon'
 import { makeEvent } from '../shared/ledger'
 
 // Real provider verification: synthetic accounts/data only, no traces or token output.
@@ -35,7 +39,10 @@ const check = (name: string) => {
 const stateFile = '.local/neon-verification-cleanup.json'
 await mkdir('.local', { recursive: true })
 async function remember() {
-  await writeFile(stateFile, JSON.stringify({ users, emails, teachers, students }))
+  await writeFile(
+    stateFile,
+    JSON.stringify({ users, emails, appAccounts: users, teachers, students }),
+  )
 }
 async function call(path: string, token?: string, body?: unknown) {
   return fetch(`${api}${path}`, {
@@ -59,7 +66,7 @@ try {
     "SELECT rolname FROM pg_roles WHERE rolname IN ('anon', 'authenticated')",
   )
   for (const row of roles.rows)
-    for (const table of ['teachers', 'students', 'events'])
+    for (const table of ['teachers', 'students', 'events', 'app_accounts'])
       for (const permission of ['SELECT', 'INSERT', 'UPDATE', 'DELETE']) {
         const grant = await pool.query('SELECT has_table_privilege($1, $2, $3) AS allowed', [
           row.rolname,
@@ -98,7 +105,7 @@ try {
     await page.getByLabel('Email', { exact: true }).fill(email)
     await page.getByLabel('Password', { exact: true }).fill(password)
     await page.getByRole('button', { name: 'Create account', exact: true }).first().click()
-    await expect(page.getByRole('alert')).toContainText('awaiting teacher approval', {
+    await expect(page.getByRole('alert')).toContainText('awaiting approval', {
       timeout: 30000,
     })
     const authUser = await pool.query('SELECT id FROM neon_auth."user" WHERE email = $1', [email])
@@ -158,6 +165,99 @@ try {
   check('real browser sign-up, CLI approval/import, JWT and isolated rosters for two teachers')
   const [a, b] = accounts
   assert.ok(a && b)
+  const extraAccounts = []
+  for (const role of ['administrator', 'student'] as const) {
+    const context = await browser.newContext()
+    contexts.push(context)
+    const page = await context.newPage()
+    const email = `halaqa-verification-${crypto.randomUUID()}@example.com`
+    const password = crypto.randomUUID() + 'aA1!'
+    const name = `Verification ${role}`
+    emails.push(email)
+    await remember()
+    await page.goto(settings.NEON_VERIFY_APP_URL)
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await page.getByRole('button', { name: 'Create account', exact: true }).click()
+    await page.getByLabel('Name', { exact: true }).fill(name)
+    await page.getByLabel('Email', { exact: true }).fill(email)
+    await page.getByLabel('Password', { exact: true }).fill(password)
+    await page.getByRole('button', { name: 'Create account', exact: true }).first().click()
+    await expect(page.getByRole('alert')).toBeVisible({ timeout: 30000 })
+    const authUser = await pool.query('SELECT id FROM neon_auth."user" WHERE email = $1', [email])
+    const userId = z.uuid().parse(authUser.rows[0]?.id)
+    users.push(userId)
+    await remember()
+    const tokenResponse = await context.request.get(`${settings.NEON_AUTH_BASE_URL}/token`, {
+      headers: { Origin: origin },
+    })
+    assert.equal(tokenResponse.status(), 200)
+    const { token } = z.object({ token: z.string().min(1) }).parse(await tokenResponse.json())
+    assert.equal((await call('/api/me', token)).status, 403)
+    extraAccounts.push({ role, email, userId, token, name })
+  }
+  const admin = extraAccounts.find((account) => account.role === 'administrator')
+  const student = extraAccounts.find((account) => account.role === 'student')
+  assert.ok(admin && student)
+  const adminFile = `.local/neon-verify-admin-${crypto.randomUUID()}.json`
+  try {
+    await writeFile(
+      adminFile,
+      JSON.stringify({ role: 'administrator', email: admin.email, name: admin.name }),
+    )
+    const grant = spawnSync(
+      process.execPath,
+      ['run', 'scripts/neon-admin.ts', 'account', 'grant', adminFile],
+      { stdio: 'pipe' },
+    )
+    assert.equal(grant.status, 0, 'Private CLI administrator bootstrap')
+    const staff = await pool.query('SELECT teacher_id FROM app_accounts WHERE auth_user_id = $1', [
+      admin.userId,
+    ])
+    teachers.push(z.uuid().parse(staff.rows[0]?.teacher_id))
+    await remember()
+  } finally {
+    await unlink(adminFile).catch(() => {})
+  }
+  assert.equal(
+    (
+      await call('/api/admin/accounts/grant', admin.token, {
+        role: 'administrator',
+        authUserId: admin.userId,
+        name: admin.name,
+      })
+    ).status,
+    403,
+  )
+  assert.equal(
+    (await call('/api/admin/accounts/disable', admin.token, { authUserId: admin.userId })).status,
+    403,
+  )
+  const board = neonAdminBoardSchema.parse(await (await call('/api/admin', admin.token)).json())
+  assert.ok(board.teachers.some((teacher) => teacher.teacherId === a.teacherId))
+  assert.ok(board.teachers.some((teacher) => teacher.teacherId === b.teacherId))
+  assert.equal((await call('/api/admin', a.token)).status, 403)
+  assert.equal(
+    (await call('/api/admin/accounts/disable', a.token, { authUserId: student.userId })).status,
+    403,
+  )
+  const adminNotebook = neonSnapshotSchema.parse(
+    await (await call('/api/notebook', admin.token)).json(),
+  )
+  assert.ok(adminNotebook.students.some((entry) => entry.studentId === a.studentId))
+  assert.ok(adminNotebook.students.some((entry) => entry.studentId === b.studentId))
+  assert.equal(
+    (
+      await call('/api/admin/accounts/grant', admin.token, {
+        role: 'student',
+        authUserId: student.userId,
+        studentId: a.studentId,
+        expiresAt: null,
+      })
+    ).status,
+    200,
+  )
+  check('signup requires approval, administrator bootstrap, self-management denial and role grant')
+
   await a.page.reload()
   await expect(a.page.getByRole('heading', { name: 'Halaqa notebook', exact: true })).toBeVisible({
     timeout: 30000,
@@ -190,6 +290,79 @@ try {
     409,
   )
   check('real Postgres concurrent retry deduplication and conflicting-ID rejection')
+  const reverse = makeEvent(a.name, {
+    kind: 'reversal',
+    targetId: event.id,
+    reason: 'Synthetic correction',
+  })
+  const corrected = makeEvent(a.name, {
+    kind: 'attendance',
+    studentId: a.studentId,
+    date: '2026-11-13',
+    status: 'late',
+  })
+  const note = makeEvent(a.name, {
+    kind: 'note',
+    studentId: a.studentId,
+    date: '2026-11-13',
+    text: 'Private synthetic note',
+    tags: ['synthetic'],
+  })
+  assert.equal(
+    (await call('/api/events', a.token, { events: [reverse, corrected, note] })).status,
+    200,
+  )
+  const studentResponse = await call('/api/student/attendance', student.token)
+  assert.equal(studentResponse.status, 200)
+  const studentBody = await studentResponse.json()
+  const attendance = neonStudentAttendanceSchema.parse(studentBody)
+  assert.equal(attendance.student.studentId, a.studentId)
+  assert.deepEqual(attendance.attendance, [{ date: '2026-11-13', status: 'late' }])
+  assert.deepEqual(Object.keys(studentBody).sort(), ['attendance', 'student'])
+  assert.equal(JSON.stringify(studentBody).includes('Private synthetic note'), false)
+  assert.equal(JSON.stringify(studentBody).includes(b.studentId), false)
+  assert.equal(JSON.stringify(studentBody).includes(event.id), false)
+  assert.equal(JSON.stringify(studentBody).includes(a.teacherId), false)
+  for (const path of ['/api/notebook', '/api/admin'])
+    assert.equal((await call(path, student.token)).status, 403)
+  for (const [path, body] of [
+    ['/api/events', { events: [event] }],
+    [
+      '/api/admin/accounts/grant',
+      { role: 'student', authUserId: student.userId, studentId: a.studentId, expiresAt: null },
+    ],
+    ['/api/admin/accounts/disable', { authUserId: student.userId }],
+    [
+      '/api/admin/students',
+      {
+        studentId: a.studentId,
+        teacherId: b.teacherId,
+        name: 'Synthetic',
+        group: '',
+        active: true,
+      },
+    ],
+  ] satisfies [string, unknown][])
+    assert.equal((await call(path, student.token, body)).status, 403)
+  assert.equal(
+    (await call('/api/admin/accounts/disable', admin.token, { authUserId: student.userId })).status,
+    200,
+  )
+  assert.equal((await call('/api/student/attendance', student.token)).status, 403)
+  assert.equal(
+    (
+      await call('/api/admin/accounts/grant', admin.token, {
+        role: 'student',
+        authUserId: student.userId,
+        studentId: a.studentId,
+        expiresAt: null,
+      })
+    ).status,
+    200,
+  )
+  assert.equal((await call('/api/student/attendance', student.token)).status, 200)
+  check('student corrected attendance isolation, denied writes and immediate stale-JWT revocation')
+
   const foreign = makeEvent(a.name, {
     kind: 'attendance',
     studentId: b.studentId,
@@ -236,7 +409,23 @@ try {
   assert.equal((await call('/api/notebook', a.token)).status, 403)
   await pool.query('UPDATE teachers SET active = true WHERE id = $1', [a.teacherId])
   check('server-enforced read-only, write-only, expiry and immediate account disable')
-  await pool.query('UPDATE students SET teacher_id = $1 WHERE id = $2', [b.teacherId, a.studentId])
+  assert.equal(
+    (
+      await call('/api/admin/students', admin.token, {
+        studentId: a.studentId,
+        teacherId: b.teacherId,
+        name: 'Verification student A',
+        group: 'Synthetic verification',
+        active: true,
+      })
+    ).status,
+    200,
+  )
+  const oldTeacher = neonSnapshotSchema.parse(await (await call('/api/notebook', a.token)).json())
+  assert.equal(
+    oldTeacher.students.some((entry) => entry.studentId === a.studentId),
+    false,
+  )
   const moved = neonSnapshotSchema.parse(await (await call('/api/notebook', b.token)).json())
   assert.ok(moved.events.some((e) => e.id === event.id))
   assert.equal((await call('/api/events', a.token, { events: [event] })).status, 403)
@@ -289,7 +478,16 @@ try {
       const id = z.uuid().parse(row.id)
       if (!users.includes(id)) users.push(id)
     }
+    const linked = await pool.query(
+      'SELECT teacher_id FROM app_accounts WHERE auth_user_id = ANY($1::text[]) AND teacher_id IS NOT NULL',
+      [users],
+    )
+    for (const row of linked.rows) {
+      const id = z.uuid().parse(row.teacher_id)
+      if (!teachers.includes(id)) teachers.push(id)
+    }
     await remember()
+    await pool.query('DELETE FROM app_accounts WHERE auth_user_id = ANY($1::text[])', [users])
     await pool.query('DELETE FROM events WHERE teacher_id = ANY($1::uuid[])', [teachers])
     await pool.query('DELETE FROM students WHERE id = ANY($1::uuid[])', [students])
     await pool.query('DELETE FROM teachers WHERE id = ANY($1::uuid[])', [teachers])
@@ -310,7 +508,10 @@ try {
       )
     } else {
       check('synthetic accounts and records removed')
-      await writeFile(stateFile, JSON.stringify({ users: [], teachers: [], students: [] }))
+      await writeFile(
+        stateFile,
+        JSON.stringify({ users: [], appAccounts: [], teachers: [], students: [] }),
+      )
     }
   } catch {
     failure = true
