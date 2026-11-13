@@ -159,3 +159,11 @@
 **Request/reason:** PR #9 `Verify` run `43433284641` failed four browser scenarios on the Linux runner: native teacher/manager dropdowns were shorter than the existing 44px assertion. The same checks passed on Windows. Preserved the test threshold and added an explicit shared select minimum height in both interfaces; native control metrics no longer determine the touch-target floor. Corrected the preceding preflight note's minute to its actual commit time. No data, provider or authorization behavior changed.
 
 **Verification/limits:** The unchanged `bun run verify:release` passed locally: 28 unit/HTTP tests, 30 browser checks, formatting, artifact/history secret checks and audit. Push and observe the Linux CI rerun; local Windows results cannot independently certify the Linux fix. Deployment remains pending until remote checks and main-only Pages promotion succeed.
+
+## 2026-11-13 16:33 — reconcile stable promotion ancestry, Asia/Damascus (UTC+03:00)
+
+**Request/reason:** Continue the authorized PR/deployment after candidate #9 passed all Linux checks and merged as `4331878`. Promotion #10 also passed checks but its earlier squash-only stable-tooling synchronization left merge conflicts against unchanged main `956a354` in `package.json` and this log.
+
+**Resolution:** Created a release-resolution branch from the verified nightly head and merged main without rewriting either branch. Preserved nightly's offline verification build command and complete log; the resulting application, workflows, dependency manifest and manager exactly match the verified nightly tree. The repository allows squash merges only, so publish this resolved branch through a replacement PR targeting main and close superseded #10. No protection setting, history rewrite or worktree is needed. This is a documented exception to the normal nightly-head promotion route; deployment remains restricted to main's Pages workflow.
+
+**Verification/limits:** Full local `bun run verify:release` passed again (28 unit/HTTP tests, 30 browser scenarios, formatting, artifact/history scans and dependency audit). Remote replacement-PR checks remain required before merging. The earlier Linux select correction is confirmed by candidate #9 and nightly's successful Verify/candidate runs. Actual Pages publication and live sample checks remain pending.
