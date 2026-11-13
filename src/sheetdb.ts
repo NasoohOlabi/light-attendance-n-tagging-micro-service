@@ -1,10 +1,11 @@
 import { z } from 'zod'
-import type { Access } from '../shared/access'
+import type { Access, Endpoint } from '../shared/access'
+import { parseRoster } from '../shared/roster'
 import { eventToRow, HEADERS, parseRows, type LedgerEvent } from '../shared/ledger'
 
 export class SheetsAccessError extends Error {}
-export async function request(
-  access: Access,
+async function endpointRequest(
+  access: Endpoint,
   method: 'GET' | 'POST',
   body?: unknown,
   suffix = '',
@@ -55,6 +56,9 @@ export async function request(
     throw new Error(`SheetDB returned ${response.status}. Check the endpoint and Events tab.`)
   return response.json()
 }
+export async function request(access: Access, method: 'GET' | 'POST', body?: unknown, suffix = '') {
+  return endpointRequest(access, method, body, suffix)
+}
 export async function readEvents(access: Access) {
   return parseRows(await request(access, 'GET'))
 }
@@ -72,4 +76,8 @@ export async function appendEvents(access: Access, events: LedgerEvent[]): Promi
     throw new Error(
       'SheetDB did not confirm every row. Keep this batch and retry after checking the sheet.',
     )
+}
+
+export async function readRoster(endpoint: Endpoint) {
+  return parseRoster(await endpointRequest(endpoint, 'GET'))
 }

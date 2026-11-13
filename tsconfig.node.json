@@ -19,6 +19,8 @@
     "vite.config.ts",
     "playwright.config.ts",
     "manager/**/*.ts",
+    "functions/**/*.ts",
+    "neon.ts",
     "tests",
     "e2e",
     "scripts",

@@ -1,5 +1,5 @@
 import { afterEach, expect, spyOn, test } from 'bun:test'
-import { appendEvents, readEvents, SheetsAccessError } from '../src/sheetdb'
+import { appendEvents, readEvents, readRoster, SheetsAccessError } from '../src/sheetdb'
 import { HEADERS, makeEvent, eventToRow } from '../shared/ledger'
 import { globalRequest, verifyProfile } from '../manager/service'
 
@@ -112,4 +112,17 @@ test('invalid Retry-After is not echoed to the user', async () => {
   mocks.push(mock)
   await expect(readEvents(access)).rejects.toThrow('Wait before retrying')
   expect(mock).toHaveBeenCalledTimes(1)
+})
+
+test('roster transport uses its read-only endpoint with GET only', async () => {
+  const seen: string[] = []
+  const mock = mockFetch(async (_input, init) => {
+    seen.push(init?.method ?? 'GET')
+    return Response.json([])
+  })
+  mocks.push(mock)
+  expect(await readRoster({ apiId: 'roster123', token: 'roster-token', sheet: 'Roster' })).toEqual(
+    [],
+  )
+  expect(seen).toEqual(['GET'])
 })

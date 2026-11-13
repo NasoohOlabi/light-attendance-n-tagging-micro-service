@@ -30,6 +30,13 @@ jobs:
       - run: bun run security:files
       - run: bunx playwright install --with-deps chromium
       - run: bun run verify:ui
+      - name: Build configured Neon frontend after offline checks
+        run: bun run build
+        env:
+          VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
+          VITE_NEON_API_URL: ${{ vars.VITE_NEON_API_URL }}
+      - run: bun run check:artifact
+      - run: bun run security:files
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - name: Package teacher site
         run: tar --dereference --hard-dereference --directory dist -cf "$RUNNER_TEMP/artifact.tar" --exclude=.git --exclude=.github .
