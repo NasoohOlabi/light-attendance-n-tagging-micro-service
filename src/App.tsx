@@ -12,6 +12,7 @@ import {
 import { clearSession, loadSession } from './session'
 import { navigatePage, setQuery, useQueryState, type Tab } from './queryState'
 import { HomePage } from './HomePage'
+import { InstallApp } from './InstallApp'
 import { WartaqIcon, WartaqLogo } from './brand/components'
 import './workspace.css'
 import { useLedger } from './useLedger'
@@ -39,6 +40,7 @@ export function App(props: {
         <a className="skip-link" href="#main-content">
           <SkipText />
         </a>
+        <InstallApp />
         <AppContent {...props} />
       </div>
     </LanguageProvider>

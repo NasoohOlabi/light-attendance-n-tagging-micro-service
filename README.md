@@ -8,6 +8,8 @@ Teachers sign up/sign in, then an owner approves their account through the priva
 
 The public homepage introduces the notebook, shows an illustrative register, explains teacher approval and answers common questions. **Sign in** opens the separate app at `?page=app`, where an existing managed session resumes automatically. Signing out returns home. Legacy private links still open their notebook directly. Both pages use the selected Midad identity and self-hosted fonts; phones have five labelled app destinations in a safe-area-aware bottom bar.
 
+Choose **Install Wartaq / تثبيت وارتق** to install the PWA or view browser-specific instructions. The installed app opens the signed-in app entry; the public shell/sample can open offline, while real account and notebook access require a connection. See [installation, caching and update behavior](docs/pwa.md).
+
 Choose **Explore with sample students** to review attendance, Arabic-capable notes and append-only corrections without a provider account. Legacy SheetDB links remain compatible; their broader capability limitations do not apply to the Neon API.
 
 Use **English / العربية** to switch the complete teacher interface, including sign-in and feedback. Arabic uses right-to-left layout; your language choice is remembered when browser storage is available. The local manager has its own language switch. See the [mobile and language audit](docs/mobile-and-languages.md) for behavior, verification and device limits.
