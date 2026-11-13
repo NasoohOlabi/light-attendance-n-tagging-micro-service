@@ -12,6 +12,8 @@ Use **English / العربية** to switch the complete teacher interface, inclu
 
 ## Run and verify
 
+Wartaq rebrand drafts are available locally at `/?design=a` (Rihab) and `/?design=b` (Midad). Use their review bar to compare Arabic/English layouts. See the [draft design system](docs/wartaq-design-system.md); the live notebook remains the normal entry until a direction is chosen.
+
 ```powershell
 bun install --frozen-lockfile
 bun run setup:security

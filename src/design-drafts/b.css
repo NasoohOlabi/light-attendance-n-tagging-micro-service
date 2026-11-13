@@ -1,0 +1,581 @@
+﻿.wartaq-b {
+  --wb-ink: #133f46;
+  --wb-teal: #004d57;
+  --wb-aqua: #007d8d;
+  --wb-line: #dce9eb;
+  display: flex;
+  min-height: 100%;
+  color: var(--wb-ink);
+  background: #f5fafc;
+  text-align: start;
+}
+.wartaq-b * {
+  box-sizing: border-box;
+}
+.wartaq-b button,
+.wartaq-b input,
+.wartaq-b select,
+.wartaq-b textarea {
+  font: inherit;
+}
+.wartaq-b button {
+  cursor: pointer;
+}
+.wartaq-b :focus-visible {
+  outline: 3px solid #00a7b5;
+  outline-offset: 3px;
+}
+.wartaq-b .wb-rail {
+  flex: 0 0 218px;
+  background: #004d57;
+  color: #fff;
+  padding: 30px 18px 22px;
+  display: flex;
+  flex-direction: column;
+}
+.wartaq-b .wb-brand {
+  padding: 4px 12px 38px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wartaq-b .wb-brand svg {
+  max-width: 130px;
+  max-height: 48px;
+}
+.wartaq-b .wb-brand > .wb-brand-subtitle {
+  color: #b8d9dd;
+  font-size: 12px;
+}
+.wartaq-b .wb-rail nav {
+  display: grid;
+  gap: 5px;
+}
+.wartaq-b .wb-rail nav button {
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #c4e0e2;
+  min-height: 48px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  text-align: start;
+}
+.wartaq-b .wb-rail nav button.is-active {
+  background: #176571;
+  color: white;
+  box-shadow: inset 4px 0 #55d4d7;
+  font-weight: 700;
+}
+.wartaq-b[dir='rtl'] .wb-rail nav button.is-active {
+  box-shadow: inset -4px 0 #55d4d7;
+}
+.wartaq-b .wb-rail-foot {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: auto;
+  padding: 22px 8px 0;
+  border-top: 1px solid #34727a;
+}
+.wartaq-b .wb-avatar,
+.wartaq-b .wb-person-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+}
+.wartaq-b .wb-avatar {
+  width: 40px;
+  height: 40px;
+  background: #cceaf2;
+  color: #004d57;
+  font-weight: 700;
+}
+.wartaq-b .wb-rail-foot strong,
+.wartaq-b .wb-rail-foot small {
+  display: block;
+}
+.wartaq-b .wb-rail-foot small {
+  color: #b8d9dd;
+  margin-top: 3px;
+}
+.wartaq-b .wb-main {
+  min-width: 0;
+  flex: 1;
+  padding: 0 38px 40px;
+}
+.wartaq-b .wb-topline {
+  min-height: 70px;
+  border-bottom: 1px solid var(--wb-line);
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: center;
+  color: #608087;
+  font-size: 13px;
+}
+.wartaq-b .wb-topline > span:first-child span {
+  padding: 0 8px;
+  color: #adc3c6;
+}
+.wartaq-b .wb-sample {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.wartaq-b .wb-sample > span {
+  width: 7px;
+  height: 7px;
+  background: #00a7b5;
+  border-radius: 50%;
+}
+.wartaq-b .wb-welcome {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 32px 0 26px;
+}
+.wartaq-b .wb-welcome p {
+  color: #007d8d;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 7px;
+}
+.wartaq-b h1,
+.wartaq-b h2,
+.wartaq-b h3,
+.wartaq-b p {
+  margin: 0;
+}
+.wartaq-b h1 {
+  color: #004d57;
+  font-size: clamp(25px, 2.4vw, 34px);
+  line-height: 1.3;
+}
+.wartaq-b .wb-welcome > div > span {
+  display: block;
+  color: #68838a;
+  margin-top: 7px;
+  font-size: 14px;
+}
+.wartaq-b .wb-date {
+  display: grid;
+  gap: 7px;
+  min-width: 155px;
+}
+.wartaq-b .wb-date label,
+.wartaq-b .wb-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #57747b;
+}
+.wartaq-b input,
+.wartaq-b select,
+.wartaq-b textarea {
+  border: 1px solid #cfe0e3;
+  background: white;
+  color: #254f56;
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 9px 12px;
+}
+.wartaq-b .wb-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 315px);
+  gap: 22px;
+  align-items: start;
+}
+.wartaq-b .wb-primary,
+.wartaq-b .wb-side {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.wartaq-b .wb-register,
+.wartaq-b .wb-notes,
+.wartaq-b .wb-overview {
+  background: #fff;
+  border: 1px solid #deebed;
+  border-radius: 13px;
+  padding: 24px;
+}
+.wartaq-b .wb-section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 22px;
+}
+.wartaq-b h2 {
+  color: #064e58;
+  font-size: 18px;
+  line-height: 1.4;
+}
+.wartaq-b .wb-section-heading p {
+  margin-top: 5px;
+  font-size: 13px;
+  color: #789096;
+}
+.wartaq-b .wb-count {
+  white-space: nowrap;
+  background: #e8f6f7;
+  color: #007d8d;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.wartaq-b .wb-search {
+  border: 1px solid #dce9eb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  color: #759398;
+}
+.wartaq-b .wb-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  min-width: 0;
+}
+.wartaq-b .wb-table-head,
+.wartaq-b .wb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.wartaq-b .wb-table-head {
+  color: #81999d;
+  font-size: 12px;
+  padding: 18px 4px 10px;
+  border-bottom: 1px solid #e8d9c4;
+}
+.wartaq-b .wb-row {
+  min-height: 66px;
+  border-bottom: 1px solid #edf3f4;
+  padding: 8px 4px;
+}
+.wartaq-b .wb-person {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.wartaq-b .wb-person bdi {
+  overflow-wrap: anywhere;
+}
+.wartaq-b .wb-person-avatar {
+  width: 35px;
+  height: 35px;
+  color: #007d8d;
+  background: #e7f5f6;
+  font-size: 14px;
+}
+.wartaq-b .wb-row select {
+  min-width: 112px;
+  color: #007d8d;
+  background: #f4fbfb;
+  border-color: #d6ebec;
+  font-size: 16px;
+}
+.wartaq-b .wb-save {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 20px;
+  color: #007d8d;
+  font-size: 13px;
+}
+.wartaq-b .wb-button,
+.wartaq-b .wb-secondary {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 17px;
+  font-weight: 700;
+}
+.wartaq-b .wb-button {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: #fff;
+  background: #007d8d;
+}
+.wartaq-b .wb-secondary {
+  color: #006e7c;
+  background: #e4f5f6;
+}
+.wartaq-b button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.wartaq-b .wb-overview h2 {
+  font-size: 15px;
+}
+.wartaq-b .wb-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+.wartaq-b .wb-metrics div {
+  display: grid;
+  gap: 5px;
+  border-inline-start: 2px solid #d4eff0;
+  padding-inline-start: 10px;
+}
+.wartaq-b .wb-metrics strong {
+  font-size: 24px;
+  line-height: 1;
+  color: #004d57;
+}
+.wartaq-b .wb-metrics span {
+  font-size: 12px;
+  color: #789096;
+}
+.wartaq-b .wb-icon-box,
+.wartaq-b .wb-next-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: #007d8d;
+  background: #e7f6f7;
+  border-radius: 10px;
+  width: 42px;
+  height: 42px;
+}
+.wartaq-b .wb-notes textarea {
+  width: 100%;
+  resize: vertical;
+  margin-top: 8px;
+}
+.wartaq-b .wb-note-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 9px;
+}
+.wartaq-b .wb-note-actions select {
+  max-width: 140px;
+  font-size: 16px;
+}
+.wartaq-b .wb-notes h3 {
+  margin: 25px 0 12px;
+  font-size: 13px;
+  color: #527177;
+}
+.wartaq-b .wb-note-list article {
+  border-top: 1px solid #edf3f4;
+  padding: 14px 0 3px;
+}
+.wartaq-b .wb-note-list article span {
+  color: #00818e;
+  font-size: 11px;
+  font-weight: 700;
+}
+.wartaq-b .wb-note-list article p {
+  color: #527177;
+  font-size: 13px;
+  line-height: 1.7;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+.wartaq-b .wb-next {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 18px 22px;
+  background: #e7f5f7;
+  border-radius: 12px;
+}
+.wartaq-b .wb-next-icon {
+  background: white;
+}
+.wartaq-b .wb-next small,
+.wartaq-b .wb-next strong {
+  display: block;
+}
+.wartaq-b .wb-next small {
+  color: #6c8b90;
+  margin-bottom: 5px;
+}
+.wartaq-b .wb-next strong {
+  color: #07545d;
+  font-size: 14px;
+}
+.wartaq-b .wb-summary-line {
+  border-top: 1px solid #e8d9c4;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 18px;
+  font-size: 14px;
+}
+.wartaq-b .wb-status {
+  color: #007d8d;
+  font-size: 13px;
+}
+.wartaq-b .wb-empty {
+  padding: 25px 4px;
+  color: #789096;
+}
+.wartaq-b .wb-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 1050px) {
+  .wartaq-b .wb-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wartaq-b .wb-side {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 700px) {
+  .wartaq-b {
+    display: block;
+    min-height: 0;
+  }
+  .wartaq-b .wb-rail {
+    padding: 12px 16px 0;
+  }
+  .wartaq-b .wb-brand {
+    padding: 0 0 10px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .wartaq-b .wb-brand svg {
+    max-width: 90px;
+    max-height: 35px;
+  }
+  .wartaq-b .wb-rail nav {
+    display: flex;
+    overflow-x: auto;
+    gap: 3px;
+  }
+  .wartaq-b .wb-rail nav button {
+    white-space: nowrap;
+    padding: 0 12px;
+    min-height: 48px;
+  }
+  .wartaq-b .wb-rail nav button.is-active,
+  .wartaq-b[dir='rtl'] .wb-rail nav button.is-active {
+    box-shadow: inset 0 -3px #55d4d7;
+    border-radius: 8px 8px 0 0;
+  }
+  .wartaq-b .wb-rail-foot {
+    display: none;
+  }
+  .wartaq-b .wb-main {
+    padding: 0 16px 28px;
+  }
+  .wartaq-b .wb-topline {
+    min-height: 54px;
+    font-size: 11px;
+  }
+  .wartaq-b .wb-welcome {
+    padding: 24px 0;
+    align-items: start;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .wartaq-b .wb-date {
+    width: 100%;
+  }
+  .wartaq-b .wb-side {
+    grid-template-columns: 1fr;
+  }
+  .wartaq-b .wb-register,
+  .wartaq-b .wb-notes,
+  .wartaq-b .wb-overview {
+    padding: 18px;
+  }
+  .wartaq-b input,
+  .wartaq-b select,
+  .wartaq-b textarea {
+    font-size: 16px;
+  }
+}
+@media (max-width: 370px) {
+  .wartaq-b .wb-rail nav button {
+    padding: 0 9px;
+    gap: 6px;
+  }
+  .wartaq-b .wb-sample {
+    max-width: 145px;
+  }
+  .wartaq-b .wb-row select {
+    min-width: 96px;
+    padding: 8px 5px;
+  }
+}
+
+.wartaq-b .wb-brand .wartaq-logo {
+  color: #fff;
+}
+.wartaq-b .wb-brand .wartaq-logo img {
+  filter: brightness(0) invert(1);
+}
+.wartaq-b input,
+.wartaq-b select,
+.wartaq-b textarea {
+  font-size: 16px;
+  border-radius: 12px;
+}
+.wartaq-b button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.wartaq-b .wb-button,
+.wartaq-b .wb-secondary,
+.wartaq-b .wb-rail nav button,
+.wartaq-b .wb-search {
+  border-radius: 12px;
+}
+.wartaq-b .wb-register,
+.wartaq-b .wb-notes,
+.wartaq-b .wb-overview {
+  border-radius: 18px;
+}
+.wartaq-b .wb-mark-all {
+  display: block;
+  margin: -10px 0 10px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #e8f6f7;
+  color: #006e7c;
+  font-weight: 700;
+}
+.wartaq-b .wb-next {
+  position: relative;
+  overflow: hidden;
+}
+.wartaq-b .wb-next-arch {
+  position: absolute;
+  width: 85px;
+  height: 85px;
+  object-fit: contain;
+  inset-inline-end: 12px;
+  opacity: 0.12;
+  pointer-events: none;
+}
