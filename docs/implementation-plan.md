@@ -1,5 +1,12 @@
 # Implementation plan and task list
 
+## Public course homepage
+
+- [x] Replace the attendance-tool marketing page with an Arabic/English course introduction, proposed outcomes/curriculum and explicit teacher/schedule/enrollment/contact placeholders.
+- [x] Keep plain root public even with a stored legacy capability; preserve explicit private links and the separate `?page=app` entry.
+- [x] Verify course anchors, sample isolation, mobile/RTL layouts and existing app/PWA flows.
+- [ ] Publish the course-focused homepage through nightly and main-only Pages, then verify the actual public root.
+
 ## Three application roles
 
 - [x] Server-owned Administrator, Teacher and Student roles; signup grants no role or data access.

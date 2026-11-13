@@ -34,7 +34,7 @@ test('sample notebook supports attendance, notes and corrections without network
     if (new URL(request.url()).hostname !== '127.0.0.1') external.push(request.url())
   })
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /Your halaqa/ })).toBeVisible()
+  await expect(page.locator('.wartaq-home h1')).toBeVisible()
   await page.getByRole('button', { name: 'Explore with sample students' }).click()
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await page.getByLabel('Student name').fill('ليلى')

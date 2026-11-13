@@ -146,7 +146,7 @@ test('repository-scoped PWA installs its real manifest and opens the public shel
   )
   expect(bypasses).toEqual([true, true, true, true])
   await page.reload()
-  await expect(page.getByRole('heading', { name: /Your halaqa/ })).toBeVisible()
+  await expect(page.locator('.wartaq-home h1')).toBeVisible()
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
   await expect(page.locator('.workspace')).toBeVisible()
   await context.setOffline(false)
