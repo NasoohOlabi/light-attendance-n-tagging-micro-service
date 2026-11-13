@@ -6,7 +6,7 @@
 - [x] Keep plain root public even with a stored legacy capability; preserve explicit private links and the separate `?page=app` entry.
 - [x] Verify course anchors, sample isolation, mobile/RTL layouts and existing app/PWA flows.
 - [x] Publish the course-focused homepage through nightly and main-only Pages: main `e482fb3`, successful Stable Pages run `43460220354`; the actual public course content and placeholders were observed at root.
-- [ ] Finish the route-aware localized browser-title follow-up found during public verification, then repeat public-root proof.
+- [x] Finish the route-aware localized browser-title follow-up: main `78fe2fa`, successful Stable Pages run `43462943941`; actual English/Arabic course titles, app-title restoration and final public-root proof passed.
 
 ## Three application roles
 
