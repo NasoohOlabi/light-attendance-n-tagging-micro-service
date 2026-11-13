@@ -1,63 +1,25 @@
-# Quran Page Log
+# Halaqa notebook
 
-A small React + TypeScript app for logging which Quran page each student has recited to, backed directly by a Google Sheet (no server). Teachers sign in with Google, search for a student, and log a page; entries are appended to the configured sheet via the Sheets API, with duplicate-entry protection.
+**Status: planning and feasibility only.** Implementation started before the user clarified the scope. At the user's request, that base prototype is preserved but development is stopped. It is not production-ready or approved for deployment. The next work is provider research, specifications and an implementation plan; do not resume coding without a new instruction.
 
-## Stack
+Attendance and tagged notes for a small, trusted teaching team. Hosted as a static GitHub Pages site, with direct SheetDB reads and append-only writes. Teachers enter through personal, reusable access links. No Google login or hosted application backend.
 
-- [Vite](https://vitejs.dev/) + React 19 + TypeScript
-- [Tailwind CSS v4](https://tailwindcss.com/) (via `@tailwindcss/vite`)
-- [react-hook-form](https://react-hook-form.com/) + [zod](https://zod.dev/) for form state/validation
-- [fuse.js](https://www.fusejs.io/) for fuzzy student-name search
-- Google Identity Services + `gapi` client for auth and the Sheets API
-- [Oxlint](https://oxc.rs/) for linting
-- Deployed to Firebase Hosting
-
-Package manager is **bun** — use `bun`, not `npm`/`yarn`/`pnpm`.
-
-## Deep links
-
-Tabs, sub-tabs, and filters live in the query string so a pasted URL restores the same screen. There is no client router.
-
-```
-?tab=pages&sub=stats&view=coverage&from=2026-08-01&to=2026-08-31&student=Ahmad
-?tab=attendance&sub=group&date=2026-09-05&group=A
-?tab=students&q=ahmad
-?tab=finals&factor=1.5&sort=pages
-```
-
-Owned keys, history rules (`pushState` vs `replaceState`), and what stays in React are in [docs/url-state.md](docs/url-state.md). Agents: that file is also in [AGENTS.md](AGENTS.md).
-
-## Setup
-
-```sh
+```powershell
 bun install
-cp .env.example .env.local
+bun run dev       # teacher app: http://127.0.0.1:5173
+bun run manager   # separate terminal: http://127.0.0.1:4174
+bun run verify    # tests, lint, type checks, production build
 ```
 
-Fill in `.env.local`:
+**Start with [the setup guide](docs/setup.md).** No environment variables are needed. The teacher app has an isolated sample notebook for trying every feature without credentials. The manager opens with setup instructions; it only contacts your real SheetDB endpoints when you configure and use them.
 
-| Var | Description |
-| --- | --- |
-| `VITE_GOOGLE_CLIENT_ID` | OAuth client ID for Google sign-in (Sheets + userinfo scopes) |
-| `VITE_SHEET_ID` | Spreadsheet ID where entries are logged |
-| `VITE_SHEET_RANGE` | Data range, header row excluded (e.g. `Sheet1!A2:D`) |
-| `VITE_ROSTER_SHEET_ID` | Spreadsheet ID holding the student roster |
-| `VITE_ROSTER_GID` | gid of the roster tab (from the sheet URL's `#gid=...`) |
-| `VITE_ROSTER_NAME_COLUMN` | Column letter in the roster tab holding student full names |
-| `VITE_TEACHERS_SHEET_ID` | Spreadsheet ID holding the Teachers tab |
-| `VITE_TEACHERS_SHEET_NAME` | Tab name (in `VITE_TEACHERS_SHEET_ID`) listing teachers |
-| `VITE_TEACHERS_NAME_COLUMN` | Column letter in the teachers tab holding teacher full names |
-| `VITE_TEACHERS_EMAIL_COLUMN` | Column letter in the teachers tab holding teacher emails |
+- Attendance per student and date, including group marking.
+- Tagged notes with free text or your own structured text format; Arabic supported.
+- Roster and group changes stored as additional events.
+- Shared summaries and a permanent correction history.
+- Pending batch recovery with stable IDs after uncertain network outcomes.
+- Local user/link management, manual token rotation, optional SheetDB Global API creation and revocation.
 
-## Scripts
+This is a separate Git repository derived from `pages-micro-service`. Its first commit preserves the authorized source working copy. The current app focuses on attendance and notes; the original Quran page/points/finals screens and Google/Firebase integrations are not carried into the new UI. Existing production sheets are not migrated or modified.
 
-```sh
-bun run dev       # start the Vite dev server
-bun run build     # type-check (tsc -b) then build for production
-bun run lint      # run oxlint
-bun run preview   # preview the production build locally
-```
-
-## Deployment
-
-Pushes to `main` trigger [.github/workflows/firebase-hosting.yml](.github/workflows/firebase-hosting.yml), which builds with bun and deploys `dist/` to Firebase Hosting (project `mrp-masjid-al-botty`). Build-time env vars come from GitHub Actions repo variables (`VITE_GOOGLE_CLIENT_ID`, `VITE_SHEET_ID`, `VITE_SHEET_RANGE`); the roster vars currently aren't wired into CI.
+Read [architecture and trust boundaries](docs/architecture.md), [URL state](docs/url-state.md), and [work log](docs/work-log.md). This repository is prepared for GitHub Pages but has no remote and has not been published.

@@ -1,55 +1,17 @@
-# AGENTS.md
+# Pages SheetDB
 
-Quran Page Log: a React/TypeScript SPA (Vite) that lets teachers log student Quran-page recitations directly into a Google Sheet. No backend — auth and data access happen client-side via Google Identity Services and the `gapi` Sheets client.
+Current task is research and planning only. Preserve the stopped prototype; do not extend, deploy, provision accounts or resume implementation unless the user asks. Treat existing setup/architecture docs as prototype notes until reconciled with the feasibility research and final specifications.
 
-## Commands
+Independent attendance and tagged-note app for five trusted teachers. Static React/TypeScript + Vite frontend; direct SheetDB access. Local Bun access manager is never deployed. See `docs/setup.md` for account setup, deployment, permissions and rotation; `docs/architecture.md` before changing access links, event semantics or retries.
 
-Use **bun** for everything — this repo has a `bun.lock`, not a `package-lock.json` or `yarn.lock`.
+Use PowerShell and Bun. No worktrees without asking. Keep responses concise.
 
-```sh
-bun install              # install deps
-bun run dev               # dev server (Vite)
-bun run build              # tsc -b && vite build — must pass before considering a change done
-bun run lint                # oxlint
-bun run preview              # preview a production build
-```
+- Run `bun run verify` before completing changes. It runs ledger/transport tests, lint and both frontend/manager type checks plus the production build.
+- Append events only. Teacher transport permits GET and POST. Corrections reference existing event IDs. Projection uses sheet row order, never device clocks.
+- Parse external data with Zod. Use named payload variants and derive types from schemas. Single quotes, no semicolons; React functions and hooks; Tailwind for the teacher UI.
+- Keep view filters in `src/queryState.ts`. Access credentials belong in the URL fragment and session storage, never query parameters, source, assets or logs.
+- `.local/manager.json` contains teacher tokens. Global management credentials stay in server memory. Never commit either or bundle manager code into `dist`.
+- Inspect starting Git status/diff and preserve unrelated work. Stage explicit paths, inspect staged diff and run `git diff --cached --check`. Document dated work (Asia/Damascus), reason, verification and limitations in `docs/work-log.md`, then commit before handing back. Report hashes, status and push state.
+- Deploy this fork through `.github/workflows/pages.yml` on GitHub Pages. The original application's Firebase instructions do not apply here.
 
-There is no test suite. Treat `bun run build` (type-check) and `bun run lint` as the verification bar for any change.
-
-## Code layout
-
-- [src/auth/](src/auth/) — Google sign-in (`useGoogleAuth` loads GIS + gapi scripts, manages the access token and user profile)
-- [src/sheets/](src/sheets/) — Sheets API access: [sheetsClient.ts](src/sheets/sheetsClient.ts) (append/read the log sheet, dedupe), [rosterClient.ts](src/sheets/rosterClient.ts) (fetch student names for autocomplete), [schema.ts](src/sheets/schema.ts) (zod schema + column order — must match `VITE_SHEET_RANGE`)
-- [src/form/](src/form/) — screens that write data: [PagesTab.tsx](src/form/PagesTab.tsx) (log vs stats), [EntryForm.tsx](src/form/EntryForm.tsx), [PointsForm.tsx](src/form/PointsForm.tsx), [AttendanceForm.tsx](src/form/AttendanceForm.tsx), [RosterView.tsx](src/form/RosterView.tsx)
-- [src/stats/](src/stats/) — read-only views: [PagesStats.tsx](src/stats/PagesStats.tsx), [FinalsView.tsx](src/stats/FinalsView.tsx)
-- [src/url/](src/url/) — query state ([queryState.ts](src/url/queryState.ts) / `useQueryState`). The only module that touches `history` / `location.search` for view state.
-- [src/config.ts](src/config.ts) — reads/validates `VITE_*` env vars; throws on startup if any are missing
-- [src/App.tsx](src/App.tsx) — sign-in and the top-level tab switch (`tab` query param)
-
-## Conventions
-
-- Functional components, hooks, no class components.
-- No semicolons, single quotes — match the existing style (oxlint/formatting is not auto-fixing, so follow surrounding code by eye).
-- Styling is Tailwind utility classes inline in JSX; no CSS modules or styled-components.
-- Errors that mean "you don't have sheet access" should be raised as `SheetsAccessError` (see [sheetsClient.ts](src/sheets/sheetsClient.ts)) so the UI can show a friendly message instead of a generic failure.
-- `COLUMN_ORDER` in [schema.ts](src/sheets/schema.ts) must stay in sync with the actual sheet columns and `VITE_SHEET_RANGE` — if you add/reorder a form field that maps to a sheet column, update both.
-- Comments are rare and only used to explain non-obvious *why* (e.g. the column-order/range coupling, the roster-cache lifetime). Don't add explanatory comments for self-evident code.
-- Env vars are accessed only through [src/config.ts](src/config.ts), never `import.meta.env` directly in components.
-- Query state — tabs, sub-tabs, filters, dates, search, and chart views live in the query string. Read [docs/url-state.md](docs/url-state.md) before adding a tab, filter, or `useState` that decides what the screen shows.
-
-## Environment
-
-Local dev needs a `.env.local` (see [.env.example](.env.example)) with Google OAuth + two spreadsheet configs (entry log + roster). Without these, `config.ts` throws on load.
-
-## Deployment
-
-The git remote (`origin`) only has a `master` branch, but the CI workflow ([.github/workflows/firebase-hosting.yml](.github/workflows/firebase-hosting.yml)) only triggers on push to `main`, and it deploys to Firebase project `mrp-masjid-al-botty`. So pushing to `master` never triggers that CI deploy.
-
-**Always deploy locally when asked to deploy** — don't rely on CI. Run the Firebase CLI directly:
-
-```sh
-bun run build
-npx firebase-tools deploy --only hosting --project pages-micro-service
-```
-
-The locally logged-in Firebase account only has access to the `pages-micro-service` project (per [.firebaserc](.firebaserc)), which differs from the project the CI workflow targets — always deploy straight to `pages-micro-service`.
+The first commit is an authorized snapshot of the original working copy, including changes of unknown provenance. It is preserved for reference; current behavior is described in this fork's docs.

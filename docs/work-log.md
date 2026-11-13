@@ -1,0 +1,15 @@
+# Work log
+
+## 2026-11-13 — Asia/Damascus (UTC+03:00)
+
+**Request/reason:** Fork the current project into a completely separate repository for five trusted users, replacing Google sign-in with reusable username/SheetDB access links, append-only attendance and tagged notes, shared reads, GitHub Pages hosting and a local access manager. User explicitly authorized including the current working copy and destination `D:\Masjid\main-production-work\pages-sheetdb`.
+
+**Starting state/provenance:** Original repository had modifications to `docs/data-cache.md`, `docs/url-state.md`, `scripts/student-activation.test.js`, `src/form/EntryForm.tsx`, `src/form/StudentAutocomplete.tsx`, `src/i18n/translations.ts`, `src/sheets/rosterClient.ts` and untracked `src/sheets/pageLogging.ts`. These are pre-existing user/workspace changes, not authored in this task. They were copied into initial snapshot commit `f6fee1d`; sensitive local files were excluded. No worktree, original-source edit, remote push or sheet mutation was performed.
+
+**Changes:** Independent Git repository and T3 project registration; focused React attendance/notes/roster/summary/history app; fragment access links; direct GET/POST SheetDB client; typed event ledger and append-only correction projection; pending-batch recovery; local manager with saved teacher credentials, same-origin guards, endpoint lifecycle tooling and explicit manual bearer rotation; GitHub Pages workflow; setup and architecture docs.
+
+**Verification:** `bun run verify` passed: 12 tests, 32 assertions, lint, strict frontend/manager type checks and Vite production build. An initial test mock typing failure (Bun fetch requires preconnect) was fixed before the passing run. Both local servers returned successful HTTP responses; manager state showed no configured credentials/users. Browser workflow verification was interrupted by the scope correction and is not claimed. T3's environment-port preview resolved to localhost while the manager accepts only 127.0.0.1; this remains a prototype integration issue to address in a future authorized implementation phase.
+
+**Limitations:** No real SheetDB credentials or GitHub repository destination supplied. Live provider provisioning, multiple-endpoint plan eligibility, CORS, DATETIME expansion, token revocation and deployed Pages behavior remain unverified. Trusted usernames/timestamps are client-supplied; no server-side signed identity or exactly-once append guarantee is claimed. UI supports Arabic content but is not a full translated Arabic interface. No existing production data migration requested/performed.
+
+**Scope correction:** User clarified that only feasibility, plans and specs were requested, then explicitly instructed that the base implementation must not be discarded. Coding stopped; both local servers and the preview tab were closed. Preserve this work as a clearly labeled WIP prototype. Remaining work is research and documentation only, especially actual SheetDB management keys, agent MCP access, revocability, expiry and paid-plan constraints. No implementation checks were failing at stop; browser and live-account verification are unfinished.
