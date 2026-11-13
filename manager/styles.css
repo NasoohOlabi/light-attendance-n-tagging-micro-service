@@ -104,6 +104,9 @@ select {
   color: inherit;
   background: white;
 }
+select {
+  min-height: 44px;
+}
 button {
   min-height: 44px;
   border: 1px solid transparent;

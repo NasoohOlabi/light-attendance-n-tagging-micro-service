@@ -32,6 +32,9 @@
   textarea {
     @apply w-full;
   }
+  select {
+    min-height: 44px;
+  }
   summary {
     min-height: 44px;
     cursor: pointer;

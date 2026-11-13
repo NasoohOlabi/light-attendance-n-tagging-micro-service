@@ -146,10 +146,16 @@
 
 **Limits/delivery:** Chromium emulation is not physical Safari/Android, screen-reader, software-keyboard or home-screen/cutout certification. Native browser validation/date-picker language follows the device. No live provider or email-delivery recheck, database/event/retry/security-boundary changes, new dependencies, service worker or offline-write claim. Shared preview automation snapshots timed out twice; switched to the project Playwright harness and inspected its actual screenshot files. No credentials or real student data used. No push, PR or publication in this task; remaining device checks are documented in `docs/mobile-and-languages.md`.
 
-## 2026-11-13 16:24 — public deployment preflight, Asia/Damascus (UTC+03:00)
+## 2026-11-13 16:22 — public deployment preflight, Asia/Damascus (UTC+03:00)
 
 **Request/reason:** User explicitly requested creating a PR and deploying the new site at the existing GitHub Pages URL. The earlier mobile task ended with local commit `a7d7c0f`; the public site was still at the previous stable release.
 
 **Release scope:** Promote the completed assigned-roster/Neon migration and dependent mobile/Arabic-English interface through a candidate PR to `nightly`, then a stable promotion PR to `main`. Preserve history and protected-branch checks; use only `.github/workflows/pages.yml` for deployment. No worktree or unrelated dependency PR is involved. Set and read back the names of the two repository public endpoint variables from the already configured local Vite build; database/Auth secrets remain private and are not GitHub Pages inputs.
 
 **Preflight proof:** Clean starting tree; fetched origin and confirmed main/nightly both require `Verify`. `bun run verify:release` passed 28 unit/HTTP tests (97 assertions), 30 desktop/mobile browser scenarios, formatting, artifact checks, built-file/full-history secret scans and dependency audit with no vulnerabilities. Source gate checked server parameterized queries, teacher/assignment locks, JWT and origin boundaries, append/retry behavior, manager credential boundaries and presentation changes. Remaining limits are physical-device coverage and unverified production password-reset email delivery. Remote CI, merges and live publication are pending and must be observed before declaring deployment complete.
+
+## 2026-11-13 16:26 — cross-platform touch target correction, Asia/Damascus (UTC+03:00)
+
+**Request/reason:** PR #9 `Verify` run `43433284641` failed four browser scenarios on the Linux runner: native teacher/manager dropdowns were shorter than the existing 44px assertion. The same checks passed on Windows. Preserved the test threshold and added an explicit shared select minimum height in both interfaces; native control metrics no longer determine the touch-target floor. Corrected the preceding preflight note's minute to its actual commit time. No data, provider or authorization behavior changed.
+
+**Verification/limits:** The unchanged `bun run verify:release` passed locally: 28 unit/HTTP tests, 30 browser checks, formatting, artifact/history secret checks and audit. Push and observe the Linux CI rerun; local Windows results cannot independently certify the Linux fix. Deployment remains pending until remote checks and main-only Pages promotion succeed.
