@@ -37,3 +37,13 @@
 **Verification:** `bun run verify` passed after the move: 12 tests/32 assertions, lint, strict type checks and production build. Project registration reports the new path. Staged diff/whitespace and final Git status checked before handback.
 
 **Limitations:** Local rename only; no remote configured, no push or deployment. Implementation remains stopped pending a new instruction in the renamed project.
+
+## 2026-11-13 10:54 - chat access skill, Asia/Damascus (UTC+03:00)
+
+**Request/reason:** Add a repository skill so chat agents can manage teacher magic links without opening the admin dashboard, using official SheetDB MCP where supported.
+
+**Changes:** Added manage-halaqa-access skill, executable PowerShell headless manager recipes, and docs/chat-access.md with Codex OAuth setup and invocation. Reuses existing guarded manager endpoints; private links go to ignored files, Global credentials stay in process memory, and revocation disconnects credentials even on failure. Documents MCP-only cloud limitations, initial provider credential setup and unsupported mint/rotation/expiry operations.
+
+**Verification:** Skill quick_validate.py and targeted Prettier passed. All seven PowerShell blocks parsed; the actual recipes executed against an isolated loopback manager with a synthetic provider, checking settings, import, private link round-trip, Arabic username transport, token-free state, endpoint revoke, post-revoke link denial and disconnect. bun run verify passed: 18 tests/53 assertions, lint, type checks, production build and 10-file artifact boundary. Staged whitespace/secret scan and hooks checked during commit.
+
+**Provenance and limits:** App, manager, source formatting, CI/security, release docs, verification skill and an independent implementation-restart log entry were already changing in this shared checkout; they are external to this task and excluded from this commit. Only this log section is staged from the shared work log. No live SheetDB connection, real credential/link, provider mutation, public manager exposure, push or deployment performed. Synthetic checks do not establish live provider behavior. Existing checkout/branch retained to avoid disrupting concurrent work; no worktree.
