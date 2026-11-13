@@ -10,7 +10,11 @@ import {
   type Student,
 } from '../shared/ledger'
 import { clearSession, loadSession } from './session'
-import { setQuery, useQueryState, type Tab } from './queryState'
+import { navigatePage, setQuery, useQueryState, type Tab } from './queryState'
+import { HomePage } from './HomePage'
+import { InstallApp } from './InstallApp'
+import { WartaqIcon, WartaqLogo } from './brand/components'
+import './workspace.css'
 import { useLedger } from './useLedger'
 import { NeonAuth } from './NeonAuth'
 import { authClient } from './neon'
@@ -26,101 +30,142 @@ const tabs: { id: Tab; label: TranslationKey }[] = [
 type Projection = ReturnType<typeof projectEvents>
 type Save = (payloads: Payload[]) => Promise<boolean>
 
-export function App(props: { initialSession: { access: Access | null; error: string } }) {
+export function App(props: {
+  initialSession: { access: Access | null; error: string }
+  initialResetToken?: string
+}) {
   return (
     <LanguageProvider>
-      <a className="skip-link" href="#main-content">
-        <SkipText />
-      </a>
-      <LanguageSwitch />
-      <AppContent {...props} />
+      <div className="wartaq-site">
+        <a className="skip-link" href="#main-content">
+          <SkipText />
+        </a>
+        <InstallApp />
+        <AppContent {...props} />
+      </div>
     </LanguageProvider>
   )
 }
 
 function AppContent({
   initialSession,
+  initialResetToken,
 }: {
   initialSession: { access: Access | null; error: string }
+  initialResetToken?: string
 }) {
   const { t, errorMessage } = useLanguage()
   const [session, setSession] = useState({ ...initialSession, revision: 0 })
   const [demo, setDemo] = useState<'legacy' | 'assigned' | null>(null)
   const { access } = session
+  const query = useQueryState()
+  const [resetToken, setResetToken] = useState(initialResetToken)
+  const reset = !!resetToken
+  const openDemo = (kind: 'legacy' | 'assigned') => {
+    setDemo(kind)
+    navigatePage('app')
+  }
+  const goHome = () => {
+    setDemo(null)
+    setResetToken(undefined)
+    navigatePage('home')
+  }
   useEffect(() => {
     function onHashChange() {
       if (!new URLSearchParams(window.location.hash.slice(1)).has('access')) return
       const next = loadSession()
       setSession((previous) => ({ ...next, revision: previous.revision + 1 }))
       setDemo(null)
+      setQuery({ page: 'app' })
     }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
+  if (!access && query.page === 'home' && !reset)
+    return (
+      <HomePage
+        onOpenApp={() => {
+          setDemo(null)
+          navigatePage('app')
+        }}
+        onExplore={() => openDemo('legacy')}
+        onExploreAssigned={() => openDemo('assigned')}
+        error={session.error ? errorMessage(session.error) : undefined}
+      />
+    )
   if (!access && !demo && authClient)
     return (
-      <NeonAuth
-        samples={
-          <>
-            <button className="secondary self-start" onClick={() => setDemo('legacy')}>
-              {t('Explore with sample students')}
-            </button>
-            <button className="secondary self-start" onClick={() => setDemo('assigned')}>
-              {t('Explore assigned teacher sample')}
-            </button>
-          </>
-        }
-      >
-        {(userId, teacher, signOut) => (
-          <Notebook
-            key={userId}
-            access={null}
-            demo={null}
-            neon={{ userId, teacher }}
-            leave={signOut}
-          />
-        )}
-      </NeonAuth>
+      <>
+        <NeonAuth
+          initialResetToken={resetToken}
+          onResetComplete={() => setResetToken(undefined)}
+          onSignOut={goHome}
+          samples={
+            <>
+              <button className="secondary self-start" onClick={() => openDemo('legacy')}>
+                {t('Explore with sample students')}
+              </button>
+              <button className="secondary self-start" onClick={() => openDemo('assigned')}>
+                {t('Explore assigned teacher sample')}
+              </button>
+            </>
+          }
+        >
+          {(userId, teacher, signOut) => (
+            <Notebook
+              key={userId}
+              access={null}
+              demo={null}
+              neon={{ userId, teacher }}
+              leave={signOut}
+            />
+          )}
+        </NeonAuth>
+      </>
     )
   if (!access && !demo)
     return (
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="mx-auto flex min-h-svh max-w-lg flex-col justify-center gap-6 px-6"
-      >
-        <span className="text-5xl text-indigo-700" aria-hidden="true">
-          ◈
-        </span>
-        <h1 className="text-4xl font-semibold tracking-tight">
-          {t('Your halaqa, one shared notebook.')}
-        </h1>
-        <p className="text-lg leading-relaxed text-slate-600">
-          {t('Record attendance. Leave a note. Keep the next teacher in the loop.')}
-        </p>
-        <div className="panel space-y-3">
-          <h2 className="font-semibold">{t('Open your personal access link')}</h2>
+      <>
+        <LanguageSwitch />
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto flex min-h-svh max-w-lg flex-col justify-center gap-6 px-6"
+        >
+          <WartaqLogo />
+          <a className="secondary self-start" href={window.location.pathname}>
+            {t('Halaqa notebook')}
+          </a>
+          <h1 className="text-4xl font-semibold tracking-tight">
+            {t('Your halaqa, one shared notebook.')}
+          </h1>
+          <p className="text-lg leading-relaxed text-slate-600">
+            {t('Record attendance. Leave a note. Keep the next teacher in the loop.')}
+          </p>
+          <div className="panel space-y-3">
+            <h2 className="font-semibold">{t('Open your personal access link')}</h2>
+            <p className="muted">
+              {t(
+                'Your manager sends you a link with your name and access. Keep it somewhere private and open it whenever you return.',
+              )}
+            </p>
+          </div>
+          {session.error && (
+            <p role="alert" className="text-red-700">
+              {errorMessage(session.error)}
+            </p>
+          )}
+          <button className="secondary self-start" onClick={() => openDemo('legacy')}>
+            {t('Explore with sample students')}
+          </button>
+          <button className="secondary self-start" onClick={() => openDemo('assigned')}>
+            {t('Explore assigned teacher sample')}
+          </button>
           <p className="muted">
-            {t(
-              'Your manager sends you a link with your name and access. Keep it somewhere private and open it whenever you return.',
-            )}
+            {t('الحضور والملاحظات · Arabic names, notes and tags are supported.')}
           </p>
-        </div>
-        {session.error && (
-          <p role="alert" className="text-red-700">
-            {errorMessage(session.error)}
-          </p>
-        )}
-        <button className="secondary self-start" onClick={() => setDemo('legacy')}>
-          {t('Explore with sample students')}
-        </button>
-        <button className="secondary self-start" onClick={() => setDemo('assigned')}>
-          {t('Explore assigned teacher sample')}
-        </button>
-        <p className="muted">
-          {t('الحضور والملاحظات · Arabic names, notes and tags are supported.')}
-        </p>
-      </main>
+        </main>
+      </>
     )
   return (
     <Notebook
@@ -130,7 +175,7 @@ function AppContent({
       leave={() => {
         clearSession()
         setSession((previous) => ({ access: null, error: '', revision: previous.revision + 1 }))
-        setDemo(null)
+        goHome()
       }}
     />
   )
@@ -163,6 +208,14 @@ function Notebook({
       (!query.group || student.group === query.group) &&
       student.name.toLocaleLowerCase().includes(query.q.toLocaleLowerCase()),
   )
+  const visibleIds = new Set(students.map((student) => student.studentId))
+  const markedToday = projected.attendance.filter(
+    ({ value }) => value.date === query.date && visibleIds.has(value.studentId),
+  ).length
+  const visibleNotes = projected.notes.filter(
+    ({ value }) => !value.studentId || visibleIds.has(value.studentId),
+  )
+  const latestNote = visibleNotes[visibleNotes.length - 1]
   const disabled =
     ledger.busy ||
     !!ledger.pending.length ||
@@ -170,187 +223,248 @@ function Notebook({
     !ledger.loaded ||
     !!(neon && !neon.teacher.canWrite)
   return (
-    <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <span aria-hidden="true" className="text-3xl text-indigo-700">
-              ◈
-            </span>
-            <h1 className="text-2xl font-semibold">{t('Halaqa notebook')}</h1>
-          </div>
-          <p className="muted mt-1">{t('Attendance & notes · الحضور والملاحظات')}</p>
+    <div className="workspace">
+      <aside className="workspace-rail">
+        <div className="workspace-brand">
+          <WartaqLogo />
+          <span>{t('Halaqa notebook')}</span>
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          <span dir="auto">{neon?.teacher.name ?? access?.username ?? t('Demo teacher')}</span>
+        <nav aria-label={t('Notebook')}>
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={query.tab === tab.id ? 'active' : ''}
+              aria-label={t(tab.label)}
+              aria-current={query.tab === tab.id ? 'page' : undefined}
+              onClick={() =>
+                setQuery({ tab: tab.id, ...(assigned ? {} : { student: '' }), tag: '' }, true)
+              }
+            >
+              <WartaqIcon name={tab.id === 'roster' ? 'students' : tab.id} />
+              <span className={tab.id === 'history' ? 'workspace-tab-long' : undefined}>
+                {t(tab.label)}
+              </span>
+              {tab.id === 'history' && (
+                <span className="workspace-tab-short" aria-hidden="true">
+                  {language === 'ar' ? 'السجل' : 'History'}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+        <div className="workspace-identity">
+          <span>{t('Attendance & notes · الحضور والملاحظات')}</span>
+        </div>
+      </aside>
+      <main id="main-content" tabIndex={-1} className="workspace-main">
+        <div className="workspace-topline">
+          <span>
+            {t('Halaqa notebook')} /{' '}
+            {t(tabs.find((tab) => tab.id === query.tab)?.label ?? 'Attendance')}
+          </span>
+          <LanguageSwitch />
           <button disabled={ledger.busy} className="secondary" onClick={leave}>
             {neon ? t('Sign out') : t('Close session')}
           </button>
         </div>
-      </header>
-      {demo && (
-        <p className="mb-5 rounded-lg bg-amber-100 p-3 text-amber-900">
-          {demo === 'assigned' ? t('Assigned teacher sample notebook.') : t('Sample notebook.')}{' '}
-          {t('Changes stay in memory and disappear when you leave. No SheetDB requests are made.')}
-        </p>
-      )}
-      <nav aria-label={t('Notebook')} className="mb-6 flex flex-wrap gap-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={query.tab === tab.id ? 'primary' : 'secondary'}
-            aria-current={query.tab === tab.id ? 'page' : undefined}
-            onClick={() =>
-              setQuery({ tab: tab.id, ...(assigned ? {} : { student: '' }), tag: '' }, true)
-            }
-          >
-            {t(tab.label)}
-          </button>
-        ))}
-      </nav>
-      <div className="mb-6 flex flex-wrap items-end gap-3">
-        <label className="grow">
-          {t('Find a student')}
-          <input
-            type="search"
-            value={query.q}
-            onChange={(event) => setQuery({ q: event.target.value })}
-            dir="auto"
-            enterKeyHint="search"
-            placeholder={t('Name / اسم الطالب')}
-          />
-        </label>
-        <label>
-          {t('Group')}
-          <select value={query.group} onChange={(event) => setQuery({ group: event.target.value })}>
-            <option value="">{t('All groups')}</option>
-            {groups.map((group) => (
-              <option key={group}>{group}</option>
-            ))}
-          </select>
-        </label>
-        {!assigned && (
-          <label className="mb-3 min-h-11 flex-row items-center">
-            <input
-              type="checkbox"
-              checked={query.all}
-              onChange={(event) => setQuery({ all: event.target.checked ? '1' : '' })}
-            />
-            {t('Include inactive')}
-          </label>
-        )}
-        {assigned && query.student && (
-          <button className="secondary" onClick={() => setQuery({ student: '' }, true)}>
-            {t('All my students')}
-          </button>
-        )}
-        {!demo && (
-          <button
-            className="secondary"
-            disabled={ledger.busy}
-            onClick={() => void ledger.refresh()}
-          >
-            {t('Refresh')}
-          </button>
-        )}
-      </div>
-      {ledger.storageBlocked && (
-        <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">
-          {errorMessage(ledger.storageBlocked)}
-        </p>
-      )}
-      {ledger.error && (
-        <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">
-          {errorMessage(ledger.error)}
-        </p>
-      )}
-      {ledger.message && (
-        <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-4 text-emerald-800">
-          {language === 'ar'
-            ? `${ledger.pending.length || (ledger.message.match(/^\d+/)?.[0] ?? '')} سجل محفوظ${demo ? ' في النموذج التجريبي' : ''}.`
-            : ledger.message}
-        </p>
-      )}
-      {projected.conflicts > 0 && (
-        <p role="alert" className="mb-4 text-red-800">
-          {language === 'ar'
-            ? `تم اكتشاف ${projected.conflicts} معرّفات مكررة متعارضة. اطلب من المسؤول فحص الجدول.`
-            : `${projected.conflicts} conflicting duplicate IDs detected. Ask the manager to inspect the sheet.`}
-        </p>
-      )}
-      {(ledger.invalid > 0 || projected.invalidReversals > 0) && (
-        <p role="status" className="mb-4 text-amber-800">
-          {language === 'ar'
-            ? `تم تجاوز ${ledger.invalid} صفوف غير صالحة و${projected.invalidReversals} تصحيحات غير صالحة. اطلب من المسؤول فحص الجدول.`
-            : `${ledger.invalid} invalid rows and ${projected.invalidReversals} invalid corrections were skipped. Ask the manager to inspect the sheet.`}
-        </p>
-      )}
-      {ledger.pending.length > 0 && (
-        <div className="panel mb-4 space-y-3">
-          <h2 className="font-semibold">
-            {language === 'ar'
-              ? `${ledger.pending.length} سجلات بانتظار التأكيد`
-              : `${ledger.pending.length} records awaiting confirmation`}
-          </h2>
-          <p className="muted">
+        <header className="workspace-welcome">
+          <div>
+            <p dir="auto">{neon?.teacher.name ?? access?.username ?? t('Demo teacher')}</p>
+            <h1>{t('Halaqa notebook')}</h1>
+            <span>{t('Record attendance. Leave a note. Keep the next teacher in the loop.')}</span>
+          </div>
+          <div className="workspace-count">
+            <strong>{projected.students.length}</strong>
+            <span>{t('Students')}</span>
+          </div>
+        </header>
+        {demo && (
+          <p className="mb-5 rounded-lg bg-amber-100 p-3 text-amber-900">
+            {demo === 'assigned' ? t('Assigned teacher sample notebook.') : t('Sample notebook.')}{' '}
             {t(
-              'Retry reuses their original IDs. Even if a request reached the sheet twice, summaries count each record once.',
+              'Changes stay in memory and disappear when you leave. No SheetDB requests are made.',
             )}
           </p>
-          <div className="flex flex-wrap gap-3">
-            <button
-              disabled={ledger.busy || !!(neon && !neon.teacher.canWrite)}
-              className="primary"
-              onClick={() => void ledger.retry()}
+        )}
+        <div className="mb-6 flex flex-wrap items-end gap-3">
+          <label className="grow">
+            {t('Find a student')}
+            <input
+              type="search"
+              value={query.q}
+              onChange={(event) => setQuery({ q: event.target.value })}
+              dir="auto"
+              enterKeyHint="search"
+              placeholder={t('Name / اسم الطالب')}
+            />
+          </label>
+          <label>
+            {t('Group')}
+            <select
+              value={query.group}
+              onChange={(event) => setQuery({ group: event.target.value })}
             >
-              {t('Retry pending batch')}
+              <option value="">{t('All groups')}</option>
+              {groups.map((group) => (
+                <option key={group}>{group}</option>
+              ))}
+            </select>
+          </label>
+          {!assigned && (
+            <label className="mb-3 min-h-11 flex-row items-center">
+              <input
+                type="checkbox"
+                checked={query.all}
+                onChange={(event) => setQuery({ all: event.target.checked ? '1' : '' })}
+              />
+              {t('Include inactive')}
+            </label>
+          )}
+          {assigned && query.student && (
+            <button className="secondary" onClick={() => setQuery({ student: '' }, true)}>
+              {t('All my students')}
             </button>
+          )}
+          {!demo && (
             <button
-              disabled={ledger.busy}
               className="secondary"
-              onClick={() => void ledger.discard()}
+              disabled={ledger.busy}
+              onClick={() => void ledger.refresh()}
             >
-              {t('Discard pending retry')}
+              {t('Refresh')}
             </button>
-          </div>
+          )}
         </div>
-      )}
-      {!ledger.loaded && !ledger.error && <p role="status">{t('Loading the shared notebook…')}</p>}
-      <fieldset disabled={disabled} className="min-w-0">
-        {query.tab === 'attendance' && (
-          <AttendanceView
-            key={query.date}
-            students={students.filter((student) => student.active)}
-            projected={projected}
-            date={query.date}
-            save={ledger.save}
-          />
+        {ledger.storageBlocked && (
+          <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">
+            {errorMessage(ledger.storageBlocked)}
+          </p>
         )}
-        {query.tab === 'notes' && (
-          <NotesView
-            students={students}
-            projected={projected}
-            save={ledger.save}
-            assigned={assigned}
-          />
+        {ledger.error && (
+          <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">
+            {errorMessage(ledger.error)}
+          </p>
         )}
-        {query.tab === 'roster' && (
-          <RosterView students={students} save={ledger.save} assigned={assigned} />
+        {ledger.message && (
+          <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-4 text-emerald-800">
+            {language === 'ar'
+              ? `${ledger.pending.length || (ledger.message.match(/^\d+/)?.[0] ?? '')} سجل محفوظ${demo ? ' في النموذج التجريبي' : ''}.`
+              : ledger.message}
+          </p>
         )}
-        {query.tab === 'summary' && <Summary students={students} projected={projected} />}
-        {query.tab === 'history' && (
-          <History
-            projected={projected}
-            students={students}
-            save={ledger.save}
-            assigned={assigned}
-          />
+        {projected.conflicts > 0 && (
+          <p role="alert" className="mb-4 text-red-800">
+            {language === 'ar'
+              ? `تم اكتشاف ${projected.conflicts} معرّفات مكررة متعارضة. اطلب من المسؤول فحص الجدول.`
+              : `${projected.conflicts} conflicting duplicate IDs detected. Ask the manager to inspect the sheet.`}
+          </p>
         )}
-      </fieldset>
-      <footer className="mt-8 border-t border-slate-200 py-5 text-sm text-slate-500">
-        {t('Every change leaves a record. Use History & corrections to undo a mistake.')}
-      </footer>
-    </main>
+        {(ledger.invalid > 0 || projected.invalidReversals > 0) && (
+          <p role="status" className="mb-4 text-amber-800">
+            {language === 'ar'
+              ? `تم تجاوز ${ledger.invalid} صفوف غير صالحة و${projected.invalidReversals} تصحيحات غير صالحة. اطلب من المسؤول فحص الجدول.`
+              : `${ledger.invalid} invalid rows and ${projected.invalidReversals} invalid corrections were skipped. Ask the manager to inspect the sheet.`}
+          </p>
+        )}
+        {ledger.pending.length > 0 && (
+          <div className="panel mb-4 space-y-3">
+            <h2 className="font-semibold">
+              {language === 'ar'
+                ? `${ledger.pending.length} سجلات بانتظار التأكيد`
+                : `${ledger.pending.length} records awaiting confirmation`}
+            </h2>
+            <p className="muted">
+              {t(
+                'Retry reuses their original IDs. Even if a request reached the sheet twice, summaries count each record once.',
+              )}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button
+                disabled={ledger.busy || !!(neon && !neon.teacher.canWrite)}
+                className="primary"
+                onClick={() => void ledger.retry()}
+              >
+                {t('Retry pending batch')}
+              </button>
+              <button
+                disabled={ledger.busy}
+                className="secondary"
+                onClick={() => void ledger.discard()}
+              >
+                {t('Discard pending retry')}
+              </button>
+            </div>
+          </div>
+        )}
+        {!ledger.loaded && !ledger.error && (
+          <p role="status">{t('Loading the shared notebook…')}</p>
+        )}
+        <div className={query.tab === 'attendance' ? 'workspace-content' : ''}>
+          <fieldset disabled={disabled} className="min-w-0">
+            {query.tab === 'attendance' && (
+              <AttendanceView
+                key={query.date}
+                students={students.filter((student) => student.active)}
+                projected={projected}
+                date={query.date}
+                save={ledger.save}
+              />
+            )}
+            {query.tab === 'notes' && (
+              <NotesView
+                students={students}
+                projected={projected}
+                save={ledger.save}
+                assigned={assigned}
+              />
+            )}
+            {query.tab === 'roster' && (
+              <RosterView students={students} save={ledger.save} assigned={assigned} />
+            )}
+            {query.tab === 'summary' && <Summary students={students} projected={projected} />}
+            {query.tab === 'history' && (
+              <History
+                projected={projected}
+                students={students}
+                save={ledger.save}
+                assigned={assigned}
+              />
+            )}
+          </fieldset>
+          {query.tab === 'attendance' && (
+            <aside className="workspace-context" aria-label={t('Summary')}>
+              <section className="panel">
+                <h2>{t('Summary')}</h2>
+                <div className="workspace-metrics">
+                  <div>
+                    <strong>{students.filter((student) => student.active).length}</strong>
+                    <span>{t('Students')}</span>
+                  </div>
+                  <div>
+                    <strong>{markedToday}</strong>
+                    <span>{language === 'ar' ? 'تم تسجيل الحضور' : 'Marked on this date'}</span>
+                  </div>
+                  <div>
+                    <strong>{visibleNotes.length}</strong>
+                    <span>{t('Notes')}</span>
+                  </div>
+                </div>
+              </section>
+              {latestNote && (
+                <section className="panel workspace-recent">
+                  <h2>{language === 'ar' ? 'آخر ملاحظة' : 'Latest note'}</h2>
+                  <small>{latestNote.value.date}</small>
+                  <p dir="auto">{latestNote.value.text}</p>
+                </section>
+              )}
+            </aside>
+          )}
+        </div>
+        <footer className="mt-8 border-t border-slate-200 py-5 text-sm text-slate-500">
+          {t('Every change leaves a record. Use History & corrections to undo a mistake.')}
+        </footer>
+      </main>
+    </div>
   )
 }
 
@@ -625,7 +739,7 @@ function NotesView({
                 <button
                   key={tag}
                   dir="auto"
-                  className="rounded-full bg-indigo-50 px-3 py-1 text-sm text-indigo-800"
+                  className="rounded-full bg-[#e2f4f4] px-3 py-1 text-sm text-[#005761]"
                   onClick={() => setQuery({ tag })}
                 >
                   #{tag}
@@ -825,7 +939,7 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
             >
               <span>{t(status)}</span>
               <meter
-                className="h-6 w-full accent-indigo-700"
+                className="h-6 w-full accent-[#007d8d]"
                 min={0}
                 max={Math.max(records.length, 1)}
                 value={count}

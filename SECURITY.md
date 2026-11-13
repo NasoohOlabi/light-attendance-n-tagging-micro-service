@@ -10,6 +10,10 @@ The application has three tables: `teachers`, `students`, `events`. Neon owns it
 
 Live verification creates only synthetic accounts/records, turns off browser traces, and removes its fixtures. Keep its private cleanup manifest and screenshots ignored. Email/password verification settings and production SMTP requirements are documented in [Neon setup](docs/neon-setup.md).
 
+## Installed app and offline cache
+
+The PWA worker caches only build-listed public frontend assets. Auth/API responses, authorization-bearing requests, query URLs, cross-origin traffic and writes bypass it. Installation does not grant teacher access or add background/offline saves. Existing pending batches remain governed by the ledger's storage/retry rules. The installed browser context may ask the teacher to sign in again; legacy links remain session-scoped. Updates wait for old clients to close, without forced reloads. See [PWA behavior and proof](docs/pwa.md).
+
 The remaining capability/link sections describe legacy SheetDB integration only.
 
 ## Legacy account independence

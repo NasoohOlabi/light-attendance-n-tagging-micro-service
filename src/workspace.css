@@ -1,0 +1,325 @@
+.workspace {
+  display: flex;
+  min-height: 100svh;
+  background: #f5fafc;
+  color: #133f46;
+}
+.workspace-rail {
+  flex: 0 0 218px;
+  display: flex;
+  flex-direction: column;
+  padding: 30px 18px;
+  background: #004d57;
+  color: white;
+}
+.workspace-brand {
+  display: grid;
+  gap: 12px;
+  padding: 4px 12px 38px;
+  color: #b8d9dd;
+  font-size: 13px;
+}
+.wartaq-site .workspace-brand .wartaq-logo {
+  color: white;
+}
+.workspace-rail nav {
+  display: grid;
+  gap: 5px;
+}
+.workspace-rail nav button {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  color: #c4e0e2;
+  background: transparent;
+  text-align: start;
+}
+.workspace-rail nav button.active {
+  background: #176571;
+  color: white;
+  box-shadow: inset 4px 0 #55d4d7;
+  font-weight: 700;
+}
+[dir='rtl'] .workspace-rail nav button.active {
+  box-shadow: inset -4px 0 #55d4d7;
+}
+.workspace-identity {
+  margin-top: auto;
+  padding: 22px 8px 0;
+  border-top: 1px solid #34727a;
+  overflow-wrap: anywhere;
+}
+.workspace-main {
+  min-width: 0;
+  flex: 1;
+  padding: 0 38px 40px;
+}
+.workspace-topline {
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid #dce9eb;
+  color: #608087;
+  font-size: 13px;
+}
+.workspace-topline > span {
+  margin-inline-end: auto;
+}
+.workspace-welcome {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 32px 0 26px;
+}
+.workspace-welcome p {
+  margin: 0 0 7px;
+  color: #007d8d;
+  font-size: 13px;
+  font-weight: 700;
+}
+.workspace-welcome h1 {
+  margin: 0;
+  color: #004d57;
+  font-size: clamp(25px, 2.4vw, 34px);
+  line-height: 1.3;
+}
+.workspace-welcome span {
+  display: block;
+  margin-top: 7px;
+  color: #68838a;
+}
+.workspace-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 18px;
+  border: 1px solid #deebed;
+  border-radius: 14px;
+  background: white;
+  flex-shrink: 0;
+}
+.workspace-count span {
+  margin: 0;
+  white-space: nowrap;
+}
+.workspace-tab-short {
+  display: none;
+}
+.workspace-count strong {
+  color: #004d57;
+  font-size: 24px;
+}
+.workspace .panel {
+  border-color: #deebed;
+  border-radius: 18px;
+}
+.workspace button,
+.workspace input,
+.workspace select,
+.workspace textarea,
+.workspace-auth button,
+.workspace-auth input {
+  min-height: 44px;
+}
+.workspace input:not([type='checkbox']),
+.workspace select,
+.workspace textarea,
+.workspace-auth input {
+  font-size: 16px;
+}
+.workspace :focus-visible,
+.workspace-auth :focus-visible {
+  outline: 3px solid #00a7b5;
+  outline-offset: 3px;
+}
+.workspace-auth {
+  max-width: 34rem;
+  min-height: 100svh;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 5rem 1.5rem 2rem;
+}
+.workspace-auth-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.workspace-auth-header > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.workspace-auth-header .language-switch {
+  padding: 0;
+  margin: 0;
+}
+.workspace-topline .language-switch {
+  margin: 0;
+  padding: 0;
+}
+.workspace-rail :focus-visible {
+  outline-color: #cceaf2;
+}
+@media (max-width: 700px) {
+  .workspace {
+    display: block;
+  }
+  .workspace-rail {
+    padding: 12px max(16px, env(safe-area-inset-left)) 0;
+  }
+  .workspace-brand {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0 10px;
+  }
+  .workspace-rail nav {
+    display: flex;
+    overflow-x: auto;
+    gap: 3px;
+  }
+  .workspace-rail nav button {
+    flex: none;
+    white-space: nowrap;
+    padding: 0 12px;
+  }
+  .workspace-rail nav button.active,
+  [dir='rtl'] .workspace-rail nav button.active {
+    box-shadow: inset 0 -3px #55d4d7;
+  }
+  .workspace-identity {
+    display: none;
+  }
+  .workspace-main {
+    padding: 0 max(16px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+  }
+  .workspace-topline {
+    flex-wrap: wrap;
+    padding: 10px 0;
+  }
+  .workspace-welcome {
+    align-items: start;
+    padding: 24px 0;
+  }
+}
+.workspace-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+  gap: 22px;
+  align-items: start;
+}
+.workspace-context {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.workspace-context h2 {
+  color: #064e58;
+  font-size: 16px;
+  font-weight: 700;
+}
+.workspace-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+.workspace-metrics div {
+  display: grid;
+  gap: 5px;
+  border-inline-start: 2px solid #d4eff0;
+  padding-inline-start: 8px;
+}
+.workspace-metrics strong {
+  font-size: 22px;
+  color: #004d57;
+}
+.workspace-metrics span,
+.workspace-recent small {
+  color: #58787d;
+  font-size: 12px;
+}
+.workspace-recent p {
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1050px) {
+  .workspace-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .workspace-context {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .workspace-rail nav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow: visible;
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 30;
+    background: #004d57;
+    border-top: 1px solid #34727a;
+    padding: 5px max(8px, env(safe-area-inset-right)) max(5px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+  }
+  .workspace-rail nav button {
+    white-space: normal;
+    padding: 4px 2px;
+    gap: 4px;
+    font-size: 11px;
+    min-height: 58px;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+  }
+  .workspace-tab-long {
+    display: none;
+  }
+  .workspace-tab-short {
+    display: inline;
+  }
+  .workspace-main {
+    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+  }
+  .workspace-topline > span {
+    display: none;
+  }
+  .workspace-topline {
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .workspace-welcome {
+    padding: 18px 0;
+    gap: 8px;
+  }
+  .workspace-welcome > div:first-child {
+    min-width: 0;
+  }
+  .workspace-welcome > div:first-child > span {
+    display: none;
+  }
+  .workspace-count {
+    padding: 8px 12px;
+  }
+  .workspace-count span {
+    font-size: 13px;
+  }
+  .workspace-context {
+    grid-template-columns: 1fr;
+  }
+}

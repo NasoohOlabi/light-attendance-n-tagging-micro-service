@@ -11,7 +11,7 @@ The user subsequently requested Neon Postgres and managed Auth instead of relyin
 - [x] Verify real signup/signin/reload, persisted notes, two-user scope, permissions/expiry/disable and concurrent retry deduplication; clean synthetic accounts/data.
 - [ ] Import the real roster and approve real teacher accounts from private owner inputs.
 - [ ] Verify production auth email delivery/custom SMTP if password-reset or verification emails are required.
-- [ ] Promote the Neon frontend through main-only Pages after setting its public URL variables. This task does not push or publish the frontend.
+- [x] Promote the Neon frontend through main-only Pages with public URL variables: PR #11, main `f353a5e`, successful Stable Pages run `43435144322`; public English/Arabic sample flow verified on 2026-11-13. The earlier migration task was local/backend-only; publication was subsequently requested explicitly.
 
 Updated 2026-11-13, Asia/Damascus (UTC+03:00). The user explicitly authorized setup, implementation and public publication, replacing the earlier planning-only stop. Preserve source snapshot `f6fee1d` and prototype `2d8fbe5`. Current delivery is the account-independent software and sample notebook; live-account readiness requires separate evidence, not credentials in Git.
 
@@ -71,6 +71,6 @@ Manual 404/410 observations are advisory, not proof of Create denial. A generic 
 - [ ] Manager lifecycle: reconcile provider deletion after process/disk failure using live account evidence; local restart path is covered synthetically.
 - [ ] Pending recovery: guided sanitized export/import for changed endpoint IDs. Current version deliberately blocks cross-link pending work and requires reconciling the old link.
 - [ ] Measure ledger size/quota before pagination or archival. Keep physical ordering semantics explicit.
-- [ ] Full Arabic translation and wider browser/device coverage if requested; Arabic content and mobile Chromium paths already work.
+- [x] Arabic/English Wartaq Midad homepage and real teacher workspace, with phone bottom navigation and retained data/auth flows; synthetic desktop/mobile coverage. Physical-device/assistive-technology certification remains unrun.
 
 Use [CONTRIBUTING](../CONTRIBUTING.md) for implementation/PR steps and the [verification feature map](../.agents/skills/verify-halaqa/features/README.md) for acceptance proof. Maintain this one task list rather than parallel model-specific plans. Update statuses with observed evidence and record limitations in [work-log.md](work-log.md).

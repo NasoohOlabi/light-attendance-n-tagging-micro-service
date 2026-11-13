@@ -1,0 +1,67 @@
+﻿@font-face {
+  font-family: 'Wartaq Plex';
+  src: url('/brand/wartaq/plex-sans-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Wartaq Plex Arabic';
+  src: url('/brand/wartaq/plex-arabic-400.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: 'Wartaq Plex Arabic';
+  src: url('/brand/wartaq/plex-arabic-600.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: 'Wartaq Plex Arabic';
+  src: url('/brand/wartaq/plex-arabic-700.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+:is(.wartaq-drafts, .wartaq-site) {
+  --wartaq-deep: #004d57;
+  --wartaq-teal: #007d8d;
+  --wartaq-turquoise: #00a7b5;
+  --wartaq-sky: #cceaf2;
+  --wartaq-cloud: #f5fafc;
+  --wartaq-sand: #e8d9c4;
+  --wartaq-space: 8px;
+  --wartaq-radius: 12px;
+  --wartaq-radius-large: 18px;
+  color: var(--wartaq-deep);
+  font-family: 'Wartaq Plex Arabic', 'Wartaq Plex', sans-serif;
+}
+:is(.wartaq-drafts, .wartaq-site) .wartaq-logo {
+  display: inline-flex;
+  align-items: center;
+  color: var(--wartaq-deep);
+  min-height: 44px;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+:is(.wartaq-drafts, .wartaq-site) :focus-visible {
+  outline: 3px solid #007d8d;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wartaq-drafts *,
+  .wartaq-drafts *::before,
+  .wartaq-drafts *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
