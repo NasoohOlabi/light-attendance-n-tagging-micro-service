@@ -1,6 +1,14 @@
 # Halaqa verification features
 
+Current Neon login, teacher scope, pending retries and account switching are covered by `e2e/neon.spec.ts` using synthetic provider boundaries. The explicit live-service path is `bun run verify:neon:live`; see [Neon setup](../../../../docs/neon-setup.md). The legacy entries below remain compatibility coverage.
+
 Every user entry point below needs proof when affected. The runnable harness is `e2e/notebook.spec.ts` plus `tests/manager.test.ts`; consult the skill for launch/isolation/evidence.
+
+Current assigned-teacher workflow: [assigned students and links](assigned.md), driven by `e2e/assigned.spec.ts`. The editable roster/general-note entries below describe legacy/demo mode; assigned mode keeps the roster read-only and requires student-specific records.
+
+For language, layout, form semantics or typography changes, run `e2e/mobile.spec.ts` and the Arabic authentication case in `e2e/neon.spec.ts`. They drive both languages through all notebook views, long names, draft preservation, Arabic comma tags, attendance/corrections, 320px portrait, 390px portrait, 844px landscape and 200% text enlargement. They assert document overflow, 44px buttons/selects/disclosures and 16px inputs; the summary table must scroll inside its labelled region. Manager checks spawn a private temporary store and preserve typed values on language switching. Evidence and limits: [mobile audit](../../../../docs/mobile-and-languages.md).
+
+If port 4173 belongs to another preview, preserve it and set `$env:PLAYWRIGHT_PORT='4273'` before `bun run verify:ui`. The harness still refuses to reuse an existing server.
 
 | Feature                                   | Entry points and proof                                          |
 | ----------------------------------------- | --------------------------------------------------------------- |

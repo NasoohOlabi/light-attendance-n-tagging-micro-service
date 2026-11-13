@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { LanguageProvider, LanguageSwitch, useLanguage, type TranslationKey } from './i18n'
+import { useEffect, useState } from 'react'
 import type { Access } from '../shared/access'
 import {
   projectEvents,
@@ -8,11 +9,14 @@ import {
   type Payload,
   type Student,
 } from '../shared/ledger'
-import { clearSession } from './session'
+import { clearSession, loadSession } from './session'
 import { setQuery, useQueryState, type Tab } from './queryState'
 import { useLedger } from './useLedger'
+import { NeonAuth } from './NeonAuth'
+import { authClient } from './neon'
+import type { NeonTeacher } from '../shared/neon'
 
-const tabs: { id: Tab; label: string }[] = [
+const tabs: { id: Tab; label: TranslationKey }[] = [
   { id: 'attendance', label: 'Attendance' },
   { id: 'notes', label: 'Notes' },
   { id: 'roster', label: 'Students' },
@@ -22,54 +26,111 @@ const tabs: { id: Tab; label: string }[] = [
 type Projection = ReturnType<typeof projectEvents>
 type Save = (payloads: Payload[]) => Promise<boolean>
 
-export function App({
+export function App(props: { initialSession: { access: Access | null; error: string } }) {
+  return (
+    <LanguageProvider>
+      <a className="skip-link" href="#main-content">
+        <SkipText />
+      </a>
+      <LanguageSwitch />
+      <AppContent {...props} />
+    </LanguageProvider>
+  )
+}
+
+function AppContent({
   initialSession,
 }: {
   initialSession: { access: Access | null; error: string }
 }) {
-  const [access, setAccess] = useState(initialSession.access)
-  const [demo, setDemo] = useState(false)
+  const { t, errorMessage } = useLanguage()
+  const [session, setSession] = useState({ ...initialSession, revision: 0 })
+  const [demo, setDemo] = useState<'legacy' | 'assigned' | null>(null)
+  const { access } = session
+  useEffect(() => {
+    function onHashChange() {
+      if (!new URLSearchParams(window.location.hash.slice(1)).has('access')) return
+      const next = loadSession()
+      setSession((previous) => ({ ...next, revision: previous.revision + 1 }))
+      setDemo(null)
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+  if (!access && !demo && authClient)
+    return (
+      <NeonAuth
+        samples={
+          <>
+            <button className="secondary self-start" onClick={() => setDemo('legacy')}>
+              {t('Explore with sample students')}
+            </button>
+            <button className="secondary self-start" onClick={() => setDemo('assigned')}>
+              {t('Explore assigned teacher sample')}
+            </button>
+          </>
+        }
+      >
+        {(userId, teacher, signOut) => (
+          <Notebook
+            key={userId}
+            access={null}
+            demo={null}
+            neon={{ userId, teacher }}
+            leave={signOut}
+          />
+        )}
+      </NeonAuth>
+    )
   if (!access && !demo)
     return (
-      <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center gap-6 px-6">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto flex min-h-svh max-w-lg flex-col justify-center gap-6 px-6"
+      >
         <span className="text-5xl text-indigo-700" aria-hidden="true">
           ◈
         </span>
         <h1 className="text-4xl font-semibold tracking-tight">
-          Your halaqa,
-          <br />
-          one shared notebook.
+          {t('Your halaqa, one shared notebook.')}
         </h1>
         <p className="text-lg leading-relaxed text-slate-600">
-          Record attendance. Leave a note. Keep the next teacher in the loop.
+          {t('Record attendance. Leave a note. Keep the next teacher in the loop.')}
         </p>
         <div className="panel space-y-3">
-          <h2 className="font-semibold">Open your personal access link</h2>
+          <h2 className="font-semibold">{t('Open your personal access link')}</h2>
           <p className="muted">
-            Your manager sends you a link with your name and access. Keep it somewhere private and
-            open it whenever you return.
+            {t(
+              'Your manager sends you a link with your name and access. Keep it somewhere private and open it whenever you return.',
+            )}
           </p>
         </div>
-        {initialSession.error && (
+        {session.error && (
           <p role="alert" className="text-red-700">
-            {initialSession.error}
+            {errorMessage(session.error)}
           </p>
         )}
-        <button className="secondary self-start" onClick={() => setDemo(true)}>
-          Explore with sample students
+        <button className="secondary self-start" onClick={() => setDemo('legacy')}>
+          {t('Explore with sample students')}
         </button>
-        <p className="muted">الحضور والملاحظات · Arabic names, notes and tags are supported.</p>
+        <button className="secondary self-start" onClick={() => setDemo('assigned')}>
+          {t('Explore assigned teacher sample')}
+        </button>
+        <p className="muted">
+          {t('الحضور والملاحظات · Arabic names, notes and tags are supported.')}
+        </p>
       </main>
     )
   return (
     <Notebook
-      key={access?.apiId ?? 'demo'}
+      key={session.revision}
       access={access}
       demo={demo}
       leave={() => {
         clearSession()
-        setAccess(null)
-        setDemo(false)
+        setSession((previous) => ({ access: null, error: '', revision: previous.revision + 1 }))
+        setDemo(null)
       }}
     />
   )
@@ -79,147 +140,182 @@ function Notebook({
   access,
   demo,
   leave,
+  neon,
 }: {
+  neon?: { userId: string; teacher: NeonTeacher }
   access: Access | null
-  demo: boolean
+  demo: 'legacy' | 'assigned' | null
   leave: () => void
 }) {
+  const { t, language, errorMessage } = useLanguage()
   const query = useQueryState()
-  const ledger = useLedger(access, demo)
-  const projected = projectEvents(ledger.events)
+  const ledger = useLedger(access, demo !== null, demo === 'assigned', neon)
+  const assigned = !!neon || access?.version === 2 || demo === 'assigned'
+  const baseProjection = projectEvents(ledger.events)
+  const projected = assigned ? { ...baseProjection, students: ledger.roster } : baseProjection
   const groups = [
     ...new Set(projected.students.map((student) => student.group).filter(Boolean)),
   ].sort()
   const students = projected.students.filter(
     (student) =>
       (query.all || student.active) &&
+      (!assigned || !query.student || student.studentId === query.student) &&
       (!query.group || student.group === query.group) &&
       student.name.toLocaleLowerCase().includes(query.q.toLocaleLowerCase()),
   )
   const disabled =
-    ledger.busy || !!ledger.pending.length || !!ledger.storageBlocked || !ledger.loaded
+    ledger.busy ||
+    !!ledger.pending.length ||
+    !!ledger.storageBlocked ||
+    !ledger.loaded ||
+    !!(neon && !neon.teacher.canWrite)
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
           <div className="flex items-center gap-3">
             <span aria-hidden="true" className="text-3xl text-indigo-700">
               ◈
             </span>
-            <h1 className="text-2xl font-semibold">Halaqa notebook</h1>
+            <h1 className="text-2xl font-semibold">{t('Halaqa notebook')}</h1>
           </div>
-          <p className="muted mt-1">Attendance & notes · الحضور والملاحظات</p>
+          <p className="muted mt-1">{t('Attendance & notes · الحضور والملاحظات')}</p>
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <span dir="auto">{access?.username ?? 'Demo teacher'}</span>
+          <span dir="auto">{neon?.teacher.name ?? access?.username ?? t('Demo teacher')}</span>
           <button disabled={ledger.busy} className="secondary" onClick={leave}>
-            Close session
+            {neon ? t('Sign out') : t('Close session')}
           </button>
         </div>
       </header>
       {demo && (
         <p className="mb-5 rounded-lg bg-amber-100 p-3 text-amber-900">
-          Sample notebook. Changes stay in memory and disappear when you leave. No SheetDB requests
-          are made.
+          {demo === 'assigned' ? t('Assigned teacher sample notebook.') : t('Sample notebook.')}{' '}
+          {t('Changes stay in memory and disappear when you leave. No SheetDB requests are made.')}
         </p>
       )}
-      <nav aria-label="Notebook" className="mb-6 flex flex-wrap gap-2">
+      <nav aria-label={t('Notebook')} className="mb-6 flex flex-wrap gap-2">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             className={query.tab === tab.id ? 'primary' : 'secondary'}
             aria-current={query.tab === tab.id ? 'page' : undefined}
-            onClick={() => setQuery({ tab: tab.id, student: '', tag: '' }, true)}
+            onClick={() =>
+              setQuery({ tab: tab.id, ...(assigned ? {} : { student: '' }), tag: '' }, true)
+            }
           >
-            {tab.label}
+            {t(tab.label)}
           </button>
         ))}
       </nav>
       <div className="mb-6 flex flex-wrap items-end gap-3">
         <label className="grow">
-          Find a student
+          {t('Find a student')}
           <input
+            type="search"
             value={query.q}
             onChange={(event) => setQuery({ q: event.target.value })}
-            placeholder="Name / اسم الطالب"
+            dir="auto"
+            enterKeyHint="search"
+            placeholder={t('Name / اسم الطالب')}
           />
         </label>
         <label>
-          Group
+          {t('Group')}
           <select value={query.group} onChange={(event) => setQuery({ group: event.target.value })}>
-            <option value="">All groups</option>
+            <option value="">{t('All groups')}</option>
             {groups.map((group) => (
               <option key={group}>{group}</option>
             ))}
           </select>
         </label>
-        <label className="mb-3 flex-row items-center">
-          <input
-            type="checkbox"
-            checked={query.all}
-            onChange={(event) => setQuery({ all: event.target.checked ? '1' : '' })}
-          />
-          Include inactive
-        </label>
+        {!assigned && (
+          <label className="mb-3 min-h-11 flex-row items-center">
+            <input
+              type="checkbox"
+              checked={query.all}
+              onChange={(event) => setQuery({ all: event.target.checked ? '1' : '' })}
+            />
+            {t('Include inactive')}
+          </label>
+        )}
+        {assigned && query.student && (
+          <button className="secondary" onClick={() => setQuery({ student: '' }, true)}>
+            {t('All my students')}
+          </button>
+        )}
         {!demo && (
           <button
             className="secondary"
             disabled={ledger.busy}
             onClick={() => void ledger.refresh()}
           >
-            Refresh
+            {t('Refresh')}
           </button>
         )}
       </div>
       {ledger.storageBlocked && (
         <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">
-          {ledger.storageBlocked}
+          {errorMessage(ledger.storageBlocked)}
         </p>
       )}
       {ledger.error && (
         <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">
-          {ledger.error}
+          {errorMessage(ledger.error)}
         </p>
       )}
       {ledger.message && (
         <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-4 text-emerald-800">
-          {ledger.message}
+          {language === 'ar'
+            ? `${ledger.pending.length || (ledger.message.match(/^\d+/)?.[0] ?? '')} سجل محفوظ${demo ? ' في النموذج التجريبي' : ''}.`
+            : ledger.message}
         </p>
       )}
       {projected.conflicts > 0 && (
         <p role="alert" className="mb-4 text-red-800">
-          {projected.conflicts} conflicting duplicate IDs detected. Ask the manager to inspect the
-          sheet.
+          {language === 'ar'
+            ? `تم اكتشاف ${projected.conflicts} معرّفات مكررة متعارضة. اطلب من المسؤول فحص الجدول.`
+            : `${projected.conflicts} conflicting duplicate IDs detected. Ask the manager to inspect the sheet.`}
         </p>
       )}
       {(ledger.invalid > 0 || projected.invalidReversals > 0) && (
-        <p className="mb-4 text-amber-800">
-          {ledger.invalid} invalid rows and {projected.invalidReversals} invalid corrections were
-          skipped. Ask the manager to inspect the sheet.
+        <p role="status" className="mb-4 text-amber-800">
+          {language === 'ar'
+            ? `تم تجاوز ${ledger.invalid} صفوف غير صالحة و${projected.invalidReversals} تصحيحات غير صالحة. اطلب من المسؤول فحص الجدول.`
+            : `${ledger.invalid} invalid rows and ${projected.invalidReversals} invalid corrections were skipped. Ask the manager to inspect the sheet.`}
         </p>
       )}
       {ledger.pending.length > 0 && (
         <div className="panel mb-4 space-y-3">
-          <h2 className="font-semibold">{ledger.pending.length} records awaiting confirmation</h2>
+          <h2 className="font-semibold">
+            {language === 'ar'
+              ? `${ledger.pending.length} سجلات بانتظار التأكيد`
+              : `${ledger.pending.length} records awaiting confirmation`}
+          </h2>
           <p className="muted">
-            Retry reuses their original IDs. Even if a request reached the sheet twice, summaries
-            count each record once.
+            {t(
+              'Retry reuses their original IDs. Even if a request reached the sheet twice, summaries count each record once.',
+            )}
           </p>
           <div className="flex flex-wrap gap-3">
-            <button disabled={ledger.busy} className="primary" onClick={() => void ledger.retry()}>
-              Retry pending batch
+            <button
+              disabled={ledger.busy || !!(neon && !neon.teacher.canWrite)}
+              className="primary"
+              onClick={() => void ledger.retry()}
+            >
+              {t('Retry pending batch')}
             </button>
             <button
               disabled={ledger.busy}
               className="secondary"
               onClick={() => void ledger.discard()}
             >
-              Discard pending retry
+              {t('Discard pending retry')}
             </button>
           </div>
         </div>
       )}
-      {!ledger.loaded && !ledger.error && <p role="status">Loading the shared notebook…</p>}
+      {!ledger.loaded && !ledger.error && <p role="status">{t('Loading the shared notebook…')}</p>}
       <fieldset disabled={disabled} className="min-w-0">
         {query.tab === 'attendance' && (
           <AttendanceView
@@ -231,18 +327,30 @@ function Notebook({
           />
         )}
         {query.tab === 'notes' && (
-          <NotesView students={students} projected={projected} save={ledger.save} />
+          <NotesView
+            students={students}
+            projected={projected}
+            save={ledger.save}
+            assigned={assigned}
+          />
         )}
-        {query.tab === 'roster' && <RosterView students={students} save={ledger.save} />}
+        {query.tab === 'roster' && (
+          <RosterView students={students} save={ledger.save} assigned={assigned} />
+        )}
         {query.tab === 'summary' && <Summary students={students} projected={projected} />}
         {query.tab === 'history' && (
-          <History projected={projected} students={students} save={ledger.save} />
+          <History
+            projected={projected}
+            students={students}
+            save={ledger.save}
+            assigned={assigned}
+          />
         )}
       </fieldset>
       <footer className="mt-8 border-t border-slate-200 py-5 text-sm text-slate-500">
-        Every change leaves a record. Use History & corrections to undo a mistake.
+        {t('Every change leaves a record. Use History & corrections to undo a mistake.')}
       </footer>
-    </div>
+    </main>
   )
 }
 
@@ -257,6 +365,7 @@ function AttendanceView({
   date: string
   save: Save
 }) {
+  const { t } = useLanguage()
   const [draft, setDraft] = useState<Record<string, string>>({})
   const current = new Map(
     projected.attendance
@@ -271,14 +380,15 @@ function AttendanceView({
     <section className="panel">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="title">Who is here today?</h2>
+          <h2 className="title">{t('Who is here today?')}</h2>
           <p className="muted mt-2">
-            Only marked students are saved. To remove an existing mark, use History & corrections;
-            undoing the latest mark may reveal an earlier one.
+            {t(
+              'Only marked students are saved. To remove an existing mark, use History & corrections; undoing the latest mark may reveal an earlier one.',
+            )}
           </p>
         </div>
         <label>
-          Session date
+          {t('Session date')}
           <input
             type="date"
             required
@@ -290,7 +400,7 @@ function AttendanceView({
         </label>
       </div>
       {!students.length ? (
-        <Empty text="Add your students in Students, or adjust the group filter." />
+        <Empty text={t('Add your students in Students, or adjust the group filter.')} />
       ) : (
         <>
           <button
@@ -301,7 +411,7 @@ function AttendanceView({
               )
             }
           >
-            Mark displayed students present
+            {t('Mark displayed students present')}
           </button>
           <div className="divide-y divide-slate-100">
             {students.map((student) => (
@@ -314,18 +424,18 @@ function AttendanceView({
                   <span className="ms-3 text-sm font-normal text-slate-500">{student.group}</span>
                 </span>
                 <select
-                  aria-label={`Attendance for ${student.name}`}
+                  aria-label={`${t('Attendance for')} ${student.name}`}
                   value={draft[student.studentId] ?? current.get(student.studentId) ?? ''}
                   onChange={(event) =>
                     setDraft({ ...draft, [student.studentId]: event.target.value })
                   }
                 >
                   <option value="" disabled={current.has(student.studentId)}>
-                    Not marked
+                    {t('Not marked')}
                   </option>
                   {statuses.map((status) => (
                     <option key={status} value={status}>
-                      {status}
+                      {t(status)}
                     </option>
                   ))}
                 </select>
@@ -345,7 +455,7 @@ function AttendanceView({
               if (await save(payloads)) setDraft({})
             }}
           >
-            Save attendance ({changed.length})
+            {t('Save attendance')} ({changed.length})
           </button>
         </>
       )}
@@ -357,16 +467,20 @@ function NotesView({
   students,
   projected,
   save,
+  assigned,
 }: {
   students: Student[]
   projected: Projection
   save: Save
+  assigned: boolean
 }) {
+  const { t } = useLanguage()
   const query = useQueryState()
   const [text, setText] = useState('')
   const [tags, setTags] = useState('')
-  const [studentId, setStudentId] = useState('')
+  const [studentId, setStudentId] = useState(query.student)
   const ids = new Set(students.map((student) => student.studentId))
+  const selectedStudentId = assigned && !ids.has(studentId) ? '' : studentId
   const notes = projected.notes.filter(
     ({ value }) =>
       (!value.studentId || ids.has(value.studentId)) &&
@@ -377,7 +491,7 @@ function NotesView({
   )
   const availableTags = [...new Set(projected.notes.flatMap(({ value }) => value.tags))].sort()
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
       <form
         className="panel space-y-4 self-start"
         onSubmit={async (event) => {
@@ -390,17 +504,31 @@ function NotesView({
                 .filter(Boolean),
             ),
           ]
-          if (await save([{ kind: 'note', studentId, date: query.date, tags: normalized, text }])) {
+          if (
+            await save([
+              {
+                kind: 'note',
+                studentId: selectedStudentId,
+                date: query.date,
+                tags: normalized,
+                text,
+              },
+            ])
+          ) {
             setText('')
             setTags('')
           }
         }}
       >
-        <h2 className="title">Leave a note</h2>
+        <h2 className="title">{t('Leave a note')}</h2>
         <label>
-          Student
-          <select value={studentId} onChange={(event) => setStudentId(event.target.value)}>
-            <option value="">General note</option>
+          {t('Student')}
+          <select
+            required={assigned}
+            value={selectedStudentId}
+            onChange={(event) => setStudentId(event.target.value)}
+          >
+            <option value="">{assigned ? t('Choose a student') : t('General note')}</option>
             {students.map((student) => (
               <option key={student.studentId} value={student.studentId}>
                 {student.name}
@@ -409,7 +537,7 @@ function NotesView({
           </select>
         </label>
         <label>
-          Date
+          {t('Date')}
           <input
             type="date"
             required
@@ -418,37 +546,41 @@ function NotesView({
           />
         </label>
         <label>
-          Tags, separated by commas
+          {t('Tags, separated by commas')}
           <input
             required
             maxLength={500}
+            dir="auto"
             value={tags}
             onChange={(event) => setTags(event.target.value)}
-            placeholder="revision, follow-up / مراجعة"
+            placeholder={t('revision, follow-up / مراجعة')}
           />
         </label>
         <label>
-          Note
+          <span id="note-label">{t('Note')}</span>
           <textarea
+            aria-labelledby="note-label"
             dir="auto"
             rows={6}
             required
             maxLength={10000}
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="What should the next teacher know?"
+            placeholder={t('What should the next teacher know?')}
           />
         </label>
         <p className="muted">
-          Plain text or your own structured format. Tags make it easy to find later.
+          {t('Plain text or your own structured format. Tags make it easy to find later.')}
         </p>
-        <button className="primary">Save note</button>
+        <button className="primary" disabled={assigned && !selectedStudentId}>
+          {t('Save note')}
+        </button>
       </form>
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="title">Shared notes</h2>
+          <h2 className="title">{t('Shared notes')}</h2>
           <label>
-            From
+            {t('From')}
             <input
               type="date"
               value={query.from}
@@ -456,7 +588,7 @@ function NotesView({
             />
           </label>
           <label>
-            To
+            {t('To')}
             <input
               type="date"
               value={query.to}
@@ -464,25 +596,25 @@ function NotesView({
             />
           </label>
           <label>
-            Filter tag
+            {t('Filter tag')}
             <select value={query.tag} onChange={(event) => setQuery({ tag: event.target.value })}>
-              <option value="">All tags</option>
+              <option value="">{t('All tags')}</option>
               {availableTags.map((tag) => (
                 <option key={tag}>{tag}</option>
               ))}
             </select>
           </label>
         </div>
-        {!notes.length && <Empty text="No notes match this view. Add the first one." />}
+        {!notes.length && <Empty text={t('No notes match this view. Add the first one.')} />}
         {notes.toReversed().map(({ event, value }) => (
           <article key={event.id} className="panel">
             <div className="mb-3 flex flex-wrap justify-between gap-2">
               <h3 dir="auto" className="font-semibold">
                 {projected.students.find((student) => student.studentId === value.studentId)
-                  ?.name ?? (value.studentId ? 'Unknown student' : 'General note')}
+                  ?.name ?? (value.studentId ? t('Unknown student') : t('General note'))}
               </h3>
               <span className="muted">
-                {value.date} · {event.actor}
+                <bdi>{value.date}</bdi> · <bdi>{event.actor}</bdi>
               </span>
             </div>
             <p dir="auto" className="whitespace-pre-wrap break-words leading-relaxed">
@@ -492,6 +624,7 @@ function NotesView({
               {value.tags.map((tag) => (
                 <button
                   key={tag}
+                  dir="auto"
                   className="rounded-full bg-indigo-50 px-3 py-1 text-sm text-indigo-800"
                   onClick={() => setQuery({ tag })}
                 >
@@ -506,59 +639,99 @@ function NotesView({
   )
 }
 
-function RosterView({ students, save }: { students: Student[]; save: Save }) {
+function RosterView({
+  students,
+  save,
+  assigned,
+}: {
+  students: Student[]
+  save: Save
+  assigned: boolean
+}) {
+  const { t } = useLanguage()
   const [name, setName] = useState('')
   const [group, setGroup] = useState('')
   return (
     <section className="panel">
-      <h2 className="title mb-5">Your students</h2>
-      <form
-        className="mb-6 flex flex-wrap items-end gap-3"
-        onSubmit={async (event) => {
-          event.preventDefault()
-          if (
-            await save([
-              { kind: 'student', studentId: crypto.randomUUID(), name, group, active: true },
-            ])
-          )
-            setName('')
-        }}
-      >
-        <label className="grow">
-          Student name
-          <input
-            dir="auto"
-            required
-            maxLength={200}
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-        <label>
-          Group
-          <input
-            dir="auto"
-            maxLength={100}
-            value={group}
-            onChange={(event) => setGroup(event.target.value)}
-          />
-        </label>
-        <button className="primary">Add student</button>
-      </form>
+      <h2 className="title mb-5">{t('Your students')}</h2>
+      {!assigned && (
+        <form
+          className="mb-6 flex flex-wrap items-end gap-3"
+          onSubmit={async (event) => {
+            event.preventDefault()
+            if (
+              await save([
+                { kind: 'student', studentId: crypto.randomUUID(), name, group, active: true },
+              ])
+            )
+              setName('')
+          }}
+        >
+          <label className="grow">
+            {t('Student name')}
+            <input
+              dir="auto"
+              required
+              maxLength={200}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <label>
+            {t('Group')}
+            <input
+              dir="auto"
+              maxLength={100}
+              value={group}
+              onChange={(event) => setGroup(event.target.value)}
+            />
+          </label>
+          <button className="primary">{t('Add student')}</button>
+        </form>
+      )}
       <div className="divide-y divide-slate-100">
-        {students.map((student) => (
-          <StudentEditor
-            key={`${student.studentId}:${student.name}:${student.group}:${student.active}`}
-            student={student}
-            save={save}
-          />
-        ))}
+        {students.map((student) =>
+          assigned ? (
+            <div key={student.studentId} className="flex items-center justify-between py-4">
+              <span>
+                <bdi>{student.name}</bdi>
+                {student.group && (
+                  <>
+                    {' '}
+                    · <bdi>{student.group}</bdi>
+                  </>
+                )}
+              </span>
+              <button
+                className="secondary"
+                onClick={() => setQuery({ student: student.studentId, tab: 'attendance' }, true)}
+              >
+                {t('Open student')}
+              </button>
+            </div>
+          ) : (
+            <StudentEditor
+              key={`${student.studentId}:${student.name}:${student.group}:${student.active}`}
+              student={student}
+              save={save}
+            />
+          ),
+        )}
       </div>
-      {!students.length && <Empty text="No students yet. Add a name and optional group above." />}
+      {!students.length && (
+        <Empty
+          text={
+            assigned
+              ? t('No assigned students match this view.')
+              : t('No students yet. Add a name and optional group above.')
+          }
+        />
+      )}
     </section>
   )
 }
 function StudentEditor({ student, save }: { student: Student; save: Save }) {
+  const { t } = useLanguage()
   const [name, setName] = useState(student.name)
   const [group, setGroup] = useState(student.group)
   return (
@@ -570,7 +743,7 @@ function StudentEditor({ student, save }: { student: Student; save: Save }) {
       }}
     >
       <label className="grow">
-        Name
+        {t('Name')}
         <input
           dir="auto"
           required
@@ -580,7 +753,7 @@ function StudentEditor({ student, save }: { student: Student; save: Save }) {
         />
       </label>
       <label>
-        Group
+        {t('Group')}
         <input
           dir="auto"
           maxLength={100}
@@ -589,20 +762,21 @@ function StudentEditor({ student, save }: { student: Student; save: Save }) {
         />
       </label>
       <button className="secondary" disabled={name === student.name && group === student.group}>
-        Save changes
+        {t('Save changes')}
       </button>
       <button
         className="secondary"
         type="button"
         onClick={() => void save([{ ...student, active: !student.active }])}
       >
-        {student.active ? 'Make inactive' : 'Activate'}
+        {student.active ? t('Make inactive') : t('Activate')}
       </button>
     </form>
   )
 }
 
 function Summary({ students, projected }: { students: Student[]; projected: Projection }) {
+  const { t, language } = useLanguage()
   const query = useQueryState()
   const ids = new Set(students.map((student) => student.studentId))
   const records = projected.attendance.filter(
@@ -611,10 +785,10 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
   return (
     <section className="panel">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <h2 className="title">Attendance overview</h2>
-        <div className="flex flex-wrap gap-3">
+        <h2 className="title">{t('Attendance overview')}</h2>
+        <div className="flex min-w-0 max-w-full flex-wrap gap-3">
           <label>
-            From
+            {t('From')}
             <input
               type="date"
               value={query.from}
@@ -622,7 +796,7 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
             />
           </label>
           <label>
-            To
+            {t('To')}
             <input
               type="date"
               value={query.to}
@@ -633,47 +807,62 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
       </div>
       {query.from > query.to && (
         <p role="alert" className="text-red-700">
-          The end date must be on or after the start date.
+          {t('The end date must be on or after the start date.')}
         </p>
       )}
       <p className="muted mb-5">
-        {records.length} marked student-sessions. Unmarked days are excluded.
+        {language === 'ar'
+          ? `${records.length} جلسات محددة للطلاب. لا تُحتسب الأيام غير المحددة.`
+          : `${records.length} marked student-sessions. Unmarked days are excluded.`}
       </p>
-      <div className="mb-8 space-y-3" aria-label="Attendance totals">
+      <div className="mb-8 space-y-3" aria-label={t('Attendance totals')}>
         {statuses.map((status) => {
           const count = records.filter(({ value }) => value.status === status).length
           return (
-            <div key={status} className="grid grid-cols-[5rem_1fr_3rem] items-center gap-3">
-              <span>{status}</span>
+            <div
+              key={status}
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(2ch,auto)] items-center gap-3"
+            >
+              <span>{t(status)}</span>
               <meter
                 className="h-6 w-full accent-indigo-700"
                 min={0}
                 max={Math.max(records.length, 1)}
                 value={count}
-                aria-label={`${status}: ${count}`}
+                aria-label={`${t(status)}: ${count}`}
               />
               <strong className="text-end">{count}</strong>
             </div>
           )
         })}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-start text-sm">
+      <p className="muted mb-2 sm:hidden">{t('Scroll sideways to see all columns.')}</p>
+      <div
+        className="overflow-x-auto"
+        role="region"
+        aria-label={t('Attendance overview')}
+        tabIndex={0}
+      >
+        <table className="w-full min-w-[42rem] table-fixed text-start text-sm">
           <thead>
             <tr>
-              <th className="p-3 text-start">Student</th>
+              <th scope="col" className="w-40 p-3 text-start">
+                {t('Student')}
+              </th>
               {statuses.map((status) => (
-                <th key={status} className="p-3">
-                  {status}
+                <th scope="col" key={status} className="p-3">
+                  {t(status)}
                 </th>
               ))}
-              <th className="p-3">Notes</th>
+              <th scope="col" className="p-3">
+                {t('Notes')}
+              </th>
             </tr>
           </thead>
           <tbody>
             {students.map((student) => (
               <tr key={student.studentId} className="border-t border-slate-100">
-                <th dir="auto" className="p-3 text-start font-medium">
+                <th scope="row" dir="auto" className="p-3 text-start font-medium">
                   {student.name}
                 </th>
                 {statuses.map((status) => (
@@ -709,17 +898,31 @@ function History({
   projected,
   students,
   save,
+  assigned,
 }: {
   projected: Projection
   students: Student[]
   save: Save
+  assigned: boolean
 }) {
+  const { t, language } = useLanguage()
   const [target, setTarget] = useState('')
   const [reason, setReason] = useState('')
   const query = useQueryState()
   const ids = new Set(students.map((student) => student.studentId))
   const visible = projected.events.filter((event) => {
     const payload = event.payload
+    if (assigned && query.student) {
+      if (payload.kind === 'reversal') {
+        const target = projected.events.find((item) => item.id === payload.targetId)
+        return (
+          !!target &&
+          target.payload.kind !== 'reversal' &&
+          target.payload.studentId === query.student
+        )
+      }
+      return payload.studentId === query.student
+    }
     return (
       (!query.q && !query.group) ||
       payload.kind === 'reversal' ||
@@ -729,12 +932,15 @@ function History({
   })
   return (
     <section className="panel">
-      <h2 className="title">History & corrections</h2>
+      <h2 className="title">{t('History & corrections')}</h2>
       <p className="muted mt-2 mb-6">
-        Undo appends a correction. The original stays in the sheet. Undoing the latest attendance
-        restores the previous status.{' '}
+        {t(
+          'Undo appends a correction. The original stays in the sheet. Undoing the latest attendance restores the previous status.',
+        )}{' '}
         {projected.duplicates > 0
-          ? `${projected.duplicates} duplicate deliveries were counted once.`
+          ? language === 'ar'
+            ? `تم احتساب ${projected.duplicates} عمليات إرسال مكررة مرة واحدة.`
+            : `${projected.duplicates} duplicate deliveries were counted once.`
           : ''}
       </p>
       {target && (
@@ -749,10 +955,10 @@ function History({
           }}
         >
           <p>
-            Undo record <code className="break-all">{target}</code>
+            {t('Undo record')} <code className="break-all">{target}</code>
           </p>
           <label>
-            Reason
+            {t('Reason')}
             <input
               required
               maxLength={1000}
@@ -761,40 +967,40 @@ function History({
             />
           </label>
           <div className="flex gap-3">
-            <button className="primary">Append correction</button>
+            <button className="primary">{t('Append correction')}</button>
             <button type="button" className="secondary" onClick={() => setTarget('')}>
-              Cancel
+              {t('Cancel')}
             </button>
           </div>
         </form>
       )}
       {!visible.length && (
-        <Empty text="New attendance, notes and student changes will appear here." />
+        <Empty text={t('New attendance, notes and student changes will appear here.')} />
       )}
       <ol className="divide-y divide-slate-100">
         {visible.toReversed().map((event) => (
           <li key={event.id} className="flex flex-wrap items-start justify-between gap-3 py-4">
             <div className="min-w-0 flex-1">
               <p dir="auto" className="font-medium">
-                {describeEvent(event, projected.students)}
+                {describeEvent(event, projected.students, t)}
               </p>
               <p className="muted mt-1">
-                {event.actor} ·{' '}
+                <bdi>{event.actor}</bdi> ·{' '}
                 {event.receivedAt
                   ? `${event.receivedAt} (SheetDB)`
-                  : `${event.clientTime} (device)`}
-                {projected.reversed.has(event.id) ? ' · Undone' : ''}
+                  : `${event.clientTime} (${t('device')})`}
+                {projected.reversed.has(event.id) ? ` · ${t('Undone')}` : ''}
               </p>
               <details className="mt-2 text-xs text-slate-500">
-                <summary>Record details</summary>
-                <pre className="mt-2 whitespace-pre-wrap break-all">
+                <summary>{t('Record details')}</summary>
+                <pre dir="ltr" className="mt-2 text-start whitespace-pre-wrap break-all">
                   {JSON.stringify(event, null, 2)}
                 </pre>
               </details>
             </div>
             {event.payload.kind !== 'reversal' && !projected.reversed.has(event.id) && (
               <button className="secondary" onClick={() => setTarget(event.id)}>
-                Undo
+                {t('Undo')}
               </button>
             )}
           </li>
@@ -803,17 +1009,26 @@ function History({
     </section>
   )
 }
-function describeEvent(event: LedgerEvent, students: Student[]) {
+function describeEvent(
+  event: LedgerEvent,
+  students: Student[],
+  t: (text: TranslationKey) => string,
+) {
   const value = event.payload
-  if (value.kind === 'reversal') return `Correction: ${value.reason}`
+  if (value.kind === 'reversal') return `${t('Correction')}: ${value.reason}`
   const name =
     students.find((student) => student.studentId === value.studentId)?.name ??
-    'General / unknown student'
+    t('General / unknown student')
   if (value.kind === 'student')
-    return `Student: ${value.name} · ${value.group || 'No group'} · ${value.active ? 'active' : 'inactive'}`
-  if (value.kind === 'attendance') return `${name} · ${value.date} · ${value.status}`
+    return `${t('Student')}: ${value.name} · ${value.group || t('No group')} · ${t(value.active ? 'active' : 'inactive')}`
+  if (value.kind === 'attendance') return `${name} · ${value.date} · ${t(value.status)}`
   return `${name} · #${value.tags.join(' #')} · ${value.text}`
 }
 function Empty({ text }: { text: string }) {
   return <p className="rounded-lg bg-slate-50 p-5 text-slate-600">{text}</p>
+}
+
+function SkipText() {
+  const { t } = useLanguage()
+  return t('Skip to main content')
 }

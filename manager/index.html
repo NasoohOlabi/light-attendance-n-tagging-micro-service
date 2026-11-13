@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="referrer" content="no-referrer" />
     <title>Halaqa · Local access manager</title>
     <link rel="stylesheet" href="/styles.css" />
@@ -15,7 +15,10 @@
           <h1>Access manager</h1>
           <p class="muted">Your five teachers. Their links. Your notebook.</p>
         </div>
-        <span class="badge">Running on your computer</span>
+        <div class="header-actions">
+          <span class="badge">Running on your computer</span>
+          <button id="language-toggle" class="secondary" type="button" lang="ar">العربية</button>
+        </div>
       </header>
       <div id="feedback" role="status" hidden></div>
       <section class="intro">
@@ -28,9 +31,9 @@
         <button id="copy-headers" class="secondary">Copy sheet headers</button
         ><a href="/setup.md" target="_blank" rel="noreferrer">Open the complete setup guide</a>
         <p class="muted">
-          Use one SheetDB endpoint per teacher, pointing to the same spreadsheet. Enable bearer
-          authentication and only Read + Create permissions. Keep Update, Delete and tab management
-          disabled. Spreadsheet access remains with your SheetDB account.
+          Use shared Events and Roster endpoints with separate bearer credentials. Enable bearer
+          authentication, Read + Create on Events, and Read only on Roster. Keep Update, Delete and
+          tab management disabled. Spreadsheet access remains with your SheetDB account.
         </p>
       </section>
       <section>
@@ -60,11 +63,33 @@
           <summary>Add a teacher or replace their token</summary>
           <form id="profile-form" class="form-grid">
             <label
-              >Username / teacher name<input
-                name="username"
-                required
-                maxlength="100"
-                autocomplete="off"
+              >Access type<select name="accessType" id="access-type">
+                <option value="2">Assigned roster</option>
+                <option value="1">Legacy</option>
+              </select></label
+            >
+            <label id="teacher-choice"
+              >Teacher<select name="teacherId" id="teacher-id">
+                <option value="">Load roster teachers first</option>
+              </select></label
+            >
+            <div class="full" id="roster-fields">
+              <label
+                >Roster endpoint ID<input name="rosterApiId" pattern="[a-zA-Z0-9_-]{5,100}"
+              /></label>
+              <label
+                >Roster bearer token<input
+                  name="rosterToken"
+                  type="password"
+                  autocomplete="new-password"
+              /></label>
+              <label>Roster tab<input name="rosterSheet" value="Roster" maxlength="100" /></label>
+              <button type="button" id="load-teachers" class="secondary">
+                Load roster teachers
+              </button>
+            </div>
+            <label id="username-field" hidden
+              >Username / teacher name<input name="username" maxlength="100" autocomplete="off"
             /></label>
             <label
               >SheetDB endpoint ID<input
@@ -79,8 +104,8 @@
             <label>Sheet tab<input name="sheet" value="Events" required maxlength="100" /></label>
             <label class="check full"
               ><input name="permissionsConfirmed" type="checkbox" required />I enabled bearer
-              authentication and only Read + Create. Update, Delete and tab operations are
-              disabled.</label
+              authentication, Read + Create for Events, and Read only for Roster. Update, Delete and
+              tab operations are disabled.</label
             >
             <div class="full"><button>Check access & save user</button></div>
           </form>
@@ -93,7 +118,20 @@
       </section>
       <section id="link-panel" hidden>
         <h2 id="link-title">Personal link</h2>
-        <textarea id="link-value" rows="4" readonly aria-label="Personal access link"></textarea>
+        <div id="student-link-controls" hidden>
+          <label
+            >Optional assigned student<select id="student-id">
+              <option value="">Teacher link</option>
+            </select></label
+          ><button id="get-student-link" type="button">Get selected link</button>
+        </div>
+        <textarea
+          id="link-value"
+          rows="4"
+          readonly
+          dir="ltr"
+          aria-label="Personal access link"
+        ></textarea>
         <div class="actions">
           <button id="copy-link">Copy link</button
           ><button id="hide-link" class="secondary">Hide link</button>

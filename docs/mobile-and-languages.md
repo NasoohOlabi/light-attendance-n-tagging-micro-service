@@ -1,0 +1,25 @@
+# Mobile and language audit
+
+Audited 2026-11-13. The teacher notebook, managed sign-in screens and legacy local access manager now provide English and Arabic interfaces. English is the initial default. Switch with **English / العربية**; language persistence is best-effort and switching preserves current form values and view filters. The manager uses a separate preference. Arabic changes document language/direction and the page title; user names, notes, tags and stored status values remain original data.
+
+| Finding                                   | Result                                                                                                                                                                                                                                              |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| English-only controls and feedback        | Translated navigation, forms, attendance statuses, summaries, corrections, loading/access states and known request errors; unexpected teacher errors use a safe localized fallback. Raw record JSON and provider diagnostics remain technical data. |
+| LTR layout with mixed Arabic/English data | RTL layout, logical spacing, isolated names/tags, automatically directed text and LTR email/password/record details.                                                                                                                                |
+| Small touch controls                      | Buttons, selects, disclosures and checkbox labels have comfortable targets; form text is at least 16px. Native date/select/email/password controls remain in use.                                                                                   |
+| Long dropdown values expanding Notes      | Single-column mobile grid uses a zero minimum; panels, labels and controls can shrink and long text wraps.                                                                                                                                          |
+| Squeezed summary columns                  | Readable table width with a labelled, keyboard-focusable horizontal scroll region, column/row headers and mobile scroll guidance.                                                                                                                   |
+| Narrow filters and enlarged text          | Wrapping filters, constrained date groups and flexible summary meters support small screens and 200% text enlargement.                                                                                                                              |
+| Mobile browser edges and navigation       | Safe-area padding, viewport-fit coverage, zoom enabled, home-screen icon, visible focus, skip link/main landmarks, autocomplete, search/email keyboard hints and reduced-motion support.                                                            |
+
+## Verification
+
+`bun run verify` covers unit/HTTP tests, lint, TypeScript, production build and deployment boundaries. `bun run verify:ui` builds an offline artifact and drives desktop Chromium and Chromium with iPhone touch emulation. If another preview owns 4173, use `$env:PLAYWRIGHT_PORT='4273'` first.
+
+`e2e/mobile.spec.ts` proves both language versions across every notebook view, a 180-character Arabic student name, Arabic comma tags, saving attendance and notes, append-only correction, preserved draft/filter state, preference restoration and unavailable preference storage. It checks 320×568, 390×844 and 844×390 viewports, 200% text at 320px, document overflow, control size, input font size and internal table scrolling. An isolated manager process proves language switching preserves form values and saved settings. `e2e/neon.spec.ts` proves translated sign-in feedback, retained email, signup autocomplete and reset-form entry against synthetic Auth boundaries.
+
+Ignored evidence: `.artifacts/playwright-report/index.html`, `.artifacts/test-results/`, `.artifacts/verification/mobile-arabic-mobile.png` and `.artifacts/verification/manager-arabic-mobile.png`. Screenshots use synthetic data only.
+
+## Limits
+
+Physical iOS Safari/Android devices, on-screen keyboards, screen readers, OS date-picker language, display cutouts and installed home-screen behavior need device testing. Chromium emulation does not certify those behaviors. Browser-owned validation/date UI follows browser/OS language. These changes add no offline save queue, service worker or install prompt; live saves still require network access, storage and Web Locks. Auth email delivery and live provider permissions were not reverified for this presentation change. No database/event/retry authorization behavior changed. Publication requires the repository's separate release process.

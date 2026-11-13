@@ -16,6 +16,14 @@ for (const file of files) {
     throw new Error(`Unexpected deployment file: ${file}`)
   if (/\.(png|ico)$/.test(file)) continue
   const text = await Bun.file(file).text()
+  for (const secret of [
+    process.env.DATABASE_URL,
+    process.env.DATABASE_URL_UNPOOLED,
+    process.env.NEON_API_KEY,
+  ])
+    if (secret && text.includes(secret)) throw new Error(`Server credential found in ${file}`)
+  if (/postgres(?:ql)?:\/\/[^\s"']+:[^\s"']+@/.test(text))
+    throw new Error(`Database credential found in ${file}`)
   if (
     /manager\.json|Management credentials loaded|globalCredentialsSchema|SHEETDB_GLOBAL|sourceMappingURL=/.test(
       text,

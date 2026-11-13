@@ -5,6 +5,10 @@ description: Verify the Halaqa notebook teacher web UI and local access manager 
 
 # Verify Halaqa
 
+Neon is the current backend: read [Neon setup](../../../docs/neon-setup.md) for Auth, Function and database boundaries. `bun run verify:ui` first builds offline verification mode, then runs the synthetic desktop/mobile suite including `e2e/neon.spec.ts`; it does not send credentials to live Auth. Rebuild with `npm run build` before a configured production preview.
+
+When explicitly verifying real Neon services, start that configured preview separately on port 4173 and run `bun run verify:neon:live`. This harness uses synthetic accounts/records only, disables tracing, tests signed authentication and actual database persistence/authorization, then removes its fixtures. Retain only sanitized `.artifacts/verification/neon-live.json` and its synthetic screenshot; private cleanup state stays in `.local`. Never run the live harness simultaneously with another live harness or the preview-owning Playwright suite.
+
 Run from the repository root in PowerShell. Read root `AGENTS.md`, then only the affected entries in [features/README.md](features/README.md). The teacher UI is primary; the loopback manager is a second surface. Production SheetDB/account credentials are unnecessary and must not enter artifacts.
 
 ## Launch

@@ -1,6 +1,12 @@
-﻿# Setup: Halaqa notebook with SheetDB
+# Setup: Halaqa notebook with SheetDB
+
+**Legacy provider runbook.** Current setup uses [Neon Auth, Postgres and a Function](neon-setup.md). Follow that runbook for new accounts, roster import, approval, modes and expiry. The instructions below apply only to retained SheetDB compatibility.
 
 **Software setup runbook.** Implementation/publication authorized 2026-11-13. The sample and synthetic browser paths are verified locally; actual provider permissions, CORS, rotation and revocation require the disposable-account gates in [implementation plan](implementation-plan.md). The deployed website has no built-in provider credentials; the local manager takes input values and generates self-contained teacher links.
+
+## Current setup route
+
+Use [assigned-roster.md](assigned-roster.md) for the current teacher workflow: separate private Read-only Roster and Read/Create Events workbooks/endpoints, owner-maintained assignments and version-two teacher/student entry links. The local run commands below apply to both modes. The older provisioning/roster-editing sections are legacy version-one reference; do not issue those shared editable links for the assigned-student use case.
 
 ## What you run
 
