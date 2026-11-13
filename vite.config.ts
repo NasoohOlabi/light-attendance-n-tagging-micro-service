@@ -54,7 +54,7 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     const safeQuery = !url.search || (url.searchParams.size === 1 && ['app', 'home'].includes(url.searchParams.get('page')))
     if (!safeQuery || (url.pathname !== scope.pathname && url.pathname !== new URL('index.html', scope).pathname)) return
-    event.respondWith(fetch(request).catch(() => caches.open(cacheName).then((cache) => cache.match(index))))
+    event.respondWith(caches.open(cacheName).then((cache) => cache.match(index).then((response) => response || fetch(request))))
     return
   }
   if (!url.search && urls.includes(url.href)) {
