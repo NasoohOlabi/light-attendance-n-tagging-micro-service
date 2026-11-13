@@ -1,5 +1,7 @@
 # Product and technical specification
 
+**Neon supersedes the provider/access architecture below.** Current authentication, authorization, schema, enrollment and acceptance evidence are in [Neon setup](neon-setup.md) and the [current task list](implementation-plan.md). Attendance, tagged notes, corrections, assigned students and stable pending IDs remain required; private magic links/local SheetDB management are legacy compatibility. Real Neon expiry and read/write access are server-enforced rather than advisory.
+
 Status: version-one acceptance target. Implementation/publication authorized 2026-11-13. Read [feasibility](feasibility.md) and the [task list](implementation-plan.md) for implemented software versus unrun live-account gates; not every target manager requirement is complete.
 
 ## Current assigned workflow

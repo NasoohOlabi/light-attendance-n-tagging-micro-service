@@ -1,5 +1,7 @@
 # Architecture and decisions
 
+**Current backend:** [Neon setup and schema](neon-setup.md). React uses managed Auth sessions and a JWT-authenticated Function with server-scoped Postgres queries. Database sequence replaces sheet order; events remain immutable through teacher APIs and retries use unique IDs. The existing projection/UI and canonical assigned-roster behavior are reused. Provider-specific SheetDB/link sections below document legacy compatibility, not the current authorization boundary.
+
 This describes the version-one implementation. Development/publication was authorized on 2026-11-13; historical prototype `2d8fbe5` remains preserved. [Feasibility](feasibility.md), [specification](specification.md) and [implementation plan](implementation-plan.md) identify the remaining provider questions and prototype gaps, and take precedence where assumptions differ.
 
 ## Current assigned-teacher flow

@@ -1,5 +1,7 @@
 # Assigned students and teacher links
 
+**Current Neon path:** teachers sign in with managed Auth; `students.teacher_id` is canonical assignment and the API scopes every roster/event query to it. The roster remains read-only for teachers; owner import uses the private CLI. Assignment eligibility and stable IDs below still apply. Separate workbook capabilities and version-two magic links describe the legacy SheetDB path only. See [Neon setup](neon-setup.md).
+
 Current teacher workflow, agreed 2026-11-13. This supersedes the original shared-notebook UI requirements. The old `قديم` checkbox is unmaintained: import a named student when the source has a nonblank teacher assignment. Do not infer activity from that checkbox, attendance percentages or row colors. Read the source inventory only; publish a separate normalized copy.
 
 ## Two data sources

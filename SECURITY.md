@@ -2,7 +2,17 @@
 
 This public repository contains application code and synthetic examples only. Do not file real tokens, personal student data or access links in public issues. Report a vulnerability privately through GitHub's **Security → Report a vulnerability** when enabled. For accidental disclosure, revoke the provider credential first, then contact the maintainer privately and retain a sanitized incident record.
 
-## Account independence
+## Neon authentication and data access
+
+Neon is the current backend. The browser receives only public Auth/API URLs. Managed Auth handles sign-up, sign-in and sessions; the notebook Function verifies the signed JWT and checks the teacher's active state, expiry and access mode on every request. Signup alone does not authorize a teacher. All data queries use the current teacher/student assignment; teacher requests cannot edit the roster or mutate/delete existing events. Database URLs and Neon management keys must never use a `VITE_` prefix or enter the static bundle.
+
+The application has three tables: `teachers`, `students`, `events`. Neon owns its separate `neon_auth` schema. The Function uses a server-only pooled connection; the private admin CLI uses an unpooled connection. Teacher disable/expiry is checked even for a still-valid JWT. Signing out ends the browser session; an already issued JWT may remain valid until its provider expiry. Revocation cannot retract data already downloaded.
+
+Live verification creates only synthetic accounts/records, turns off browser traces, and removes its fixtures. Keep its private cleanup manifest and screenshots ignored. Email/password verification settings and production SMTP requirements are documented in [Neon setup](docs/neon-setup.md).
+
+The remaining capability/link sections describe legacy SheetDB integration only.
+
+## Legacy account independence
 
 The deployed teacher app has no embedded account, roster, API ID, bearer or management key. Its initial private magic link carries `version`, `username`, `apiId`, `token` and `sheet` in a URL fragment. The browser removes that fragment immediately and keeps access in session storage; the bearer travels only in the SheetDB Authorization header. A link is a reusable secret, not a login with enforced expiry. Anyone receiving it can copy its capabilities. Only the matching endpoint bearer belongs there; account management/Google credentials never do.
 

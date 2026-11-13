@@ -1,5 +1,18 @@
 # Implementation plan and task list
 
+## Current Neon migration
+
+The user subsequently requested Neon Postgres and managed Auth instead of relying on SheetDB capabilities. [Neon setup](neon-setup.md) is authoritative for the current backend. The assigned-teacher workflow remains; signup requires owner approval and the Function enforces identity, assignment, modes and expiry. The original SheetDB acceptance matrix below is legacy-only.
+
+- [x] Preserve staged assigned-roster work in authorized baseline `cc4e279`.
+- [x] Install Neon CLI/skills, authenticate, link the requested production branch and reconcile Postgres/Auth.
+- [x] Version and test the three-table migration on an isolated Neon branch; apply it to production.
+- [x] Deploy the authenticated notebook Function and wire managed Auth and API public URLs into React.
+- [x] Verify real signup/signin/reload, persisted notes, two-user scope, permissions/expiry/disable and concurrent retry deduplication; clean synthetic accounts/data.
+- [ ] Import the real roster and approve real teacher accounts from private owner inputs.
+- [ ] Verify production auth email delivery/custom SMTP if password-reset or verification emails are required.
+- [ ] Promote the Neon frontend through main-only Pages after setting its public URL variables. This task does not push or publish the frontend.
+
 Updated 2026-11-13, Asia/Damascus (UTC+03:00). The user explicitly authorized setup, implementation and public publication, replacing the earlier planning-only stop. Preserve source snapshot `f6fee1d` and prototype `2d8fbe5`. Current delivery is the account-independent software and sample notebook; live-account readiness requires separate evidence, not credentials in Git.
 
 ## Current assigned-student delivery

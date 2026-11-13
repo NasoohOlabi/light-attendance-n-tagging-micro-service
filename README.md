@@ -1,12 +1,12 @@
 # light-attendance-n-tagging-micro-service
 
-An account-independent attendance and tagged-note notebook for trusted teachers. The teacher app is static React/TypeScript on GitHub Pages; the owner access manager runs locally with Bun. Each private magic link supplies its teacher name, SheetDB endpoint, bearer and tab. No account or credential is built into the deployed site.
+An attendance and tagged-note notebook with a static React/TypeScript frontend, Neon managed authentication and a small Neon Function API backed by Postgres. The database has three application tables: teachers, students and events. No ORM or separate server host is required.
 
-The current [assigned-student workflow](docs/assigned-roster.md) uses a separate read-only roster and append-only records. Teachers see and work with only their assigned students in the app. The owner copies students with a teacher assignment from the source inventory; the old/former flag is ignored. Shared raw API capabilities remain broader, as explicitly accepted by the owner. Version-two links carry both endpoint credentials; student entry links are teacher navigation, not student accounts.
+Teachers sign up/sign in, then an owner approves their account through the private CLI. The API checks identity, assignment, read/write mode and optional access expiry on every request. Teachers see only their assigned students and related history. The old/former source flag remains ignored when importing assigned students. See [Neon setup](docs/neon-setup.md) for dashboard-free provisioning, schema, approval and verification.
 
 [Open the stable notebook](https://nasooholabi.github.io/light-attendance-n-tagging-micro-service/) · [Public source](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service)
 
-Choose **Explore with sample students** to review attendance, Arabic-capable tagged notes, roster changes, summaries and append-only corrections. The sample makes no SheetDB requests and resets on reload. Real use needs owner-supplied private links and the provider acceptance checks below; sample success does not certify a live account.
+Choose **Explore with sample students** to review attendance, Arabic-capable notes and append-only corrections without a provider account. Legacy SheetDB links remain compatible; their broader capability limitations do not apply to the Neon API.
 
 ## Run and verify
 
@@ -15,11 +15,10 @@ bun install --frozen-lockfile
 bun run setup:security
 bunx playwright install chromium
 bun run dev       # http://127.0.0.1:5173/
-bun run manager   # separate terminal; http://127.0.0.1:4174/
 bun run verify:release
 ```
 
-No production credentials are needed for development. Enter provider settings only in the local manager. It verifies authenticated reads and anonymous denial before issuing self-contained links; optional Global account keys stay in process memory. Teacher capabilities are stored in ignored `.local/manager.json`, never GitHub. See [security](SECURITY.md) and [setup](docs/setup.md).
+Neon CLI pulls private variables into ignored `.env.local`. Vite exposes only the public Auth and Function URLs; database credentials stay on the server. Offline samples and synthetic checks need no real account. The legacy manager remains available through `bun run manager`. See [security](SECURITY.md).
 
 ## Direction and tasks
 
@@ -33,8 +32,8 @@ No production credentials are needed for development. Enter provider settings on
 
 ## Data and security
 
-Teachers share one intended notebook through independently revocable Read/Create provider endpoints. Writes append versioned events; corrections reference originals, projections follow sheet row order, duplicate IDs count once and conflicting IDs are flagged. Pending batches retain IDs through uncertain delivery and use browser Web Locks to coordinate tabs. All external data is validated with Zod.
+Writes append versioned events; corrections reference originals, projections follow database sequence order, and event primary keys prevent duplicate physical rows. Conflicting reused IDs are rejected. Pending batches retain IDs through uncertain delivery and use browser Web Locks to coordinate tabs. External data is validated with Zod.
 
-This is trusted attribution, not server-verified identity or per-user private records. Magic links are reusable secrets and have no enforced expiry. Live CORS, endpoint permissions/import behavior, revocation and cross-endpoint freshness must pass on disposable provider data before real use. Never sort the raw Events ledger or commit personal records.
+Neon authorizes teachers server-side; users cannot self-approve, impersonate another teacher or alter the canonical roster through the API. The legacy SheetDB integration retains its original trusted-attribution limits. Never commit personal records or credentials.
 
 History preserves the authorized original-source snapshot `f6fee1d` (including pre-existing work of unknown authorship) and stopped prototype `2d8fbe5`. Implementation/publication was newly authorized on 2026-11-13. The original Firebase app and production data are not migrated or deployed by this fork.

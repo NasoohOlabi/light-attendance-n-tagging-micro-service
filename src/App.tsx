@@ -11,6 +11,9 @@ import {
 import { clearSession, loadSession } from './session'
 import { setQuery, useQueryState, type Tab } from './queryState'
 import { useLedger } from './useLedger'
+import { NeonAuth } from './NeonAuth'
+import { authClient } from './neon'
+import type { NeonTeacher } from '../shared/neon'
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'attendance', label: 'Attendance' },
@@ -40,6 +43,31 @@ export function App({
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
+  if (!access && !demo && authClient)
+    return (
+      <NeonAuth
+        samples={
+          <>
+            <button className="secondary self-start" onClick={() => setDemo('legacy')}>
+              Explore with sample students
+            </button>
+            <button className="secondary self-start" onClick={() => setDemo('assigned')}>
+              Explore assigned teacher sample
+            </button>
+          </>
+        }
+      >
+        {(userId, teacher, signOut) => (
+          <Notebook
+            key={userId}
+            access={null}
+            demo={null}
+            neon={{ userId, teacher }}
+            leave={signOut}
+          />
+        )}
+      </NeonAuth>
+    )
   if (!access && !demo)
     return (
       <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center gap-6 px-6">
@@ -93,14 +121,16 @@ function Notebook({
   access,
   demo,
   leave,
+  neon,
 }: {
+  neon?: { userId: string; teacher: NeonTeacher }
   access: Access | null
   demo: 'legacy' | 'assigned' | null
   leave: () => void
 }) {
   const query = useQueryState()
-  const ledger = useLedger(access, demo !== null, demo === 'assigned')
-  const assigned = access?.version === 2 || demo === 'assigned'
+  const ledger = useLedger(access, demo !== null, demo === 'assigned', neon)
+  const assigned = !!neon || access?.version === 2 || demo === 'assigned'
   const baseProjection = projectEvents(ledger.events)
   const projected = assigned ? { ...baseProjection, students: ledger.roster } : baseProjection
   const groups = [
@@ -114,7 +144,11 @@ function Notebook({
       student.name.toLocaleLowerCase().includes(query.q.toLocaleLowerCase()),
   )
   const disabled =
-    ledger.busy || !!ledger.pending.length || !!ledger.storageBlocked || !ledger.loaded
+    ledger.busy ||
+    !!ledger.pending.length ||
+    !!ledger.storageBlocked ||
+    !ledger.loaded ||
+    !!(neon && !neon.teacher.canWrite)
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
@@ -128,9 +162,9 @@ function Notebook({
           <p className="muted mt-1">Attendance & notes · الحضور والملاحظات</p>
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <span dir="auto">{access?.username ?? 'Demo teacher'}</span>
+          <span dir="auto">{neon?.teacher.name ?? access?.username ?? 'Demo teacher'}</span>
           <button disabled={ledger.busy} className="secondary" onClick={leave}>
-            Close session
+            {neon ? 'Sign out' : 'Close session'}
           </button>
         </div>
       </header>
@@ -232,7 +266,11 @@ function Notebook({
             count each record once.
           </p>
           <div className="flex flex-wrap gap-3">
-            <button disabled={ledger.busy} className="primary" onClick={() => void ledger.retry()}>
+            <button
+              disabled={ledger.busy || !!(neon && !neon.teacher.canWrite)}
+              className="primary"
+              onClick={() => void ledger.retry()}
+            >
               Retry pending batch
             </button>
             <button
