@@ -56,13 +56,23 @@ function AppContent({
   initialSession: { access: Access | null; error: string }
   initialResetToken?: string
 }) {
-  const { t, errorMessage } = useLanguage()
+  const { language, t, errorMessage } = useLanguage()
   const [session, setSession] = useState({ ...initialSession, revision: 0 })
   const [demo, setDemo] = useState<'legacy' | 'assigned' | null>(null)
   const { access } = session
   const query = useQueryState()
   const [resetToken, setResetToken] = useState(initialResetToken)
   const reset = !!resetToken
+  useEffect(() => {
+    document.title =
+      query.page === 'home' && !reset
+        ? language === 'ar'
+          ? 'وارتق · دورة تلاوة القرآن'
+          : 'Wartaq · Quran recitation course'
+        : language === 'ar'
+          ? 'وارتق · دفتر الحلقة'
+          : 'Wartaq · Halaqa notebook'
+  }, [language, query.page, reset])
   const openDemo = (kind: 'legacy' | 'assigned') => {
     setDemo(kind)
     navigatePage('app')
