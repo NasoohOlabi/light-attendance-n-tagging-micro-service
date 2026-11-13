@@ -253,23 +253,20 @@ export function useLanguage() {
 }
 export function LanguageSwitch() {
   const { language, setLanguage } = useLanguage()
+  const target = language === 'en' ? 'ar' : 'en'
   return (
     <div className="language-switch" role="group" aria-label="Language / اللغة">
       <button
         type="button"
-        lang="en"
-        aria-pressed={language === 'en'}
-        onClick={() => setLanguage('en')}
+        lang={target}
+        title={target === 'ar' ? 'التبديل إلى العربية' : 'Switch to English'}
+        onClick={() => setLanguage(target)}
       >
-        English
-      </button>
-      <button
-        type="button"
-        lang="ar"
-        aria-pressed={language === 'ar'}
-        onClick={() => setLanguage('ar')}
-      >
-        العربية
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9S9.5 5.5 12 3Z" />
+        </svg>
+        {target === 'ar' ? 'العربية' : 'English'}
       </button>
     </div>
   )

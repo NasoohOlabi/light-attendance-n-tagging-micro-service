@@ -68,15 +68,18 @@
     @apply mx-auto flex max-w-6xl flex-wrap justify-end gap-2 px-4 pt-3 sm:px-8;
   }
   .language-switch button {
-    @apply min-w-11 rounded-lg border bg-white px-3 py-2;
-    border-color: #bfd8db;
+    @apply inline-flex min-w-11 items-center justify-center gap-2 rounded-lg px-3 py-2 font-medium;
+    background: transparent;
     color: #175761;
   }
-  .language-switch button[aria-pressed='true'] {
-    @apply font-semibold;
-    border-color: #007d8d;
+  .language-switch button:hover {
     background: #e2f4f4;
-    color: #005761;
+  }
+  .language-switch svg {
+    width: 1.2rem;
+    height: 1.2rem;
+    stroke: currentColor;
+    stroke-width: 1.6;
   }
 }
 @media (prefers-reduced-motion: reduce) {
