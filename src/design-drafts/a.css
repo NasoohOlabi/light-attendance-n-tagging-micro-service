@@ -1,0 +1,491 @@
+﻿.wartaq-a {
+  --a-ink: var(--wartaq-deep, #004d57);
+  --a-teal: var(--wartaq-teal, #007d8d);
+  --a-paper: var(--wartaq-cloud, #f5fafc);
+  --a-line: #d0e3e9;
+  --a-muted: #526f78;
+  color: var(--a-ink);
+  background: var(--a-paper);
+  min-width: 0;
+  font-family: 'Wartaq Plex Arabic', 'Wartaq Plex', sans-serif;
+  line-height: 1.6;
+}
+.wartaq-a * {
+  box-sizing: border-box;
+}
+.wartaq-a button,
+.wartaq-a input,
+.wartaq-a select,
+.wartaq-a textarea {
+  font: inherit;
+}
+.wartaq-a button {
+  cursor: pointer;
+}
+.wartaq-a button:focus-visible,
+.wartaq-a input:focus-visible,
+.wartaq-a select:focus-visible,
+.wartaq-a textarea:focus-visible {
+  outline: 3px solid #c4964e;
+  outline-offset: 3px;
+}
+.wartaq-a h1,
+.wartaq-a h2,
+.wartaq-a p {
+  margin: 0;
+}
+.wartaq-a h1,
+.wartaq-a h2 {
+  line-height: 1.3;
+}
+.wartaq-a p {
+  color: var(--a-muted);
+}
+.wartaq-a label {
+  display: grid;
+  gap: 7px;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+.wartaq-a input,
+.wartaq-a select,
+.wartaq-a textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  border: 1px solid #a9c7d1;
+  border-radius: var(--wartaq-radius, 12px);
+  background: white;
+  color: var(--a-ink);
+  padding: 9px 12px;
+  font-size: 16px;
+}
+.wartaq-a textarea {
+  min-height: 105px;
+  resize: vertical;
+}
+.wartaq-a .a-header {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  min-height: 92px;
+  padding: 16px clamp(20px, 5vw, 76px);
+  border-bottom: 1px solid var(--a-line);
+  background: #fff;
+}
+.wartaq-a .a-logo {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  flex: 0 0 auto;
+}
+.wartaq-a .a-logo svg,
+.wartaq-a .a-logo img {
+  max-width: 145px;
+  max-height: 56px;
+}
+.wartaq-a .a-header nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-inline-start: auto;
+}
+.wartaq-a .a-header nav button {
+  min-height: 44px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  padding: 8px 14px;
+  color: var(--a-muted);
+  font-weight: 700;
+}
+.wartaq-a .a-header nav button.is-active {
+  color: var(--a-teal);
+  border-bottom-color: var(--a-teal);
+}
+.wartaq-a .a-preview {
+  border: 1px solid #c0dce4;
+  border-radius: 30px;
+  padding: 6px 13px;
+  color: var(--a-teal);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.wartaq-a .a-welcome {
+  max-width: 1450px;
+  margin: auto;
+  padding: clamp(36px, 7vw, 95px) clamp(20px, 7vw, 100px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(40px, 8vw, 120px);
+  align-items: center;
+}
+.wartaq-a .a-intro {
+  max-width: 570px;
+}
+.wartaq-a .a-kicker {
+  display: block;
+  color: #a27539;
+  font-size: 0.86rem;
+  font-weight: 700;
+  margin-bottom: 13px;
+}
+.wartaq-a .a-intro h1 {
+  font-family: 'Wartaq Plex Arabic', 'Wartaq Plex', sans-serif;
+  font-size: clamp(2.6rem, 5vw, 5rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  max-width: 10em;
+}
+.wartaq-a .a-intro > p {
+  font-size: 1.12rem;
+  max-width: 36rem;
+  margin-top: 23px;
+  line-height: 1.9;
+}
+.wartaq-a .a-signin {
+  display: grid;
+  gap: 14px;
+  max-width: 390px;
+  margin-top: 34px;
+}
+.wartaq-a .a-signin small {
+  color: var(--a-muted);
+}
+.wartaq-a .a-button {
+  border: 1px solid var(--a-teal);
+  border-radius: var(--wartaq-radius, 12px);
+  background: var(--a-teal);
+  color: white;
+  min-height: 46px;
+  padding: 10px 19px;
+  font-weight: 700;
+}
+.wartaq-a .a-button:hover {
+  background: #005d69;
+}
+.wartaq-a .a-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.wartaq-a .a-signin .a-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.wartaq-a .a-entrance {
+  padding: 24px 24px 16px;
+  background: var(--wartaq-sky, #cceaf2);
+  border: 1px solid #b8dce5;
+}
+.wartaq-a .a-arch {
+  height: clamp(350px, 42vw, 590px);
+  border: 1px solid #9dc8d4;
+  border-radius: 48% 48% 2px 2px / 32% 32% 2px 2px;
+  background: #e8f6f9;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.wartaq-a .a-arch img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.wartaq-a .a-entrance-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  color: #426f7b;
+  font-size: 0.8rem;
+}
+.wartaq-a .a-workspace,
+.wartaq-a .a-components {
+  max-width: 1450px;
+  margin: auto;
+  padding: 54px clamp(20px, 5vw, 76px) 80px;
+}
+.wartaq-a .a-workspace-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+.wartaq-a .a-workspace-head h1,
+.wartaq-a .a-components h1 {
+  font-family: 'Wartaq Plex Arabic', 'Wartaq Plex', sans-serif;
+  font-size: clamp(2rem, 3.2vw, 3.2rem);
+  font-weight: 600;
+}
+.wartaq-a .a-workspace-head p {
+  margin-top: 9px;
+}
+.wartaq-a .a-date {
+  width: min(100%, 200px);
+}
+.wartaq-a .a-notice {
+  margin: 28px 0;
+  padding: 13px 18px;
+  background: #e6f4f8;
+  border-inline-start: 3px solid #6fa7b5;
+  color: #285d6b;
+  font-size: 0.9rem;
+}
+.wartaq-a .a-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.8fr);
+  gap: 26px;
+  align-items: start;
+}
+.wartaq-a .a-attendance,
+.wartaq-a .a-note,
+.wartaq-a .a-summary,
+.wartaq-a .a-component-sample > div {
+  background: white;
+  border: 1px solid var(--a-line);
+  border-radius: var(--wartaq-radius-large, 18px);
+  padding: clamp(20px, 3vw, 32px);
+}
+.wartaq-a .a-section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: start;
+}
+.wartaq-a h2 {
+  font-size: 1.45rem;
+}
+.wartaq-a .a-section-head p,
+.wartaq-a .a-note p {
+  margin-top: 7px;
+  font-size: 0.92rem;
+}
+.wartaq-a .a-count {
+  color: var(--a-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.wartaq-a .a-text-button {
+  border: 0;
+  background: transparent;
+  color: var(--a-teal);
+  padding: 10px 0;
+  min-height: 44px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.wartaq-a .a-attendance > .a-text-button {
+  margin-top: 20px;
+}
+.wartaq-a .a-rows {
+  border-top: 1px solid var(--a-line);
+}
+.wartaq-a .a-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--a-line);
+}
+.wartaq-a .a-row select {
+  width: 150px;
+}
+.wartaq-a .a-student {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.wartaq-a .a-student strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.wartaq-a .a-student small {
+  display: block;
+  color: var(--a-muted);
+}
+.wartaq-a .a-avatar {
+  flex: 0 0 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e6f3f7;
+  color: #497783;
+}
+.wartaq-a .a-attendance-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  color: var(--a-muted);
+  font-size: 0.9rem;
+}
+.wartaq-a .a-side {
+  display: grid;
+  gap: 22px;
+}
+.wartaq-a .a-note form {
+  display: grid;
+  gap: 15px;
+  margin-top: 22px;
+}
+.wartaq-a .a-tag-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+.wartaq-a .a-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.wartaq-a .a-tags button,
+.wartaq-a .a-tags span {
+  min-height: 44px;
+  border: 1px solid #b5d5df;
+  border-radius: 30px;
+  padding: 6px 13px;
+  background: #eff8fa;
+  color: #356d7b;
+  font-size: 0.85rem;
+}
+.wartaq-a .a-tags button[aria-pressed='true'] {
+  background: #d0ebf1;
+  border-color: #43899a;
+}
+.wartaq-a .a-button-light {
+  background: white;
+  color: var(--a-teal);
+}
+.wartaq-a .a-button-light:hover {
+  color: white;
+}
+.wartaq-a .a-summary {
+  background: #e8f5f8;
+}
+.wartaq-a .a-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid #c5e1e8;
+  padding-top: 12px;
+  margin-top: 12px;
+}
+.wartaq-a .a-saved-note {
+  padding-top: 12px;
+  overflow-wrap: anywhere;
+}
+.wartaq-a .a-summary > .a-saved-note {
+  display: block;
+}
+.wartaq-a .a-saved-note > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wartaq-a .a-saved-note p {
+  margin-top: 12px;
+}
+.wartaq-a .a-components > p {
+  max-width: 650px;
+  margin-top: 16px;
+}
+.wartaq-a .a-component-sample {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 32px 0 20px;
+}
+.wartaq-a .a-component-sample p {
+  margin: 8px 0 20px;
+}
+.wartaq-a .a-component-sample .a-tags {
+  margin: 15px 0;
+}
+.wartaq-a .a-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 24px clamp(20px, 5vw, 76px);
+  border-top: 1px solid var(--a-line);
+  color: var(--a-muted);
+  font-size: 0.82rem;
+}
+.wartaq-a .a-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 760px) {
+  .wartaq-a .a-header {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .wartaq-a .a-header nav {
+    order: 3;
+    width: 100%;
+    margin: 0;
+    justify-content: space-between;
+  }
+  .wartaq-a .a-header nav button {
+    padding-inline: 8px;
+  }
+  .wartaq-a .a-preview {
+    margin-inline-start: auto;
+  }
+  .wartaq-a .a-welcome,
+  .wartaq-a .a-columns,
+  .wartaq-a .a-component-sample {
+    grid-template-columns: 1fr;
+  }
+  .wartaq-a .a-welcome {
+    gap: 40px;
+  }
+  .wartaq-a .a-entrance {
+    max-width: 500px;
+    width: 100%;
+    margin: auto;
+  }
+  .wartaq-a .a-arch {
+    height: 350px;
+  }
+}
+@media (max-width: 390px) {
+  .wartaq-a .a-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .wartaq-a .a-row select {
+    width: 100%;
+  }
+  .wartaq-a .a-section-head {
+    flex-wrap: wrap;
+  }
+  .wartaq-a .a-arch {
+    height: 290px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wartaq-a * {
+    scroll-behavior: auto;
+    transition: none;
+    animation: none;
+  }
+}

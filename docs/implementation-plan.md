@@ -71,6 +71,6 @@ Manual 404/410 observations are advisory, not proof of Create denial. A generic 
 - [ ] Manager lifecycle: reconcile provider deletion after process/disk failure using live account evidence; local restart path is covered synthetically.
 - [ ] Pending recovery: guided sanitized export/import for changed endpoint IDs. Current version deliberately blocks cross-link pending work and requires reconciling the old link.
 - [ ] Measure ledger size/quota before pagination or archival. Keep physical ordering semantics explicit.
-- [ ] Full Arabic translation and wider browser/device coverage if requested; Arabic content and mobile Chromium paths already work.
+- [x] Arabic/English Wartaq Midad homepage and real teacher workspace, with phone bottom navigation and retained data/auth flows; synthetic desktop/mobile coverage. Physical-device/assistive-technology certification remains unrun.
 
 Use [CONTRIBUTING](../CONTRIBUTING.md) for implementation/PR steps and the [verification feature map](../.agents/skills/verify-halaqa/features/README.md) for acceptance proof. Maintain this one task list rather than parallel model-specific plans. Update statuses with observed evidence and record limitations in [work-log.md](work-log.md).

@@ -1,0 +1,416 @@
+.wartaq-home {
+  background: #f5fafc;
+  color: #124e56;
+}
+.home-wrap {
+  width: min(100% - 3rem, 1120px);
+  margin-inline: auto;
+}
+.home-header {
+  background: #004d57;
+  color: white;
+}
+.home-header-inner {
+  width: min(100% - 3rem, 1120px);
+  min-height: 90px;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.wartaq-home .home-header .wartaq-logo {
+  color: white;
+}
+.home-header nav,
+.home-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.home-header nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 44px;
+  color: #e3f3f4;
+  text-decoration: none;
+  font-weight: 600;
+}
+.home-header nav a:hover,
+.home-actions a:hover {
+  text-decoration: underline;
+}
+.home-header .language-switch {
+  padding: 0;
+  margin: 0;
+  gap: 4px;
+}
+.home-header .language-switch button {
+  color: white;
+  border-color: #60939a;
+  background: transparent;
+}
+.home-header .language-switch button[aria-pressed='true'] {
+  background: #d9f1f3;
+  color: #004d57;
+  border-color: #d9f1f3;
+}
+.home-sign-in {
+  border: 1px solid #b9dcdf;
+  border-radius: 10px;
+  background: transparent;
+  color: white;
+  padding: 9px 18px;
+  font-weight: 700;
+}
+.home-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5%;
+  align-items: center;
+  min-height: 570px;
+  padding-block: 64px 72px;
+}
+.home-kicker {
+  color: #007d8d;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+.home-hero h1 {
+  max-width: 600px;
+  margin: 0;
+  font-size: clamp(2.6rem, 5vw, 4.3rem);
+  line-height: 1.13;
+  letter-spacing: -0.035em;
+  color: #004d57;
+}
+.home-lede {
+  max-width: 520px;
+  font-size: 1.15rem;
+  line-height: 1.8;
+  color: #496d73;
+  margin: 24px 0 28px;
+}
+.home-actions,
+.home-final-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.home-primary {
+  min-height: 50px;
+  border: 0;
+  border-radius: 10px;
+  background: #007d8d;
+  color: white;
+  padding: 12px 20px;
+  font-weight: 700;
+}
+.home-primary:hover {
+  background: #005f6c;
+}
+.home-actions a {
+  color: #006d7a;
+  font-weight: 700;
+  padding: 12px 0;
+}
+.home-error {
+  color: #a02b31;
+}
+.home-illustration {
+  background: #cceaf2;
+  border-radius: 48% 48% 18px 18px;
+  padding: 66px 25px 30px;
+}
+.home-notebook {
+  display: flex;
+  min-height: 300px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 18px 45px #004d5724;
+}
+.home-notebook-rail {
+  flex: 0 0 53px;
+  background: #00545e;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 23px 10px;
+}
+.home-notebook-rail span {
+  display: block;
+  width: 20px;
+  height: 4px;
+  background: #8dcbd0;
+  border-radius: 5px;
+}
+.home-notebook-content {
+  flex: 1;
+  min-width: 0;
+  padding: 22px;
+}
+.home-notebook-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid #dcebed;
+  padding-bottom: 14px;
+}
+.home-notebook-head small {
+  color: #52777d;
+}
+.home-notebook h2 {
+  font-size: 1.05rem;
+  margin: 20px 0 8px;
+}
+.home-student {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e8f0f1;
+}
+.home-student b {
+  color: #006b78;
+  background: #e2f4f4;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+.home-note {
+  margin-top: 18px;
+  padding: 14px;
+  background: #f2f9fa;
+  border-radius: 9px;
+  font-size: 0.85rem;
+}
+.home-note span {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 700;
+}
+.home-note p {
+  margin: 9px 0;
+}
+.home-note small {
+  color: #007d8d;
+}
+.home-features {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 12%;
+  padding-block: 85px;
+  border-top: 1px solid #cfe2e4;
+}
+.wartaq-home h2 {
+  color: #004d57;
+  line-height: 1.3;
+}
+.home-section-intro h2,
+.home-access h2,
+.home-faq h2,
+.home-final h2 {
+  margin: 0 0 15px;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+}
+.home-section-intro p,
+.home-access p,
+.home-faq p,
+.home-final p,
+.home-feature-list p {
+  color: #527279;
+  line-height: 1.75;
+  margin: 0;
+}
+.home-feature-list article {
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid #d8e9eb;
+  padding: 0 0 22px;
+  margin-bottom: 22px;
+}
+.home-feature-list article:last-child {
+  margin-bottom: 0;
+}
+.home-feature-list svg {
+  flex: none;
+  color: #007d8d;
+}
+.home-feature-list h3,
+.home-access h3 {
+  margin: 0 0 7px;
+  color: #07545d;
+  font-size: 1.12rem;
+}
+.home-access {
+  background: #e2f2f4;
+  padding-block: 78px;
+}
+.home-access-inner {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 12%;
+}
+.home-access ol {
+  list-style: none;
+  counter-reset: access;
+  padding: 0;
+  margin: 0;
+}
+.home-access li {
+  counter-increment: access;
+  display: flex;
+  gap: 18px;
+  margin-bottom: 25px;
+}
+.home-access li:last-child {
+  margin-bottom: 0;
+}
+.home-access li::before {
+  content: counter(access);
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #007d8d;
+  color: white;
+  font-weight: 700;
+}
+.home-faq {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 12%;
+  padding-block: 80px;
+}
+.home-faq details {
+  border-bottom: 1px solid #cfe2e4;
+}
+.home-faq details:first-child {
+  border-top: 1px solid #cfe2e4;
+}
+.home-faq summary {
+  padding: 17px 4px;
+  font-weight: 700;
+}
+.home-faq details p {
+  padding: 0 4px 20px;
+}
+.home-final {
+  background: #cceaf2;
+  border-radius: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 25px;
+  padding: 38px;
+  margin-bottom: 70px;
+}
+.home-final > div:first-child {
+  max-width: 540px;
+}
+.home-final-actions {
+  flex-direction: column;
+  align-items: stretch;
+}
+.home-assigned {
+  color: #006d7a;
+  border: 0;
+  background: transparent;
+  text-decoration: underline;
+  font-weight: 700;
+}
+.home-footer {
+  background: #004d57;
+  color: #d1e8ea;
+  padding-block: 32px;
+}
+.home-footer .home-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.wartaq-home .home-footer .wartaq-logo {
+  color: white;
+}
+.home-footer p {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .home-header-inner {
+    flex-wrap: wrap;
+    padding-block: 14px;
+    gap: 12px;
+  }
+  .home-header nav {
+    order: 3;
+    width: 100%;
+    gap: 20px;
+  }
+  .home-header-actions {
+    gap: 8px;
+  }
+  .home-hero,
+  .home-features,
+  .home-access-inner,
+  .home-faq {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .home-hero {
+    padding-block: 45px 55px;
+  }
+  .home-illustration {
+    max-width: 530px;
+    width: 100%;
+  }
+  .home-features,
+  .home-faq {
+    padding-block: 55px;
+  }
+  .home-access {
+    padding-block: 55px;
+  }
+  .home-final {
+    align-items: start;
+    flex-direction: column;
+  }
+  .home-footer .home-wrap {
+    align-items: start;
+    flex-direction: column;
+  }
+}
+@media (max-width: 400px) {
+  .home-wrap,
+  .home-header-inner {
+    width: min(100% - 2rem, 1120px);
+  }
+  .home-header .wartaq-logo {
+    font-size: 1.2rem;
+  }
+  .home-header-actions {
+    gap: 4px;
+  }
+  .home-sign-in {
+    padding-inline: 10px;
+  }
+  .home-illustration {
+    padding: 48px 12px 18px;
+  }
+  .home-notebook-content {
+    padding: 15px;
+  }
+  .home-final {
+    padding: 25px;
+  }
+}

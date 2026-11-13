@@ -92,6 +92,7 @@ try {
     const password = crypto.randomUUID() + 'aA1!'
     const name = `Verification teacher ${suffix}`
     await page.goto(settings.NEON_VERIFY_APP_URL)
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     await page.getByRole('button', { name: 'Create account', exact: true }).click()
     await page.getByLabel('Name', { exact: true }).fill(name)
     await page.getByLabel('Email', { exact: true }).fill(email)
@@ -257,6 +258,7 @@ try {
   await a.page.screenshot({ path: '.artifacts/verification/neon-live.png', fullPage: true })
   check('real rendered note save and persisted Arabic data after browser reload')
   await a.page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await a.page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(a.page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
   await a.page.getByLabel('Email', { exact: true }).fill(a.email)
   await a.page.getByLabel('Password', { exact: true }).fill('wrong-password')

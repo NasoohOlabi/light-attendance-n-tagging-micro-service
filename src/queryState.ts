@@ -15,6 +15,7 @@ export function useQueryState() {
   const search = useSyncExternalStore(subscribe, () => window.location.search)
   const query = new URLSearchParams(search)
   return {
+    page: z.enum(['home', 'app']).safeParse(query.get('page')).data ?? 'home',
     tab: tabSchema.safeParse(query.get('tab')).data ?? 'attendance',
     date: z.iso.date().safeParse(query.get('date')).data ?? today(),
     from: z.iso.date().safeParse(query.get('from')).data ?? today().slice(0, 7) + '-01',
@@ -26,7 +27,18 @@ export function useQueryState() {
     all: query.get('all') === '1',
   }
 }
-const allowedKeys = new Set(['tab', 'date', 'from', 'to', 'q', 'group', 'tag', 'student', 'all'])
+const allowedKeys = new Set([
+  'page',
+  'tab',
+  'date',
+  'from',
+  'to',
+  'q',
+  'group',
+  'tag',
+  'student',
+  'all',
+])
 export function sanitizedSearch(search: string) {
   const query = new URLSearchParams(search)
   for (const key of [...query.keys()]) if (!allowedKeys.has(key)) query.delete(key)
@@ -45,5 +57,10 @@ export function setQuery(values: Record<string, string>, push = false) {
     '',
     window.location.pathname + (search ? `?${search}` : ''),
   )
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
+export function navigatePage(page: 'home' | 'app') {
+  window.history.pushState(null, '', window.location.pathname + (page === 'app' ? '?page=app' : ''))
   window.dispatchEvent(new PopStateEvent('popstate'))
 }

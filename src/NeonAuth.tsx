@@ -1,24 +1,61 @@
-import { useLanguage } from './i18n'
+import { LanguageSwitch, useLanguage } from './i18n'
 import { useEffect, useState } from 'react'
 import type { NeonTeacher } from '../shared/neon'
 import { z } from 'zod'
 import { authClient, getTeacher, NeonRequestError } from './neon'
+import { WartaqLogo } from './brand/components'
+
+function AuthHeader() {
+  const { language } = useLanguage()
+  return (
+    <header className="workspace-auth-header">
+      <a
+        href={window.location.pathname}
+        aria-label={language === 'ar' ? 'الصفحة الرئيسية' : 'Home'}
+      >
+        <WartaqLogo />
+      </a>
+      <LanguageSwitch />
+    </header>
+  )
+}
 
 export function NeonAuth({
   children,
   samples,
+  initialResetToken,
+  onSignOut,
+  onResetComplete,
 }: {
+  initialResetToken?: string
+  onSignOut: () => void
+  onResetComplete: () => void
   samples: React.ReactNode
   children: (userId: string, teacher: NeonTeacher, signOut: () => void) => React.ReactNode
 }) {
   if (!authClient) return null
-  return <ConfiguredAuth samples={samples}>{children}</ConfiguredAuth>
+  return (
+    <ConfiguredAuth
+      samples={samples}
+      initialResetToken={initialResetToken}
+      onSignOut={onSignOut}
+      onResetComplete={onResetComplete}
+    >
+      {children}
+    </ConfiguredAuth>
+  )
 }
 
 function ConfiguredAuth({
   children,
   samples,
+  initialResetToken,
+  onSignOut,
+  onResetComplete,
 }: {
+  initialResetToken?: string
+  onSignOut: () => void
+  onResetComplete: () => void
   samples: React.ReactNode
   children: (userId: string, teacher: NeonTeacher, signOut: () => void) => React.ReactNode
 }) {
@@ -30,7 +67,7 @@ function ConfiguredAuth({
   const [teacher, setTeacher] = useState<{ userId: string; value: NeonTeacher } | null>(null)
   const [approval, setApproval] = useState<{ userId: string; message: string } | null>(null)
   const [mode, setMode] = useState<'sign-in' | 'sign-up' | 'forgot' | 'reset'>(() =>
-    new URLSearchParams(window.location.search).has('token') ? 'reset' : 'sign-in',
+    initialResetToken ? 'reset' : 'sign-in',
   )
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -62,17 +99,20 @@ function ConfiguredAuth({
     setTeacher(null)
     setApproval(null)
     void client.signOut()
+    onSignOut()
   }
   if (session.isPending)
     return (
-      <main id="main-content" tabIndex={-1}>
+      <main id="main-content" tabIndex={-1} className="workspace-auth">
+        <AuthHeader />
         <p role="status">{t('Loading your session…')}</p>
       </main>
     )
   if (userId) {
     if (approval?.userId === userId)
       return (
-        <main id="main-content" tabIndex={-1} className="panel space-y-3">
+        <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
+          <AuthHeader />
           <p role="alert">{errorMessage(approval.message)}</p>
           <button className="secondary" onClick={signOut}>
             {t('Sign out')}
@@ -81,13 +121,15 @@ function ConfiguredAuth({
       )
     if (!teacher || teacher.userId !== userId)
       return (
-        <main id="main-content" tabIndex={-1}>
+        <main id="main-content" tabIndex={-1} className="workspace-auth">
+          <AuthHeader />
           <p role="status">{t('Loading your notebook…')}</p>
         </main>
       )
     if (!teacher.value.canRead)
       return (
-        <main id="main-content" tabIndex={-1} className="panel space-y-3">
+        <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
+          <AuthHeader />
           <p>
             {t(
               'Your account has write-only access. The notebook requires read access; contact your manager.',
@@ -101,11 +143,8 @@ function ConfiguredAuth({
     return children(userId, teacher.value, signOut)
   }
   return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      className="mx-auto flex min-h-svh max-w-lg flex-col justify-center gap-6 px-6"
-    >
+    <main id="main-content" tabIndex={-1} className="workspace-auth">
+      <AuthHeader />
       <h1 className="text-4xl font-semibold tracking-tight">
         {t('Your halaqa, one shared notebook.')}
       </h1>
@@ -123,7 +162,7 @@ function ConfiguredAuth({
             if (mode === 'forgot') {
               const result = await client.requestPasswordReset({
                 email,
-                redirectTo: window.location.origin + window.location.pathname,
+                redirectTo: window.location.origin + window.location.pathname + '?page=app',
               })
               setError(
                 result.error
@@ -131,12 +170,13 @@ function ConfiguredAuth({
                   : 'If the account exists, a password reset email has been sent.',
               )
             } else if (mode === 'reset') {
-              const token = new URLSearchParams(window.location.search).get('token')
+              const token = initialResetToken
               if (!token) throw new Error()
               const result = await client.resetPassword({ newPassword: password, token })
               if (result.error) setError('Unable to reset your password. Request a new link.')
               else {
-                window.history.replaceState(null, '', window.location.pathname)
+                window.history.replaceState(null, '', window.location.pathname + '?page=app')
+                onResetComplete()
                 setMode('sign-in')
                 setError('Password updated. Please sign in.')
               }
