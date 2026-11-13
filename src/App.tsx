@@ -83,7 +83,7 @@ function AppContent({
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
-  if (!access && query.page === 'home' && !reset)
+  if (query.page === 'home' && !reset)
     return (
       <HomePage
         onOpenApp={() => {
@@ -183,7 +183,7 @@ function AppContent({
   return (
     <Notebook
       key={session.revision}
-      access={access}
+      access={demo ? null : access}
       demo={demo}
       leave={() => {
         clearSession()

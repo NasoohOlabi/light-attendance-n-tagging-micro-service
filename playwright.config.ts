@@ -12,6 +12,8 @@ const origin = `http://127.0.0.1:${port}`
 
 export default defineConfig({
   testDir: './e2e',
+  // Bound browser and child-server load on Windows and CI.
+  workers: 2,
   outputDir: '.artifacts/test-results',
   reporter: [['list'], ['html', { outputFolder: '.artifacts/playwright-report', open: 'never' }]],
   use: {
