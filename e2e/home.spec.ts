@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+﻿import { expect, test, type Page } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 
 async function mobileLayout(page: Page) {
@@ -39,9 +39,24 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   await expect(page.locator('.wartaq-logo')).toHaveText(['وارتق', 'وارتق'])
   await expect(page.locator('.wartaq-logo img')).toHaveCount(0)
   await expect(page.locator('.workspace')).toHaveCount(0)
+  await expect(
+    page.getByRole('heading', { name: 'Recite with care. Grow with every verse.' }),
+  ).toBeVisible()
+  await expect(page.getByText(/Course preview:.*placeholders awaiting confirmation/)).toBeVisible()
+  await expect(
+    page.getByText(
+      'Enrollment is not open yet. Registration details will be shared when confirmed.',
+    ),
+  ).toBeVisible()
   await expect(page.getByRole('group', { name: 'Language / اللغة' })).toHaveCount(1)
   for (const language of ['العربية', 'English']) {
     await page.getByRole('button', { name: language, exact: true }).click()
+    if (language === 'العربية') {
+      await expect(
+        page.getByRole('heading', { name: 'تلاوة بعناية، ونمو مع كل آية.' }),
+      ).toBeVisible()
+      await expect(page.getByText(/معلومات أولية بانتظار التأكيد/)).toBeVisible()
+    }
     for (const viewport of [
       { width: 320, height: 568 },
       { width: 390, height: 844 },
@@ -51,10 +66,14 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
       await mobileLayout(page)
     }
   }
-  await page.getByRole('link', { name: 'Features', exact: true }).click()
-  await expect(page).toHaveURL(/#features$/)
+  await page.getByRole('link', { name: 'Course outline', exact: true }).click()
+  await expect(page).toHaveURL(/#how-it-works$/)
   await page.reload()
-  await expect(page).toHaveURL(/#features$/)
+  await expect(page).toHaveURL(/#how-it-works$/)
+  await page.getByRole('link', { name: 'Course details', exact: true }).click()
+  await expect(page).toHaveURL(/#enrollment$/)
+  await page.reload()
+  await expect(page).toHaveURL(/#enrollment$/)
   await page.locator('summary').first().click()
   await expect(page.locator('details').first()).toHaveAttribute('open', '')
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()

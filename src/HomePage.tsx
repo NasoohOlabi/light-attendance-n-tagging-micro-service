@@ -1,101 +1,109 @@
-import { WartaqIcon, WartaqLogo } from './brand/components'
+﻿import { WartaqLogo } from './brand/components'
 import { LanguageSwitch, useLanguage } from './i18n'
 import './home.css'
 
 const copy = {
   en: {
-    features: 'Features',
-    how: 'How access works',
+    nav: 'Main navigation',
+    outline: 'Course outline',
+    details: 'Course details',
     signIn: 'Sign in',
+    eyebrow: 'A journey with the Quran',
+    title: 'Recite with care. Grow with every verse.',
     intro:
-      'A practical notebook for Quran halaqa teachers to record attendance, share context and pick up where another teacher left off.',
-    sample: 'Illustrative sample',
-    notebook: 'Halaqa notebook',
-    attendance: 'Attendance',
-    notes: 'Shared notes',
-    present: 'Present',
-    late: 'Late',
-    student1: 'Ahmad',
-    student2: 'Yusuf',
-    note: 'Continue revision from the last lesson.',
-    tag: 'revision',
-    featureTitle: 'The details that carry a halaqa forward',
-    featureIntro:
-      'Keep the daily record and the context around it together, ready for the next teacher.',
-    attendanceTitle: 'Mark attendance',
-    attendanceBody:
-      'Record attendance for the students in your notebook and return to the overview when you need it.',
-    notesTitle: 'Leave a useful note',
-    notesBody: 'Write a note for a student, add tags and find it again later.',
-    historyTitle: 'Keep the history clear',
-    historyBody: 'Review the record and append a correction when something needs to be undone.',
-    accessTitle: 'From account to notebook',
-    accessIntro: 'Your manager connects your account to the students you teach.',
-    step1: 'Create an account or sign in',
-    step1Body: 'Use your own account to enter the notebook.',
-    step2: 'Get teacher approval',
-    step2Body:
-      'Your manager approves access. Creating an account alone does not grant notebook access.',
-    step3: 'Open your assigned roster',
-    step3Body:
-      'Once approved, work with the active students assigned to you and the access your manager has granted.',
-    faq: 'Questions before you begin',
-    q1: 'Can I try it first?',
-    a1: 'Yes. Explore the sample notebook without an account. Sample changes stay in memory and disappear when you leave.',
-    q2: 'What can another teacher see?',
-    a2: 'Approved access and student assignments determine which notebook records a teacher can work with. Ask your manager about your access.',
-    q3: 'What if I make a mistake?',
-    a3: 'Use History & corrections to append a correction to an existing record. The history remains available.',
-    finalTitle: 'A little more continuity for every halaqa.',
-    finalBody: 'Explore the notebook with sample students, or sign in to your account.',
-    trySample: 'Open the sample notebook',
-    openNotebook: 'Open your notebook',
-    footer: 'Attendance and shared notes for halaqa teachers.',
+      'A course in Quran recitation, built around attentive practice and a steady relationship with the words we read.',
+    explore: 'Explore the course',
+    enrollment: 'Enrollment information',
+    notice:
+      'Course preview: the outline, teachers, dates, fees, enrollment and contact details are placeholders awaiting confirmation.',
+    outcomes: 'A practice to return to',
+    outcomesIntro:
+      'The proposed course makes space to listen, practise and grow in confidence at a thoughtful pace.',
+    outcome1: 'Read with attention',
+    outcome1Body: 'Develop a more mindful approach to pronunciation and recitation.',
+    outcome2: 'Practise consistently',
+    outcome2Body: 'Build a regular rhythm of reading and review.',
+    outcome3: 'Learn together',
+    outcome3Body: 'Make room for guidance, questions and reflection.',
+    curriculum: 'A proposed path through the course',
+    curriculumIntro: 'The final curriculum and level will be confirmed before enrollment opens.',
+    lesson1: 'Foundations',
+    lesson1Body: 'Begin with the building blocks of clear recitation.',
+    lesson2: 'Guided recitation',
+    lesson2Body: 'Listen and practise passages with attention to detail.',
+    lesson3: 'Review and reflection',
+    lesson3Body: 'Revisit what you have learned and continue practising.',
+    audience: 'Who is it for?',
+    audienceBody:
+      'For anyone interested in making time for Quran recitation. The intended level and prerequisites are to be confirmed.',
+    teacher: 'Your teacher',
+    teacherBody: 'Teacher information will be shared once confirmed.',
+    schedule: 'Time and place',
+    scheduleBody: 'Dates, schedule, location or online format, and fees are yet to be confirmed.',
+    register: 'Enrollment',
+    registerBody: 'Enrollment is not open yet. Registration details will be shared when confirmed.',
+    faq: 'Questions',
+    q1: 'When does the course start?',
+    a1: 'The start date and schedule are awaiting confirmation.',
+    q2: 'Do I need previous experience?',
+    a2: 'The intended level and prerequisites will be confirmed with the course details.',
+    q3: 'How can I get in touch?',
+    a3: 'Contact details will be shared once confirmed.',
+    contact: 'Contact',
+    contactBody: 'Contact information is awaiting confirmation.',
+    tools: 'Already part of a halaqa?',
+    toolsBody: 'Open your notebook or explore it with sample students.',
+    footer: 'A space for a thoughtful journey with the Quran.',
   },
   ar: {
-    features: 'المزايا',
-    how: 'كيف يعمل الوصول',
+    nav: 'التنقل الرئيسي',
+    outline: 'محاور الدورة',
+    details: 'تفاصيل الدورة',
     signIn: 'تسجيل الدخول',
-    intro:
-      'دفتر عملي لمعلمي حلقات القرآن لتسجيل الحضور ومشاركة الملاحظات ومتابعة ما بدأه المعلم الآخر.',
-    sample: 'مثال توضيحي',
-    notebook: 'دفتر الحلقة',
-    attendance: 'الحضور',
-    notes: 'الملاحظات المشتركة',
-    present: 'حاضر',
-    late: 'متأخر',
-    student1: 'أحمد',
-    student2: 'يوسف',
-    note: 'متابعة المراجعة من الدرس السابق.',
-    tag: 'مراجعة',
-    featureTitle: 'التفاصيل التي تساعد الحلقة على الاستمرار',
-    featureIntro: 'احتفظ بالسجل اليومي والملاحظات المصاحبة معاً، ليطلع عليها المعلم التالي.',
-    attendanceTitle: 'سجّل الحضور',
-    attendanceBody: 'سجّل حضور الطلاب في دفترك وارجع إلى الملخص عند الحاجة.',
-    notesTitle: 'اترك ملاحظة مفيدة',
-    notesBody: 'اكتب ملاحظة لطالب، وأضف وسوماً لتجدها لاحقاً.',
-    historyTitle: 'احتفظ بسجل واضح',
-    historyBody: 'راجع السجل وأضف تصحيحاً عندما تحتاج إلى التراجع عن خطأ.',
-    accessTitle: 'من الحساب إلى الدفتر',
-    accessIntro: 'يربط المسؤول حسابك بالطلاب الذين تدرّسهم.',
-    step1: 'أنشئ حساباً أو سجّل الدخول',
-    step1Body: 'استخدم حسابك الخاص للدخول إلى الدفتر.',
-    step2: 'احصل على موافقة المسؤول',
-    step2Body: 'يوافق المسؤول على الوصول. إنشاء الحساب وحده لا يمنحك الوصول إلى الدفتر.',
-    step3: 'افتح قائمة طلابك المعيّنين',
-    step3Body: 'بعد الموافقة، يمكنك العمل مع الطلاب النشطين المعيّنين لك حسب صلاحياتك.',
-    faq: 'أسئلة قبل البدء',
-    q1: 'هل يمكنني التجربة أولاً؟',
-    a1: 'نعم، يمكنك استكشاف الدفتر التجريبي دون حساب. تبقى التغييرات في الذاكرة وتختفي عند المغادرة.',
-    q2: 'ماذا يرى المعلم الآخر؟',
-    a2: 'تحدد الصلاحيات المعتمدة والطلاب المعيّنون السجلات التي يمكن للمعلم التعامل معها. اسأل المسؤول عن صلاحياتك.',
-    q3: 'ماذا لو أخطأت؟',
-    a3: 'استخدم السجل والتصحيحات لإضافة تصحيح إلى سجل موجود. يبقى السجل متاحاً.',
-    finalTitle: 'استمرارية أكبر لكل حلقة.',
-    finalBody: 'استكشف الدفتر بطلاب تجريبيين، أو سجّل الدخول إلى حسابك.',
-    trySample: 'افتح الدفتر التجريبي',
-    openNotebook: 'افتح دفترك',
-    footer: 'الحضور والملاحظات المشتركة لمعلمي الحلقات.',
+    eyebrow: 'رحلة مع القرآن',
+    title: 'تلاوة بعناية، ونمو مع كل آية.',
+    intro: 'دورة في تلاوة القرآن الكريم، تقوم على الممارسة المتأنية والصلة المستمرة بكلمات الله.',
+    explore: 'استكشف الدورة',
+    enrollment: 'معلومات التسجيل',
+    notice:
+      'معاينة للدورة: المحاور والمعلمون والمواعيد والرسوم والتسجيل وبيانات التواصل معلومات أولية بانتظار التأكيد.',
+    outcomes: 'ممارسة نعود إليها',
+    outcomesIntro: 'تمنح الدورة المقترحة مساحة للاستماع والتدرب والنمو في الثقة بخطوات متأنية.',
+    outcome1: 'اقرأ بانتباه',
+    outcome1Body: 'نمِّ عنايتك بالنطق والتلاوة.',
+    outcome2: 'تدرّب باستمرار',
+    outcome2Body: 'ابنِ عادة منتظمة للقراءة والمراجعة.',
+    outcome3: 'تعلّم مع الآخرين',
+    outcome3Body: 'أفسح مجالاً للتوجيه والأسئلة والتأمل.',
+    curriculum: 'مسار مقترح للدورة',
+    curriculumIntro: 'سيُؤكّد المنهج النهائي ومستوى الدورة قبل فتح التسجيل.',
+    lesson1: 'الأساسيات',
+    lesson1Body: 'ابدأ بأسس التلاوة الواضحة.',
+    lesson2: 'التلاوة الموجّهة',
+    lesson2Body: 'استمع وتدرّب على مقاطع مع الانتباه للتفاصيل.',
+    lesson3: 'المراجعة والتأمل',
+    lesson3Body: 'راجع ما تعلمته وواصل الممارسة.',
+    audience: 'لمن هذه الدورة؟',
+    audienceBody:
+      'لكل من يرغب في تخصيص وقت لتلاوة القرآن. المستوى المطلوب والمتطلبات السابقة بانتظار التأكيد.',
+    teacher: 'المعلم',
+    teacherBody: 'ستُنشر معلومات المعلم بعد تأكيدها.',
+    schedule: 'الزمان والمكان',
+    scheduleBody: 'المواعيد والجدول والمكان أو طريقة المشاركة عن بُعد والرسوم بانتظار التأكيد.',
+    register: 'التسجيل',
+    registerBody: 'التسجيل غير مفتوح بعد. ستُنشر تفاصيل التسجيل عند تأكيدها.',
+    faq: 'أسئلة شائعة',
+    q1: 'متى تبدأ الدورة؟',
+    a1: 'موعد البدء والجدول بانتظار التأكيد.',
+    q2: 'هل أحتاج إلى خبرة سابقة؟',
+    a2: 'سيُؤكّد مستوى الدورة والمتطلبات السابقة مع تفاصيلها.',
+    q3: 'كيف أتواصل معكم؟',
+    a3: 'ستُنشر بيانات التواصل بعد تأكيدها.',
+    contact: 'التواصل',
+    contactBody: 'بيانات التواصل بانتظار التأكيد.',
+    tools: 'هل أنت من أهل الحلقات؟',
+    toolsBody: 'افتح دفترك أو استكشفه باستخدام طلاب تجريبيين.',
+    footer: 'مساحة لرحلة متأنية مع القرآن الكريم.',
   },
 }
 
@@ -121,9 +129,9 @@ export function HomePage({
       <header className="home-header">
         <div className="home-header-inner">
           <WartaqLogo />
-          <nav aria-label={language === 'ar' ? 'التنقل الرئيسي' : 'Main navigation'}>
-            <a href="#features">{c.features}</a>
-            <a href="#how-it-works">{c.how}</a>
+          <nav aria-label={c.nav}>
+            <a href="#how-it-works">{c.outline}</a>
+            <a href="#enrollment">{c.details}</a>
           </nav>
           <div className="home-header-actions">
             <LanguageSwitch />
@@ -135,9 +143,9 @@ export function HomePage({
       </header>
       <main id="main-content" tabIndex={-1}>
         <section className="home-hero home-wrap">
-          <div className="home-hero-copy">
-            <p className="home-kicker">{c.notebook}</p>
-            <h1>{t('Your halaqa, one shared notebook.')}</h1>
+          <div>
+            <p className="home-kicker">{c.eyebrow}</p>
+            <h1>{c.title}</h1>
             <p className="home-lede">{c.intro}</p>
             {error && (
               <p role="alert" className="home-error">
@@ -145,103 +153,82 @@ export function HomePage({
               </p>
             )}
             <div className="home-actions">
-              <button className="home-primary" onClick={onExplore}>
-                {t('Explore with sample students')}
-              </button>
-              <a href="#how-it-works">{c.how}</a>
+              <a className="home-primary" href="#how-it-works">
+                {c.explore}
+              </a>
+              <a href="#enrollment">{c.enrollment}</a>
             </div>
           </div>
-          <div className="home-illustration" aria-label={c.sample}>
-            <div className="home-notebook">
-              <div className="home-notebook-rail">
-                <WartaqIcon name="book" size={24} />
-                <span />
-                <span />
-                <span />
-              </div>
-              <div className="home-notebook-content">
-                <div className="home-notebook-head">
-                  <strong>{c.notebook}</strong>
-                  <small>{c.sample}</small>
-                </div>
-                <h2>{c.attendance}</h2>
-                <div className="home-student">
-                  <span>{c.student1}</span>
-                  <b>{c.present}</b>
-                </div>
-                <div className="home-student">
-                  <span>{c.student2}</span>
-                  <b>{c.late}</b>
-                </div>
-                <div className="home-note">
-                  <span>
-                    <WartaqIcon name="notes" size={18} /> {c.notes}
-                  </span>
-                  <p>{c.note}</p>
-                  <small>{c.tag}</small>
-                </div>
-              </div>
-            </div>
+          <div className="home-illustration">
+            <img src={`${import.meta.env.BASE_URL}brand/wartaq/quran-book.svg`} alt="" />
           </div>
         </section>
-        <section id="features" className="home-features home-wrap">
-          <div className="home-section-intro">
-            <h2>{c.featureTitle}</h2>
-            <p>{c.featureIntro}</p>
+        <div className="home-wrap">
+          <p className="home-notice">{c.notice}</p>
+        </div>
+        <section id="features" className="home-section home-wrap">
+          <div className="home-section-heading">
+            <h2>{c.outcomes}</h2>
+            <p>{c.outcomesIntro}</p>
           </div>
-          <div className="home-feature-list">
+          <div className="home-outcomes">
             <article>
-              <WartaqIcon name="attendance" size={25} />
-              <div>
-                <h3>{c.attendanceTitle}</h3>
-                <p>{c.attendanceBody}</p>
-              </div>
+              <h3>{c.outcome1}</h3>
+              <p>{c.outcome1Body}</p>
             </article>
             <article>
-              <WartaqIcon name="notes" size={25} />
-              <div>
-                <h3>{c.notesTitle}</h3>
-                <p>{c.notesBody}</p>
-              </div>
+              <h3>{c.outcome2}</h3>
+              <p>{c.outcome2Body}</p>
             </article>
             <article>
-              <WartaqIcon name="history" size={25} />
-              <div>
-                <h3>{c.historyTitle}</h3>
-                <p>{c.historyBody}</p>
-              </div>
+              <h3>{c.outcome3}</h3>
+              <p>{c.outcome3Body}</p>
             </article>
           </div>
         </section>
-        <section id="how-it-works" className="home-access">
-          <div className="home-wrap home-access-inner">
+        <section id="how-it-works" className="home-curriculum">
+          <div className="home-wrap home-split">
             <div>
-              <h2>{c.accessTitle}</h2>
-              <p>{c.accessIntro}</p>
+              <h2>{c.curriculum}</h2>
+              <p>{c.curriculumIntro}</p>
             </div>
             <ol>
               <li>
-                <div>
-                  <h3>{c.step1}</h3>
-                  <p>{c.step1Body}</p>
-                </div>
+                <h3>{c.lesson1}</h3>
+                <p>{c.lesson1Body}</p>
               </li>
               <li>
-                <div>
-                  <h3>{c.step2}</h3>
-                  <p>{c.step2Body}</p>
-                </div>
+                <h3>{c.lesson2}</h3>
+                <p>{c.lesson2Body}</p>
               </li>
               <li>
-                <div>
-                  <h3>{c.step3}</h3>
-                  <p>{c.step3Body}</p>
-                </div>
+                <h3>{c.lesson3}</h3>
+                <p>{c.lesson3Body}</p>
               </li>
             </ol>
           </div>
         </section>
-        <section id="questions" className="home-faq home-wrap">
+        <section id="enrollment" className="home-section home-wrap">
+          <div className="home-details">
+            <article>
+              <h2>{c.audience}</h2>
+              <p>{c.audienceBody}</p>
+            </article>
+            <article>
+              <h2>{c.teacher}</h2>
+              <p>{c.teacherBody}</p>
+            </article>
+            <article>
+              <h2>{c.schedule}</h2>
+              <p>{c.scheduleBody}</p>
+            </article>
+            <article>
+              <h2>{c.register}</h2>
+              <p>{c.registerBody}</p>
+            </article>
+          </div>
+        </section>
+        <section className="home-faq home-wrap">
           <h2>{c.faq}</h2>
           <div>
             <details>
@@ -256,23 +243,18 @@ export function HomePage({
               <summary>{c.q3}</summary>
               <p>{c.a3}</p>
             </details>
+            <h3>{c.contact}</h3>
+            <p>{c.contactBody}</p>
           </div>
         </section>
-        <section className="home-final home-wrap">
+        <section className="home-tools home-wrap">
           <div>
-            <h2>{c.finalTitle}</h2>
-            <p>{c.finalBody}</p>
+            <h2>{c.tools}</h2>
+            <p>{c.toolsBody}</p>
           </div>
-          <div className="home-final-actions">
-            <button className="home-primary" onClick={onExplore}>
-              {c.trySample}
-            </button>
-            <button className="home-assigned" onClick={onOpenApp}>
-              {c.openNotebook}
-            </button>
-            <button className="home-assigned" onClick={onExploreAssigned}>
-              {t('Explore assigned teacher sample')}
-            </button>
+          <div className="home-tool-actions">
+            <button onClick={onExplore}>{t('Explore with sample students')}</button>
+            <button onClick={onExploreAssigned}>{t('Explore assigned teacher sample')}</button>
           </div>
         </section>
       </main>

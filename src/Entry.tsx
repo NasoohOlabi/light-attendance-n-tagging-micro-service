@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { z } from 'zod'
 import { App } from './App'
 import { loadSession } from './session'
+import { setQuery } from './queryState'
 
 const DraftGallery = lazy(() =>
   import('./design-drafts/Gallery').then(({ DraftGallery }) => ({ default: DraftGallery })),
@@ -15,10 +16,12 @@ const initialResetToken = design
   ? undefined
   : z.string().min(1).max(4096).safeParse(entryQuery.get('token')).data
 const homeAnchor = z
-  .enum(['#features', '#how-it-works', '#questions'])
+  .enum(['#features', '#how-it-works', '#questions', '#enrollment'])
   .safeParse(window.location.hash).data
+const privateEntry = new URLSearchParams(window.location.hash.slice(1)).has('access')
 const initialSession = design ? null : loadSession()
-if (homeAnchor && !design && !initialSession?.access && !initialResetToken)
+if (privateEntry && initialSession?.access && !initialResetToken) setQuery({ page: 'app' })
+if (homeAnchor && !design && !initialResetToken)
   window.history.replaceState(
     null,
     '',

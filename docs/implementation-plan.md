@@ -1,5 +1,12 @@
 # Implementation plan and task list
 
+## Public course homepage
+
+- [x] Replace the attendance-tool marketing page with an Arabic/English course introduction, proposed outcomes/curriculum and explicit teacher/schedule/enrollment/contact placeholders.
+- [x] Keep plain root public even with a stored legacy capability; preserve explicit private links and the separate `?page=app` entry.
+- [x] Verify course anchors, sample isolation, mobile/RTL layouts and existing app/PWA flows.
+- [ ] Publish the course-focused homepage through nightly and main-only Pages, then verify the actual public root.
+
 ## Three application roles
 
 - [x] Server-owned Administrator, Teacher and Student roles; signup grants no role or data access.
@@ -7,7 +14,7 @@
 - [x] Administrator account approval, role/link changes, disable and canonical roster assignment; self-management blocked.
 - [x] Repeatable role migration tested twice on an isolated Neon branch, then applied to production; owner-designated first Administrator granted privately and verified without recording personal identity here.
 - [x] Arabic/English phone UI, synthetic API/UI checks and real Neon Auth/JWT/Postgres verification with fixture cleanup.
-- [ ] Promote the role UI through nightly and main-only Pages; record actual publication separately in the work log.
+- [x] Promote the role UI through nightly and main-only Pages: PR #17, main `340be7a`, successful Stable Pages run `43456101107`; public configured assets and Arabic/English Administrator/Student phone screens verified with synthetic service boundaries. Actual Neon permissions were verified separately above.
 
 See [role permissions](roles.md) for scope, private bootstrap and limitations.
 

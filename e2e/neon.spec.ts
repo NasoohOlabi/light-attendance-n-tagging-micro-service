@@ -227,7 +227,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.reload()
   await expect(page.getByText('Alpha Student')).toBeVisible()
   await page.getByRole('button', { name: 'Sign out' }).click()
-  await expect(page.getByRole('heading', { name: /Your halaqa/ })).toBeVisible()
+  await expect(page.locator('.wartaq-home h1')).toBeVisible()
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByLabel('Email').fill(users[1].email)
   await page.getByLabel('Password').fill('synthetic-password')
