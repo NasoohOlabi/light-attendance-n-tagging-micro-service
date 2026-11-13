@@ -1,5 +1,16 @@
 # Implementation plan and task list
 
+## Three application roles
+
+- [x] Server-owned Administrator, Teacher and Student roles; signup grants no role or data access.
+- [x] Student read-only view contains only their own effective attendance, with no notes, raw events or peer roster.
+- [x] Administrator account approval, role/link changes, disable and canonical roster assignment; self-management blocked.
+- [x] Repeatable role migration tested twice on an isolated Neon branch, then applied to production; owner-designated first Administrator granted privately and verified without recording personal identity here.
+- [x] Arabic/English phone UI, synthetic API/UI checks and real Neon Auth/JWT/Postgres verification with fixture cleanup.
+- [ ] Promote the role UI through nightly and main-only Pages; record actual publication separately in the work log.
+
+See [role permissions](roles.md) for scope, private bootstrap and limitations.
+
 ## Current Neon migration
 
 The user subsequently requested Neon Postgres and managed Auth instead of relying on SheetDB capabilities. [Neon setup](neon-setup.md) is authoritative for the current backend. The assigned-teacher workflow remains; signup requires owner approval and the Function enforces identity, assignment, modes and expiry. The original SheetDB acceptance matrix below is legacy-only.

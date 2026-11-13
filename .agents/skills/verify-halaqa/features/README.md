@@ -2,6 +2,8 @@
 
 Current Neon login, teacher scope, pending retries and account switching are covered by `e2e/neon.spec.ts` using synthetic provider boundaries. The explicit live-service path is `bun run verify:neon:live`; see [Neon setup](../../../../docs/neon-setup.md). The legacy entries below remain compatibility coverage.
 
+Three-role changes also run `e2e/roles.spec.ts`: real Arabic/English phone Student attendance, no staff API calls or notebook controls, stale access removal on 403, signup without role selection, Administrator self-protection, Teacher approval modes, Student identity linking and canonical roster creation. `tests/neon-api.test.ts` checks server denials and projected attendance privacy. Live verification separately proves actual Auth/JWT/Postgres behavior and removes synthetic fixtures; offline mocks cannot prove provider authorization.
+
 Every user entry point below needs proof when affected. The runnable harness is `e2e/notebook.spec.ts` plus `tests/manager.test.ts`; consult the skill for launch/isolation/evidence.
 
 For PWA/install changes, run `e2e/pwa.spec.ts` and the full suite. It serves the built site under an isolated `/notebook/` prefix and proves manifest/icon/worker URLs, clean offline entry, private/authenticated/query/POST cache bypass, native prompt wiring and single use, Arabic/iPad instructions, standalone hiding and waiting updates preserving an unsaved note. Keep `.artifacts/pwa/` screenshots. Native OS installation is simulated only at the prompt callback; browser cache and network behavior are real. Physical-device installation and live provider access remain separate. See [PWA behavior](../../../../docs/pwa.md).

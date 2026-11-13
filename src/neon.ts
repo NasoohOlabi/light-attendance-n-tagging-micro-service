@@ -1,7 +1,12 @@
-﻿import { createAuthClient } from '@neon/auth'
+import { createAuthClient } from '@neon/auth'
 import { BetterAuthReactAdapter } from '@neon/auth/react/adapters'
 import { z } from 'zod'
-import { neonBatchSchema, neonSnapshotSchema, neonTeacherSchema } from '../shared/neon'
+import {
+  neonAccountSchema,
+  neonBatchSchema,
+  neonSnapshotSchema,
+  neonTeacherSchema,
+} from '../shared/neon'
 import type { LedgerEvent } from '../shared/ledger'
 
 function endpoint(value: string | undefined) {
@@ -32,7 +37,7 @@ export class NeonRequestError extends Error {
   constructor(public status: number) {
     super(
       status === 403
-        ? 'Your account is awaiting teacher approval. Contact your manager.'
+        ? 'Your account is awaiting approval or no longer has access. Contact your manager.'
         : status === 401
           ? 'Your session has expired. Please sign in again.'
           : 'The notebook request failed. Please try again.',
@@ -40,7 +45,7 @@ export class NeonRequestError extends Error {
   }
 }
 
-async function request(path: string, userId: string, events?: LedgerEvent[]) {
+export async function request(path: string, userId: string, body?: unknown): Promise<unknown> {
   if (!authClient || !apiUrl) throw new Error('Notebook configuration is unavailable.')
   const session = await authClient.getSession({
     fetchOptions: { signal: AbortSignal.timeout(15000) },
@@ -69,16 +74,23 @@ async function request(path: string, userId: string, events?: LedgerEvent[]) {
     throw new NeonRequestError(401)
   }
   const response = await fetch(`${apiUrl}${path}`, {
-    method: events ? 'POST' : 'GET',
+    method: body !== undefined ? 'POST' : 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
-      ...(events ? { 'Content-Type': 'application/json' } : {}),
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
     },
-    ...(events ? { body: JSON.stringify(neonBatchSchema.parse({ events })) } : {}),
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     signal: AbortSignal.timeout(15000),
   })
-  if (!response.ok) throw new NeonRequestError(response.status)
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403)
+      window.dispatchEvent(new CustomEvent('neon-access-denied', { detail: response.status }))
+    throw new NeonRequestError(response.status)
+  }
   return response.json() as Promise<unknown>
+}
+export async function getAccount(userId: string) {
+  return z.object({ account: neonAccountSchema }).parse(await request('/api/me', userId)).account
 }
 export async function getTeacher(userId: string) {
   try {
@@ -98,7 +110,9 @@ export async function getNotebook(userId: string) {
 }
 export async function postEvents(userId: string, events: LedgerEvent[]) {
   try {
-    return neonSnapshotSchema.parse(await request('/api/events', userId, events))
+    return neonSnapshotSchema.parse(
+      await request('/api/events', userId, neonBatchSchema.parse({ events })),
+    )
   } catch (cause) {
     if (cause instanceof NeonRequestError) throw cause
     throw new Error('The notebook request failed. Please try again.')

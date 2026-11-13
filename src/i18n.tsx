@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 
 const arabic = {
+  'Your account is awaiting approval or no longer has access. Contact your manager.':
+    'حسابك ينتظر الموافقة أو لم يعد لديه صلاحية. تواصل مع المسؤول.',
   early: 'مبكر',
   'Explore with sample students': 'استكشف باستخدام طلاب تجريبيين',
   'Explore assigned teacher sample': 'استكشف نموذج المعلم المعيّن',
@@ -132,6 +134,7 @@ const arabic = {
   'The authentication service is unavailable. Please try again.':
     'خدمة المصادقة غير متاحة. حاول مجدداً.',
   'Could not load your teacher account. Please try again.': 'تعذر تحميل حساب المعلم. حاول مجدداً.',
+  'Could not load your account. Please try again.': 'تعذر تحميل حسابك. حاول مجدداً.',
   'Your account is awaiting teacher approval. Contact your manager.':
     'حسابك بانتظار موافقة المسؤول. تواصل معه.',
   'Your session has expired. Please sign in again.': 'انتهت جلستك. سجّل الدخول مجدداً.',
