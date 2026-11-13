@@ -1,5 +1,7 @@
 # Architecture and decisions
 
+This describes the preserved WIP prototype, not an approved final architecture. Development is stopped. [Feasibility](feasibility.md), [specification](specification.md) and [implementation plan](implementation-plan.md) identify the remaining provider questions and prototype gaps, and take precedence where assumptions differ.
+
 ## Scope and inheritance
 
 The user's revised scope is attendance and tag-based notes for five trusted users, shared stats and roster reads, static GitHub hosting, no hosted login/backend, and a local access manager. The source working tree was preserved in commit `f6fee1d` with permission, including pre-existing changes whose authorship was not established. The new app retains the React/TypeScript/Vite/Bun stack, Tailwind styling, Arabic-capable inputs and query-state convention. Google/Firebase auth, Google Sheets clients, old data schemas and page-specific screens are replaced.

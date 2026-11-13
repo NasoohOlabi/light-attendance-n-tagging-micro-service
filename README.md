@@ -1,8 +1,22 @@
 # Halaqa notebook
 
-**Status: planning and feasibility only.** Implementation started before the user clarified the scope. At the user's request, that base prototype is preserved but development is stopped. It is not production-ready or approved for deployment. The next work is provider research, specifications and an implementation plan; do not resume coding without a new instruction.
+**Status: planning complete; implementation stopped.** Implementation started before the user clarified the scope. At the user's request, the base prototype is preserved in commit `2d8fbe5`. It is not production-ready or approved for deployment. Do not resume coding without a new instruction.
 
-Attendance and tagged notes for a small, trusted teaching team. Hosted as a static GitHub Pages site, with direct SheetDB reads and append-only writes. Teachers enter through personal, reusable access links. No Google login or hosted application backend.
+The proposed product is attendance and tagged notes for five trusted teachers: a static GitHub Pages frontend, direct SheetDB reads and append-only writes, reusable personal access links, and a local access manager. No teacher Google login or hosted application backend.
+
+## Plans and specifications
+
+Read in this order:
+
+1. [Feasibility and recommendation](docs/feasibility.md) — what is feasible, what is unproven, costs and decision gates.
+2. [SheetDB capability research](docs/sheetdb-research.md) — cited official docs/OpenAPI findings, revocation and expiry limits.
+3. [Agent access](docs/agent-access.md) — OAuth MCP versus Global management keys, tool coverage and proposed local adapter.
+4. [Product and technical specification](docs/specification.md) — requirements, data contract and acceptance criteria.
+5. [Implementation plan](docs/implementation-plan.md) — sequenced future work, provider validation matrix and prototype gaps.
+
+Recommendation: manual provisioning first; one independently protected Read/Create endpoint per teacher. Official MCP handles agent data tasks without a management key. Global keys enable optional endpoint lifecycle automation. Native teacher-token expiry and automatic bearer issuance/rotation are **not documented**, so they are not promised.
+
+## Preserved prototype
 
 ```powershell
 bun install
@@ -11,7 +25,7 @@ bun run manager   # separate terminal: http://127.0.0.1:4174
 bun run verify    # tests, lint, type checks, production build
 ```
 
-**Start with [the setup guide](docs/setup.md).** No environment variables are needed. The teacher app has an isolated sample notebook for trying every feature without credentials. The manager opens with setup instructions; it only contacts your real SheetDB endpoints when you configure and use them.
+[Prototype setup notes](docs/setup.md) describe what was built before the stop. They are not authorization to provision accounts or deploy. No environment variables are needed for the local sample notebook. The manager remains unverified against a live SheetDB account.
 
 - Attendance per student and date, including group marking.
 - Tagged notes with free text or your own structured text format; Arabic supported.
@@ -22,4 +36,4 @@ bun run verify    # tests, lint, type checks, production build
 
 This is a separate Git repository derived from `pages-micro-service`. Its first commit preserves the authorized source working copy. The current app focuses on attendance and notes; the original Quran page/points/finals screens and Google/Firebase integrations are not carried into the new UI. Existing production sheets are not migrated or modified.
 
-Read [architecture and trust boundaries](docs/architecture.md), [URL state](docs/url-state.md), and [work log](docs/work-log.md). This repository is prepared for GitHub Pages but has no remote and has not been published.
+Read [prototype architecture](docs/architecture.md), [URL state](docs/url-state.md), and [work log](docs/work-log.md). The repo has Git initialized on `main`, no remote and no push/publication. It is registered in T3 Code as Pages SheetDB. Both prototype servers are stopped. The original production repository was not edited by this task.

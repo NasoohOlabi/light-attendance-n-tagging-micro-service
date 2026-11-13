@@ -1,5 +1,7 @@
 # Setup: Halaqa notebook with SheetDB
 
+**Preserved prototype notes, not a deployment-ready runbook.** Development stopped at the user's request. Read [feasibility](feasibility.md), [agent access](agent-access.md) and [implementation plan](implementation-plan.md) before using these instructions. Provider provisioning, bearer rotation and browser workflows have not been verified against a live account. These instructions do not authorize executing them now.
+
 ## What you run
 
 Teachers use one static website on GitHub Pages. Their browsers talk directly to SheetDB. You run the access manager on your Windows computer only when managing users. Closing the manager does not affect teacher access. Google login is only needed by you when connecting your spreadsheet to SheetDB; teachers never sign into Google.
@@ -75,13 +77,13 @@ After another teacher saves, use **Refresh** to load changes. There is no contin
 
 SheetDB's published Global API exposes list/create/delete API operations; it does **not document a bearer-token refresh/rotation endpoint**. This manager deliberately does not simulate rotation locally.
 
-**Rotate a token on the same endpoint:** change/regenerate it in the SheetDB dashboard, then choose Replace token for the teacher, paste the new token, confirm permissions and save. Send the newly generated link. Verify the old credential is rejected by SheetDB; merely changing the manager's saved copy does not revoke anything. A currently open teacher tab continues using the old credential until it opens the new link.
+**Rotate a token on the same endpoint, if supported:** first verify that the SheetDB dashboard provides a rotation/regeneration control and invalidates the old bearer. Public documentation does not establish that control. If verified, use it, then choose Replace token for the teacher, paste the new token, confirm permissions and save. Send the newly generated link. Merely changing the manager's saved copy does not revoke anything. A currently open teacher tab continues using the old credential until it opens the new link. If rotation is unavailable, replace the API endpoint instead.
 
 **Revoke one teacher:** use Revoke with a loaded Global API key, type the endpoint ID, and confirm. This deletes the SheetDB API endpoint, not the spreadsheet or its rows. Without Global API access, delete the endpoint in SheetDB first, then select the manager's manual confirmation checkbox. Manual confirmation accepts only a response demonstrating rejected credentials or a missing endpoint (401/404/410); a generic 403 might mean only reads were disabled, so it is not sufficient evidence of revocation.
 
 **Replace the endpoint:** revoke the old endpoint first, create/configure a new one and save it for the same username. History remains in the same spreadsheet. A new endpoint means pending batches in the old browser session are not automatically migrated; inspect and reconcile them before retiring that session.
 
-**Optional account tools:** load the SheetDB App ID and management API key into the local manager. These credentials remain in that Bun process's memory. Create endpoint always sends explicit `read,create` permissions. After creation, configure bearer authentication in SheetDB and enter the resulting token in the teacher form. If creation times out, check the provider dashboard before repeating it, because an endpoint may already have been created.
+**Optional account tools:** the prototype accepts a SheetDB App ID and management API key and keeps them in the Bun process's memory. The public OpenAPI also supports an optional bearer/Basic factor for Global keys; the prototype does not implement that yet. Create endpoint sends explicit `read,create` permissions but does not configure bearer authentication or retrieve its token. Verify those dashboard steps before issuing access. If creation times out, check the provider dashboard before repeating it, because an endpoint may already have been created.
 
 References: [list APIs](https://docs.sheetdb.io/global-api/get-all-apis), [create API](https://docs.sheetdb.io/global-api/create-new-api), [delete API](https://docs.sheetdb.io/global-api/delete-api).
 

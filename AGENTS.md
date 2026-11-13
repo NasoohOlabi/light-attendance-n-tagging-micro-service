@@ -1,6 +1,6 @@
 # Pages SheetDB
 
-Current task is research and planning only. Preserve the stopped prototype; do not extend, deploy, provision accounts or resume implementation unless the user asks. Treat existing setup/architecture docs as prototype notes until reconciled with the feasibility research and final specifications.
+Current scope is research and planning only. Preserve stopped prototype `2d8fbe5`; do not extend, deploy, provision accounts or resume implementation unless the user asks. Start with `docs/feasibility.md`, `docs/specification.md` and `docs/implementation-plan.md`. For agent credentials, revocation or expiry, read `docs/agent-access.md` and `docs/sheetdb-research.md`. These planning docs take precedence over prototype setup/architecture notes when they identify an unverified assumption.
 
 Independent attendance and tagged-note app for five trusted teachers. Static React/TypeScript + Vite frontend; direct SheetDB access. Local Bun access manager is never deployed. See `docs/setup.md` for account setup, deployment, permissions and rotation; `docs/architecture.md` before changing access links, event semantics or retries.
 
