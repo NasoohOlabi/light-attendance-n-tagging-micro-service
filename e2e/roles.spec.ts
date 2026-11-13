@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { createServer } from 'node:net'
 import { mkdir } from 'node:fs/promises'
+import { compactHeader } from './headerLayout'
 
 test.use({ trace: 'off' })
 const auth = 'https://roles-auth.example.test'
@@ -147,12 +148,14 @@ test('student sees only their attendance and loses it after access is denied', a
   await expect(page.getByText('Synthetic Student')).toBeVisible()
   await expect(page.getByText('2026-11-12')).toBeVisible()
   await expect(page.getByText('present', { exact: true })).toBeVisible()
+  await compactHeader(page, '.role-header')
   await expect(
     page.getByRole('button', { name: /Notes|Students|History|Administration/ }),
   ).toHaveCount(0)
   await page.getByRole('button', { name: 'العربية', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'حضوري' })).toBeVisible()
   await expect(page.getByText('حاضر', { exact: true })).toBeVisible()
+  await compactHeader(page, '.role-header')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
     true,
   )
@@ -310,12 +313,30 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await page.screenshot({ path: '.artifacts/verification/role-administration.png', fullPage: true })
   await utilityIcon(page, 'Sign out')
   await utilityIcon(page, 'Refresh')
+  for (const width of [320, 390, 844]) {
+    await page.setViewportSize({ width, height: 844 })
+    await compactHeader(page, '.role-header')
+  }
+  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  for (const width of [320, 390, 844]) {
+    await page.setViewportSize({ width, height: 844 })
+    await compactHeader(page, '.role-header')
+  }
+  await page.screenshot({
+    path: '.artifacts/verification/compact-role-header-ar.png',
+    fullPage: true,
+  })
+  await page.getByRole('button', { name: 'English', exact: true }).click()
   await page.getByRole('button', { name: 'Open notebook', exact: true }).click()
   await expect(page.locator('.workspace')).toBeVisible()
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await utilityIcon(page, 'Administration')
   await utilityIcon(page, 'Sign out')
   await utilityIcon(page, 'العربية')
+  for (const width of [320, 390, 844]) {
+    await page.setViewportSize({ width, height: 844 })
+    await compactHeader(page, '.workspace-topline')
+  }
   const refresh = await utilityIcon(page, 'Refresh')
   await expect(refresh).toBeEnabled()
   const readsBeforeRefresh = notebookReads
@@ -327,6 +348,10 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await utilityIcon(page, 'تسجيل الخروج')
   await utilityIcon(page, 'تحديث')
   await utilityIcon(page, 'فتح الطالب')
+  for (const width of [320, 390, 844]) {
+    await page.setViewportSize({ width, height: 844 })
+    await compactHeader(page, '.workspace-topline')
+  }
   await page.screenshot({ path: '.artifacts/verification/utility-icons-ar.png', fullPage: true })
   await page.getByRole('button', { name: 'English', exact: true }).click()
   const openStudent = await utilityIcon(page, 'Open student')
