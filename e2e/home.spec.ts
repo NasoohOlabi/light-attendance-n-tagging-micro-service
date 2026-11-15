@@ -95,9 +95,7 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   await expect(page.locator('.wartaq-home')).toBeVisible()
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.locator('.workspace')).toHaveCount(0)
-  await expect(
-    page.getByRole('heading', { name: 'Open your personal access link', exact: true }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
   await page.goBack()
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
   await page.getByRole('button', { name: 'Close session', exact: true }).click()

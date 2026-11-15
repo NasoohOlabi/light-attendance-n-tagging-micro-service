@@ -1,11 +1,12 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { compactHeader } from './headerLayout'
 import { spawn, type ChildProcess } from 'node:child_process'
+import { mkdir } from 'node:fs/promises'
 
 test.use({ trace: 'off' })
 
-const auth = 'https://auth.example.test'
-const api = 'https://notebook.example.test'
+let auth = ''
+let api = ''
 const users = [
   {
     id: '10000000-0000-4000-8000-000000000001',
@@ -29,6 +30,8 @@ test.beforeAll(async ({ browserName }, testInfo) => {
   if (browserName !== 'chromium') throw new Error('Synthetic test requires Chromium')
   const port = testInfo.project.name === 'mobile' ? '4183' : '4182'
   origin = `http://127.0.0.1:${port}`
+  auth = `${origin}/api/auth`
+  api = `${origin}/api`
   server = spawn(
     process.execPath,
     ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', port, '--strictPort'],
@@ -98,8 +101,6 @@ test('Arabic authentication keeps mobile input semantics and localized feedback'
     'autocomplete',
     'new-password',
   )
-  await page.getByRole('button', { name: 'Forgot password?', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Reset password', exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
     true,
   )
@@ -112,8 +113,11 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   let current: (typeof users)[number] | undefined
   const events: Record<string, unknown[]> = {}
   let writes = 0
-  const token = (id: string) =>
-    `e30.${Buffer.from(JSON.stringify({ sub: id })).toString('base64url')}.c2ln`
+  let releaseApproval = () => {}
+  const approvalHeld = new Promise<void>((resolve) => {
+    releaseApproval = resolve
+  })
+  let firstApproval = true
   await context.route(`${auth}/**`, async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
@@ -139,8 +143,6 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
       current = undefined
       return route.fulfill({ json: { success: true }, headers })
     }
-    if (path.endsWith('/token'))
-      return route.fulfill({ json: { token: token(current?.id ?? '') }, headers })
     const session = current
       ? {
           user: {
@@ -164,6 +166,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
     return route.fulfill({ json: session, headers })
   })
   await context.route(`${api}/**`, async (route) => {
+    if (new URL(route.request().url()).pathname.startsWith('/api/auth/')) return route.fallback()
     const request = route.request()
     const headers = {
       'access-control-allow-origin': origin,
@@ -179,8 +182,9 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
             request.headers()['access-control-request-headers'] ?? 'content-type',
         },
       })
-    const bearer = request.headers().authorization
-    const selected = users.find((user) => bearer === `Bearer ${token(user.id)}`)
+    const selected = users.find(
+      (user) => user.id === request.headers()['x-user-id'] && user.id === current?.id,
+    )
     if (!selected) return route.fulfill({ status: 401, json: { error: 'Unauthorized' }, headers })
     const teacher = {
       role: 'teacher',
@@ -190,8 +194,13 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
       canWrite: true,
       expiresAt: null,
     }
-    if (request.url().endsWith('/api/me'))
+    if (request.url().endsWith('/api/me')) {
+      if (firstApproval) {
+        firstApproval = false
+        await approvalHeld
+      }
       return route.fulfill({ json: { account: teacher, teacher }, headers })
+    }
     if (request.method() === 'POST') {
       writes++
       events[selected.id] = [...(events[selected.id] ?? []), ...request.postDataJSON().events]
@@ -219,6 +228,12 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.getByLabel('Email').fill(users[0].email)
   await page.getByLabel('Password').fill('synthetic-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByText('Loading your notebook…')).toBeVisible()
+  await expect(page.getByText('Alpha Student')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Explore with sample students' })).toBeVisible()
+  releaseApproval()
+  await expect(page.getByRole('button', { name: 'Add student', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByText('Alpha Student')).toBeVisible()
   await expect(page.getByText('Beta Student')).toHaveCount(0)
   await page.getByLabel('Attendance for Alpha Student').selectOption('present')
@@ -235,36 +250,264 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.getByLabel('Email').fill(users[1].email)
   await page.getByLabel('Password').fill('synthetic-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByText('Beta Student')).toBeVisible()
   await expect(page.getByText('Alpha Student')).toHaveCount(0)
 })
 
-test('reset link opens the app and consumes its token without retaining it in the URL', async ({
-  page,
-}) => {
-  let reset: unknown
+test('session restoration keeps the public sign-in usable', async ({ page }) => {
+  let release = () => {}
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
   await page.route(`${auth}/**`, async (route) => {
-    const request = route.request()
+    if (route.request().method() !== 'OPTIONS') await held
+    await route.fulfill({
+      headers: {
+        'access-control-allow-origin': origin,
+        'access-control-allow-credentials': 'true',
+      },
+      json: null,
+    })
+  })
+  await page.goto(`${origin}/?page=app`)
+  await expect(page.getByLabel('Email')).toBeVisible({ timeout: 3000 })
+  await page.getByLabel('Email').fill('synthetic@example.test')
+  await expect(page.getByRole('button', { name: 'Explore with sample students' })).toBeVisible()
+  const bookmark = page.getByRole('button', { name: 'Grow the bookmark' })
+  const before = await bookmark.innerHTML()
+  await bookmark.focus()
+  await page.keyboard.press('Enter')
+  expect(await bookmark.innerHTML()).not.toBe(before)
+  await page.getByRole('button', { name: 'العربية' }).click()
+  await mkdir('.artifacts/auth-loading', { recursive: true })
+  await page.screenshot({
+    path: `.artifacts/auth-loading/${test.info().project.name}-ar.png`,
+    fullPage: true,
+  })
+  await page.getByRole('button', { name: 'English' }).click()
+  await expect(page.getByLabel('Email')).toHaveValue('synthetic@example.test')
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeDisabled()
+  release()
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeEnabled()
+  release()
+})
+
+test('failed session check offers retry without losing input', async ({ page }) => {
+  let fail = true
+  await page.route(`${auth}/**`, async (route) => {
     const headers = {
       'access-control-allow-origin': origin,
       'access-control-allow-credentials': 'true',
-      'access-control-allow-methods': 'GET, POST, OPTIONS',
-      'access-control-allow-headers':
-        request.headers()['access-control-request-headers'] ?? 'content-type',
     }
-    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
-    if (new URL(request.url()).pathname.endsWith('/reset-password')) {
-      reset = request.postDataJSON()
-      return route.fulfill({ headers, json: { status: true } })
-    }
+    if (fail) return route.fulfill({ status: 503, headers, json: { message: 'Unavailable' } })
     return route.fulfill({ headers, json: null })
   })
-  await page.goto(`${origin}/?token=synthetic-reset-link`)
-  await expect(page.getByRole('heading', { name: 'Reset password', exact: true })).toBeVisible()
-  await expect(page).not.toHaveURL(/token=/)
-  await page.getByLabel('Password', { exact: true }).fill('synthetic-new-password')
-  await page.getByRole('button', { name: 'Update password', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
-  expect(reset).toEqual({ newPassword: 'synthetic-new-password', token: 'synthetic-reset-link' })
-  await expect(page).toHaveURL(/page=app/)
+  await page.goto(`${origin}/?page=app`)
+  await page.getByLabel('Email').fill('synthetic@example.test')
+  await expect(
+    page.getByText('Could not check your session. Try again or explore a sample.'),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeDisabled()
+  fail = false
+  await page.getByRole('button', { name: 'Try again' }).click()
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeEnabled()
+  await expect(page.getByLabel('Email')).toHaveValue('synthetic@example.test')
+})
+
+test('stalled session check times out and can recover', async ({ page }) => {
+  let stall = true
+  let release = () => {}
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route(`${auth}/**`, async (route) => {
+    if (stall) await held
+    await route
+      .fulfill({
+        headers: {
+          'access-control-allow-origin': origin,
+          'access-control-allow-credentials': 'true',
+        },
+        json: null,
+      })
+      .catch(() => {})
+  })
+  await page.goto(`${origin}/?page=app`)
+  await expect(
+    page.getByText('Could not check your session. Try again or explore a sample.'),
+  ).toBeVisible({ timeout: 15000 })
+  stall = false
+  await page.getByRole('button', { name: 'Try again' }).click()
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeEnabled()
+  release()
+})
+
+async function mockTeacher(page: Page, post: () => Promise<void>) {
+  const user = users[0]
+  const now = new Date().toISOString()
+  const session = {
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      emailVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    session: {
+      id: 'synthetic-session',
+      userId: user.id,
+      token: 'synthetic-token',
+      expiresAt: new Date(Date.now() + 3600000).toISOString(),
+      createdAt: now,
+      updatedAt: now,
+    },
+  }
+  const teacher = {
+    role: 'teacher',
+    id: user.id,
+    name: user.name,
+    canRead: true,
+    canWrite: true,
+    expiresAt: null,
+  }
+  await page.route(`${auth}/**`, (route) => route.fulfill({ json: session }))
+  await page.route(`${api}/**`, async (route) => {
+    if (new URL(route.request().url()).pathname.startsWith('/api/auth/')) return route.fallback()
+    if (route.request().url().endsWith('/api/me'))
+      return route.fulfill({ json: { account: teacher } })
+    if (route.request().method() === 'POST') await post()
+    return route.fulfill({
+      json: {
+        teacher,
+        students: [
+          {
+            kind: 'student',
+            studentId: user.studentId,
+            name: user.student,
+            group: '',
+            active: true,
+          },
+        ],
+        events: [],
+      },
+    })
+  })
+  await page.goto(`${origin}/?page=app`)
+  await page.getByRole('button', { name: 'Take attendance' }).click()
+  await expect(page.getByLabel('Attendance for Alpha Student')).toBeVisible()
+}
+
+async function saveAttendance(page: Page) {
+  await page.getByLabel('Attendance for Alpha Student').selectOption('present')
+  await page.getByRole('button', { name: 'Save attendance (1)' }).click()
+}
+
+test('storage write failure prevents authenticated writes', async ({ page }) => {
+  let posts = 0
+  await page.addInitScript(() => {
+    const original = Storage.prototype.setItem
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith('halaqa-pending-neon:')) throw new Error('Synthetic storage failure')
+      return original.call(this, key, value)
+    }
+  })
+  await mockTeacher(page, async () => {
+    posts++
+  })
+  await saveAttendance(page)
+  await expect(page.getByRole('alert').first()).toContainText('Could not persist the pending batch')
+  expect(posts).toBe(0)
+})
+
+test('old pending batches block authenticated writes', async ({ page }) => {
+  let posts = 0
+  await page.addInitScript(() => localStorage.setItem('halaqa-pending-v1:old', 'pending'))
+  await mockTeacher(page, async () => {
+    posts++
+  })
+  await expect(page.getByRole('alert').first()).toContainText(
+    'Copy the pending batch from browser storage',
+  )
+  await expect(page.getByRole('button', { name: 'Save attendance (0)' })).toBeDisabled()
+  expect(posts).toBe(0)
+})
+
+test('corrupted pending storage blocks authenticated writes', async ({ page }) => {
+  let posts = 0
+  await page.addInitScript(
+    (id) => localStorage.setItem(`halaqa-pending-neon:${location.origin}:${id}`, 'invalid'),
+    users[0].id,
+  )
+  await mockTeacher(page, async () => {
+    posts++
+  })
+  await expect(page.getByRole('alert').first()).toContainText('saved batch is corrupted')
+  expect(posts).toBe(0)
+})
+
+test('a second tab cannot send while a save is in flight', async ({ context, page }) => {
+  let release = () => {}
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let posts = 0
+  const write = async () => {
+    posts++
+    await gate
+  }
+  const second = await context.newPage()
+  try {
+    await mockTeacher(page, write)
+    await mockTeacher(second, write)
+    await saveAttendance(page)
+    await expect.poll(() => posts).toBe(1)
+    await saveAttendance(second)
+    await expect(second.getByRole('alert')).toContainText('Another tab is saving')
+    expect(posts).toBe(1)
+  } finally {
+    release()
+  }
+})
+
+test('malformed notebook snapshots block saving', async ({ page }) => {
+  let posts = 0
+  await mockTeacher(page, async () => {
+    posts++
+  })
+  await page.route(`${api}/notebook`, (route) =>
+    route.fulfill({ json: { students: 'invalid', events: [] } }),
+  )
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('The notebook request failed')
+  await saveAttendance(page)
+  await expect(page.getByRole('alert')).toContainText('The notebook request failed')
+  expect(posts).toBe(0)
+})
+
+test('pending retry rejects a student removed from the current assignment', async ({ page }) => {
+  let posts = 0
+  await mockTeacher(page, async () => {})
+  await page.route(`${api}/events`, (route) => {
+    posts++
+    return route.fulfill({ status: 503, json: { error: 'Synthetic response loss' } })
+  })
+  await saveAttendance(page)
+  await expect(page.getByText('1 records awaiting confirmation')).toBeVisible()
+  await expect.poll(() => posts).toBe(1)
+  const teacher = {
+    role: 'teacher',
+    id: users[0].id,
+    name: users[0].name,
+    canRead: true,
+    canWrite: true,
+    expiresAt: null,
+  }
+  await page.route(`${api}/notebook`, (route) =>
+    route.fulfill({ json: { teacher, students: [], events: [] } }),
+  )
+  await page.getByRole('button', { name: 'Retry pending batch' }).click()
+  await expect(page.getByRole('alert')).toContainText('outside your assigned active students')
+  expect(posts).toBe(1)
 })

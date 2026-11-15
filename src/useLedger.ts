@@ -1,7 +1,6 @@
 import { useLanguage } from './i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
-import type { Access } from '../shared/access'
 import {
   eventSchema,
   makeEvent,
@@ -9,33 +8,27 @@ import {
   type LedgerEvent,
   type Payload,
 } from '../shared/ledger'
-import { appendEvents, readEvents, readRoster } from './sheetdb'
-import { assignedEvents, assignedStudents, validateAssignedPayloads } from '../shared/roster'
+import { assignedEvents, validateAssignedPayloads } from '../shared/roster'
 import type { Student } from '../shared/ledger'
 import { demoEvents } from './demo'
 import { apiUrl, getNotebook, postEvents } from './neon'
 import type { NeonTeacher } from '../shared/neon'
 
 export function useLedger(
-  access: Access | null,
   demo: boolean,
   assignedDemo = false,
   neon?: { userId: string; teacher: NeonTeacher },
 ) {
   const { t } = useLanguage()
   const neonUserId = neon?.userId
-  const key = neon
-    ? `halaqa-pending-neon:${apiUrl}:${neon.teacher.id}`
-    : access
-      ? `halaqa-pending-v1:${access.apiId}:${access.sheet}:${access.username}${access.version === 2 ? `:${access.teacherId}:${access.roster.apiId}:${access.roster.sheet}` : ''}`
-      : ''
+  const key = neon ? `halaqa-pending-neon:${apiUrl}:${neon.teacher.id}` : ''
   const [events, setEvents] = useState<LedgerEvent[]>(() => (demo ? demoEvents() : []))
   const [roster, setRoster] = useState<Student[]>(() =>
     assignedDemo ? projectEvents(events).students.slice(0, 1) : [],
   )
   const [pending, setPending] = useState<LedgerEvent[]>([])
   const [storageBlocked, setStorageBlocked] = useState(() =>
-    (access || neon) && !navigator.locks
+    neon && !navigator.locks
       ? 'This browser cannot safely coordinate saves between tabs. Use a current browser with Web Locks support.'
       : '',
   )
@@ -44,9 +37,9 @@ export function useLedger(
   const locked = useRef(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const [invalid, setInvalid] = useState(0)
+  const invalid = 0
   useEffect(() => {
-    if (!access && !neonUserId) return
+    if (!neonUserId) return
     try {
       const otherKey = Object.keys(localStorage).find(
         (item) =>
@@ -59,7 +52,7 @@ export function useLedger(
       if (stored) setPending(z.array(eventSchema).min(1).parse(JSON.parse(stored)))
       if (otherKey) {
         setStorageBlocked(
-          'A pending batch belongs to another access link. Reopen that link and reconcile it before saving here.',
+          'A pending batch belongs to another account or an old link. Copy the pending batch from browser storage and contact your administrator to reconcile it before saving.',
         )
       }
     } catch {
@@ -68,32 +61,11 @@ export function useLedger(
       )
     }
     let cancelled = false
-    if (neonUserId) {
-      getNotebook(neonUserId)
-        .then((snapshot) => {
-          if (!cancelled) {
-            setEvents(snapshot.events)
-            setRoster(snapshot.students)
-            setLoaded(true)
-          }
-        })
-        .catch((cause: unknown) => {
-          if (!cancelled) setError(errorText(cause))
-        })
-      return () => {
-        cancelled = true
-      }
-    }
-    if (!access) return
-    Promise.all([
-      readEvents(access),
-      access.version === 2 ? readRoster(access.roster) : Promise.resolve([]),
-    ])
-      .then(([result, rows]) => {
+    getNotebook(neonUserId)
+      .then((snapshot) => {
         if (!cancelled) {
-          setEvents(result.events)
-          if (access.version === 2) setRoster(assignedStudents(rows, access.teacherId))
-          setInvalid(result.invalid)
+          setEvents(snapshot.events)
+          setRoster(snapshot.students)
           setLoaded(true)
         }
       })
@@ -103,29 +75,16 @@ export function useLedger(
     return () => {
       cancelled = true
     }
-  }, [access, key, neonUserId])
+  }, [key, neonUserId])
 
   const refresh = useCallback(async () => {
-    if ((!access && !neonUserId) || locked.current) return
+    if (!neonUserId || locked.current) return
     locked.current = true
     setBusy(true)
     try {
-      if (neonUserId) {
-        const snapshot = await getNotebook(neonUserId)
-        setEvents(snapshot.events)
-        setRoster(snapshot.students)
-        setLoaded(true)
-        setError('')
-        return
-      }
-      if (!access) return
-      const [result, rows] = await Promise.all([
-        readEvents(access),
-        access.version === 2 ? readRoster(access.roster) : Promise.resolve([]),
-      ])
-      if (access.version === 2) setRoster(assignedStudents(rows, access.teacherId))
-      setEvents(result.events)
-      setInvalid(result.invalid)
+      const snapshot = await getNotebook(neonUserId)
+      setEvents(snapshot.events)
+      setRoster(snapshot.students)
       setLoaded(true)
       setError('')
     } catch (cause) {
@@ -134,7 +93,7 @@ export function useLedger(
       locked.current = false
       setBusy(false)
     }
-  }, [access, neonUserId])
+  }, [neonUserId])
 
   async function send(batch: LedgerEvent[]): Promise<boolean> {
     if (locked.current || !batch.length) return false
@@ -144,7 +103,7 @@ export function useLedger(
     setMessage('')
     let writeStarted = false
     try {
-      if (access || neon) {
+      if (neon) {
         if (!navigator.locks) {
           setStorageBlocked(
             'This browser cannot safely coordinate saves between tabs. Use a current browser with Web Locks support.',
@@ -154,13 +113,13 @@ export function useLedger(
         const saved = await navigator.locks.request(key, { ifAvailable: true }, async (lock) => {
           if (!lock)
             throw new Error(
-              'Another tab is saving this access link. Wait for it to finish, then refresh and try again. No write was sent from this tab.',
+              'Another tab is saving this account. Wait for it to finish, then refresh and try again. No write was sent from this tab.',
             )
           try {
             const existing = localStorage.getItem(key)
             if (existing && existing !== JSON.stringify(batch)) {
               const reason =
-                'Another pending batch exists for this link. Reload and reconcile it before saving.'
+                'Another pending batch exists for this account. Reload and reconcile it before saving.'
               setStorageBlocked(reason)
               throw new Error(reason)
             }
@@ -173,59 +132,28 @@ export function useLedger(
             throw new Error(reason)
           }
           setPending(batch)
-          if (neon) {
-            if (!neon.teacher.canWrite) throw new Error('Your account has read-only access.')
-            const current = await getNotebook(neon.userId)
-            setRoster(current.students)
-            validateAssignedPayloads(
-              batch.map((event) => event.payload),
-              current.students,
-              current.events,
-            )
-            if (
-              projectEvents([...current.events, ...batch]).conflicts >
-              projectEvents(current.events).conflicts
-            )
-              throw new Error(
-                'A pending ID conflicts with a saved record. Ask the manager to inspect it before retrying.',
-              )
-            const ids = new Set(current.events.map((event) => event.id))
-            const remaining = batch.filter((event) => !ids.has(event.id))
-            const snapshot = remaining.length
-              ? ((writeStarted = true), await postEvents(neon.userId, remaining))
-              : current
-            setEvents(snapshot.events)
-            setRoster(snapshot.students)
-            localStorage.removeItem(key)
-            return true
-          }
-          if (!access) return false
-          const [current, rows] = await Promise.all([
-            readEvents(access),
-            access.version === 2 ? readRoster(access.roster) : Promise.resolve([]),
-          ])
-          if (access.version === 2) {
-            const currentRoster = assignedStudents(rows, access.teacherId)
-            setRoster(currentRoster)
-            validateAssignedPayloads(
-              batch.map((event) => event.payload),
-              currentRoster,
-              current.events,
-            )
-          }
+          if (!neon.teacher.canWrite) throw new Error('Your account has read-only access.')
+          const current = await getNotebook(neon.userId)
+          setRoster(current.students)
+          validateAssignedPayloads(
+            batch.map((event) => event.payload),
+            current.students,
+            current.events,
+          )
           if (
             projectEvents([...current.events, ...batch]).conflicts >
             projectEvents(current.events).conflicts
           )
             throw new Error(
-              'A pending ID conflicts with a sheet record. Ask the manager to inspect it before retrying.',
+              'A pending ID conflicts with a saved record. Ask the manager to inspect it before retrying.',
             )
           const ids = new Set(current.events.map((event) => event.id))
           const remaining = batch.filter((event) => !ids.has(event.id))
-          if (remaining.length) writeStarted = true
-          await appendEvents(access, remaining)
-          setEvents([...current.events, ...remaining])
-          setInvalid(current.invalid)
+          const snapshot = remaining.length
+            ? ((writeStarted = true), await postEvents(neon.userId, remaining))
+            : current
+          setEvents(snapshot.events)
+          setRoster(snapshot.students)
           localStorage.removeItem(key)
           return true
         })
@@ -238,7 +166,7 @@ export function useLedger(
             events,
           )
         setEvents((previous) => [...previous, ...batch])
-      } else throw new Error('Open your access link first.')
+      } else throw new Error('Sign in first.')
       setPending([])
       setMessage(
         `${batch.length} record${batch.length === 1 ? '' : 's'} saved${demo ? ' in this demo' : ''}.`,
@@ -246,7 +174,7 @@ export function useLedger(
       return true
     } catch (cause) {
       setError(
-        `${errorText(cause)}${writeStarted ? ' The save may already have reached the sheet. Retry the same pending batch to avoid counting it twice.' : ''}`,
+        `${errorText(cause)}${writeStarted ? ' The save may already have reached the server. Retry the same pending batch to avoid counting it twice.' : ''}`,
       )
       return false
     } finally {
@@ -259,9 +187,7 @@ export function useLedger(
     if (storageBlocked || pending.length || !loaded || !payloads.length) return false
     try {
       return await send(
-        payloads.map((payload) =>
-          makeEvent(neon?.teacher.name ?? access?.username ?? 'Demo teacher', payload),
-        ),
+        payloads.map((payload) => makeEvent(neon?.teacher.name ?? 'Demo teacher', payload)),
       )
     } catch (cause) {
       setError(errorText(cause))
@@ -272,7 +198,7 @@ export function useLedger(
     if (
       !window.confirm(
         t(
-          'Stop retrying this batch? It may already exist in the sheet. Refresh and inspect history before entering it again.',
+          'Stop retrying this batch? It may already exist on the server. Refresh and inspect history before entering it again.',
         ),
       )
     )
@@ -287,7 +213,7 @@ export function useLedger(
       await navigator.locks.request(key, { ifAvailable: true }, (lock) => {
         if (!lock)
           throw new Error(
-            'Another tab is saving this access link. Wait for it to finish before discarding.',
+            'Another tab is saving this account. Wait for it to finish before discarding.',
           )
         if (localStorage.getItem(key) !== JSON.stringify(pending))
           throw new Error('The pending batch changed in another tab. Reload before discarding.')
@@ -301,7 +227,7 @@ export function useLedger(
   }
 
   return {
-    events: neon || access?.version === 2 || assignedDemo ? assignedEvents(events, roster) : events,
+    events: neon || assignedDemo ? assignedEvents(events, roster) : events,
     roster,
     pending,
     storageBlocked,

@@ -1,9 +1,11 @@
 ﻿import { z } from 'zod'
+import { hashPassword } from 'better-auth/crypto'
 import type { Pool, PoolClient } from 'pg'
 import {
   neonAdminBoardSchema,
   neonAdminDisableSchema,
   neonAdminGrantSchema,
+  neonAdminPasswordResetSchema,
   neonAdminStudentSchema,
   neonBatchSchema,
   neonSnapshotSchema,
@@ -183,6 +185,18 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
         [grant.authUserId, grant.role, staffId, expiry],
       )
     }
+  } else if (path === '/api/admin/accounts/reset-password') {
+    const { authUserId, password } = neonAdminPasswordResetSchema.parse(body)
+    if (authUserId === subject) throw new HttpError(403)
+    const hash = await hashPassword(password)
+    await db.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
+    const updated = await db.query(
+      `UPDATE neon_auth.account SET password = $2, "updatedAt" = now()
+      WHERE "userId"::text = $1 AND "providerId" = 'credential' RETURNING id`,
+      [authUserId, hash],
+    )
+    if (updated.rowCount !== 1) throw new HttpError(400)
+    await db.query('DELETE FROM neon_auth.session WHERE "userId"::text = $1', [authUserId])
   } else if (path === '/api/admin/accounts/disable') {
     const { authUserId } = neonAdminDisableSchema.parse(body)
     if (authUserId === subject) throw new HttpError(403)
@@ -210,6 +224,7 @@ export function createHandler(
   pool: Pool,
   verify: (token: string) => Promise<string>,
   origins: string[],
+  verifyRequest?: (request: Request) => Promise<string>,
 ) {
   return async (request: Request): Promise<Response> => {
     const origin = request.headers.get('origin')
@@ -239,6 +254,7 @@ export function createHandler(
         '/api/admin',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
+        '/api/admin/accounts/reset-password',
         '/api/admin/students',
       ].includes(path)
     )
@@ -248,6 +264,7 @@ export function createHandler(
         '/api/events',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
+        '/api/admin/accounts/reset-password',
         '/api/admin/students',
       ].includes(path) &&
         request.method !== 'POST') ||
@@ -255,16 +272,19 @@ export function createHandler(
         '/api/events',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
+        '/api/admin/accounts/reset-password',
         '/api/admin/students',
       ].includes(path) &&
         request.method !== 'GET')
     )
       return reply({ error: 'Method not allowed' }, 405)
     const bearer = request.headers.get('authorization')?.match(/^Bearer (\S+)$/i)
-    if (!bearer) return reply({ error: 'Unauthorized' }, 401)
+    if (!bearer && !verifyRequest) return reply({ error: 'Unauthorized' }, 401)
     let subject: string
     try {
-      subject = await verify(bearer[1])
+      if (verifyRequest) subject = await verifyRequest(request)
+      else if (bearer) subject = await verify(bearer[1])
+      else return reply({ error: 'Unauthorized' }, 401)
     } catch {
       return reply({ error: 'Unauthorized' }, 401)
     }

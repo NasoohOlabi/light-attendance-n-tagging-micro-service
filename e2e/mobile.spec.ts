@@ -1,8 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { mkdir, mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { mkdir } from 'node:fs/promises'
 
 async function usableLayout(page: Page) {
   const overflow = await page.locator('body *').evaluateAll((elements) =>
@@ -107,7 +104,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.getByRole('button', { name: 'إضافة تصحيح', exact: true }).click()
   await expect(savedNote).toContainText('تم التراجع')
   await page.setViewportSize({ width: 320, height: 568 })
-  await page.locator('nav button').nth(3).click()
+  await page.getByRole('button', { name: 'الملخص', exact: true }).click()
   await expect(page.locator('th[scope=col]').first()).toBeVisible()
   await expect(page.locator('[tabindex="0"]').filter({ has: page.locator('table') })).toHaveCount(1)
   expect(
@@ -149,59 +146,4 @@ test('language switching works when preference storage is unavailable', async ({
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
   await page.getByRole('button', { name: 'English', exact: true }).click()
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-})
-
-test.describe('isolated local manager', () => {
-  let directory: string
-  let child: ChildProcess
-  let address: string
-  test.beforeAll(async () => {
-    directory = await mkdtemp(join(tmpdir(), 'halaqa-mobile-manager-'))
-    child = spawn('bun', ['manager/server.ts'], {
-      env: { ...process.env, MANAGER_DIRECTORY: directory, MANAGER_PORT: '0' },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    })
-    address = await new Promise<string>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Manager startup timed out')), 15000)
-      child.once('error', reject)
-      child.stdout?.once('data', (chunk: Buffer) => {
-        clearTimeout(timeout)
-        resolve(chunk.toString().trim().replace('Local access manager: ', ''))
-      })
-    })
-  })
-  test.afterAll(async () => {
-    if (child && child.exitCode === null) {
-      const exited = new Promise((resolve) => child.once('exit', resolve))
-      child.kill()
-      await exited
-    }
-    if (directory) await rm(directory, { recursive: true, force: true })
-  })
-  test('manager language and phone layout preserve entered values', async ({ page }, testInfo) => {
-    await page.setViewportSize({ width: 320, height: 568 })
-    await page.goto(address)
-    await page
-      .getByLabel('GitHub Pages URL (or local development URL)')
-      .fill('https://example.test/notebook/')
-    await usableLayout(page)
-    await page.getByRole('button', { name: 'العربية', exact: true }).click()
-    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
-    await expect(page.locator('#site-url')).toHaveValue('https://example.test/notebook/')
-    await usableLayout(page)
-    await page.getByRole('button', { name: 'English', exact: true }).click()
-    await page.getByRole('button', { name: 'Save URL', exact: true }).click()
-    await expect(page.locator('#feedback')).toBeVisible()
-    await page.getByRole('button', { name: 'العربية', exact: true }).click()
-    await expect(page.locator('#feedback')).not.toContainText('saved')
-    await page.reload()
-    await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
-    await expect(page.locator('#site-url')).toHaveValue('https://example.test/notebook/')
-    await usableLayout(page)
-    await mkdir('.artifacts/verification', { recursive: true })
-    await page.screenshot({
-      path: `.artifacts/verification/manager-arabic-${testInfo.project.name}.png`,
-      fullPage: true,
-    })
-  })
 })

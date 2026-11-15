@@ -1,0 +1,17 @@
+﻿*
+!package.json
+!bun.lock
+!index.html
+!vite.config.ts
+!tsconfig*.json
+!src/
+!src/**
+!shared/
+!shared/**
+!public/
+!public/**
+!server/
+!server/**
+!functions/
+!functions/notebook-service.ts
+!Dockerfile

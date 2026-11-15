@@ -1,37 +1,36 @@
 import { lazy, Suspense } from 'react'
 import { z } from 'zod'
 import { App } from './App'
-import { loadSession } from './session'
-import { setQuery } from './queryState'
+import { sanitizedSearch } from './queryState'
 
 const DraftGallery = lazy(() =>
   import('./design-drafts/Gallery').then(({ DraftGallery }) => ({ default: DraftGallery })),
 )
 
-// Read once before session loading removes private URL capabilities. StrictMode
-// can render twice; it must not consume a password-reset token a second time.
 const entryQuery = new URLSearchParams(window.location.search)
 const design = z.enum(['a', 'b']).safeParse(entryQuery.get('design')).data
-const initialResetToken = design
-  ? undefined
-  : z.string().min(1).max(4096).safeParse(entryQuery.get('token')).data
-const homeAnchor = z
-  .enum(['#features', '#how-it-works', '#questions', '#enrollment'])
-  .safeParse(window.location.hash).data
-const privateEntry = new URLSearchParams(window.location.hash.slice(1)).has('access')
-const initialSession = design ? null : loadSession()
-if (privateEntry && initialSession?.access && !initialResetToken) setQuery({ page: 'app' })
-if (homeAnchor && !design && !initialResetToken)
-  window.history.replaceState(
-    null,
-    '',
-    window.location.pathname + window.location.search + homeAnchor,
-  )
+const search = sanitizedSearch(window.location.search)
+if (design) search.set('design', design)
+const hash = new URLSearchParams(window.location.hash.slice(1)).has('access')
+  ? ''
+  : window.location.hash
+window.history.replaceState(
+  null,
+  '',
+  window.location.pathname + (search.size ? `?${search}` : '') + hash,
+)
+try {
+  sessionStorage.removeItem('halaqa-access-v1')
+} catch {
+  /* Storage is optional. */
+}
+window.addEventListener('hashchange', () => {
+  if (new URLSearchParams(window.location.hash.slice(1)).has('access'))
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+})
 
 export function ApplicationEntry() {
-  if (!design && initialSession)
-    return <App initialSession={initialSession} initialResetToken={initialResetToken} />
-  if (!design) return null
+  if (!design) return <App />
   return (
     <Suspense
       fallback={

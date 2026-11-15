@@ -1,5 +1,4 @@
-import { createAuthClient } from '@neon/auth'
-import { BetterAuthReactAdapter } from '@neon/auth/react/adapters'
+﻿import { createAuthClient } from 'better-auth/react'
 import { z } from 'zod'
 import {
   neonAccountSchema,
@@ -9,29 +8,8 @@ import {
 } from '../shared/neon'
 import type { LedgerEvent } from '../shared/ledger'
 
-function endpoint(value: string | undefined) {
-  if (!value) return null
-  try {
-    const url = new URL(value)
-    if (
-      (url.protocol !== 'https:' &&
-        !(url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) ||
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash
-    )
-      return null
-    return url.href.replace(/\/$/, '')
-  } catch {
-    return null
-  }
-}
-
-export const authUrl = endpoint(import.meta.env.VITE_NEON_AUTH_URL)
-export const apiUrl = endpoint(import.meta.env.VITE_NEON_API_URL)
-export const authClient =
-  authUrl && apiUrl ? createAuthClient(authUrl, { adapter: BetterAuthReactAdapter() }) : null
+export const apiUrl = window.location.origin
+export const authClient = createAuthClient()
 
 export class NeonRequestError extends Error {
   constructor(public status: number) {
@@ -52,31 +30,10 @@ export async function request(path: string, userId: string, body?: unknown): Pro
   })
   if (session.data?.user.id !== userId)
     throw new Error('Your session changed. Please sign in again.')
-  // This SDK caches unknown routes as session reads; force the JWT request over its transport.
-  const result = await authClient.$fetch('/token', {
-    method: 'GET',
-    headers: { 'X-Force-Fetch': 'true' },
-    signal: AbortSignal.timeout(15000),
-  })
-  const parsed = z.object({ token: z.string().min(1) }).safeParse(result.data)
-  const token = parsed.success ? parsed.data.token : null
-  if (!token) throw new NeonRequestError(401)
-  try {
-    const payload = token.split('.')[1]
-    if (
-      !payload ||
-      z
-        .object({ sub: z.string() })
-        .parse(JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))).sub !== userId
-    )
-      throw new Error()
-  } catch {
-    throw new NeonRequestError(401)
-  }
   const response = await fetch(`${apiUrl}${path}`, {
     method: body !== undefined ? 'POST' : 'GET',
     headers: {
-      Authorization: `Bearer ${token}`,
+      'X-User-Id': userId,
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),

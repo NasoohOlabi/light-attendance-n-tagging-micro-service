@@ -63,6 +63,13 @@ export const neonAdminGrantSchema = z.discriminatedUnion('role', [
   }),
 ])
 export const neonAdminDisableSchema = z.strictObject({ authUserId })
+export const neonAdminPasswordResetSchema = z
+  .strictObject({
+    authUserId,
+    password: z.string().min(8).max(128),
+    passwordConfirmation: z.string(),
+  })
+  .refine((value) => value.password === value.passwordConfirmation)
 export const neonAdminStudentSchema = z.strictObject({
   studentId: z.uuid(),
   teacherId: z.uuid(),

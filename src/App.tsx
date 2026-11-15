@@ -1,7 +1,6 @@
-import { LogOut, RefreshCw, Settings2, UserRound } from 'lucide-react'
+import { House, LogOut, RefreshCw, Settings2, UserRound } from 'lucide-react'
 import { LanguageProvider, LanguageSwitch, useLanguage, type TranslationKey } from './i18n'
 import { useEffect, useState } from 'react'
-import type { Access } from '../shared/access'
 import {
   projectEvents,
   statuses,
@@ -10,9 +9,10 @@ import {
   type Payload,
   type Student,
 } from '../shared/ledger'
-import { clearSession, loadSession } from './session'
 import { navigatePage, setQuery, useQueryState, type Tab } from './queryState'
 import { HomePage } from './HomePage'
+import { NotebookDashboard } from './NotebookDashboard'
+import { rankStudents } from './studentSearch'
 import { InstallApp } from './InstallApp'
 import { WartaqIcon, WartaqLogo } from './brand/components'
 import './workspace.css'
@@ -20,10 +20,9 @@ import { useLedger } from './useLedger'
 import { NeonAuth } from './NeonAuth'
 import { AdminConsole } from './AdminConsole'
 import { StudentAttendance } from './StudentAttendance'
-import { authClient } from './neon'
 import type { NeonTeacher } from '../shared/neon'
 
-const tabs: { id: Tab; label: TranslationKey }[] = [
+const tabs: { id: Exclude<Tab, 'dashboard'>; label: TranslationKey }[] = [
   { id: 'attendance', label: 'Attendance' },
   { id: 'notes', label: 'Notes' },
   { id: 'roster', label: 'Students' },
@@ -33,10 +32,7 @@ const tabs: { id: Tab; label: TranslationKey }[] = [
 type Projection = ReturnType<typeof projectEvents>
 type Save = (payloads: Payload[]) => Promise<boolean>
 
-export function App(props: {
-  initialSession: { access: Access | null; error: string }
-  initialResetToken?: string
-}) {
+export function App() {
   return (
     <LanguageProvider>
       <div className="wartaq-site">
@@ -44,78 +40,53 @@ export function App(props: {
           <SkipText />
         </a>
         <InstallApp />
-        <AppContent {...props} />
+        <AppContent />
       </div>
     </LanguageProvider>
   )
 }
 
-function AppContent({
-  initialSession,
-  initialResetToken,
-}: {
-  initialSession: { access: Access | null; error: string }
-  initialResetToken?: string
-}) {
-  const { language, t, errorMessage } = useLanguage()
-  const [session, setSession] = useState({ ...initialSession, revision: 0 })
-  const [demo, setDemo] = useState<'legacy' | 'assigned' | null>(null)
-  const { access } = session
+function AppContent() {
+  const { language, t } = useLanguage()
+  const [demo, setDemo] = useState<'editable' | 'assigned' | null>(null)
   const query = useQueryState()
-  const [resetToken, setResetToken] = useState(initialResetToken)
-  const reset = !!resetToken
   useEffect(() => {
     document.title =
-      query.page === 'home' && !reset
+      query.page === 'home'
         ? language === 'ar'
           ? 'وارتق · دورة تلاوة القرآن'
           : 'Wartaq · Quran recitation course'
         : language === 'ar'
           ? 'وارتق · دفتر الحلقة'
           : 'Wartaq · Halaqa notebook'
-  }, [language, query.page, reset])
-  const openDemo = (kind: 'legacy' | 'assigned') => {
+  }, [language, query.page])
+  const openDemo = (kind: 'editable' | 'assigned') => {
     setDemo(kind)
     navigatePage('app')
   }
   const goHome = () => {
     setDemo(null)
-    setResetToken(undefined)
     navigatePage('home')
   }
-  useEffect(() => {
-    function onHashChange() {
-      if (!new URLSearchParams(window.location.hash.slice(1)).has('access')) return
-      const next = loadSession()
-      setSession((previous) => ({ ...next, revision: previous.revision + 1 }))
-      setDemo(null)
-      setQuery({ page: 'app' })
-    }
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
-  }, [])
-  if (query.page === 'home' && !reset)
+  if (query.page === 'home')
     return (
       <HomePage
         onOpenApp={() => {
           setDemo(null)
           navigatePage('app')
         }}
-        onExplore={() => openDemo('legacy')}
+        onExplore={() => openDemo('editable')}
         onExploreAssigned={() => openDemo('assigned')}
-        error={session.error ? errorMessage(session.error) : undefined}
       />
     )
-  if (!access && !demo && authClient)
+  if (!demo)
     return (
       <>
         <NeonAuth
-          initialResetToken={resetToken}
-          onResetComplete={() => setResetToken(undefined)}
           onSignOut={goHome}
           samples={
             <>
-              <button className="secondary self-start" onClick={() => openDemo('legacy')}>
+              <button className="secondary self-start" onClick={() => openDemo('editable')}>
                 {t('Explore with sample students')}
               </button>
               <button className="secondary self-start" onClick={() => openDemo('assigned')}>
@@ -127,17 +98,18 @@ function AppContent({
           {(userId, account, signOut) =>
             account.role === 'student' ? (
               <StudentAttendance key={userId} userId={userId} signOut={signOut} />
-            ) : account.role === 'administrator' && query.view === 'administration' ? (
+            ) : account.role === 'administrator' &&
+              (query.view === 'administration' || query.view === 'add-student') ? (
               <AdminConsole
                 key={userId}
                 userId={userId}
                 signOut={signOut}
+                initialCreateStudent={query.view === 'add-student'}
                 openNotebook={() => setQuery({ view: 'notebook' }, true)}
               />
             ) : (
               <Notebook
                 key={userId}
-                access={null}
                 demo={null}
                 neon={{ userId, teacher: account }}
                 leave={signOut}
@@ -147,79 +119,22 @@ function AppContent({
         </NeonAuth>
       </>
     )
-  if (!access && !demo)
-    return (
-      <>
-        <LanguageSwitch />
-        <main
-          id="main-content"
-          tabIndex={-1}
-          className="mx-auto flex min-h-svh max-w-lg flex-col justify-center gap-6 px-6"
-        >
-          <WartaqLogo />
-          <a className="secondary self-start" href={window.location.pathname}>
-            {t('Halaqa notebook')}
-          </a>
-          <h1 className="text-4xl font-semibold tracking-tight">
-            {t('Your halaqa, one shared notebook.')}
-          </h1>
-          <p className="text-lg leading-relaxed text-slate-600">
-            {t('Record attendance. Leave a note. Keep the next teacher in the loop.')}
-          </p>
-          <div className="panel space-y-3">
-            <h2 className="font-semibold">{t('Open your personal access link')}</h2>
-            <p className="muted">
-              {t(
-                'Your manager sends you a link with your name and access. Keep it somewhere private and open it whenever you return.',
-              )}
-            </p>
-          </div>
-          {session.error && (
-            <p role="alert" className="text-red-700">
-              {errorMessage(session.error)}
-            </p>
-          )}
-          <button className="secondary self-start" onClick={() => openDemo('legacy')}>
-            {t('Explore with sample students')}
-          </button>
-          <button className="secondary self-start" onClick={() => openDemo('assigned')}>
-            {t('Explore assigned teacher sample')}
-          </button>
-          <p className="muted">
-            {t('الحضور والملاحظات · Arabic names, notes and tags are supported.')}
-          </p>
-        </main>
-      </>
-    )
-  return (
-    <Notebook
-      key={session.revision}
-      access={demo ? null : access}
-      demo={demo}
-      leave={() => {
-        clearSession()
-        setSession((previous) => ({ access: null, error: '', revision: previous.revision + 1 }))
-        goHome()
-      }}
-    />
-  )
+  return <Notebook demo={demo} leave={goHome} />
 }
 
 function Notebook({
-  access,
   demo,
   leave,
   neon,
 }: {
   neon?: { userId: string; teacher: NeonTeacher }
-  access: Access | null
-  demo: 'legacy' | 'assigned' | null
+  demo: 'editable' | 'assigned' | null
   leave: () => void
 }) {
   const { t, language, errorMessage } = useLanguage()
   const query = useQueryState()
-  const ledger = useLedger(access, demo !== null, demo === 'assigned', neon)
-  const assigned = !!neon || access?.version === 2 || demo === 'assigned'
+  const ledger = useLedger(demo !== null, demo === 'assigned', neon)
+  const assigned = !!neon || demo === 'assigned'
   const baseProjection = projectEvents(ledger.events)
   const projected = assigned ? { ...baseProjection, students: ledger.roster } : baseProjection
   const groups = [
@@ -230,7 +145,8 @@ function Notebook({
       (query.all || student.active) &&
       (!assigned || !query.student || student.studentId === query.student) &&
       (!query.group || student.group === query.group) &&
-      student.name.toLocaleLowerCase().includes(query.q.toLocaleLowerCase()),
+      (query.tab === 'attendance' ||
+        student.name.toLocaleLowerCase().includes(query.q.toLocaleLowerCase())),
   )
   const visibleIds = new Set(students.map((student) => student.studentId))
   const markedToday = projected.attendance.filter(
@@ -254,6 +170,20 @@ function Notebook({
           <span>{t('Halaqa notebook')}</span>
         </div>
         <nav aria-label={t('Notebook')}>
+          <button
+            className={query.tab === 'dashboard' ? 'active' : ''}
+            aria-label={language === 'ar' ? 'الرئيسية' : 'Dashboard'}
+            aria-current={query.tab === 'dashboard' ? 'page' : undefined}
+            onClick={() => setQuery({ tab: 'dashboard' }, true)}
+          >
+            <House size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
+            <span className="workspace-tab-long">
+              {language === 'ar' ? 'الرئيسية' : 'Dashboard'}
+            </span>
+            <span className="workspace-tab-short" aria-hidden="true">
+              {language === 'ar' ? 'الرئيسية' : 'Home'}
+            </span>
+          </button>
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -265,12 +195,22 @@ function Notebook({
               }
             >
               <WartaqIcon name={tab.id === 'roster' ? 'students' : tab.id} />
-              <span className={tab.id === 'history' ? 'workspace-tab-long' : undefined}>
+              <span
+                className={
+                  ['attendance', 'history'].includes(tab.id) ? 'workspace-tab-long' : undefined
+                }
+              >
                 {t(tab.label)}
               </span>
-              {tab.id === 'history' && (
+              {['attendance', 'history'].includes(tab.id) && (
                 <span className="workspace-tab-short" aria-hidden="true">
-                  {language === 'ar' ? 'السجل' : 'History'}
+                  {tab.id === 'attendance'
+                    ? language === 'ar'
+                      ? 'الحضور'
+                      : 'Attend'
+                    : language === 'ar'
+                      ? 'السجل'
+                      : 'History'}
                 </span>
               )}
             </button>
@@ -285,7 +225,11 @@ function Notebook({
           <div className="workspace-context" dir="auto">
             <span>
               {t('Halaqa notebook')} /{' '}
-              {t(tabs.find((tab) => tab.id === query.tab)?.label ?? 'Attendance')}
+              {query.tab === 'dashboard'
+                ? language === 'ar'
+                  ? 'الرئيسية'
+                  : 'Dashboard'
+                : t(tabs.find((tab) => tab.id === query.tab)?.label ?? 'Attendance')}
             </span>
             {neon && (
               <span>
@@ -330,7 +274,7 @@ function Notebook({
         </div>
         <header className="workspace-welcome">
           <div>
-            <p dir="auto">{neon?.teacher.name ?? access?.username ?? t('Demo teacher')}</p>
+            <p dir="auto">{neon?.teacher.name ?? t('Demo teacher')}</p>
             <h1>{t('Halaqa notebook')}</h1>
             <span>{t('Record attendance. Leave a note. Keep the next teacher in the loop.')}</span>
           </div>
@@ -342,12 +286,10 @@ function Notebook({
         {demo && (
           <p className="mb-5 rounded-lg bg-amber-100 p-3 text-amber-900">
             {demo === 'assigned' ? t('Assigned teacher sample notebook.') : t('Sample notebook.')}{' '}
-            {t(
-              'Changes stay in memory and disappear when you leave. No SheetDB requests are made.',
-            )}
+            {t('Changes stay in memory and disappear when you leave. No server requests are made.')}
           </p>
         )}
-        <div className="mb-6 flex flex-wrap items-end gap-3">
+        <div className="mb-6 flex flex-wrap items-end gap-3" hidden={query.tab === 'dashboard'}>
           <label className="grow">
             {t('Find a student')}
             <input
@@ -419,14 +361,14 @@ function Notebook({
           <p role="alert" className="mb-4 text-red-800">
             {language === 'ar'
               ? `تم اكتشاف ${projected.conflicts} معرّفات مكررة متعارضة. اطلب من المسؤول فحص الجدول.`
-              : `${projected.conflicts} conflicting duplicate IDs detected. Ask the manager to inspect the sheet.`}
+              : `${projected.conflicts} conflicting duplicate IDs detected. Ask the manager to inspect the records.`}
           </p>
         )}
         {(ledger.invalid > 0 || projected.invalidReversals > 0) && (
           <p role="status" className="mb-4 text-amber-800">
             {language === 'ar'
               ? `تم تجاوز ${ledger.invalid} صفوف غير صالحة و${projected.invalidReversals} تصحيحات غير صالحة. اطلب من المسؤول فحص الجدول.`
-              : `${ledger.invalid} invalid rows and ${projected.invalidReversals} invalid corrections were skipped. Ask the manager to inspect the sheet.`}
+              : `${ledger.invalid} invalid rows and ${projected.invalidReversals} invalid corrections were skipped. Ask the manager to inspect the records.`}
           </p>
         )}
         {ledger.pending.length > 0 && (
@@ -437,9 +379,7 @@ function Notebook({
                 : `${ledger.pending.length} records awaiting confirmation`}
             </h2>
             <p className="muted">
-              {t(
-                'Retry reuses their original IDs. Even if a request reached the sheet twice, summaries count each record once.',
-              )}
+              {t('Retry reuses the original IDs, so each record is counted once.')}
             </p>
             <div className="flex flex-wrap gap-3">
               <button
@@ -463,11 +403,26 @@ function Notebook({
           <p role="status">{t('Loading the shared notebook…')}</p>
         )}
         <div className={query.tab === 'attendance' ? 'workspace-content' : ''}>
-          <fieldset disabled={disabled} className="min-w-0">
+          <fieldset disabled={disabled && query.tab !== 'dashboard'} className="min-w-0">
+            {query.tab === 'dashboard' && (
+              <NotebookDashboard
+                projected={projected}
+                date={query.date}
+                canAdd={neon?.teacher.role === 'administrator' || demo === 'editable'}
+                onAttendance={() => setQuery({ tab: 'attendance', q: '', group: '' }, true)}
+                onAdd={() =>
+                  neon
+                    ? setQuery({ view: 'add-student' }, true)
+                    : setQuery({ tab: 'roster', q: '', group: '' }, true)
+                }
+              />
+            )}
             {query.tab === 'attendance' && (
               <AttendanceView
                 key={query.date}
                 students={students.filter((student) => student.active)}
+                allStudents={projected.students.filter((student) => student.active)}
+                search={query.q}
                 projected={projected}
                 date={query.date}
                 save={ledger.save}
@@ -533,23 +488,28 @@ function Notebook({
 
 function AttendanceView({
   students,
+  allStudents,
+  search,
   projected,
   date,
   save,
 }: {
   students: Student[]
+  allStudents: Student[]
+  search: string
   projected: Projection
   date: string
   save: Save
 }) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [draft, setDraft] = useState<Record<string, string>>({})
   const current = new Map(
     projected.attendance
       .filter(({ value }) => value.date === date)
       .map(({ value }) => [value.studentId, value.status]),
   )
-  const changed = students.filter(
+  const visible = search.trim() ? rankStudents(students, search) : students
+  const changed = allStudents.filter(
     (student) =>
       draft[student.studentId] && draft[student.studentId] !== current.get(student.studentId),
   )
@@ -576,49 +536,99 @@ function AttendanceView({
           />
         </label>
       </div>
-      {!students.length ? (
-        <Empty text={t('Add your students in Students, or adjust the group filter.')} />
+      {!visible.length ? (
+        <Empty
+          text={
+            search.trim()
+              ? language === 'ar'
+                ? 'لا يوجد طلاب مطابقون.'
+                : 'No students match your search.'
+              : t('Add your students in Students, or adjust the group filter.')
+          }
+        />
       ) : (
         <>
           <button
             className="secondary mb-4"
             onClick={() =>
-              setDraft(
-                Object.fromEntries(students.map((student) => [student.studentId, 'present'])),
-              )
+              setDraft({
+                ...draft,
+                ...Object.fromEntries(visible.map((student) => [student.studentId, 'present'])),
+              })
             }
           >
             {t('Mark displayed students present')}
           </button>
-          <div className="divide-y divide-slate-100">
-            {students.map((student) => (
-              <label
-                key={student.studentId}
-                className="flex-row flex-wrap items-center justify-between gap-3 py-3"
-              >
-                <span dir="auto" className="text-base font-semibold">
-                  {student.name}
-                  <span className="ms-3 text-sm font-normal text-slate-500">{student.group}</span>
-                </span>
-                <select
-                  aria-label={`${t('Attendance for')} ${student.name}`}
-                  value={draft[student.studentId] ?? current.get(student.studentId) ?? ''}
-                  onChange={(event) =>
-                    setDraft({ ...draft, [student.studentId]: event.target.value })
-                  }
+          {search.trim() ? (
+            <div className="divide-y divide-slate-100">
+              {visible.map((student) => (
+                <label
+                  key={student.studentId}
+                  className="flex-row flex-wrap items-center justify-between gap-3 py-3"
                 >
-                  <option value="" disabled={current.has(student.studentId)}>
-                    {t('Not marked')}
-                  </option>
-                  {statuses.map((status) => (
-                    <option key={status} value={status}>
-                      {t(status)}
+                  <span dir="auto" className="text-base font-semibold">
+                    {student.name}
+                    <span className="ms-3 text-sm font-normal text-slate-500">{student.group}</span>
+                  </span>
+                  <select
+                    aria-label={`${t('Attendance for')} ${student.name}`}
+                    value={draft[student.studentId] ?? current.get(student.studentId) ?? ''}
+                    onChange={(event) =>
+                      setDraft({ ...draft, [student.studentId]: event.target.value })
+                    }
+                  >
+                    <option value="" disabled={current.has(student.studentId)}>
+                      {t('Not marked')}
                     </option>
-                  ))}
-                </select>
-              </label>
-            ))}
-          </div>
+                    {statuses.map((status) => (
+                      <option key={status} value={status}>
+                        {t(status)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+          ) : (
+            [...new Set(visible.map((student) => student.group))].sort().map((group) => (
+              <details key={group} open className="attendance-group">
+                <summary>{group || (language === 'ar' ? 'بلا مجموعة' : 'Ungrouped')}</summary>
+                <div className="divide-y divide-slate-100">
+                  {visible
+                    .filter((student) => student.group === group)
+                    .map((student) => (
+                      <label
+                        key={student.studentId}
+                        className="flex-row flex-wrap items-center justify-between gap-3 py-3"
+                      >
+                        <span dir="auto" className="text-base font-semibold">
+                          {student.name}
+                          <span className="ms-3 text-sm font-normal text-slate-500">
+                            {student.group}
+                          </span>
+                        </span>
+                        <select
+                          aria-label={`${t('Attendance for')} ${student.name}`}
+                          value={draft[student.studentId] ?? current.get(student.studentId) ?? ''}
+                          onChange={(event) =>
+                            setDraft({ ...draft, [student.studentId]: event.target.value })
+                          }
+                        >
+                          <option value="" disabled={current.has(student.studentId)}>
+                            {t('Not marked')}
+                          </option>
+                          {statuses.map((status) => (
+                            <option key={status} value={status}>
+                              {t(status)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                </div>
+              </details>
+            ))
+          )}
           <button
             className="primary mt-5"
             disabled={!changed.length}
@@ -1114,7 +1124,7 @@ function History({
       <h2 className="title">{t('History & corrections')}</h2>
       <p className="muted mt-2 mb-6">
         {t(
-          'Undo appends a correction. The original stays in the sheet. Undoing the latest attendance restores the previous status.',
+          'Undo appends a correction. The original stays in the record. Undoing the latest attendance restores the previous status.',
         )}{' '}
         {projected.duplicates > 0
           ? language === 'ar'
@@ -1166,7 +1176,7 @@ function History({
               <p className="muted mt-1">
                 <bdi>{event.actor}</bdi> ·{' '}
                 {event.receivedAt
-                  ? `${event.receivedAt} (SheetDB)`
+                  ? `${event.receivedAt} (server)`
                   : `${event.clientTime} (${t('device')})`}
                 {projected.reversed.has(event.id) ? ` · ${t('Undone')}` : ''}
               </p>
