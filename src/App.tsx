@@ -282,47 +282,51 @@ function Notebook({
       </aside>
       <main id="main-content" tabIndex={-1} className="workspace-main">
         <div className="workspace-topline">
-          <span>
-            {t('Halaqa notebook')} /{' '}
-            {t(tabs.find((tab) => tab.id === query.tab)?.label ?? 'Attendance')}
-          </span>
-          <LanguageSwitch />
-          {neon && (
+          <div className="workspace-context" dir="auto">
             <span>
-              {neon.teacher.role === 'administrator'
-                ? language === 'ar'
-                  ? 'مسؤول'
-                  : 'Administrator'
-                : language === 'ar'
-                  ? 'معلم'
-                  : 'Teacher'}
+              {t('Halaqa notebook')} /{' '}
+              {t(tabs.find((tab) => tab.id === query.tab)?.label ?? 'Attendance')}
             </span>
-          )}
-          {neon?.teacher.role === 'administrator' && (
+            {neon && (
+              <span>
+                {neon.teacher.role === 'administrator'
+                  ? language === 'ar'
+                    ? 'مسؤول'
+                    : 'Administrator'
+                  : language === 'ar'
+                    ? 'معلم'
+                    : 'Teacher'}
+              </span>
+            )}
+          </div>
+          <div className="header-actions">
+            <LanguageSwitch />
+            {neon?.teacher.role === 'administrator' && (
+              <button
+                className="icon-button"
+                aria-label={language === 'ar' ? 'الإدارة' : 'Administration'}
+                title={language === 'ar' ? 'الإدارة' : 'Administration'}
+                onClick={() => setQuery({ view: 'administration' }, true)}
+              >
+                <Settings2 size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
+              </button>
+            )}
             <button
+              disabled={ledger.busy}
               className="icon-button"
-              aria-label={language === 'ar' ? 'الإدارة' : 'Administration'}
-              title={language === 'ar' ? 'الإدارة' : 'Administration'}
-              onClick={() => setQuery({ view: 'administration' }, true)}
+              aria-label={neon ? t('Sign out') : t('Close session')}
+              title={neon ? t('Sign out') : t('Close session')}
+              onClick={leave}
             >
-              <Settings2 size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
+              <LogOut
+                className="icon-directional"
+                size={20}
+                strokeWidth={1.6}
+                aria-hidden="true"
+                focusable="false"
+              />
             </button>
-          )}
-          <button
-            disabled={ledger.busy}
-            className="icon-button"
-            aria-label={neon ? t('Sign out') : t('Close session')}
-            title={neon ? t('Sign out') : t('Close session')}
-            onClick={leave}
-          >
-            <LogOut
-              className="icon-directional"
-              size={20}
-              strokeWidth={1.6}
-              aria-hidden="true"
-              focusable="false"
-            />
-          </button>
+          </div>
         </div>
         <header className="workspace-welcome">
           <div>

@@ -45,21 +45,23 @@ export function StudentAttendance({ userId, signOut }: { userId: string; signOut
     <main id="main-content" className="role-page" tabIndex={-1}>
       <header className="role-header">
         <WartaqLogo />
-        <LanguageSwitch />
-        <button
-          className="icon-button"
-          aria-label={t('Sign out')}
-          title={t('Sign out')}
-          onClick={signOut}
-        >
-          <LogOut
-            className="icon-directional"
-            size={20}
-            strokeWidth={1.6}
-            aria-hidden="true"
-            focusable="false"
-          />
-        </button>
+        <div className="header-actions">
+          <LanguageSwitch />
+          <button
+            className="icon-button"
+            aria-label={t('Sign out')}
+            title={t('Sign out')}
+            onClick={signOut}
+          >
+            <LogOut
+              className="icon-directional"
+              size={20}
+              strokeWidth={1.6}
+              aria-hidden="true"
+              focusable="false"
+            />
+          </button>
+        </div>
       </header>
       <div className="role-heading">
         <div>

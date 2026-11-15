@@ -16,6 +16,8 @@
   gap: 1rem;
 }
 .role-header {
+  direction: ltr;
+  flex-direction: row-reverse;
   padding-bottom: 2rem;
   border-bottom: 1px solid #cde1df;
 }

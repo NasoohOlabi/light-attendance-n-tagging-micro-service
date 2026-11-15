@@ -4,13 +4,13 @@ An attendance and tagged-note notebook with React/TypeScript, a Bun server, self
 
 Users sign up/sign in, then an Administrator approves their application role. Administrators manage other accounts and roster assignments; Teachers see their assigned students and related notebook; Students can only read their own attendance. The API checks role, identity, active state and expiry on every request, plus Teacher assignment/read-write mode. Signup cannot self-approve or choose a role. The first Administrator is granted through private CLI input. The old/former source flag remains ignored when importing assigned students. See [role permissions](docs/roles.md) and [Neon setup](docs/neon-setup.md) for provisioning and verification.
 
-[Wartaq homepage](https://nasooholabi.github.io/light-attendance-n-tagging-micro-service/) · [Open the app](https://nasooholabi.github.io/light-attendance-n-tagging-micro-service/?page=app) · [Public source](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service)
+[Wartaq homepage](https://light-attendance-n-tagging-micro-service-production.up.railway.app/) · [Open the app](https://light-attendance-n-tagging-micro-service-production.up.railway.app/?page=app) · [Public source](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service)
 
 The public root homepage showcases the Quran recitation course, learning outcomes and draft curriculum, with clearly marked placeholders for teachers, schedule/location and enrollment details. It does not accept course registrations yet. **Sign in** opens the separate app at `?page=app`, where an existing managed session resumes automatically. Signing out returns home. Plain root visits stay on the public homepage even with a stored legacy session; fresh private links still open their notebook directly at the app entry. Both pages use the selected Midad identity and self-hosted fonts; the teacher workspace has five labelled phone destinations in a safe-area-aware bottom bar.
 
 Choose **Install Wartaq / تثبيت وارتق** to install the PWA or view browser-specific instructions. The installed app opens the signed-in app entry; the public shell/sample can open offline, while real account and notebook access require a connection. See [installation, caching and update behavior](docs/pwa.md).
 
-Choose **Explore with sample students** to review attendance, Arabic-capable notes and append-only corrections without a provider account. Legacy SheetDB links remain compatible; their broader capability limitations do not apply to the Neon API.
+Choose **Explore with sample students** to review attendance, Arabic-capable notes and append-only corrections without a provider account. Legacy SheetDB links remain compatible; their broader capability limitations do not apply to the authenticated server API.
 
 Use **English / العربية** to switch the complete teacher interface, including sign-in and feedback. Arabic uses right-to-left layout; your language choice is remembered when browser storage is available. The local manager has its own language switch. See the [mobile and language audit](docs/mobile-and-languages.md) for behavior, verification and device limits.
 
@@ -26,7 +26,7 @@ bun run dev       # http://127.0.0.1:5173/
 bun run verify:release
 ```
 
-Neon CLI pulls private variables into ignored `.env.local`. Vite exposes only the public Auth and Function URLs; database credentials stay on the server. Offline samples and synthetic checks need no real account. The legacy manager remains available through `bun run manager`. See [security](SECURITY.md).
+Railway stores database and signing credentials server-side. Auth and notebook calls use the site origin; no provider endpoints or credentials are bundled. For real local login run the built app through `bun run start` with private server variables. Offline samples and synthetic checks need no real account. The legacy manager remains available through `bun run manager`. See [security](SECURITY.md).
 
 ## Direction and tasks
 
