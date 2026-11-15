@@ -1,5 +1,15 @@
 # Work log
 
+## 2026-11-15 21:55 — Published dashboard proof and Arabic demo copy, Asia/Damascus (UTC+03:00)
+
+**Publication:** PR #34 passed required Verify, CodeQL and security checks on `4ce3109`, with no comments or reviews outstanding, and squash-merged to main `f9029fa`. Main Validation passed and Railway deployment `34959bc8-5d0c-41f3-98f3-43db8b4d0317` succeeded, including its database-backed health check. The verified promotion tree exactly matched main.
+
+**Actual origin proof:** Fresh isolated Chromium at the public Railway origin passed health, the pinned Docker artifact `assets/index-D_JorKH6.js`, dashboard entry/actions/charts, grouped and fuzzy sample attendance, preserved drafts, sample save/chart updates, Arabic phone layout without overflow, and anonymous/foreign-origin rejection by the deployed reset route. All requests stayed on the Railway origin. These sample changes stayed in memory; no real account was reset or production notebook data modified. Tracing was disabled; the owned browser/context closed. Synthetic PNG and JSON remain ignored under `.artifacts/verification/deployed-attendance-dashboard*`.
+
+**Correction/provenance:** The first artifact assertion incorrectly assumed Windows and Railway Docker builds would emit identical chunk hashes. Verified the actual artifact against the successful provider build output instead; the browser proof then passed. Visual inspection found one garbled Arabic word in the sample-only no-server-requests banner introduced by this task's translation cleanup. Created this small stable correction from deployed main, replacing it with the intended Arabic text. No application behavior changed; no new feature or schema work is included. The complete release gate follows before publishing this correction. Native PWA installation remains unverified after the recorded policy stop; no installation proof is claimed.
+
+**Correction gate:** `bun run verify:release` passed 16 unit tests (one disposable-database test skipped), all 54 desktop/mobile cases, strict build/artifact, lint, formatting, security scans and clean audit. The only implementation diff is the corrected banner sentence; this small stable correction proceeds through the main PR/CI gate.
+
 ## 2026-11-15 21:46 — Promote attendance dashboard, Asia/Damascus (UTC+03:00)
 
 **Candidate/result:** PR #33 passed required Verify, CodeQL and security checks on `b56923c`, with no comments or reviews outstanding, and squash-merged to nightly as `e52d95e`. Its complete tree exactly matched the locally verified candidate. Created `release/attendance-dashboard`, merged nightly ancestry normally, and retained that tree; this promotion adds only this log note. The stable diff against main contains the requested dashboard, Administrator resets and SheetDB retirement. Stable CI and actual Railway deployment proof remain required before claiming publication.
