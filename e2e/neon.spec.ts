@@ -232,6 +232,8 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await expect(page.getByText('Alpha Student')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Explore with sample students' })).toBeVisible()
   releaseApproval()
+  await expect(page.getByRole('button', { name: 'Add student', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByText('Alpha Student')).toBeVisible()
   await expect(page.getByText('Beta Student')).toHaveCount(0)
   await page.getByLabel('Attendance for Alpha Student').selectOption('present')
@@ -248,6 +250,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.getByLabel('Email').fill(users[1].email)
   await page.getByLabel('Password').fill('synthetic-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByText('Beta Student')).toBeVisible()
   await expect(page.getByText('Alpha Student')).toHaveCount(0)
 })
@@ -392,6 +395,7 @@ async function mockTeacher(page: Page, post: () => Promise<void>) {
     })
   })
   await page.goto(`${origin}/?page=app`)
+  await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByLabel('Attendance for Alpha Student')).toBeVisible()
 }
 
@@ -491,6 +495,7 @@ test('pending retry rejects a student removed from the current assignment', asyn
   })
   await saveAttendance(page)
   await expect(page.getByText('1 records awaiting confirmation')).toBeVisible()
+  await expect.poll(() => posts).toBe(1)
   const teacher = {
     role: 'teacher',
     id: users[0].id,

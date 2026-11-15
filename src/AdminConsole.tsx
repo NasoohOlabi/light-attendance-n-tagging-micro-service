@@ -20,10 +20,12 @@ export function AdminConsole({
   userId,
   signOut,
   openNotebook,
+  initialCreateStudent = false,
 }: {
   userId: string
   signOut: () => void
   openNotebook: () => void
+  initialCreateStudent?: boolean
 }) {
   const { language, t, errorMessage } = useLanguage()
   const ar = language === 'ar'
@@ -32,7 +34,7 @@ export function AdminConsole({
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [editing, setEditing] = useState<Student | null>(null)
-  const [creating, setCreating] = useState(false)
+  const [creating, setCreating] = useState(initialCreateStudent)
   const [revision, setRevision] = useState(0)
   useEffect(() => {
     let cancelled = false
@@ -120,7 +122,7 @@ export function AdminConsole({
       {!board && !error && <p role="status">{ar ? 'جارٍ التحميل…' : 'Loading…'}</p>}
       {board && (
         <>
-          <section className="panel role-section">
+          <section className="panel role-section" hidden={initialCreateStudent && creating}>
             <h2 className="title">{ar ? 'الحسابات' : 'Accounts'}</h2>
             {board.accounts.map((account) => (
               <AccountForm
@@ -379,7 +381,7 @@ function AccountForm({
               }
             }}
           >
-            {ar ? '????? تأكيد كلمة المرور' : 'Reset password'}
+            {ar ? 'إعادة تعيين كلمة المرور' : 'Reset password'}
           </button>
           {passwordError && <p role="alert">{passwordError}</p>}
         </div>

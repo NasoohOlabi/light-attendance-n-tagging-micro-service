@@ -2,11 +2,11 @@
 
 ## Sub-features
 
-Student/general notes, Arabic text/tags, normalized comma-separated tags, date bounds, tag buttons and dropdown filtering.
+Student notes; general notes in the sample, Arabic text/tags, normalized comma-separated tags, date bounds, tag buttons and dropdown filtering.
 
 ## How to get to it (user POV)
 
-Open **Notes**. Choose a student or **General note**, enter date, tags and text, then **Save note**. Read the shared feed beside the form.
+Open **Notes**. Choose a student (or **General note** in the sample), enter date, tags and text, then **Save note**. Read the shared feed beside the form.
 
 ## Driving it with Playwright
 
@@ -14,4 +14,4 @@ The `sample notebook` test selects ليلى, fills **Tags, separated by commas**
 
 ## Gotchas
 
-Notes are data, including JSON/formula-looking strings; React renders text and transport uses RAW. Tags normalize to lowercase. No-tag/blank notes are rejected. Date range and roster filters combine; clear them before concluding a note was lost.
+Notes are data, including JSON/formula-looking strings; React renders text and the API validates payloads. Tags normalize to lowercase. No-tag/blank notes are rejected. Date range and roster filters combine; clear them before concluding a note was lost.

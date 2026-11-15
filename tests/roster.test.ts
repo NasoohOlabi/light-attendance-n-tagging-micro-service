@@ -1,41 +1,14 @@
 import { describe, expect, test } from 'bun:test'
-import {
-  assignedEvents,
-  assignedStudents,
-  parseRoster,
-  validateAssignedPayloads,
-} from '../shared/roster'
-import { makeEvent } from '../shared/ledger'
-
-const teacherA = '10000000-0000-4000-8000-000000000001'
-const teacherB = '10000000-0000-4000-8000-000000000002'
+import { assignedEvents, validateAssignedPayloads } from '../shared/roster'
+import { makeEvent, type Student } from '../shared/ledger'
 const studentA = '20000000-0000-4000-8000-000000000001'
 const studentB = '20000000-0000-4000-8000-000000000002'
-const row = {
-  studentId: studentA,
-  name: 'Student A',
-  teacherId: teacherA,
-  teacherName: 'Teacher A',
-  group: '',
-  active: 'TRUE',
-}
 
 describe('assigned roster', () => {
-  test('rejects invalid and ambiguous rows', () => {
-    expect(() => parseRoster([{ ...row, active: 'yes' }])).toThrow()
-    expect(() => parseRoster([row, row])).toThrow()
-    expect(() =>
-      parseRoster([row, { ...row, studentId: studentB, teacherName: 'Other' }]),
-    ).toThrow()
-  })
   test('filters events and validates writes against active assignments', () => {
-    const students = assignedStudents(
-      parseRoster([
-        row,
-        { ...row, studentId: studentB, teacherId: teacherB, teacherName: 'Teacher B' },
-      ]),
-      teacherA,
-    )
+    const students: Student[] = [
+      { kind: 'student', studentId: studentA, name: 'Student A', group: '', active: true },
+    ]
     const own = makeEvent('A', {
       kind: 'attendance',
       studentId: studentA,
