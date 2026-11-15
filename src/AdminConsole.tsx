@@ -5,6 +5,7 @@ import {
   neonAdminBoardSchema,
   neonAdminDisableSchema,
   neonAdminGrantSchema,
+  neonAdminPasswordResetSchema,
   neonAdminStudentSchema,
 } from '../shared/neon'
 import { LanguageSwitch, useLanguage } from './i18n'
@@ -214,6 +215,9 @@ function AccountForm({
     account.role ?? 'teacher',
   )
   const [name, setName] = useState(account.name)
+  const [password, setPassword] = useState('')
+  const [passwordConfirmation, setPasswordConfirmation] = useState('')
+  const [passwordError, setPasswordError] = useState('')
   const [studentId, setStudentId] = useState(account.studentId ?? '')
   const [mode, setMode] = useState<'read_write' | 'read_only' | 'write_only' | ''>('')
   const [expires, setExpires] = useState(() => {
@@ -327,6 +331,59 @@ function AccountForm({
           </label>
         )}
       </div>
+      {!self && (
+        <div className="role-fields">
+          <label>
+            {ar ? 'كلمة المرور الجديدة' : 'New password'}
+            <input
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              maxLength={128}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          <label>
+            {ar ? 'تأكيد كلمة المرور' : 'Confirm password'}
+            <input
+              type="password"
+              autoComplete="new-password"
+              maxLength={128}
+              value={passwordConfirmation}
+              onChange={(e) => setPasswordConfirmation(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={async () => {
+              const parsed = neonAdminPasswordResetSchema.safeParse({
+                authUserId: account.authUserId,
+                password,
+                passwordConfirmation,
+              })
+              if (!parsed.success) {
+                setPasswordError(
+                  ar
+                    ? 'يجب تطابق كلمتي المرور وأن تتكون من 8 إلى 128 حرفاً.'
+                    : 'Passwords must match and contain 8 to 128 characters.',
+                )
+                return
+              }
+              setPasswordError('')
+              if (await save('/api/admin/accounts/reset-password', parsed.data)) {
+                setPassword('')
+                setPasswordConfirmation('')
+              }
+            }}
+          >
+            {ar ? '????? تأكيد كلمة المرور' : 'Reset password'}
+          </button>
+          {passwordError && <p role="alert">{passwordError}</p>}
+        </div>
+      )}
       <div className="role-actions">
         <button className="primary" disabled={busy || self}>
           {ar ? 'حفظ الدور' : 'Save role'}

@@ -5,7 +5,6 @@ import {
   parseRoster,
   validateAssignedPayloads,
 } from '../shared/roster'
-import { assignedAccessSchema, createStudentAccessLink, decodeAccess } from '../shared/access'
 import { makeEvent } from '../shared/ledger'
 
 const teacherA = '10000000-0000-4000-8000-000000000001'
@@ -70,33 +69,4 @@ describe('assigned roster', () => {
     expect(() => validateAssignedPayloads([foreign.payload], students, [own, other])).toThrow()
     expect(() => validateAssignedPayloads([own.payload], students, [own])).not.toThrow()
   })
-})
-
-test('assigned student links keep both credentials in the fragment', () => {
-  const access = {
-    version: 2,
-    username: 'Teacher A',
-    teacherId: teacherA,
-    apiId: 'events123',
-    token: 'events-secret',
-    sheet: 'Events',
-    roster: { apiId: 'roster123', token: 'roster-secret', sheet: 'Roster' },
-  } as const
-  const url = new URL(createStudentAccessLink('https://example.org/?token=old', access, studentA))
-  expect(url.searchParams.get('student')).toBe(studentA)
-  expect(url.search).not.toContain('secret')
-  expect(decodeAccess(new URLSearchParams(url.hash.slice(1)).get('access') ?? '')).toEqual(access)
-})
-
-test('assigned links require separate roster and events API endpoints', () => {
-  const result = assignedAccessSchema.safeParse({
-    version: 2,
-    username: 'Teacher A',
-    teacherId: teacherA,
-    apiId: 'shared123',
-    token: 'events-secret',
-    sheet: 'Events',
-    roster: { apiId: 'shared123', token: 'roster-secret', sheet: 'Roster' },
-  })
-  expect(result.success).toBe(false)
 })

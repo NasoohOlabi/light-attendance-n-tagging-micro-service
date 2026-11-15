@@ -274,6 +274,13 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     body: { role: 'student', authUserId: studentUserId, studentId, expiresAt: null },
   })
   const teacher = page.locator('form').filter({ hasText: 'teacher@example.test' })
+  await teacher.getByLabel('New password').fill('synthetic-password-one')
+  await teacher.getByLabel('Confirm password').fill('synthetic-password-two')
+  await teacher.getByRole('button', { name: 'Reset password' }).click()
+  await expect(teacher.getByRole('alert')).toHaveText(
+    'Passwords must match and contain 8 to 128 characters.',
+  )
+  expect(posts.some((post) => post.path === '/api/admin/accounts/reset-password')).toBe(false)
   await teacher.locator('select').nth(1).selectOption('read_only')
   await teacher.getByRole('button', { name: 'Save role' }).click()
   await expect.poll(() => posts.length).toBe(2)

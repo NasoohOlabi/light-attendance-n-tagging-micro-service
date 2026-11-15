@@ -1,29 +1,5 @@
 import { describe, expect, test } from 'bun:test'
 import { makeEvent, parseRows, projectEvents, eventToRow, type LedgerEvent } from '../shared/ledger'
-import { createAccessLink, decodeAccess } from '../shared/access'
-
-describe('personal links', () => {
-  const access = {
-    version: 1,
-    username: 'المعلم أحمد',
-    apiId: 'example123',
-    token: 'private-token',
-    sheet: 'Events',
-  } as const
-  test('Unicode identity round trips in the fragment, with no query credentials', () => {
-    const url = new URL(createAccessLink('https://example.github.io/notebook/?old=1', access))
-    expect(url.search).toBe('')
-    expect(decodeAccess(url.hash.slice('#access='.length))).toEqual(access)
-    expect(url.pathname).toBe('/notebook/')
-  })
-  test('rejects bad payloads and unsafe hosting URLs', () => {
-    expect(() => decodeAccess('not-json')).toThrow()
-    expect(() => createAccessLink('javascript:alert(1)', access)).toThrow()
-    expect(() => createAccessLink('http://public.example/', access)).toThrow()
-    expect(() => createAccessLink('http://127.0.0.1:5173/', access)).not.toThrow()
-  })
-})
-
 describe('append-only projection', () => {
   const studentId = crypto.randomUUID()
   const student = makeEvent('manager', {

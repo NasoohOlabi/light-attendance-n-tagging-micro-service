@@ -1,9 +1,11 @@
 ﻿import { z } from 'zod'
+import { hashPassword } from 'better-auth/crypto'
 import type { Pool, PoolClient } from 'pg'
 import {
   neonAdminBoardSchema,
   neonAdminDisableSchema,
   neonAdminGrantSchema,
+  neonAdminPasswordResetSchema,
   neonAdminStudentSchema,
   neonBatchSchema,
   neonSnapshotSchema,
@@ -183,6 +185,18 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
         [grant.authUserId, grant.role, staffId, expiry],
       )
     }
+  } else if (path === '/api/admin/accounts/reset-password') {
+    const { authUserId, password } = neonAdminPasswordResetSchema.parse(body)
+    if (authUserId === subject) throw new HttpError(403)
+    const hash = await hashPassword(password)
+    await db.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
+    const updated = await db.query(
+      `UPDATE neon_auth.account SET password = $2, "updatedAt" = now()
+      WHERE "userId"::text = $1 AND "providerId" = 'credential' RETURNING id`,
+      [authUserId, hash],
+    )
+    if (updated.rowCount !== 1) throw new HttpError(400)
+    await db.query('DELETE FROM neon_auth.session WHERE "userId"::text = $1', [authUserId])
   } else if (path === '/api/admin/accounts/disable') {
     const { authUserId } = neonAdminDisableSchema.parse(body)
     if (authUserId === subject) throw new HttpError(403)
@@ -240,6 +254,7 @@ export function createHandler(
         '/api/admin',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
+        '/api/admin/accounts/reset-password',
         '/api/admin/students',
       ].includes(path)
     )
@@ -249,6 +264,7 @@ export function createHandler(
         '/api/events',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
+        '/api/admin/accounts/reset-password',
         '/api/admin/students',
       ].includes(path) &&
         request.method !== 'POST') ||
@@ -256,6 +272,7 @@ export function createHandler(
         '/api/events',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
+        '/api/admin/accounts/reset-password',
         '/api/admin/students',
       ].includes(path) &&
         request.method !== 'GET')

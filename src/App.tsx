@@ -1,7 +1,6 @@
 import { LogOut, RefreshCw, Settings2, UserRound } from 'lucide-react'
 import { LanguageProvider, LanguageSwitch, useLanguage, type TranslationKey } from './i18n'
 import { useEffect, useState } from 'react'
-import type { Access } from '../shared/access'
 import {
   projectEvents,
   statuses,
@@ -10,7 +9,6 @@ import {
   type Payload,
   type Student,
 } from '../shared/ledger'
-import { clearSession, loadSession } from './session'
 import { navigatePage, setQuery, useQueryState, type Tab } from './queryState'
 import { HomePage } from './HomePage'
 import { InstallApp } from './InstallApp'
@@ -20,7 +18,6 @@ import { useLedger } from './useLedger'
 import { NeonAuth } from './NeonAuth'
 import { AdminConsole } from './AdminConsole'
 import { StudentAttendance } from './StudentAttendance'
-import { authClient } from './neon'
 import type { NeonTeacher } from '../shared/neon'
 
 const tabs: { id: Tab; label: TranslationKey }[] = [
@@ -33,10 +30,7 @@ const tabs: { id: Tab; label: TranslationKey }[] = [
 type Projection = ReturnType<typeof projectEvents>
 type Save = (payloads: Payload[]) => Promise<boolean>
 
-export function App(props: {
-  initialSession: { access: Access | null; error: string }
-  initialResetToken?: string
-}) {
+export function App() {
   return (
     <LanguageProvider>
       <div className="wartaq-site">
@@ -44,78 +38,53 @@ export function App(props: {
           <SkipText />
         </a>
         <InstallApp />
-        <AppContent {...props} />
+        <AppContent />
       </div>
     </LanguageProvider>
   )
 }
 
-function AppContent({
-  initialSession,
-  initialResetToken,
-}: {
-  initialSession: { access: Access | null; error: string }
-  initialResetToken?: string
-}) {
-  const { language, t, errorMessage } = useLanguage()
-  const [session, setSession] = useState({ ...initialSession, revision: 0 })
-  const [demo, setDemo] = useState<'legacy' | 'assigned' | null>(null)
-  const { access } = session
+function AppContent() {
+  const { language, t } = useLanguage()
+  const [demo, setDemo] = useState<'editable' | 'assigned' | null>(null)
   const query = useQueryState()
-  const [resetToken, setResetToken] = useState(initialResetToken)
-  const reset = !!resetToken
   useEffect(() => {
     document.title =
-      query.page === 'home' && !reset
+      query.page === 'home'
         ? language === 'ar'
           ? 'وارتق · دورة تلاوة القرآن'
           : 'Wartaq · Quran recitation course'
         : language === 'ar'
           ? 'وارتق · دفتر الحلقة'
           : 'Wartaq · Halaqa notebook'
-  }, [language, query.page, reset])
-  const openDemo = (kind: 'legacy' | 'assigned') => {
+  }, [language, query.page])
+  const openDemo = (kind: 'editable' | 'assigned') => {
     setDemo(kind)
     navigatePage('app')
   }
   const goHome = () => {
     setDemo(null)
-    setResetToken(undefined)
     navigatePage('home')
   }
-  useEffect(() => {
-    function onHashChange() {
-      if (!new URLSearchParams(window.location.hash.slice(1)).has('access')) return
-      const next = loadSession()
-      setSession((previous) => ({ ...next, revision: previous.revision + 1 }))
-      setDemo(null)
-      setQuery({ page: 'app' })
-    }
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
-  }, [])
-  if (query.page === 'home' && !reset)
+  if (query.page === 'home')
     return (
       <HomePage
         onOpenApp={() => {
           setDemo(null)
           navigatePage('app')
         }}
-        onExplore={() => openDemo('legacy')}
+        onExplore={() => openDemo('editable')}
         onExploreAssigned={() => openDemo('assigned')}
-        error={session.error ? errorMessage(session.error) : undefined}
       />
     )
-  if (!access && !demo && authClient)
+  if (!demo)
     return (
       <>
         <NeonAuth
-          initialResetToken={resetToken}
-          onResetComplete={() => setResetToken(undefined)}
           onSignOut={goHome}
           samples={
             <>
-              <button className="secondary self-start" onClick={() => openDemo('legacy')}>
+              <button className="secondary self-start" onClick={() => openDemo('editable')}>
                 {t('Explore with sample students')}
               </button>
               <button className="secondary self-start" onClick={() => openDemo('assigned')}>
@@ -137,7 +106,6 @@ function AppContent({
             ) : (
               <Notebook
                 key={userId}
-                access={null}
                 demo={null}
                 neon={{ userId, teacher: account }}
                 leave={signOut}
@@ -147,79 +115,22 @@ function AppContent({
         </NeonAuth>
       </>
     )
-  if (!access && !demo)
-    return (
-      <>
-        <LanguageSwitch />
-        <main
-          id="main-content"
-          tabIndex={-1}
-          className="mx-auto flex min-h-svh max-w-lg flex-col justify-center gap-6 px-6"
-        >
-          <WartaqLogo />
-          <a className="secondary self-start" href={window.location.pathname}>
-            {t('Halaqa notebook')}
-          </a>
-          <h1 className="text-4xl font-semibold tracking-tight">
-            {t('Your halaqa, one shared notebook.')}
-          </h1>
-          <p className="text-lg leading-relaxed text-slate-600">
-            {t('Record attendance. Leave a note. Keep the next teacher in the loop.')}
-          </p>
-          <div className="panel space-y-3">
-            <h2 className="font-semibold">{t('Open your personal access link')}</h2>
-            <p className="muted">
-              {t(
-                'Your manager sends you a link with your name and access. Keep it somewhere private and open it whenever you return.',
-              )}
-            </p>
-          </div>
-          {session.error && (
-            <p role="alert" className="text-red-700">
-              {errorMessage(session.error)}
-            </p>
-          )}
-          <button className="secondary self-start" onClick={() => openDemo('legacy')}>
-            {t('Explore with sample students')}
-          </button>
-          <button className="secondary self-start" onClick={() => openDemo('assigned')}>
-            {t('Explore assigned teacher sample')}
-          </button>
-          <p className="muted">
-            {t('الحضور والملاحظات · Arabic names, notes and tags are supported.')}
-          </p>
-        </main>
-      </>
-    )
-  return (
-    <Notebook
-      key={session.revision}
-      access={demo ? null : access}
-      demo={demo}
-      leave={() => {
-        clearSession()
-        setSession((previous) => ({ access: null, error: '', revision: previous.revision + 1 }))
-        goHome()
-      }}
-    />
-  )
+  return <Notebook demo={demo} leave={goHome} />
 }
 
 function Notebook({
-  access,
   demo,
   leave,
   neon,
 }: {
   neon?: { userId: string; teacher: NeonTeacher }
-  access: Access | null
-  demo: 'legacy' | 'assigned' | null
+  demo: 'editable' | 'assigned' | null
   leave: () => void
 }) {
   const { t, language, errorMessage } = useLanguage()
   const query = useQueryState()
-  const ledger = useLedger(access, demo !== null, demo === 'assigned', neon)
-  const assigned = !!neon || access?.version === 2 || demo === 'assigned'
+  const ledger = useLedger(demo !== null, demo === 'assigned', neon)
+  const assigned = !!neon || demo === 'assigned'
   const baseProjection = projectEvents(ledger.events)
   const projected = assigned ? { ...baseProjection, students: ledger.roster } : baseProjection
   const groups = [
@@ -330,7 +241,7 @@ function Notebook({
         </div>
         <header className="workspace-welcome">
           <div>
-            <p dir="auto">{neon?.teacher.name ?? access?.username ?? t('Demo teacher')}</p>
+            <p dir="auto">{neon?.teacher.name ?? t('Demo teacher')}</p>
             <h1>{t('Halaqa notebook')}</h1>
             <span>{t('Record attendance. Leave a note. Keep the next teacher in the loop.')}</span>
           </div>
@@ -342,9 +253,7 @@ function Notebook({
         {demo && (
           <p className="mb-5 rounded-lg bg-amber-100 p-3 text-amber-900">
             {demo === 'assigned' ? t('Assigned teacher sample notebook.') : t('Sample notebook.')}{' '}
-            {t(
-              'Changes stay in memory and disappear when you leave. No SheetDB requests are made.',
-            )}
+            {t('Changes stay in memory and disappear when you leave. No server requests are made.')}
           </p>
         )}
         <div className="mb-6 flex flex-wrap items-end gap-3">
@@ -419,14 +328,14 @@ function Notebook({
           <p role="alert" className="mb-4 text-red-800">
             {language === 'ar'
               ? `تم اكتشاف ${projected.conflicts} معرّفات مكررة متعارضة. اطلب من المسؤول فحص الجدول.`
-              : `${projected.conflicts} conflicting duplicate IDs detected. Ask the manager to inspect the sheet.`}
+              : `${projected.conflicts} conflicting duplicate IDs detected. Ask the manager to inspect the records.`}
           </p>
         )}
         {(ledger.invalid > 0 || projected.invalidReversals > 0) && (
           <p role="status" className="mb-4 text-amber-800">
             {language === 'ar'
               ? `تم تجاوز ${ledger.invalid} صفوف غير صالحة و${projected.invalidReversals} تصحيحات غير صالحة. اطلب من المسؤول فحص الجدول.`
-              : `${ledger.invalid} invalid rows and ${projected.invalidReversals} invalid corrections were skipped. Ask the manager to inspect the sheet.`}
+              : `${ledger.invalid} invalid rows and ${projected.invalidReversals} invalid corrections were skipped. Ask the manager to inspect the records.`}
           </p>
         )}
         {ledger.pending.length > 0 && (
@@ -437,9 +346,7 @@ function Notebook({
                 : `${ledger.pending.length} records awaiting confirmation`}
             </h2>
             <p className="muted">
-              {t(
-                'Retry reuses their original IDs. Even if a request reached the sheet twice, summaries count each record once.',
-              )}
+              {t('Retry reuses the original IDs, so each record is counted once.')}
             </p>
             <div className="flex flex-wrap gap-3">
               <button
@@ -1114,7 +1021,7 @@ function History({
       <h2 className="title">{t('History & corrections')}</h2>
       <p className="muted mt-2 mb-6">
         {t(
-          'Undo appends a correction. The original stays in the sheet. Undoing the latest attendance restores the previous status.',
+          'Undo appends a correction. The original stays in the record. Undoing the latest attendance restores the previous status.',
         )}{' '}
         {projected.duplicates > 0
           ? language === 'ar'
@@ -1166,7 +1073,7 @@ function History({
               <p className="muted mt-1">
                 <bdi>{event.actor}</bdi> ·{' '}
                 {event.receivedAt
-                  ? `${event.receivedAt} (SheetDB)`
+                  ? `${event.receivedAt} (server)`
                   : `${event.clientTime} (${t('device')})`}
                 {projected.reversed.has(event.id) ? ` · ${t('Undone')}` : ''}
               </p>

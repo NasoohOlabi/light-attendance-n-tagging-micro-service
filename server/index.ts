@@ -82,9 +82,30 @@ export async function handle(request: Request): Promise<Response> {
       request.headers.get('origin') !== origin
     )
       return Response.json({ error: 'Forbidden' }, { status: 403 })
-    const response = url.pathname.startsWith('/api/auth/')
-      ? await auth.handler(request)
-      : await notebook(request)
+    let response: Response
+    if (
+      url.pathname.startsWith('/api/auth/') &&
+      request.method !== 'GET' &&
+      request.method !== 'HEAD'
+    ) {
+      // ponytail: one lock serializes auth mutations; use per-account locks if throughput matters.
+      const db = await pool.connect()
+      try {
+        await db.query('BEGIN')
+        await db.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
+        response = await auth.handler(request)
+        await db.query('COMMIT')
+      } catch (error) {
+        await db.query('ROLLBACK')
+        throw error
+      } finally {
+        db.release()
+      }
+    } else {
+      response = url.pathname.startsWith('/api/auth/')
+        ? await auth.handler(request)
+        : await notebook(request)
+    }
     response.headers.set('Cache-Control', 'no-store')
     return response
   }
