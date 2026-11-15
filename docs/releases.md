@@ -1,5 +1,7 @@
 # Stable and nightly releases
 
+Railway replaces Neon and Pages under the 2026-11-15 request. See [Railway setup](railway-setup.md) for the current runtime, session boundary, deployment, transfer and recovery rules. Neon-specific sections below are historical. The code backup is `backup/neon-current-2026-11-15` at `77cedae`; source Neon data/services remain intact.
+
 `main` is the stable source and the default branch. Only `Stable Pages` builds from `refs/heads/main` and deploys to the `github-pages` environment. That environment permits only the main branch. `vX.Y.Z` tags identify stable releases; they point at a verified main commit and do not separately trigger Pages. Initial software release is 0.1.0; live SheetDB account certification is a separate acceptance gate.
 
 `nightly` is the integration/candidate branch. The Nightly candidate workflow runs on its pushes and at **01:17 UTC / 04:17 Asia/Damascus** daily, builds that branch and retains a versioned downloadable artifact for 14 days. It has read-only repository permissions, no Pages deployment and no management secrets. This provides nightly and stable versions without sharing the stable site. Manual nightly dispatch must select `nightly`.

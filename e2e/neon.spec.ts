@@ -4,8 +4,8 @@ import { mkdir } from 'node:fs/promises'
 
 test.use({ trace: 'off' })
 
-const auth = 'https://auth.example.test'
-const api = 'https://notebook.example.test'
+let auth = ''
+let api = ''
 const users = [
   {
     id: '10000000-0000-4000-8000-000000000001',
@@ -29,6 +29,8 @@ test.beforeAll(async ({ browserName }, testInfo) => {
   if (browserName !== 'chromium') throw new Error('Synthetic test requires Chromium')
   const port = testInfo.project.name === 'mobile' ? '4183' : '4182'
   origin = `http://127.0.0.1:${port}`
+  auth = `${origin}/api/auth`
+  api = `${origin}/api`
   server = spawn(
     process.execPath,
     ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', port, '--strictPort'],
@@ -115,8 +117,6 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
     releaseApproval = resolve
   })
   let firstApproval = true
-  const token = (id: string) =>
-    `e30.${Buffer.from(JSON.stringify({ sub: id })).toString('base64url')}.c2ln`
   await context.route(`${auth}/**`, async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
@@ -142,8 +142,6 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
       current = undefined
       return route.fulfill({ json: { success: true }, headers })
     }
-    if (path.endsWith('/token'))
-      return route.fulfill({ json: { token: token(current?.id ?? '') }, headers })
     const session = current
       ? {
           user: {
@@ -167,6 +165,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
     return route.fulfill({ json: session, headers })
   })
   await context.route(`${api}/**`, async (route) => {
+    if (new URL(route.request().url()).pathname.startsWith('/api/auth/')) return route.fallback()
     const request = route.request()
     const headers = {
       'access-control-allow-origin': origin,
@@ -182,8 +181,9 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
             request.headers()['access-control-request-headers'] ?? 'content-type',
         },
       })
-    const bearer = request.headers().authorization
-    const selected = users.find((user) => bearer === `Bearer ${token(user.id)}`)
+    const selected = users.find(
+      (user) => user.id === request.headers()['x-user-id'] && user.id === current?.id,
+    )
     if (!selected) return route.fulfill({ status: 401, json: { error: 'Unauthorized' }, headers })
     const teacher = {
       role: 'teacher',

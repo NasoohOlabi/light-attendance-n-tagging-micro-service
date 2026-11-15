@@ -1,6 +1,6 @@
 # Wartaq — Halaqa notebook
 
-An attendance and tagged-note notebook with a static React/TypeScript frontend, Neon managed authentication and a small Neon Function API backed by Postgres. Four application tables hold accounts, teachers, students and events. No ORM or separate server host is required.
+An attendance and tagged-note notebook with React/TypeScript, a Bun server, self-hosted Better Auth and Railway Postgres. Four application tables hold accounts, teachers, students and events. Read [Railway setup](docs/railway-setup.md) for deployment and migration; the Neon runbook below is historical.
 
 Users sign up/sign in, then an Administrator approves their application role. Administrators manage other accounts and roster assignments; Teachers see their assigned students and related notebook; Students can only read their own attendance. The API checks role, identity, active state and expiry on every request, plus Teacher assignment/read-write mode. Signup cannot self-approve or choose a role. The first Administrator is granted through private CLI input. The old/former source flag remains ignored when importing assigned students. See [role permissions](docs/roles.md) and [Neon setup](docs/neon-setup.md) for provisioning and verification.
 
@@ -36,7 +36,7 @@ Neon CLI pulls private variables into ignored `.env.local`. Vite exposes only th
 - [Feasibility](docs/feasibility.md), [provider research](docs/sheetdb-research.md), [agent access](docs/agent-access.md): supported capabilities versus unverified provider behavior.
 - [Contributor/Git workflow](CONTRIBUTING.md), [agent instructions](AGENTS.md), [releases](docs/releases.md), [verification skill](.agents/skills/verify-halaqa/SKILL.md), [work log](docs/work-log.md).
 
-`main` publishes stable Pages after release checks. `nightly` produces tested candidate artifacts and never deploys the stable site. Every new feature is assigned to Terra with explicit file ownership; the orchestrator reviews and commits coherent units.
+`main` publishes stable Railway after release checks; Pages publishing is retired. `nightly` produces tested candidate artifacts and never deploys the stable site. Every new feature is assigned to Terra with explicit file ownership; the orchestrator reviews and commits coherent units.
 
 ## Data and security
 

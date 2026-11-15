@@ -5,7 +5,7 @@ description: Verify the Halaqa notebook teacher web UI and local access manager 
 
 # Verify Halaqa
 
-Neon is the current backend: read [Neon setup](../../../docs/neon-setup.md) for Auth, Function and database boundaries. `bun run verify:ui` first builds offline verification mode, then runs the synthetic desktop/mobile suite including `e2e/neon.spec.ts`; it does not send credentials to live Auth. Rebuild with `npm run build` before a configured production preview.
+Railway is the current backend: read [Railway setup](../../../docs/railway-setup.md) for the same-origin Bun/Better Auth/Postgres boundary. `bun run verify:ui` builds verification mode and runs the synthetic desktop/mobile suite, including the historically named `e2e/neon.spec.ts`. It does not contact live Auth. For real sessions run the built app through `bun run start`, rather than Vite preview. `TEST_RAILWAY_DATABASE_URL` enables `tests/railway-integration.test.ts` against a migrated disposable database; never point it at production. The Neon live harness below is historical and is not the Railway verification path.
 
 When explicitly verifying real Neon services, start that configured preview separately on port 4173 and run `bun run verify:neon:live`. This harness uses synthetic accounts/records only, disables tracing, tests signed authentication and actual database persistence/authorization, then removes its fixtures. Retain only sanitized `.artifacts/verification/neon-live.json` and its synthetic screenshot; private cleanup state stays in `.local`. Never run the live harness simultaneously with another live harness or the preview-owning Playwright suite.
 

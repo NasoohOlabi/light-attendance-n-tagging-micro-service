@@ -206,15 +206,7 @@ function ConfiguredAuth({
           setError('')
           try {
             if (mode === 'forgot') {
-              const result = await client.requestPasswordReset({
-                email,
-                redirectTo: window.location.origin + window.location.pathname + '?page=app',
-              })
-              setError(
-                result.error
-                  ? 'Unable to request a reset. Please try again.'
-                  : 'If the account exists, a password reset email has been sent.',
-              )
+              setError('Password reset is unavailable. Contact your manager.')
             } else if (mode === 'reset') {
               const token = initialResetToken
               if (!token) throw new Error()

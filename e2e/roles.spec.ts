@@ -4,8 +4,8 @@ import { createServer } from 'node:net'
 import { mkdir } from 'node:fs/promises'
 
 test.use({ trace: 'off' })
-const auth = 'https://roles-auth.example.test'
-const api = 'https://roles-api.example.test'
+let auth = ''
+let api = ''
 const adminId = '10000000-0000-4000-8000-000000000001'
 const teacherId = '10000000-0000-4000-8000-000000000002'
 const studentUserId = '10000000-0000-4000-8000-000000000003'
@@ -21,6 +21,8 @@ test.beforeAll(async ({ browserName }, testInfo) => {
     probe.listen(port, '127.0.0.1', () => probe.close(() => resolve()))
   })
   origin = `http://127.0.0.1:${port}`
+  auth = `${origin}/api/auth`
+  api = `${origin}/api`
   server = spawn(
     process.execPath,
     [
@@ -50,7 +52,6 @@ test.beforeAll(async ({ browserName }, testInfo) => {
 test.afterAll(() => server?.kill())
 
 async function mockAuth(page: Page, id: string) {
-  const token = `e30.${Buffer.from(JSON.stringify({ sub: id })).toString('base64url')}.c2ln`
   await page.route(`${auth}/**`, async (route) => {
     const request = route.request()
     const headers = {
@@ -61,7 +62,6 @@ async function mockAuth(page: Page, id: string) {
         request.headers()['access-control-request-headers'] ?? 'content-type',
     }
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
-    if (request.url().endsWith('/token')) return route.fulfill({ json: { token }, headers })
     const now = new Date().toISOString()
     return route.fulfill({
       headers,
@@ -113,6 +113,7 @@ test('student sees only their attendance and loses it after access is denied', a
   const paths: string[] = []
   let denied = false
   await page.route(`${api}/**`, async (route) => {
+    if (new URL(route.request().url()).pathname.startsWith('/api/auth/')) return route.fallback()
     const req = route.request()
     const headers = cors(req.headers()['access-control-request-headers'])
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
@@ -210,6 +211,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     students: [{ studentId, name: 'Synthetic Student', group: 'Group A', active: true, teacherId }],
   }
   await page.route(`${api}/**`, async (route) => {
+    if (new URL(route.request().url()).pathname.startsWith('/api/auth/')) return route.fallback()
     const req = route.request()
     const headers = cors(req.headers()['access-control-request-headers'])
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers })

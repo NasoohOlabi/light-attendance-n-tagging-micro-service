@@ -128,6 +128,8 @@ const arabic = {
   'Your manager must approve your account before you can open the notebook.':
     'يجب أن يوافق المسؤول على حسابك قبل فتح الدفتر.',
   'Unable to request a reset. Please try again.': 'تعذر طلب إعادة التعيين. حاول مجدداً.',
+  'Password reset is unavailable. Contact your manager.':
+    'إعادة تعيين كلمة المرور غير متاحة. تواصل مع المسؤول.',
   'If the account exists, a password reset email has been sent.':
     'إذا كان الحساب موجوداً فقد أُرسلت رسالة لإعادة تعيين كلمة المرور.',
   'Unable to reset your password. Request a new link.':

@@ -1,5 +1,7 @@
 # Neon setup and operation
 
+Railway replaces Neon and Pages under the 2026-11-15 request. See [Railway setup](railway-setup.md) for the current runtime, session boundary, deployment, transfer and recovery rules. Neon-specific sections below are historical. The code backup is `backup/neon-current-2026-11-15` at `77cedae`; source Neon data/services remain intact.
+
 Neon is the current backend. The static React app signs users in through managed Neon Auth and sends a short-lived JWT to the `notebook` Neon Function. That Function verifies the signature and checks the server-owned application role, approval and expiry; Teacher access also checks mode and current student assignment. Students receive only their own projected attendance. Administrators manage other accounts and roster assignments. Neither a database password nor a management key is sent to the browser. Legacy SheetDB links remain compatible, with their earlier limitations. See [role permissions](roles.md).
 
 ## Four application tables
