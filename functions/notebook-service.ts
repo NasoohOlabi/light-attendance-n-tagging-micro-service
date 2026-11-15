@@ -210,6 +210,7 @@ export function createHandler(
   pool: Pool,
   verify: (token: string) => Promise<string>,
   origins: string[],
+  verifyRequest?: (request: Request) => Promise<string>,
 ) {
   return async (request: Request): Promise<Response> => {
     const origin = request.headers.get('origin')
@@ -261,10 +262,12 @@ export function createHandler(
     )
       return reply({ error: 'Method not allowed' }, 405)
     const bearer = request.headers.get('authorization')?.match(/^Bearer (\S+)$/i)
-    if (!bearer) return reply({ error: 'Unauthorized' }, 401)
+    if (!bearer && !verifyRequest) return reply({ error: 'Unauthorized' }, 401)
     let subject: string
     try {
-      subject = await verify(bearer[1])
+      if (verifyRequest) subject = await verifyRequest(request)
+      else if (bearer) subject = await verify(bearer[1])
+      else return reply({ error: 'Unauthorized' }, 401)
     } catch {
       return reply({ error: 'Unauthorized' }, 401)
     }

@@ -1,5 +1,7 @@
 # Security policy
 
+Railway replaces Neon and Pages under the 2026-11-15 request. See [Railway setup](docs/railway-setup.md) for the current runtime, session boundary, deployment, transfer and recovery rules. Neon-specific sections below are historical. The code backup is `backup/neon-current-2026-11-15` at `77cedae`; source Neon data/services remain intact.
+
 This public repository contains application code and synthetic examples only. Do not file real tokens, personal student data or access links in public issues. Report a vulnerability privately through GitHub's **Security → Report a vulnerability** when enabled. For accidental disclosure, revoke the provider credential first, then contact the maintainer privately and retain a sanitized incident record.
 
 ## Neon authentication and data access

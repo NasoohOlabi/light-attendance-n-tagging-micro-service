@@ -1,5 +1,14 @@
 # Implementation plan and task list
 
+## Railway replacement requested 2026-11-15
+
+- [x] Push the current Neon implementation as `backup/neon-current-2026-11-15` (`77cedae`) and export a separate private data snapshot.
+- [x] Replace managed Auth/Function hosting with a same-origin Bun server, Better Auth and Railway Postgres while retaining role/assignment restrictions.
+- [x] Transfer identities, credential hashes and the four application tables; compare every selected row and verify a real Neon-generated password hash with Better Auth.
+- [ ] Complete release checks, promote verified main and prove the actual Railway deployment.
+
+See [Railway setup](railway-setup.md). Earlier Neon and Pages delivery records below are historical. Retain the source services for recovery until a separate decommission request.
+
 ## Public course homepage
 
 - [x] Replace the attendance-tool marketing page with an Arabic/English course introduction, proposed outcomes/curriculum and explicit teacher/schedule/enrollment/contact placeholders.

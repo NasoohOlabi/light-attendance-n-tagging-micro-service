@@ -20,6 +20,8 @@ for (const file of files) {
     process.env.DATABASE_URL,
     process.env.DATABASE_URL_UNPOOLED,
     process.env.NEON_API_KEY,
+    process.env.BETTER_AUTH_SECRET,
+    process.env.MIGRATION_TARGET_DATABASE_URL,
   ])
     if (secret && text.includes(secret)) throw new Error(`Server credential found in ${file}`)
   if (/postgres(?:ql)?:\/\/[^\s"']+:[^\s"']+@/.test(text))

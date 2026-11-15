@@ -9,6 +9,7 @@ let origin = ''
 const prefix = '/notebook/'
 const assets = new Map<string, Buffer>()
 let workerRevision = 0
+let delayNavigation = false
 
 test.beforeAll(async () => {
   async function readAssets(directory: string, path = '') {
@@ -49,9 +50,10 @@ test.beforeAll(async () => {
       'content-type': types[file.split('.').pop() ?? ''] ?? 'application/octet-stream',
       'cache-control': 'no-store',
     })
-    response.end(
-      file === 'sw.js' ? body.toString() + `\n// synthetic update ${workerRevision}` : body,
-    )
+    const content =
+      file === 'sw.js' ? body.toString() + `\n// synthetic update ${workerRevision}` : body
+    if (delayNavigation && file === 'index.html') setTimeout(() => response.end(content), 5000)
+    else response.end(content)
   })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   const address = server.address()
@@ -150,6 +152,29 @@ test('repository-scoped PWA installs its real manifest and opens the public shel
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
   await expect(page.locator('.workspace')).toBeVisible()
   await context.setOffline(false)
+})
+
+test('cached public shell opens without waiting for a stalled navigation', async ({
+  page,
+}, testInfo) => {
+  await page.goto(origin + prefix)
+  await page.evaluate(() => navigator.serviceWorker.ready)
+  await page.reload()
+  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true)
+  delayNavigation = true
+  try {
+    for (const path of ['', '?page=app', '?page=home', 'index.html']) {
+      await page.goto(origin + prefix + path, { timeout: 2000 })
+      await expect(page.locator('main h1')).toBeVisible({ timeout: 2000 })
+    }
+    await mkdir('.artifacts/pwa', { recursive: true })
+    await page.screenshot({ path: `.artifacts/pwa/cached-shell-${testInfo.project.name}.png` })
+    await expect(
+      page.goto(origin + prefix + '?token=synthetic-private-token', { timeout: 1000 }),
+    ).rejects.toThrow()
+  } finally {
+    delayNavigation = false
+  }
 })
 
 test('PWA update waits while the current notebook has an unsaved note', async ({ page }) => {
