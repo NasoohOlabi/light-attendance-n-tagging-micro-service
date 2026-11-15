@@ -99,7 +99,9 @@ function AppContent() {
             account.role === 'student' ? (
               <StudentAttendance key={userId} userId={userId} signOut={signOut} />
             ) : account.role === 'administrator' &&
-              (query.view === 'administration' || query.view === 'add-student') ? (
+              (query.view === 'settings' ||
+                query.view === 'administration' ||
+                query.view === 'add-student') ? (
               <AdminConsole
                 key={userId}
                 userId={userId}
@@ -248,9 +250,9 @@ function Notebook({
             {neon?.teacher.role === 'administrator' && (
               <button
                 className="icon-button"
-                aria-label={language === 'ar' ? 'الإدارة' : 'Administration'}
-                title={language === 'ar' ? 'الإدارة' : 'Administration'}
-                onClick={() => setQuery({ view: 'administration' }, true)}
+                aria-label={language === 'ar' ? 'الإعدادات' : 'Settings'}
+                title={language === 'ar' ? 'الإعدادات' : 'Settings'}
+                onClick={() => setQuery({ view: 'settings' }, true)}
               >
                 <Settings2 size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
               </button>
