@@ -1,5 +1,11 @@
 # Work log
 
+## 2026-11-15 21:46 — Promote attendance dashboard, Asia/Damascus (UTC+03:00)
+
+**Candidate/result:** PR #33 passed required Verify, CodeQL and security checks on `b56923c`, with no comments or reviews outstanding, and squash-merged to nightly as `e52d95e`. Its complete tree exactly matched the locally verified candidate. Created `release/attendance-dashboard`, merged nightly ancestry normally, and retained that tree; this promotion adds only this log note. The stable diff against main contains the requested dashboard, Administrator resets and SheetDB retirement. Stable CI and actual Railway deployment proof remain required before claiming publication.
+
+**Stable local gate:** Repeated `bun run verify:release` successfully: 16 unit tests, one explicitly skipped disposable-database test, all 54 desktop/mobile browser cases, build/artifact, formatting, file/history security scans and clean dependency audit. No checks were bypassed; the separate real Railway reset evidence remains recorded above.
+
 ## 2026-11-15 21:44 — Candidate history integration, Asia/Damascus (UTC+03:00)
 
 **Reason/result:** Candidate PR #33 exposed duplicate squash-history conflicts with older nightly. Merged nightly ancestry normally and retained the already-reviewed Railway/dashboard tree for every obsolete runtime/document conflict. Recovered nightly's unique 2026-11-13 21:47 public-proof note verbatim below. Before this log-only addition, the resolved index exactly matched verified `b6dabec`; no current or unrelated application work was discarded. Candidate CI remains required before promotion.
