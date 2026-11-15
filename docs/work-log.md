@@ -1,5 +1,15 @@
 # Work log
 
+## 2026-11-15 22:44 — Keep role management in Settings, Asia/Damascus (UTC+03:00)
+
+**Request/reason:** Owner repeated the desired attendance home with Take attendance, fuzzy names/group accordions, Add student and charts, requested moving roles to Settings, and explicitly authorized deployment. Started clean on deployed main `c5f56ee`; those dashboard controls were already implemented and deployed. Created `fix/home-settings-navigation` without a worktree. Terra implemented the bounded navigation/test correction; the orchestrator reviewed and owns documentation, release gates, commits and publication.
+
+**Changes:** The Administrator gear and destination now say Settings in English/Arabic and use `view=settings`; existing `view=administration` links remain compatible. Dedicated student creation has a Students heading and keeps account/role forms hidden after cancel or save, fixing their unintended reappearance. Default dashboard, fuzzy/grouped attendance, charts, compact icon layout, server authorization and student privacy remain intact. Updated behavior docs and the affected verification map.
+
+**Verification/limits:** Focused desktop/mobile role scenarios passed 4/4, including default dashboard, Settings and legacy links, localized gear labels, student creation/cancel and account-form separation. Reviewed the complete source/test diff and role guards. Integrated release gate and CI/publication follow before claiming this correction is live. No real account or roster mutation is needed for this UI correction. Prior native PWA installation limits remain unchanged.
+
+**Release gate:** `bun run verify:release` passed 16 unit tests (one disposable-database test explicitly skipped), all 54 desktop/mobile cases, lint, build/artifact, formatting, file/history secret scans and clean dependency audit. No checks were bypassed. This correction to the published UI proceeds through the protected main PR/CI gate; new feature behavior is already in the deployed baseline.
+
 ## 2026-11-15 21:55 — Published dashboard proof and Arabic demo copy, Asia/Damascus (UTC+03:00)
 
 **Publication:** PR #34 passed required Verify, CodeQL and security checks on `4ce3109`, with no comments or reviews outstanding, and squash-merged to main `f9029fa`. Main Validation passed and Railway deployment `34959bc8-5d0c-41f3-98f3-43db8b4d0317` succeeded, including its database-backed health check. The verified promotion tree exactly matched main.
