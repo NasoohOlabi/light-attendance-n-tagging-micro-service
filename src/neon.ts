@@ -1,4 +1,4 @@
-import { createAuthClient } from 'better-auth/react'
+﻿import { createAuthClient } from 'better-auth/react'
 import { z } from 'zod'
 import {
   neonAccountSchema,
@@ -9,7 +9,7 @@ import {
 import type { LedgerEvent } from '../shared/ledger'
 
 export const apiUrl = window.location.origin
-export const authClient = import.meta.env.MODE === 'verification' ? null : createAuthClient()
+export const authClient = createAuthClient()
 
 export class NeonRequestError extends Error {
   constructor(public status: number) {

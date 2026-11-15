@@ -1,44 +1,16 @@
 ---
 name: verify-halaqa
-description: Verify the Halaqa notebook teacher web UI and local access manager after attendance, note, roster, correction, access or delivery changes; launch the production build, drive desktop/mobile Playwright paths and retain proof.
+description: Verify the Halaqa notebook UI after attendance, note, roster, correction, access or delivery changes using desktop and mobile browser paths.
 ---
 
 # Verify Halaqa
 
-Railway is the current backend: read [Railway setup](../../../docs/railway-setup.md) for the same-origin Bun/Better Auth/Postgres boundary. `bun run verify:ui` builds verification mode and runs the synthetic desktop/mobile suite, including the historically named `e2e/neon.spec.ts`. It does not contact live Auth. For real sessions run the built app through `bun run start`, rather than Vite preview. `TEST_RAILWAY_DATABASE_URL` enables `tests/railway-integration.test.ts` against a migrated disposable database; never point it at production. The Neon live harness below is historical and is not the Railway verification path.
+Read root `AGENTS.md` and the affected entries in [features/README.md](features/README.md). Run from the repository root in PowerShell. Use synthetic data for recorded evidence; never record real identities, records or credentials.
 
-When explicitly verifying real Neon services, start that configured preview separately on port 4173 and run `bun run verify:neon:live`. This harness uses synthetic accounts/records only, disables tracing, tests signed authentication and actual database persistence/authorization, then removes its fixtures. Retain only sanitized `.artifacts/verification/neon-live.json` and its synthetic screenshot; private cleanup state stays in `.local`. Never run the live harness simultaneously with another live harness or the preview-owning Playwright suite.
+1. Install dependencies with `bun install --frozen-lockfile`, configure hooks with `bun run setup:security`, and install Chromium with `bunx playwright install chromium` when needed.
+2. Run `bun run verify` and `bun run verify:ui`. The UI harness builds verification mode, launches its own preview on port 4173, and refuses to reuse an existing server. If that port is occupied, preserve the process and set `$env:PLAYWRIGHT_PORT='4273'` before running. On Windows, put the real Bun runtime directory first in PATH if its shim causes child-process issues.
+3. Drive the affected user controls and assert resulting state and side effects described in the feature map. The historically named `e2e/neon.spec.ts` and `e2e/roles.spec.ts` intercept synthetic same-origin `/api/auth` and `/api` routes; they do not contact live Auth. Preserve synthetic `.artifacts/playwright-report/`, test results and relevant screenshots. Do not claim native installation from simulated prompt tests.
+4. For real sessions, run the built app with `bun run server/index.ts` against a configured disposable database. `TEST_RAILWAY_DATABASE_URL` enables `tests/railway-integration.test.ts` against a migrated disposable database only. Live provider checks use synthetic accounts and records, disable tracing and clean up fixtures; see [Railway setup](../../../docs/railway-setup.md).
+5. Confirm the report and artifact checks passed. Playwright tears down its preview and contexts; after interruption stop only processes started by this run and preserve evidence. Report failures and any unverified live or physical-device behavior.
 
-Run from the repository root in PowerShell. Read root `AGENTS.md`, then only the affected entries in [features/README.md](features/README.md). The teacher UI is primary; the loopback manager is a second surface. Production SheetDB/account credentials are unnecessary and must not enter artifacts.
-
-## Launch
-
-Install once with `bun install --frozen-lockfile`, `bun run setup:security` and `bunx playwright install chromium`. Build with `bun run verify`. The harness `bun run verify:ui` launches `bun run preview -- --port 4173 --strictPort` at `http://127.0.0.1:4173/`, waits for HTTP readiness, creates isolated browser contexts and stops its server when done. It refuses to reuse a running server. Do not run a separate preview first.
-
-Use `bun run manager` only for a deliberate local owner session; default `http://127.0.0.1:4174/` stores real profiles in ignored `.local`. Automated manager verification is `bun test ./tests/manager.test.ts`: it starts its own child on port 0, sets `MANAGER_DIRECTORY` to a unique temporary directory, checks real HTTP/CSRF/restart behavior and kills only that child. Never double-drive the owner's manager or use its directory for tests.
-
-## Doctor
-
-Run `bun run check:artifact` to read/check the built teacher artifact, its relative asset paths and security policies. Run `bunx playwright test --list` to confirm both desktop and mobile projects and mapped scenarios are discoverable. On startup trouble, inspect `Get-NetTCPConnection -LocalPort 4173 -State Listen -ErrorAction SilentlyContinue`: an existing listener means stop this attempt, identify its owner and choose a separate explicit port/config before driving; never kill an unrelated process. `bun run verify` is the clean rebuild if artifact checks fail. Browser console/page errors fail the harness, except the deliberately simulated failed SheetDB response.
-
-On Windows with a Chocolatey Bun shim, run checks/hooks with the real runtime directory first in this PowerShell session's PATH: `$verificationRuntime = (bun --print 'process.execPath').Trim(); $env:Path = (Split-Path -Parent $verificationRuntime) + ';' + $env:Path`. The shim can leave child manager processes behind when its wrapper is terminated. Preserve pre-existing processes; stop only exact children whose ownership you recorded. If high-concurrency Chromium runs crash, retain the failure report and rerun the complete UI suite with `bun run verify:ui --workers=2`; record both outcomes.
-
-## Drive
-
-Run `bun run verify:ui --project=chromium --grep 'sample notebook'` for a quick one-feature proof, or `bun run verify:ui` for all desktop/mobile scenarios. `e2e/notebook.spec.ts` uses the real rendered controls: **Explore with sample students**, **Students**, **Student name**, **Add student**, **Attendance for ليلى**, **Save attendance (1)**, **Notes**, **Tags, separated by commas**, **Save note**, **Filter tag**, **History & corrections**, **Undo**, **Reason**, **Append correction**. Use the feature map for other entry points and resulting side effects.
-
-Synthetic provider tests intercept only the existing external `https://sheetdb.io/**` boundary. They open an actual fragment access link with a generated test token, click real forms, inspect GET/POST + RAW bodies, retain submitted IDs, deliberately lose a response, retry and prove one logical record. Storage corruption/write denial and competing tabs must prevent additional POSTs. No internal React setter or test-only application endpoint is used.
-
-## Evidence
-
-Proof must include the action and resulting state, plus side effects. The suite asserts real student/attendance/note/correction changes, original history retention, zero external demo requests and actual captured synthetic append bodies/IDs. Unit projection tests alone are insufficient UI proof. Only provider HTTP is simulated; local browser, storage, manager and build are real. Live provider permissions/CORS/revocation remain the separate unrun A1–A7 matrix in `docs/implementation-plan.md`.
-
-Retain `.artifacts/playwright-report/index.html`, `.artifacts/test-results/` traces and `.artifacts/verification/notebook.png`. The screenshot is from the synthetic Arabic note flow, not real student data. Traces preserve actions/assertions and synthetic traffic; never run these recording settings with production tokens. All artifacts are ignored by Git. CI uploads the synthetic HTML report for seven days. Run `Test-Path .artifacts/verification/notebook.png` after teardown and read the report result; screenshots alone do not prove a flow passed.
-
-## Cleanup
-
-Playwright tears down its own preview child and browser contexts on pass or failure. Manager tests kill their exact spawned PID and remove their unique scratch directory in `finally`. Re-run cleanup after failed attempts; if a runner is interrupted, stop only the process tree whose PID/session you started. Never kill by process name. Do not delete `.artifacts` or browser reports during cleanup: evidence survives. Default manager state is never touched by automated verification.
-
-## Helpers
-
-`bun run verify` runs the unit/HTTP tests, lint, strict checks, production build and `scripts/check-artifact.ts`. `bun run verify:ui` runs `playwright.config.ts` + `e2e/notebook.spec.ts`; no helper requires manual interpretation. `bun run verify:release` adds formatting, full-history secrets and dependency audit. Future feature work updates the map and harness; use `maintain-verification-skill` when auditing their accuracy.
+`bun run verify:release` adds formatting, security/history, browser and dependency checks before stable promotion. Synthetic browser and database checks do not prove live provider behavior.

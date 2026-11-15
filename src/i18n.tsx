@@ -10,9 +10,6 @@ const arabic = {
   'Your halaqa, one shared notebook.': 'حلقتك، دفتر مشترك واحد.',
   'Record attendance. Leave a note. Keep the next teacher in the loop.':
     'سجّل الحضور واترك ملاحظة ليبقى المعلم التالي على اطلاع.',
-  'Open your personal access link': 'افتح رابط الوصول الشخصي',
-  'Your manager sends you a link with your name and access. Keep it somewhere private and open it whenever you return.':
-    'يرسل إليك المسؤول رابطاً باسمك وصلاحياتك. احتفظ به في مكان خاص وافتحه عند العودة.',
   'الحضور والملاحظات · Arabic names, notes and tags are supported.':
     'الحضور والملاحظات · الأسماء والملاحظات والوسوم العربية مدعومة.',
   'Halaqa notebook': 'دفتر الحلقة',
@@ -22,8 +19,8 @@ const arabic = {
   'Close session': 'إغلاق الجلسة',
   'Assigned teacher sample notebook.': 'دفتر تجريبي للمعلم المعيّن.',
   'Sample notebook.': 'دفتر تجريبي.',
-  'Changes stay in memory and disappear when you leave. No SheetDB requests are made.':
-    'تبقى التغييرات في الذاكرة وتختفي عند المغادرة. لا تُرسل طلبات إلى SheetDB.',
+  'Changes stay in memory and disappear when you leave. No server requests are made.':
+    'تبقى التغييرات في الذاكرة وتختفي عند المغادرة. لا تُرسل طلبات إلى ??????.',
   Notebook: 'الدفتر',
   Attendance: 'الحضور',
   Notes: 'الملاحظات',
@@ -116,24 +113,14 @@ const arabic = {
   'Your account has write-only access. The notebook requires read access; contact your manager.':
     'حسابك يسمح بالكتابة فقط. يتطلب الدفتر صلاحية القراءة؛ تواصل مع المسؤول.',
   'Create an account': 'إنشاء حساب',
-  'Reset password': 'إعادة تعيين كلمة المرور',
   Email: 'البريد الإلكتروني',
   Password: 'كلمة المرور',
   'Please wait…': 'يرجى الانتظار…',
   'Create account': 'إنشاء حساب',
-  'Send reset email': 'إرسال رسالة إعادة التعيين',
   'Update password': 'تحديث كلمة المرور',
   'Sign in': 'تسجيل الدخول',
-  'Forgot password?': 'هل نسيت كلمة المرور؟',
   'Your manager must approve your account before you can open the notebook.':
     'يجب أن يوافق المسؤول على حسابك قبل فتح الدفتر.',
-  'Unable to request a reset. Please try again.': 'تعذر طلب إعادة التعيين. حاول مجدداً.',
-  'Password reset is unavailable. Contact your manager.':
-    'إعادة تعيين كلمة المرور غير متاحة. تواصل مع المسؤول.',
-  'If the account exists, a password reset email has been sent.':
-    'إذا كان الحساب موجوداً فقد أُرسلت رسالة لإعادة تعيين كلمة المرور.',
-  'Unable to reset your password. Request a new link.':
-    'تعذرت إعادة تعيين كلمة المرور. اطلب رابطاً جديداً.',
   'Password updated. Please sign in.': 'تم تحديث كلمة المرور. سجّل الدخول.',
   'Invalid email or password. Check your details and try again.':
     'البريد الإلكتروني أو كلمة المرور غير صحيحين. تحقق من بياناتك وحاول مجدداً.',
@@ -153,48 +140,33 @@ const arabic = {
     'هذا السجل خارج قائمة طلابك النشطين المعيّنين.',
   'The request failed.': 'فشل الطلب.',
   'Your account has read-only access.': 'حسابك للقراءة فقط.',
-  'Open your access link first.': 'افتح رابط الوصول أولاً.',
   'This browser cannot safely coordinate saves between tabs. Use a current browser with Web Locks support.':
     'لا يمكن لهذا المتصفح تنسيق الحفظ بأمان بين علامات التبويب. استخدم متصفحاً حديثاً يدعم Web Locks.',
-  'A pending batch belongs to another access link. Reopen that link and reconcile it before saving here.':
+  'A pending batch belongs to another account or an old link. Copy the pending batch from browser storage and contact your administrator to reconcile it before saving.':
     'توجد دفعة معلّقة لرابط وصول آخر. افتح ذلك الرابط وسوّها قبل الحفظ هنا.',
   'Pending storage is unavailable or a saved batch is corrupted. Keep a copy of browser storage and ask the manager for help before saving.':
     'التخزين المعلّق غير متاح أو أن دفعة محفوظة تالفة. احتفظ بنسخة من تخزين المتصفح واطلب المساعدة من المسؤول قبل الحفظ.',
-  'Another tab is saving this access link. Wait for it to finish, then refresh and try again. No write was sent from this tab.':
+  'Another tab is saving this account. Wait for it to finish, then refresh and try again. No write was sent from this tab.':
     'تقوم علامة تبويب أخرى بالحفظ. انتظر انتهاءها ثم حدّث وحاول مجدداً. لم تُرسل كتابة من علامة التبويب هذه.',
-  'Another pending batch exists for this link. Reload and reconcile it before saving.':
+  'Another pending batch exists for this account. Reload and reconcile it before saving.':
     'توجد دفعة معلّقة أخرى لهذا الرابط. أعد التحميل وسوّها قبل الحفظ.',
   'Could not persist the pending batch. No write was sent; restore browser storage before saving.':
     'تعذر حفظ الدفعة المعلّقة. لم تُرسل كتابة؛ أصلح تخزين المتصفح قبل الحفظ.',
   'A pending ID conflicts with a saved record. Ask the manager to inspect it before retrying.':
     'يتعارض معرّف معلّق مع سجل محفوظ. اطلب من المسؤول فحصه قبل إعادة المحاولة.',
-  'A pending ID conflicts with a sheet record. Ask the manager to inspect it before retrying.':
-    'يتعارض معرّف معلّق مع سجل في الجدول. اطلب من المسؤول فحصه قبل إعادة المحاولة.',
-  'Another tab is saving this access link. Wait for it to finish before discarding.':
+  'Another tab is saving this account. Wait for it to finish before discarding.':
     'تقوم علامة تبويب أخرى بالحفظ. انتظر انتهاءها قبل الإلغاء.',
   'The pending batch changed in another tab. Reload before discarding.':
     'تغيرت الدفعة المعلّقة في علامة تبويب أخرى. أعد التحميل قبل الإلغاء.',
-  'This link is invalid or session storage is unavailable. Reopen it in a regular browser window, or ask the manager for a new link.':
-    'الرابط غير صالح أو تخزين الجلسة غير متاح. أعد فتحه في نافذة متصفح عادية أو اطلب رابطاً جديداً من المسؤول.',
-  'Session storage is unavailable or invalid. Reopen your access link.':
-    'تخزين الجلسة غير متاح أو غير صالح. أعد فتح رابط الوصول.',
-  'Stop retrying this batch? It may already exist in the sheet. Refresh and inspect history before entering it again.':
+  'Stop retrying this batch? It may already exist on the server. Refresh and inspect history before entering it again.':
     'هل تريد إيقاف إعادة محاولة هذه الدفعة؟ قد تكون موجودة في الجدول. حدّث وافحص السجل قبل إدخالها مجدداً.',
-  'The save may already have reached the sheet. Retry the same pending batch to avoid counting it twice.':
+  'The save may already have reached the server. Retry the same pending batch to avoid counting it twice.':
     'قد يكون الحفظ وصل إلى الجدول بالفعل. أعد محاولة الدفعة نفسها لتجنب احتسابها مرتين.',
   'Skip to main content': 'انتقل إلى المحتوى الرئيسي',
-  'Retry reuses their original IDs. Even if a request reached the sheet twice, summaries count each record once.':
+  'Retry reuses the original IDs, so each record is counted once.':
     'تعيد المحاولة استخدام المعرّفات الأصلية. حتى إذا وصل الطلب إلى الجدول مرتين، يحسب الملخص كل سجل مرة واحدة.',
-  'Undo appends a correction. The original stays in the sheet. Undoing the latest attendance restores the previous status.':
+  'Undo appends a correction. The original stays in the record. Undoing the latest attendance restores the previous status.':
     'يضيف التراجع تصحيحاً ويبقى الأصل في الجدول. يعيد التراجع عن أحدث حضور الحالة السابقة.',
-  'SheetDB could not be reached. Check your connection and the endpoint CORS settings.':
-    'تعذر الوصول إلى SheetDB. تحقق من الاتصال وإعدادات CORS للنقطة.',
-  'This link has lost access, or the endpoint permissions are incorrect. Ask the manager for a replacement.':
-    'فقد هذا الرابط صلاحية الوصول أو أن صلاحيات النقطة غير صحيحة. اطلب رابطاً بديلاً من المسؤول.',
-  'Events sheet headers do not match. Open the setup guide before submitting records.':
-    'عناوين جدول الأحداث غير متطابقة. افتح دليل الإعداد قبل إرسال السجلات.',
-  'SheetDB did not confirm every row. Keep this batch and retry after checking the sheet.':
-    'لم يؤكد SheetDB جميع الصفوف. احتفظ بالدفعة وأعد المحاولة بعد فحص الجدول.',
   'Duplicate student ID in roster': 'معرّف طالب مكرر في القائمة',
   'Conflicting teacher names in roster': 'أسماء معلمين متعارضة في القائمة',
 }
@@ -232,28 +204,15 @@ export function useLanguage() {
   const t = (text: TranslationKey) => (language === 'ar' ? arabic[text] : text)
   const errorMessage = (message: string) => {
     const warning =
-      ' The save may already have reached the sheet. Retry the same pending batch to avoid counting it twice.'
+      ' The save may already have reached the server. Retry the same pending batch to avoid counting it twice.'
     const hasWarning = message.endsWith(warning)
     const base = hasWarning ? message.slice(0, -warning.length) : message
     const known = Object.entries(arabic).find(([key]) => key === base)
-    let result = known ? (language === 'ar' ? known[1] : base) : t('The request failed.')
-    const rate =
-      /^SheetDB request limit reached\. Wait at least (\d+) seconds before retrying\.$/.exec(base)
-    const status = /^SheetDB returned (\d+)\. Check the endpoint and Events tab\.$/.exec(base)
-    if (rate)
-      result =
-        language === 'ar'
-          ? `تم بلوغ حد طلبات SheetDB. انتظر ${rate[1]} ثانية على الأقل قبل إعادة المحاولة.`
-          : base
-    else if (base === 'SheetDB request limit reached. Wait before retrying.')
-      result = language === 'ar' ? 'تم بلوغ حد طلبات SheetDB. انتظر قبل إعادة المحاولة.' : base
-    else if (status)
-      result =
-        language === 'ar' ? `أرجع SheetDB الرمز ${status[1]}. تحقق من النقطة وجدول الأحداث.` : base
+    const result = known ? (language === 'ar' ? known[1] : base) : t('The request failed.')
     return (
       result +
       (hasWarning
-        ? ` ${t('The save may already have reached the sheet. Retry the same pending batch to avoid counting it twice.')}`
+        ? ` ${t('The save may already have reached the server. Retry the same pending batch to avoid counting it twice.')}`
         : '')
     )
   }

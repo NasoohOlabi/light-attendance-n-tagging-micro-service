@@ -1,47 +1,9 @@
-# Wartaq — Halaqa notebook
+# Wartaq attendance notebook
 
-An attendance and tagged-note notebook with React/TypeScript, a Bun server, self-hosted Better Auth and Railway Postgres. Four application tables hold accounts, teachers, students and events. Read [Railway setup](docs/railway-setup.md) for deployment and migration; the Neon runbook below is historical.
+A React/TypeScript notebook served by Bun with Better Auth and Railway Postgres. Administrators approve accounts and manage assignments; Teachers work with assigned students; Students see only their own attendance. Signup grants no application role. See [roles](docs/roles.md), [assigned roster](docs/assigned-roster.md) and [security](SECURITY.md).
 
-Users sign up/sign in, then an Administrator approves their application role. Administrators manage other accounts and roster assignments; Teachers see their assigned students and related notebook; Students can only read their own attendance. The API checks role, identity, active state and expiry on every request, plus Teacher assignment/read-write mode. Signup cannot self-approve or choose a role. The first Administrator is granted through private CLI input. The old/former source flag remains ignored when importing assigned students. See [role permissions](docs/roles.md) and [Neon setup](docs/neon-setup.md) for provisioning and verification.
+Choose **Explore with sample students** to try the notebook without an account. English and Arabic interfaces support responsive and right-to-left layouts. The notebook opens on a dashboard with attendance charts and actions to take attendance or add a student. Administrators and sample users can add students; **Administration** opens account and roster management.
 
-[Wartaq homepage](https://light-attendance-n-tagging-micro-service-production.up.railway.app/) · [Open the app](https://light-attendance-n-tagging-micro-service-production.up.railway.app/?page=app) · [Public source](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service)
+Install dependencies with `bun install --frozen-lockfile` and run `bun run dev` for the public shell and sample. For authenticated local use, configure a disposable database and run the built app through Bun as described in [Railway setup](docs/railway-setup.md). Run `bun run verify` for repository checks and `bun run verify:ui` for synthetic browser checks. [Verification guidance](.agents/skills/verify-halaqa/SKILL.md) describes coverage and limits.
 
-The public root homepage showcases the Quran recitation course, learning outcomes and draft curriculum, with clearly marked placeholders for teachers, schedule/location and enrollment details. It does not accept course registrations yet. **Sign in** opens the separate app at `?page=app`, where an existing managed session resumes automatically. Signing out returns home. Plain root visits stay on the public homepage even with a stored legacy session; fresh private links still open their notebook directly at the app entry. Both pages use the selected Midad identity and self-hosted fonts; the teacher workspace has five labelled phone destinations in a safe-area-aware bottom bar.
-
-Choose **Install Wartaq / تثبيت وارتق** to install the PWA or view browser-specific instructions. The installed app opens the signed-in app entry; the public shell/sample can open offline, while real account and notebook access require a connection. See [installation, caching and update behavior](docs/pwa.md).
-
-Choose **Explore with sample students** to review attendance, Arabic-capable notes and append-only corrections without a provider account. Legacy SheetDB links remain compatible; their broader capability limitations do not apply to the authenticated server API.
-
-Use **English / العربية** to switch the complete teacher interface, including sign-in and feedback. Arabic uses right-to-left layout; your language choice is remembered when browser storage is available. The local manager has its own language switch. See the [mobile and language audit](docs/mobile-and-languages.md) for behavior, verification and device limits.
-
-## Run and verify
-
-Midad (B) is the selected design. The earlier `/?design=a` and `/?design=b` review samples remain isolated references; they never open accounts or save production data. See the [design system](docs/wartaq-design-system.md) for component ownership and entry behavior.
-
-```powershell
-bun install --frozen-lockfile
-bun run setup:security
-bunx playwright install chromium
-bun run dev       # http://127.0.0.1:5173/
-bun run verify:release
-```
-
-Railway stores database and signing credentials server-side. Auth and notebook calls use the site origin; no provider endpoints or credentials are bundled. For real local login run the built app through `bun run start` with private server variables. Offline samples and synthetic checks need no real account. The legacy manager remains available through `bun run manager`. See [security](SECURITY.md).
-
-## Direction and tasks
-
-- [Implementation plan and task list](docs/implementation-plan.md): completed work, live-account gates and bounded follow-ups.
-- [Specification](docs/specification.md): T1–T12 teacher acceptance, manager requirements and trust limits.
-- [Architecture](docs/architecture.md): event order, retries, projections and extension points.
-- [Feasibility](docs/feasibility.md), [provider research](docs/sheetdb-research.md), [agent access](docs/agent-access.md): supported capabilities versus unverified provider behavior.
-- [Contributor/Git workflow](CONTRIBUTING.md), [agent instructions](AGENTS.md), [releases](docs/releases.md), [verification skill](.agents/skills/verify-halaqa/SKILL.md), [work log](docs/work-log.md).
-
-`main` publishes stable Railway after release checks; Pages publishing is retired. `nightly` produces tested candidate artifacts and never deploys the stable site. Every new feature is assigned to Terra with explicit file ownership; the orchestrator reviews and commits coherent units.
-
-## Data and security
-
-Writes append versioned events; corrections reference originals, projections follow database sequence order, and event primary keys prevent duplicate physical rows. Conflicting reused IDs are rejected. Pending batches retain IDs through uncertain delivery and use browser Web Locks to coordinate tabs. External data is validated with Zod.
-
-Neon authorizes application roles server-side; users cannot self-approve or impersonate another teacher. Only Administrators manage the canonical roster through the API. Students never receive notes or raw ledger history. The legacy SheetDB integration retains its original trusted-attribution limits. Never commit personal records or credentials.
-
-History preserves the authorized original-source snapshot `f6fee1d` (including pre-existing work of unknown authorship) and stopped prototype `2d8fbe5`. Implementation/publication was newly authorized on 2026-11-13. The original Firebase app and production data are not migrated or deployed by this fork.
+[Architecture](docs/architecture.md) documents event ordering, corrections and delivery. [Specification](docs/specification.md), [PWA](docs/pwa.md), [mobile and languages](docs/mobile-and-languages.md), and [releases](docs/releases.md) cover the remaining behavior. Keep credentials and real records outside Git.

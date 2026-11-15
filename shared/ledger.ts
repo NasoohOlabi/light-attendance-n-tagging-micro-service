@@ -47,7 +47,6 @@ export type Payload = z.infer<typeof payloadSchema>
 export type Student = z.infer<typeof studentSchema>
 export type Attendance = z.infer<typeof attendanceSchema>
 export type Status = z.infer<typeof statusSchema>
-export const HEADERS = ['id', 'actor', 'client_time', 'received_at', 'payload']
 export function makeEvent(actor: string, payload: Payload): LedgerEvent {
   return eventSchema.parse({
     id: crypto.randomUUID(),
@@ -56,50 +55,6 @@ export function makeEvent(actor: string, payload: Payload): LedgerEvent {
     receivedAt: '',
     payload,
   })
-}
-export function eventToRow(event: LedgerEvent) {
-  return {
-    id: event.id,
-    actor: event.actor,
-    client_time: event.clientTime,
-    received_at: 'DATETIME',
-    payload: JSON.stringify({ version: 1, ...event.payload }),
-  }
-}
-const rowSchema = z.object({
-  id: z.string(),
-  actor: z.string(),
-  client_time: z.string(),
-  received_at: z.string(),
-  payload: z.string(),
-})
-export function parseRows(input: unknown): { events: LedgerEvent[]; invalid: number } {
-  const rows = z.array(z.unknown()).parse(input)
-  const events: LedgerEvent[] = []
-  let invalid = 0
-  for (const raw of rows) {
-    try {
-      const row = rowSchema.parse(raw)
-      const payload: unknown = JSON.parse(row.payload)
-      const versioned = z
-        .object({ version: z.literal(1).optional() })
-        .passthrough()
-        .parse(payload)
-      const { version: _version, ...body } = versioned
-      events.push(
-        eventSchema.parse({
-          id: row.id,
-          actor: row.actor,
-          clientTime: row.client_time,
-          receivedAt: row.received_at,
-          payload: body,
-        }),
-      )
-    } catch {
-      invalid += 1
-    }
-  }
-  return { events, invalid }
 }
 export function projectEvents(events: LedgerEvent[]) {
   const unique = new Map<string, LedgerEvent>()

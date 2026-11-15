@@ -23,24 +23,15 @@ function AuthHeader() {
 export function NeonAuth({
   children,
   samples,
-  initialResetToken,
   onSignOut,
-  onResetComplete,
 }: {
-  initialResetToken?: string
   onSignOut: () => void
-  onResetComplete: () => void
   samples: React.ReactNode
   children: (userId: string, teacher: NeonAccount, signOut: () => void) => React.ReactNode
 }) {
   if (!authClient) return null
   return (
-    <ConfiguredAuth
-      samples={samples}
-      initialResetToken={initialResetToken}
-      onSignOut={onSignOut}
-      onResetComplete={onResetComplete}
-    >
+    <ConfiguredAuth samples={samples} onSignOut={onSignOut}>
       {children}
     </ConfiguredAuth>
   )
@@ -49,26 +40,20 @@ export function NeonAuth({
 function ConfiguredAuth({
   children,
   samples,
-  initialResetToken,
   onSignOut,
-  onResetComplete,
 }: {
-  initialResetToken?: string
   onSignOut: () => void
-  onResetComplete: () => void
   samples: React.ReactNode
   children: (userId: string, teacher: NeonAccount, signOut: () => void) => React.ReactNode
 }) {
-  const { t, errorMessage } = useLanguage()
+  const { t, errorMessage, language } = useLanguage()
   // The parent only renders this component when the client exists.
   const client = authClient!
   const session = client.useSession()
   const userId = session.data?.user.id
   const [teacher, setTeacher] = useState<{ userId: string; value: NeonAccount } | null>(null)
   const [approval, setApproval] = useState<{ userId: string; message: string } | null>(null)
-  const [mode, setMode] = useState<'sign-in' | 'sign-up' | 'forgot' | 'reset'>(() =>
-    initialResetToken ? 'reset' : 'sign-in',
-  )
+  const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -205,31 +190,16 @@ function ConfiguredAuth({
           setBusy(true)
           setError('')
           try {
-            if (mode === 'forgot') {
-              setError('Password reset is unavailable. Contact your manager.')
-            } else if (mode === 'reset') {
-              const token = initialResetToken
-              if (!token) throw new Error()
-              const result = await client.resetPassword({ newPassword: password, token })
-              if (result.error) setError('Unable to reset your password. Request a new link.')
-              else {
-                window.history.replaceState(null, '', window.location.pathname + '?page=app')
-                onResetComplete()
-                setMode('sign-in')
-                setError('Password updated. Please sign in.')
-              }
-            } else {
-              const result =
+            const result =
+              mode === 'sign-in'
+                ? await client.signIn.email({ email, password })
+                : await client.signUp.email({ name, email, password })
+            if (result.error)
+              setError(
                 mode === 'sign-in'
-                  ? await client.signIn.email({ email, password })
-                  : await client.signUp.email({ name, email, password })
-              if (result.error)
-                setError(
-                  mode === 'sign-in'
-                    ? 'Invalid email or password. Check your details and try again.'
-                    : 'Unable to create the account. Check your details and try again.',
-                )
-            }
+                  ? 'Invalid email or password. Check your details and try again.'
+                  : 'Unable to create the account. Check your details and try again.',
+              )
           } catch (cause) {
             const failure = z.object({ error: z.object({ status: z.number() }) }).safeParse(cause)
             setError(
@@ -242,13 +212,7 @@ function ConfiguredAuth({
           }
         }}
       >
-        <h2 className="title">
-          {mode === 'sign-up'
-            ? t('Create an account')
-            : mode === 'forgot' || mode === 'reset'
-              ? t('Reset password')
-              : t('Sign in')}
-        </h2>
+        <h2 className="title">{mode === 'sign-up' ? t('Create an account') : t('Sign in')}</h2>
         {mode === 'sign-up' && (
           <label>
             {t('Name')}
@@ -262,50 +226,36 @@ function ConfiguredAuth({
             />
           </label>
         )}
-        {mode !== 'reset' && (
-          <label>
-            {t('Email')}
-            <input
-              required
-              type="email"
-              dir="ltr"
-              autoCapitalize="none"
-              spellCheck={false}
-              inputMode="email"
-              enterKeyHint={mode === 'forgot' ? 'go' : 'next'}
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
-        )}
-        {mode !== 'forgot' && (
-          <label>
-            {t('Password')}
-            <input
-              required
-              type="password"
-              dir="ltr"
-              enterKeyHint="go"
-              autoComplete={
-                mode === 'sign-up' || mode === 'reset' ? 'new-password' : 'current-password'
-              }
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
-        )}
+        <label>
+          {t('Email')}
+          <input
+            required
+            type="email"
+            dir="ltr"
+            autoCapitalize="none"
+            spellCheck={false}
+            inputMode="email"
+            enterKeyHint="next"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </label>
+        <label>
+          {t('Password')}
+          <input
+            required
+            type="password"
+            dir="ltr"
+            enterKeyHint="go"
+            autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
         {error && <p role="alert">{errorMessage(error)}</p>}
         <button className="primary" disabled={busy || session.isPending || Boolean(session.error)}>
-          {busy
-            ? t('Please wait…')
-            : mode === 'sign-up'
-              ? t('Create account')
-              : mode === 'forgot'
-                ? t('Send reset email')
-                : mode === 'reset'
-                  ? t('Update password')
-                  : t('Sign in')}
+          {busy ? t('Please wait…') : mode === 'sign-up' ? t('Create account') : t('Sign in')}
         </button>
         <div className="flex flex-wrap gap-2">
           <button
@@ -318,17 +268,14 @@ function ConfiguredAuth({
           >
             {mode === 'sign-up' ? t('Sign in') : t('Create account')}
           </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              setMode('forgot')
-              setError('')
-            }}
-          >
-            {t('Forgot password?')}
-          </button>
         </div>
+        {mode === 'sign-in' && (
+          <p className="muted">
+            {language === 'ar'
+              ? 'تواصل مع المسؤول لإعادة تعيين كلمة المرور.'
+              : 'Contact your administrator to reset your password.'}
+          </p>
+        )}
         {mode === 'sign-up' && (
           <p className="muted">
             {t('Your manager must approve your account before you can open the notebook.')}

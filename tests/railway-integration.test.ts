@@ -8,6 +8,8 @@ const integration = databaseUrl ? test : test.skip
 let server: ReturnType<typeof Bun.spawn> | undefined
 let pool: Pool | undefined
 let userId = ''
+let adminId = ''
+const adminTeacherId = crypto.randomUUID()
 const teacherId = crypto.randomUUID()
 const studentId = crypto.randomUUID()
 const origin = 'http://127.0.0.1:39377'
@@ -22,6 +24,11 @@ afterAll(async () => {
     await pool.query('DELETE FROM app_accounts WHERE auth_user_id = $1', [userId])
     await pool.query('DELETE FROM neon_auth."user" WHERE id = $1', [userId])
   }
+  if (adminId) {
+    await pool.query('DELETE FROM app_accounts WHERE auth_user_id = $1', [adminId])
+    await pool.query('DELETE FROM neon_auth."user" WHERE id = $1', [adminId])
+  }
+  await pool.query('DELETE FROM teachers WHERE id = $1', [adminTeacherId])
   await pool.query('DELETE FROM students WHERE id = $1', [studentId])
   await pool.query('DELETE FROM teachers WHERE id = $1', [teacherId])
   await pool.end()
@@ -97,6 +104,17 @@ integration(
     expect((await fetch(`${origin}/api/student/attendance`, { headers })).status).toBe(200)
     expect((await fetch(`${origin}/api/notebook`, { headers })).status).toBe(403)
     expect((await fetch(`${origin}/api/admin`, { headers })).status).toBe(403)
+    const deniedReset = () =>
+      fetch(`${origin}/api/admin/accounts/reset-password`, {
+        method: 'POST',
+        headers: { ...headers, origin, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          authUserId: crypto.randomUUID(),
+          password,
+          passwordConfirmation: password,
+        }),
+      })
+    expect((await deniedReset()).status).toBe(403)
     await pool.query(
       "UPDATE app_accounts SET role = 'teacher', student_id = NULL, teacher_id = $2 WHERE auth_user_id = $1",
       [userId, teacherId],
@@ -121,6 +139,7 @@ integration(
     ])
     expect(z.object({ count: z.literal(1) }).safeParse(stored.rows[0]).success).toBe(true)
     expect((await fetch(`${origin}/api/notebook`, { headers })).status).toBe(200)
+    expect((await deniedReset()).status).toBe(403)
     await pool.query('UPDATE app_accounts SET active = false WHERE auth_user_id = $1', [userId])
     expect((await fetch(`${origin}/api/me`, { headers })).status).toBe(403)
     expect(
@@ -138,6 +157,77 @@ integration(
       body: JSON.stringify({ email, password }),
     })
     expect(signIn.status).toBe(200)
+    const targetCookie = signIn.headers.get('set-cookie')?.split(';')[0] ?? ''
+    const adminSignUp = await fetch(`${origin}/api/auth/sign-up/email`, {
+      method: 'POST',
+      headers: { origin, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Synthetic administrator',
+        email: `admin-${crypto.randomUUID()}@example.test`,
+        password,
+      }),
+    })
+    expect(adminSignUp.status).toBe(200)
+    adminId = z.object({ user: z.object({ id: z.uuid() }) }).parse(await adminSignUp.json()).user.id
+    const adminCookie = adminSignUp.headers.get('set-cookie')?.split(';')[0] ?? ''
+    await pool.query(
+      "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, 'Synthetic administrator', 'read_write')",
+      [adminTeacherId, adminId],
+    )
+    await pool.query(
+      "INSERT INTO app_accounts (auth_user_id, role, teacher_id) VALUES ($1, 'administrator', $2)",
+      [adminId, adminTeacherId],
+    )
+    const resetPassword = crypto.randomUUID()
+    const reset = (cookie: string, id: string, body: unknown, requestOrigin = origin) =>
+      fetch(`${origin}/api/admin/accounts/reset-password`, {
+        method: 'POST',
+        headers: {
+          cookie,
+          'x-user-id': id,
+          origin: requestOrigin,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      })
+    const body = {
+      authUserId: userId,
+      password: resetPassword,
+      passwordConfirmation: resetPassword,
+    }
+    expect((await reset('', '', body)).status).toBe(401)
+    expect((await reset(targetCookie, userId, body)).status).toBe(403)
+    expect((await reset(adminCookie, adminId, body, 'https://evil.example')).status).toBe(403)
+    expect((await reset(adminCookie, adminId, { ...body, authUserId: adminId })).status).toBe(403)
+    expect(
+      (await reset(adminCookie, adminId, { ...body, passwordConfirmation: 'wrong' })).status,
+    ).toBe(400)
+    const before = await pool.query(
+      'SELECT role, active, expires_at, teacher_id, student_id FROM app_accounts WHERE auth_user_id = $1',
+      [userId],
+    )
+    expect((await reset(adminCookie, adminId, body)).status).toBe(200)
+    expect(
+      (await fetch(`${origin}/api/me`, { headers: { cookie: targetCookie, 'x-user-id': userId } }))
+        .status,
+    ).toBe(401)
+    const after = await pool.query(
+      'SELECT role, active, expires_at, teacher_id, student_id FROM app_accounts WHERE auth_user_id = $1',
+      [userId],
+    )
+    expect(after.rows).toEqual(before.rows)
+    expect(
+      (await pool.query('SELECT count(*)::int AS count FROM events WHERE id = $1', [event.id]))
+        .rows[0].count,
+    ).toBe(1)
+    const login = (value: string) =>
+      fetch(`${origin}/api/auth/sign-in/email`, {
+        method: 'POST',
+        headers: { origin, 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password: value }),
+      })
+    expect((await login(password)).ok).toBe(false)
+    expect((await login(resetPassword)).status).toBe(200)
   },
-  30000,
+  180000,
 )

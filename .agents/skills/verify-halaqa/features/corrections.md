@@ -2,7 +2,7 @@
 
 ## Sub-features
 
-Inspect record details, undo note/attendance/roster with reason, retain originals, recompute projections and show duplicates/conflicts.
+Inspect record details, undo note/attendance (and sample roster) with reason, retain originals, recompute projections and show duplicates/conflicts.
 
 ## How to get to it (user POV)
 
@@ -14,4 +14,4 @@ The `sample notebook` test scopes an `li` containing the saved Arabic note, clic
 
 ## Gotchas
 
-Corrections append; there is no delete. Reversal-of-reversal is unsupported. Restoring intent uses a fresh ordinary event. Original malformed rows remain in provider storage and are counted invalid, not erased.
+Corrections append; there is no delete. Reversal-of-reversal is unsupported. Restoring intent uses a fresh ordinary event. Original malformed rows remain in database and are counted invalid, not erased.

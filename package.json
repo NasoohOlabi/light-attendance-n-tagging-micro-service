@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
-    "lint": "oxlint src shared manager functions server tests e2e scripts neon.ts vite.config.ts playwright.config.ts",
+    "lint": "oxlint src shared functions server tests e2e scripts neon.ts vite.config.ts playwright.config.ts",
     "test": "bun test ./tests",
     "typecheck": "tsc -b --pretty false",
     "format": "prettier --write .",
@@ -20,7 +20,6 @@
     "security:history": "bun scripts/security.ts history",
     "security:files": "bun scripts/security.ts files",
     "preview": "vite preview --host 127.0.0.1",
-    "manager": "bun run manager/server.ts",
     "db:migrate": "bun run scripts/neon-admin.ts migrate",
     "neon:admin": "bun run scripts/neon-admin.ts",
     "verify:neon:live": "bun run scripts/verify-neon-live.ts",

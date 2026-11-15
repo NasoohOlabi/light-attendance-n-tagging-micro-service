@@ -5,6 +5,7 @@ import {
   neonAdminBoardSchema,
   neonAdminDisableSchema,
   neonAdminGrantSchema,
+  neonAdminPasswordResetSchema,
   neonAdminStudentSchema,
 } from '../shared/neon'
 import { LanguageSwitch, useLanguage } from './i18n'
@@ -19,10 +20,12 @@ export function AdminConsole({
   userId,
   signOut,
   openNotebook,
+  initialCreateStudent = false,
 }: {
   userId: string
   signOut: () => void
   openNotebook: () => void
+  initialCreateStudent?: boolean
 }) {
   const { language, t, errorMessage } = useLanguage()
   const ar = language === 'ar'
@@ -31,7 +34,7 @@ export function AdminConsole({
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [editing, setEditing] = useState<Student | null>(null)
-  const [creating, setCreating] = useState(false)
+  const [creating, setCreating] = useState(initialCreateStudent)
   const [revision, setRevision] = useState(0)
   useEffect(() => {
     let cancelled = false
@@ -119,7 +122,7 @@ export function AdminConsole({
       {!board && !error && <p role="status">{ar ? 'جارٍ التحميل…' : 'Loading…'}</p>}
       {board && (
         <>
-          <section className="panel role-section">
+          <section className="panel role-section" hidden={initialCreateStudent && creating}>
             <h2 className="title">{ar ? 'الحسابات' : 'Accounts'}</h2>
             {board.accounts.map((account) => (
               <AccountForm
@@ -214,6 +217,9 @@ function AccountForm({
     account.role ?? 'teacher',
   )
   const [name, setName] = useState(account.name)
+  const [password, setPassword] = useState('')
+  const [passwordConfirmation, setPasswordConfirmation] = useState('')
+  const [passwordError, setPasswordError] = useState('')
   const [studentId, setStudentId] = useState(account.studentId ?? '')
   const [mode, setMode] = useState<'read_write' | 'read_only' | 'write_only' | ''>('')
   const [expires, setExpires] = useState(() => {
@@ -327,6 +333,59 @@ function AccountForm({
           </label>
         )}
       </div>
+      {!self && (
+        <div className="role-fields">
+          <label>
+            {ar ? 'كلمة المرور الجديدة' : 'New password'}
+            <input
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              maxLength={128}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          <label>
+            {ar ? 'تأكيد كلمة المرور' : 'Confirm password'}
+            <input
+              type="password"
+              autoComplete="new-password"
+              maxLength={128}
+              value={passwordConfirmation}
+              onChange={(e) => setPasswordConfirmation(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={async () => {
+              const parsed = neonAdminPasswordResetSchema.safeParse({
+                authUserId: account.authUserId,
+                password,
+                passwordConfirmation,
+              })
+              if (!parsed.success) {
+                setPasswordError(
+                  ar
+                    ? 'يجب تطابق كلمتي المرور وأن تتكون من 8 إلى 128 حرفاً.'
+                    : 'Passwords must match and contain 8 to 128 characters.',
+                )
+                return
+              }
+              setPasswordError('')
+              if (await save('/api/admin/accounts/reset-password', parsed.data)) {
+                setPassword('')
+                setPasswordConfirmation('')
+              }
+            }}
+          >
+            {ar ? 'إعادة تعيين كلمة المرور' : 'Reset password'}
+          </button>
+          {passwordError && <p role="alert">{passwordError}</p>}
+        </div>
+      )}
       <div className="role-actions">
         <button className="primary" disabled={busy || self}>
           {ar ? 'حفظ الدور' : 'Save role'}

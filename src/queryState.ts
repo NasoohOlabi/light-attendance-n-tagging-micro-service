@@ -1,7 +1,14 @@
 import { useSyncExternalStore } from 'react'
 import { z } from 'zod'
 
-export const tabSchema = z.enum(['attendance', 'notes', 'roster', 'summary', 'history'])
+export const tabSchema = z.enum([
+  'dashboard',
+  'attendance',
+  'notes',
+  'roster',
+  'summary',
+  'history',
+])
 export type Tab = z.infer<typeof tabSchema>
 export function today() {
   const date = new Date()
@@ -17,8 +24,9 @@ export function useQueryState() {
   return {
     page: z.enum(['home', 'app']).safeParse(query.get('page')).data ?? 'home',
     view:
-      z.enum(['administration', 'notebook']).safeParse(query.get('view')).data ?? 'administration',
-    tab: tabSchema.safeParse(query.get('tab')).data ?? 'attendance',
+      z.enum(['administration', 'add-student', 'notebook']).safeParse(query.get('view')).data ??
+      'notebook',
+    tab: tabSchema.safeParse(query.get('tab')).data ?? 'dashboard',
     date: z.iso.date().safeParse(query.get('date')).data ?? today(),
     from: z.iso.date().safeParse(query.get('from')).data ?? today().slice(0, 7) + '-01',
     to: z.iso.date().safeParse(query.get('to')).data ?? today(),
@@ -66,4 +74,5 @@ export function setQuery(values: Record<string, string>, push = false) {
 export function navigatePage(page: 'home' | 'app') {
   window.history.pushState(null, '', window.location.pathname + (page === 'app' ? '?page=app' : ''))
   window.dispatchEvent(new PopStateEvent('popstate'))
+  window.scrollTo(0, 0)
 }
