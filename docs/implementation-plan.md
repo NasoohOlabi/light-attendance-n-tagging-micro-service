@@ -5,7 +5,7 @@
 - [x] Push the current Neon implementation as `backup/neon-current-2026-11-15` (`77cedae`) and export a separate private data snapshot.
 - [x] Replace managed Auth/Function hosting with a same-origin Bun server, Better Auth and Railway Postgres while retaining role/assignment restrictions.
 - [x] Transfer identities, credential hashes and the four application tables; compare every selected row and verify a real Neon-generated password hash with Better Auth.
-- [ ] Complete release checks, promote verified main and prove the actual Railway deployment.
+- [x] Complete release checks, promote verified main `e9408cd` through PR #31 and prove actual Railway login, scoped data, attendance/note persistence, reload, Arabic phone layout and signout; clean synthetic fixtures and pause old Neon grants.
 
 See [Railway setup](railway-setup.md). Earlier Neon and Pages delivery records below are historical. Retain the source services for recovery until a separate decommission request.
 
