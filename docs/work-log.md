@@ -782,3 +782,13 @@
 - Changes: replaced action labels with existing Lucide icons, retaining localized accessible names and tooltips.
 - Verification: bun run verify passed (four database integration tests skipped); bun run verify:ui passed 58 desktop/mobile tests on port 4273.
 - Limits: synthetic browser checks do not verify live Railway or physical devices.
+
+## 2026-11-16 23:40 Asia/Damascus (UTC+03:00) - Delete retired GitHub Pages site
+
+**Request/reason:** Owner reported lost access at the retired GitHub Pages URL and explicitly requested deletion using the GitHub CLI. The Railway cutover deliberately paused the old Neon application grants; the old site was still published despite its workflow having been removed. Started with a clean checkout on main at `1604f01` and created `chore/remove-retired-pages-site` without a worktree.
+
+**Changes:** Deleted only this repository's Pages site with `gh api --method DELETE repos/NasoohOlabi/light-attendance-n-tagging-micro-service/pages`; GitHub returned HTTP 204. Preserved the repository, recovery history, Neon data and Railway application. No application role or credential changes were made.
+
+**Verification/limits:** The Pages API subsequently returned HTTP 404, and the owner's public Pages URL returned HTTP 404. Railway `/health` returned HTTP 200 with `ok=true`. No Pages references remain in current workflows. These checks prove publication removal and Railway health, not an authenticated owner sign-in. Previously installed or cached clients may retain downloaded content. Local repository verification is recorded below.
+
+**Local verification/delivery:** `bun run verify` passed: 20 tests/84 assertions, lint, strict build and artifact checks. Four optional database integrations skipped without a disposable database; five existing nonblocking React warnings remain. This commit records the completed remote Pages deletion only; it does not require an application deployment. No push is part of this request.
