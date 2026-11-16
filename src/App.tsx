@@ -203,11 +203,15 @@ function Notebook({
           <div className="workspace-context" dir="auto">
             <span>
               {t('Halaqa notebook')} /{' '}
-              {query.tab === 'dashboard'
+              {query.view === 'courses'
                 ? language === 'ar'
-                  ? 'الرئيسية'
-                  : 'Dashboard'
-                : t(tabs.find((tab) => tab.id === query.tab)?.label ?? 'Attendance')}
+                  ? 'الدورات'
+                  : 'Courses'
+                : query.tab === 'dashboard'
+                  ? language === 'ar'
+                    ? 'الرئيسية'
+                    : 'Dashboard'
+                  : t(tabs.find((tab) => tab.id === query.tab)?.label ?? 'Attendance')}
             </span>
             {neon && (
               <span>
@@ -253,17 +257,20 @@ function Notebook({
             </button>
           </div>
         </div>
-        <header className="workspace-welcome">
-          <div>
-            <p dir="auto">{neon?.teacher.name ?? t('Demo teacher')}</p>
-            <h1>{t('Halaqa notebook')}</h1>
-            <span>{t('Record attendance. Leave a note. Keep the next teacher in the loop.')}</span>
-          </div>
-          <div className="workspace-count">
-            <strong>{projected.students.length}</strong>
-            <span>{t('Students')}</span>
-          </div>
-        </header>
+        {query.view !== 'courses' && (
+          <header className="workspace-welcome">
+            <div>
+              <h1>{t('Halaqa notebook')}</h1>
+              <span>
+                {t('Record attendance. Leave a note. Keep the next teacher in the loop.')}
+              </span>
+            </div>
+            <div className="workspace-count">
+              <strong>{projected.students.length}</strong>
+              <span>{t('Students')}</span>
+            </div>
+          </header>
+        )}
         {demo && (
           <p className="mb-5 rounded-lg bg-amber-100 p-3 text-amber-900">
             {demo === 'assigned' ? t('Assigned teacher sample notebook.') : t('Sample notebook.')}{' '}

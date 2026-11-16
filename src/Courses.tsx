@@ -77,7 +77,7 @@ export function Courses({
   )
   return (
     <section className="panel space-y-5">
-      <h2 className="title">{ar ? 'الدورات' : 'Courses'}</h2>
+      {!query.courseView && <h1 className="title">{ar ? 'الدورات' : 'Courses'}</h1>}
       {error && <p role="alert">{error}</p>}
       {saved && <p role="status">{ar ? 'تم الحفظ' : 'Saved'}</p>}
       {!query.courseView && (
@@ -91,41 +91,44 @@ export function Courses({
           >
             {ar ? 'إنشاء دورة' : 'Create course'}
           </button>
-          <div
-            className="role-table-scroll"
-            role="region"
-            aria-label={ar ? 'قائمة الدورات' : 'Course list'}
-            tabIndex={0}
-          >
-            <table className="role-table">
-              <thead>
-                <tr>
-                  <th>{ar ? 'الدورة' : 'Course'}</th>
-                  <th>{ar ? 'الإجراءات' : 'Actions'}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {courses.map((item) => (
-                  <tr key={item.id}>
-                    <td dir="auto">{item.name}</td>
-                    <td>
-                      <div className="flex flex-wrap gap-2">
-                        <button className="secondary" onClick={() => go('edit', item.id)}>
-                          {ar ? 'تعديل' : 'Edit'}
-                        </button>
-                        <button className="secondary" onClick={() => go('students', item.id)}>
-                          {ar ? 'إدارة الطلاب' : 'Manage students'}
-                        </button>
-                        <button className="secondary" onClick={() => go('grades', item.id)}>
-                          {ar ? 'الدرجات' : 'Grades'}
-                        </button>
-                      </div>
-                    </td>
+          {!courses.length && <p>{ar ? 'لا توجد دورات بعد.' : 'No courses yet.'}</p>}
+          {courses.length > 0 && (
+            <div
+              className="role-table-scroll"
+              role="region"
+              aria-label={ar ? 'قائمة الدورات' : 'Course list'}
+              tabIndex={0}
+            >
+              <table className="role-table w-full table-fixed">
+                <thead>
+                  <tr>
+                    <th className="w-1/3">{ar ? 'الدورة' : 'Course'}</th>
+                    <th>{ar ? 'الإجراءات' : 'Actions'}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {courses.map((item) => (
+                    <tr key={item.id}>
+                      <td dir="auto">{item.name}</td>
+                      <td>
+                        <div className="flex flex-wrap gap-2">
+                          <button className="secondary" onClick={() => go('edit', item.id)}>
+                            {ar ? 'تعديل' : 'Edit'}
+                          </button>
+                          <button className="secondary" onClick={() => go('students', item.id)}>
+                            {ar ? 'إدارة الطلاب' : 'Manage students'}
+                          </button>
+                          <button className="secondary" onClick={() => go('grades', item.id)}>
+                            {ar ? 'الدرجات' : 'Grades'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       )}
       {(query.courseView === 'create' || (query.courseView === 'edit' && course)) && (
@@ -133,7 +136,7 @@ export function Courses({
           <button className="secondary" onClick={() => go('', '')}>
             {ar ? 'العودة للدورات' : 'Back to courses'}
           </button>
-          <h3 className="title">
+          <h1 className="title">
             {query.courseView === 'create'
               ? ar
                 ? 'إنشاء دورة'
@@ -141,7 +144,7 @@ export function Courses({
               : ar
                 ? 'تعديل الدورة'
                 : 'Edit course'}
-          </h3>
+          </h1>
           <form
             className="flex flex-wrap items-end gap-3"
             onSubmit={(event) => {
@@ -173,7 +176,7 @@ export function Courses({
           <button className="secondary" onClick={() => go('', '')}>
             {ar ? 'العودة للدورات' : 'Back to courses'}
           </button>
-          <h3 className="title">
+          <h1 className="title">
             {course.name} —{' '}
             {query.courseView === 'students'
               ? ar
@@ -182,7 +185,7 @@ export function Courses({
               : ar
                 ? 'الدرجات'
                 : 'Grades'}
-          </h3>
+          </h1>
           {query.courseView === 'students' && (
             <>
               <button

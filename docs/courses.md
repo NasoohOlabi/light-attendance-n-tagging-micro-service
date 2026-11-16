@@ -1,6 +1,6 @@
 ﻿# Courses and enrollment
 
-Administrators open **Courses** to see the course list. Create/edit a course, **Manage students**, and **Grades** are separate destinations, with the notebook navigation retained. Choose a course from its row rather than combining course/student selectors and scores in one form.
+Administrators open **Courses** to see every saved course, including courses with no students. The default is the list; **Create course** opens a separate page and returns to the list after saving. Create/edit a course, **Manage students**, and **Grades** are separate destinations with individual page headings and the notebook navigation retained. Course pages omit the generic notebook introduction and unrelated student count. The localized account role appears once in the header. Choose a course from its row rather than combining course/student selectors and scores in one form.
 
 **Manage students** searches the existing roster by name. Each student has separate identity, current roster level, course level and enrollment columns. The switch enrolls or withdraws that student without deleting their enrollment, history or grades. A new enrollment starts with the roster level as an editable draft; an existing course level remains independent, including a deliberately blank level. Changing membership or level preserves both exam scores. Switching off blocks new attendance for that enrollment on the server.
 

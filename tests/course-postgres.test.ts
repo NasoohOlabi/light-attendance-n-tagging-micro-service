@@ -73,6 +73,13 @@ integration(
           name: `Synthetic course ${i + 1}`,
         })
         expect(response.status, await response.clone().text()).toBe(200)
+        const withoutEnrollment = neonSnapshotSchema.parse(
+          await (await call('/api/notebook', subjects.admin)).json(),
+        )
+        expect(withoutEnrollment.courses).toContainEqual({
+          id: courseIds[i],
+          name: `Synthetic course ${i + 1}`,
+        })
         const enrolled = await call('/api/admin/enrollments', subjects.admin, {
           id: enrollmentIds[i],
           courseId: courseIds[i],

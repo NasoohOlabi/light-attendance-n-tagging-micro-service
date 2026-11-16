@@ -218,7 +218,46 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   }
   await page.getByRole('button', { name: 'English', exact: true }).click()
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  await expect(page.getByRole('row').filter({ hasText: 'Course A' })).toBeVisible()
+  if (testInfo.project.name === 'mobile') {
+    for (const language of ['en', 'ar']) {
+      if (language === 'ar') {
+        await page
+          .getByRole('button', { name: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', exact: true })
+          .click()
+      }
+      for (const width of [320, 390]) {
+        await page.setViewportSize({ width, height: 844 })
+        const actions = page
+          .getByRole('region', {
+            name:
+              language === 'en'
+                ? 'Course list'
+                : '\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062f\u0648\u0631\u0627\u062a',
+          })
+          .locator('tbody tr button')
+        await expect(actions).toHaveCount(6)
+        const bounds = await actions.evaluateAll((buttons) =>
+          buttons.map((button) => {
+            const rect = button.getBoundingClientRect()
+            return { left: rect.left, right: rect.right }
+          }),
+        )
+        expect(bounds.every((rect) => rect.left >= 0 && rect.right <= width)).toBe(true)
+        await page.screenshot({
+          path: `.artifacts/verification/course-list-${width}-${language}.png`,
+          fullPage: true,
+        })
+      }
+    }
+    await page.getByRole('button', { name: 'English', exact: true }).click()
+  }
   await page.getByRole('button', { name: 'Create course' }).click()
+  await expect(page.getByRole('region', { name: 'Course list' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create course')
+  await expect(
+    page.getByLabel('Course name').locator('xpath=ancestor::section[1]').getByRole('heading'),
+  ).toHaveCount(1)
   await page.getByLabel('Course name').fill('Created course')
   await page.getByRole('button', { name: 'Save course' }).click()
   await expect(page.getByRole('alert')).toBeVisible()
@@ -226,6 +265,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect.poll(() => courses.length).toBe(3)
   await expect.poll(() => attemptedCourseIds.length).toBe(2)
   expect(attemptedCourseIds[0]).toBe(attemptedCourseIds[1])
+  await expect(page.getByRole('row').filter({ hasText: 'Created course' })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('row').filter({ hasText: 'Created course' })).toBeVisible()
   await page.getByRole('button', { name: 'Create course' }).click()
   await page.getByLabel('Course name').fill('Another course')
   await page.getByRole('button', { name: 'Save course' }).click()

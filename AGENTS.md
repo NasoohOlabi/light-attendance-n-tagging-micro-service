@@ -14,6 +14,8 @@ Use PowerShell and Bun. No worktrees without asking. Keep responses concise. Thi
 
 The orchestrator scopes tasks, reviews diffs, runs gates and owns final commits/publication. Delegate every new feature implementation to a `gpt-6.1-terra` sub-agent with bounded acceptance criteria and explicit file ownership. If Terra is unavailable, report it; do not silently substitute. Workers implement and verify their unit without spawning further workers or committing shared state; the orchestrator stages and commits serially. Independent workers use disjoint files in this checkout. Small integration fixes and repository tooling can be completed by the orchestrator. Read only the relevant feature map and source; avoid rereading all docs or launching duplicate reviews.
 
+Prefer mobile-first, page-oriented navigation: list pages open on saved records, and add/edit, membership and grading actions lead to separate destinations. Keep each page focused, avoid repeated role labels and generic introductory text, and keep the course list's row actions visible on phones.
+
 ## Validation and safety
 
 - Run `bun run verify` before completing any repository change. For UI changes use `.agents/skills/verify-halaqa/SKILL.md` and the affected feature map. Run `bun run verify:release` before stable promotion/publication. Fix failed checks; document provider checks that cannot run locally.
