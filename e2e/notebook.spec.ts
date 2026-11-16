@@ -43,7 +43,10 @@ test('sample notebook supports attendance, notes and corrections without network
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await expect(page.getByRole('status')).toContainText('saved in this demo')
   await page.getByRole('button', { name: 'Summary', exact: true }).click()
-  await expect(page.getByLabel('absent: 1')).toBeVisible()
+  await expect(page.getByRole('meter', { name: 'absent' })).toHaveAttribute(
+    'aria-valuetext',
+    '50.0%',
+  )
   await page.getByRole('button', { name: 'Notes', exact: true }).click()
   await page.getByRole('combobox', { name: 'Student', exact: true }).selectOption({ label: 'ليلى' })
   await page.getByLabel('Tags, separated by commas').fill('مراجعة, قراءة')

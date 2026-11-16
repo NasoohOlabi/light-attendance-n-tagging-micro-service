@@ -1082,30 +1082,51 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
       </div>
       <p className="muted mb-5">
         {language === 'ar'
-          ? `${records.length} جلسات محددة للطلاب. لا تُحتسب الأيام غير المحددة.`
-          : `${records.length} marked student-sessions. Unmarked days are excluded.`}
+          ? 'النسب من جلسات الطلاب المسجلة؛ لا تُحتسب الأيام غير المحددة.'
+          : 'Percentages of recorded student-sessions; unmarked days are excluded.'}
       </p>
-      <div className="mb-8 space-y-3" aria-label={t('Attendance totals')}>
-        {statuses.map((status) => {
-          const count = records.filter(({ value }) => value.status === status).length
-          return (
-            <div
-              key={status}
-              className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(2ch,auto)] items-center gap-3"
-            >
-              <span>{t(status)}</span>
-              <meter
-                className="h-6 w-full accent-[#007d8d]"
-                min={0}
-                max={Math.max(records.length, 1)}
-                value={count}
-                aria-label={`${t(status)}: ${count}`}
-              />
-              <strong className="text-end">{count}</strong>
-            </div>
-          )
-        })}
-      </div>
+      {records.length === 0 ? (
+        <p className="muted mb-8">
+          {language === 'ar' ? 'لا توجد سجلات حضور بعد.' : 'No attendance records yet.'}
+        </p>
+      ) : (
+        <div className="mb-8 space-y-3" aria-label={t('Attendance totals')}>
+          {statuses.map((status) => {
+            const count = records.filter(({ value }) => value.status === status).length
+            const percentage = (count / records.length) * 100
+            const formatted = new Intl.NumberFormat(language, {
+              style: 'percent',
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1,
+            }).format(count / records.length)
+            return (
+              <div
+                key={status}
+                className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(5ch,auto)] items-center gap-3"
+              >
+                <span>{t(status)}</span>
+                <div
+                  role="meter"
+                  aria-label={t(status)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Number(percentage.toFixed(1))}
+                  aria-valuetext={formatted}
+                  className="h-3 overflow-hidden rounded-full bg-teal-100"
+                >
+                  <div
+                    className="h-full rounded-full bg-[#007d8d]"
+                    style={{ width: `${percentage}%` }}
+                  />
+                </div>
+                <strong className="text-end" dir="auto">
+                  {formatted}
+                </strong>
+              </div>
+            )
+          })}
+        </div>
+      )}
       <p className="muted mb-2 sm:hidden">{t('Scroll sideways to see all columns.')}</p>
       <div
         className="overflow-x-auto"
