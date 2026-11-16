@@ -511,3 +511,9 @@
 **Verification:** `bun run verify:release` passed with the disposable PostgreSQL database: 19 tests/119 assertions, all 56 desktop/mobile browser cases, build/artifact, formatting, file/history security scans and clean dependency audit. No checks were bypassed.
 
 **Production migration:** Registered a temporary owner SSH key and used the authenticated Railway CLI to run the committed additive `003-courses.sql` inside the existing production application against its private database. The migration ran twice in one transaction with advisory locking, bounded lock/statement timeouts and verification of both attendance constraints. Existing event records were preserved. No public database proxy was opened, credentials were not exported, and Neon recovery services were untouched. Candidate/stable CI, application deployment, synthetic live course proof and temporary-key removal remain next.
+
+## 2026-11-16 12:37 — Promote verified course candidate, Asia/Damascus (UTC+03:00)
+
+**Request/reason:** Continue the owner's authorized merge and deployment. Candidate PR #37 passed Verify, CodeQL and security checks on `19af8d2`, with no comments or outstanding reviews, and squash-merged into nightly as `6dc77e6`.
+
+**Promotion/provenance:** Created `release/course-enrollments` from the merged candidate and merged stable main ancestry normally. Resolved duplicate squash-history conflicts to the verified candidate; before this note the full tree/index matched both `6dc77e6` and `19af8d2`. The stable diff contains only the requested course/enrollment implementation and its behavior, test and work-log documentation. The additive production migration is already verified; no Neon recovery data/services were changed. Repeating full release verification before the main PR; stable CI, Railway application deployment, synthetic live proof and temporary-key removal remain required.
