@@ -4,6 +4,8 @@
 
 Administrators manage assignments in Settings. The sample supports local roster edits; authenticated Teachers see their assigned roster.
 
+In Administrator **Settings → Students**, and the dashboard's dedicated **Add student** destination, verify five separate table columns: **First name**, **Last name**, **Level**, **Active**, **Actions**. Create and edit a synthetic student with separate given/family names, save, and reopen Edit to confirm each field persisted independently. Include a compound Arabic given/family name, a mononym with blank family name, active/inactive students and a legacy unsplit name. Level uses the roster group value. Legacy names remain intact until edited.
+
 ## How to get to it (user POV)
 
 In the sample, open **Students**. Use **Student name**, optional **Group**, and **Add student**. Each row has Name/Group edits, **Save changes**, **Make inactive** or **Activate**.
@@ -15,3 +17,5 @@ The `sample notebook` test fills **Student name** with ليلى and clicks **Add
 ## Gotchas
 
 Use a row-scoped locator because editable names/groups repeat. Renaming must preserve attendance/note references. Deactivation does not delete history. Demo and live notebooks never merge.
+
+The Administrator table retains all five columns at phone widths through a bounded, named, keyboard-focusable horizontal scrolling region. Verify English and Arabic headers/cell order, row-scoped Edit, scroll reachability and no page-level overflow at 320px. Keep synthetic table screenshots under ignored `.artifacts/verification/`. Apply `neon/004-student-names.sql` before testing the updated administrator API against a disposable database; local/synthetic proof does not establish deployed migration status.

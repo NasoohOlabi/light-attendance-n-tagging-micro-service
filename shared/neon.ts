@@ -94,13 +94,24 @@ export const neonAdminPasswordResetSchema = z
     passwordConfirmation: z.string(),
   })
   .refine((value) => value.password === value.passwordConfirmation)
-export const neonAdminStudentSchema = z.strictObject({
+const studentFields = {
   studentId: z.uuid(),
   teacherId: z.uuid(),
-  name: z.string().trim().min(1).max(200),
   group: z.string().trim().max(100),
   active: z.boolean(),
-})
+}
+export const neonAdminStudentSchema = z.union([
+  z.strictObject({ ...studentFields, name: z.string().trim().min(1).max(200) }),
+  z
+    .strictObject({
+      ...studentFields,
+      firstName: z.string().trim().min(1).max(200),
+      lastName: z.string().trim().max(200),
+    })
+    .refine(
+      ({ firstName, lastName }) => [firstName, lastName].filter(Boolean).join(' ').length <= 200,
+    ),
+])
 export const neonAdminBoardSchema = z.object({
   accounts: z.array(
     z.object({
@@ -119,6 +130,8 @@ export const neonAdminBoardSchema = z.object({
     z.object({
       studentId: z.uuid(),
       name: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
       group: z.string(),
       active: z.boolean(),
       teacherId: z.uuid(),

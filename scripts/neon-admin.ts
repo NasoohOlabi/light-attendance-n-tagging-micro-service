@@ -169,7 +169,9 @@ async function main() {
         for (const student of students)
           await client.query(
             `INSERT INTO students (id, teacher_id, name, group_name, active) VALUES ($1, $2, $3, $4, $5)
-          ON CONFLICT (id) DO UPDATE SET teacher_id = EXCLUDED.teacher_id, name = EXCLUDED.name, group_name = EXCLUDED.group_name, active = EXCLUDED.active`,
+            ON CONFLICT (id) DO UPDATE SET teacher_id = EXCLUDED.teacher_id, name = EXCLUDED.name, group_name = EXCLUDED.group_name, active = EXCLUDED.active,
+              first_name = CASE WHEN students.name = EXCLUDED.name THEN students.first_name ELSE NULL END,
+              last_name = CASE WHEN students.name = EXCLUDED.name THEN students.last_name ELSE NULL END`,
             [student.id, student.teacherId, student.name, student.group, student.active],
           )
       })

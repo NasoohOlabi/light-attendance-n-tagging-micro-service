@@ -36,6 +36,9 @@ export function AdminConsole({
   const [editing, setEditing] = useState<Student | null>(null)
   const [creating, setCreating] = useState(initialCreateStudent)
   const [revision, setRevision] = useState(0)
+  const [section, setSection] = useState<'accounts' | 'students'>(
+    initialCreateStudent ? 'students' : 'accounts',
+  )
   useEffect(() => {
     let cancelled = false
     request('/api/admin', userId)
@@ -124,77 +127,127 @@ export function AdminConsole({
       {!board && !error && <p role="status">{ar ? 'جارٍ التحميل…' : 'Loading…'}</p>}
       {board && (
         <>
-          <section className="panel role-section" hidden={initialCreateStudent}>
-            <h2 className="title">{ar ? 'الحسابات' : 'Accounts'}</h2>
-            {board.accounts.map((account) => (
-              <AccountForm
-                key={`${account.authUserId}:${account.role}:${account.active}`}
-                account={account}
-                students={board.students}
-                self={account.authUserId === userId}
-                busy={busy}
-                save={save}
-                ar={ar}
-              />
-            ))}
-          </section>
-          <section className="panel role-section">
-            <div className="role-heading">
-              <h2 className="title">{ar ? 'الطلاب' : 'Students'}</h2>
+          {!initialCreateStudent && (
+            <nav className="role-tabs" aria-label={ar ? 'أقسام الإعدادات' : 'Settings sections'}>
               <button
                 className="secondary"
-                onClick={() => {
-                  setEditing(null)
-                  setCreating(true)
-                }}
+                aria-pressed={section === 'accounts'}
+                onClick={() => setSection('accounts')}
               >
-                {ar ? 'إضافة طالب' : 'Add student'}
+                {ar ? 'الحسابات' : 'Accounts'}
               </button>
-            </div>
-            {(creating || editing) && (
-              <StudentForm
-                key={editing?.studentId ?? 'new'}
-                student={editing}
-                teachers={board.teachers.filter((teacher) =>
-                  board.accounts.some(
-                    (account) =>
-                      account.teacherId === teacher.teacherId &&
-                      account.role === 'teacher' &&
-                      account.active,
-                  ),
-                )}
-                busy={busy}
-                ar={ar}
-                save={async (value) => {
-                  if (await save('/api/admin/students', neonAdminStudentSchema.parse(value))) {
-                    setEditing(null)
-                    setCreating(false)
-                  }
-                }}
-                cancel={() => {
-                  setEditing(null)
-                  setCreating(false)
-                }}
-              />
-            )}
-            {board.students.map((student) => (
-              <div className="role-row" key={student.studentId}>
-                <span dir="auto">
-                  {student.name} · {student.group} ·{' '}
-                  {student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}
-                </span>
+              <button
+                className="secondary"
+                aria-pressed={section === 'students'}
+                onClick={() => setSection('students')}
+              >
+                {ar ? 'الطلاب' : 'Students'}
+              </button>
+            </nav>
+          )}
+          {section === 'accounts' && !initialCreateStudent && (
+            <section className="panel role-section">
+              <h2 className="title">{ar ? 'الحسابات' : 'Accounts'}</h2>
+              {board.accounts.filter((account) => account.authUserId !== userId).length === 0 && (
+                <p>{ar ? 'لا توجد حسابات أخرى.' : 'No other accounts.'}</p>
+              )}
+              {board.accounts
+                .filter((account) => account.authUserId !== userId)
+                .map((account) => (
+                  <AccountForm
+                    key={`${account.authUserId}:${account.role}:${account.active}`}
+                    account={account}
+                    students={board.students}
+                    busy={busy}
+                    save={save}
+                    ar={ar}
+                  />
+                ))}
+            </section>
+          )}
+          {section === 'students' && (
+            <section className="panel role-section">
+              <div className="role-heading">
+                <h2 className="title">{ar ? 'الطلاب' : 'Students'}</h2>
                 <button
                   className="secondary"
                   onClick={() => {
-                    setCreating(false)
-                    setEditing(student)
+                    setEditing(null)
+                    setCreating(true)
                   }}
                 >
-                  {ar ? 'تعديل' : 'Edit'}
+                  {ar ? 'إضافة طالب' : 'Add student'}
                 </button>
               </div>
-            ))}
-          </section>
+              {(creating || editing) && (
+                <StudentForm
+                  key={editing?.studentId ?? 'new'}
+                  student={editing}
+                  teachers={board.teachers.filter((teacher) =>
+                    board.accounts.some(
+                      (account) =>
+                        account.teacherId === teacher.teacherId &&
+                        account.role === 'teacher' &&
+                        account.active,
+                    ),
+                  )}
+                  busy={busy}
+                  ar={ar}
+                  save={async (value) => {
+                    if (await save('/api/admin/students', neonAdminStudentSchema.parse(value))) {
+                      setEditing(null)
+                      setCreating(false)
+                    }
+                  }}
+                  cancel={() => {
+                    setEditing(null)
+                    setCreating(false)
+                  }}
+                />
+              )}
+              <div
+                className="role-table-scroll"
+                role="region"
+                aria-label={ar ? 'قائمة الطلاب' : 'Student list'}
+                tabIndex={0}
+              >
+                <table className="role-table role-students-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">{ar ? 'الاسم الأول' : 'First name'}</th>
+                      <th scope="col">{ar ? 'اسم العائلة' : 'Last name'}</th>
+                      <th scope="col">{ar ? 'المستوى' : 'Level'}</th>
+                      <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
+                      <th scope="col">{ar ? 'الإجراءات' : 'Actions'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {board.students.map((student) => (
+                      <tr key={student.studentId}>
+                        <td dir="auto">{student.firstName}</td>
+                        <td dir="auto">{student.lastName || '—'}</td>
+                        <td dir="auto">{student.group}</td>
+                        <td>
+                          {student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}
+                        </td>
+                        <td>
+                          <button
+                            className="secondary"
+                            onClick={() => {
+                              setCreating(false)
+                              setEditing(student)
+                            }}
+                          >
+                            {ar ? 'تعديل' : 'Edit'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
         </>
       )}
     </main>
@@ -203,14 +256,12 @@ export function AdminConsole({
 function AccountForm({
   account,
   students,
-  self,
   busy,
   save,
   ar,
 }: {
   account: Account
   students: Student[]
-  self: boolean
   busy: boolean
   save: (path: string, body: unknown) => Promise<boolean>
   ar: boolean
@@ -230,112 +281,117 @@ function AccountForm({
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
   })
   return (
-    <form
-      className="role-account"
-      onSubmit={(event) => {
-        event.preventDefault()
-        const expiresAt = expires ? new Date(expires).toISOString() : null
-        const input =
-          role === 'administrator'
-            ? { role, authUserId: account.authUserId, name }
-            : role === 'teacher'
-              ? { role, authUserId: account.authUserId, name, mode, expiresAt }
-              : { role, authUserId: account.authUserId, studentId, expiresAt }
-        const parsed = neonAdminGrantSchema.safeParse(input)
-        if (parsed.success) void save('/api/admin/accounts/grant', parsed.data)
-      }}
-    >
-      <div>
-        <strong dir="auto">{account.name}</strong>
-        <div dir="ltr">{account.email}</div>
+    <details className="role-account">
+      <summary>
         <span>
-          {account.role === 'administrator'
-            ? ar
-              ? 'مسؤول'
-              : 'Administrator'
-            : account.role === 'teacher'
+          <strong dir="auto">{account.name}</strong>
+          <span dir="ltr">{account.email}</span>
+          <span>
+            {account.role === 'administrator'
               ? ar
-                ? 'معلم'
-                : 'Teacher'
-              : account.role === 'student'
+                ? 'مسؤول'
+                : 'Administrator'
+              : account.role === 'teacher'
                 ? ar
-                  ? 'طالب'
-                  : 'Student'
-                : ar
-                  ? 'بانتظار الموافقة'
-                  : 'Pending approval'}{' '}
-          · {account.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}
+                  ? 'معلم'
+                  : 'Teacher'
+                : account.role === 'student'
+                  ? ar
+                    ? 'طالب'
+                    : 'Student'
+                  : ar
+                    ? 'بانتظار الموافقة'
+                    : 'Pending approval'}
+            {' · '}
+            {account.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}
+          </span>
         </span>
-      </div>
-      <div className="role-fields">
-        <label>
-          {ar ? 'الدور' : 'Role'}
-          <select
-            value={role}
-            disabled={self}
-            onChange={(event) => {
-              const v = z.enum(['administrator', 'teacher', 'student']).parse(event.target.value)
-              setRole(v)
-            }}
-          >
-            <option value="administrator">{ar ? 'مسؤول' : 'Administrator'}</option>
-            <option value="teacher">{ar ? 'معلم' : 'Teacher'}</option>
-            <option value="student">{ar ? 'طالب' : 'Student'}</option>
-          </select>
-        </label>
-        {role === 'student' ? (
+        <span className="role-manage">{ar ? 'إدارة' : 'Manage'}</span>
+      </summary>
+      <form
+        className="role-editor"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const expiresAt = expires ? new Date(expires).toISOString() : null
+          const input =
+            role === 'administrator'
+              ? { role, authUserId: account.authUserId, name }
+              : role === 'teacher'
+                ? { role, authUserId: account.authUserId, name, mode, expiresAt }
+                : { role, authUserId: account.authUserId, studentId, expiresAt }
+          const parsed = neonAdminGrantSchema.safeParse(input)
+          if (parsed.success) void save('/api/admin/accounts/grant', parsed.data)
+        }}
+      >
+        <div className="role-fields">
           <label>
-            {ar ? 'الطالب' : 'Student'}
-            <select required value={studentId} onChange={(e) => setStudentId(e.target.value)}>
-              <option value="">{ar ? 'اختر طالباً' : 'Choose a student'}</option>
-              {students.map((student) => (
-                <option key={student.studentId} value={student.studentId}>
-                  {student.name} · {student.group}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : (
-          <label>
-            {ar ? 'الاسم' : 'Name'}
-            <input
-              required
-              maxLength={100}
-              dir="auto"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-        )}
-        {role === 'teacher' && (
-          <label>
-            {ar ? 'الصلاحية' : 'Access'}
+            {ar ? 'الدور' : 'Role'}
             <select
-              value={mode}
-              required
-              onChange={(e) =>
-                setMode(z.enum(['', 'read_write', 'read_only', 'write_only']).parse(e.target.value))
-              }
+              value={role}
+              onChange={(event) => {
+                const v = z.enum(['administrator', 'teacher', 'student']).parse(event.target.value)
+                setRole(v)
+              }}
             >
-              <option value="">{ar ? 'اختر الصلاحية' : 'Choose access'}</option>
-              <option value="read_write">{ar ? 'قراءة وكتابة' : 'Read and write'}</option>
-              <option value="read_only">{ar ? 'قراءة فقط' : 'Read only'}</option>
-              <option value="write_only">{ar ? 'كتابة فقط' : 'Write only'}</option>
+              <option value="administrator">{ar ? 'مسؤول' : 'Administrator'}</option>
+              <option value="teacher">{ar ? 'معلم' : 'Teacher'}</option>
+              <option value="student">{ar ? 'طالب' : 'Student'}</option>
             </select>
           </label>
-        )}
-        {role !== 'administrator' && (
-          <label>
-            {ar ? 'انتهاء الصلاحية (اختياري)' : 'Expires (optional)'}
-            <input
-              type="datetime-local"
-              value={expires}
-              onChange={(e) => setExpires(e.target.value)}
-            />
-          </label>
-        )}
-      </div>
-      {!self && (
+          {role === 'student' ? (
+            <label>
+              {ar ? 'الطالب' : 'Student'}
+              <select required value={studentId} onChange={(e) => setStudentId(e.target.value)}>
+                <option value="">{ar ? 'اختر طالباً' : 'Choose a student'}</option>
+                {students.map((student) => (
+                  <option key={student.studentId} value={student.studentId}>
+                    {student.name} · {student.group}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <label>
+              {ar ? 'الاسم' : 'Name'}
+              <input
+                required
+                maxLength={100}
+                dir="auto"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+          )}
+          {role === 'teacher' && (
+            <label>
+              {ar ? 'الصلاحية' : 'Access'}
+              <select
+                value={mode}
+                required
+                onChange={(e) =>
+                  setMode(
+                    z.enum(['', 'read_write', 'read_only', 'write_only']).parse(e.target.value),
+                  )
+                }
+              >
+                <option value="">{ar ? 'اختر الصلاحية' : 'Choose access'}</option>
+                <option value="read_write">{ar ? 'قراءة وكتابة' : 'Read and write'}</option>
+                <option value="read_only">{ar ? 'قراءة فقط' : 'Read only'}</option>
+                <option value="write_only">{ar ? 'كتابة فقط' : 'Write only'}</option>
+              </select>
+            </label>
+          )}
+          {role !== 'administrator' && (
+            <label>
+              {ar ? 'انتهاء الصلاحية (اختياري)' : 'Expires (optional)'}
+              <input
+                type="datetime-local"
+                value={expires}
+                onChange={(e) => setExpires(e.target.value)}
+              />
+            </label>
+          )}
+        </div>
         <div className="role-fields">
           <label>
             {ar ? 'كلمة المرور الجديدة' : 'New password'}
@@ -387,26 +443,26 @@ function AccountForm({
           </button>
           {passwordError && <p role="alert">{passwordError}</p>}
         </div>
-      )}
-      <div className="role-actions">
-        <button className="primary" disabled={busy || self}>
-          {ar ? 'حفظ الدور' : 'Save role'}
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          disabled={busy || self || !account.active}
-          onClick={() =>
-            void save(
-              '/api/admin/accounts/disable',
-              neonAdminDisableSchema.parse({ authUserId: account.authUserId }),
-            )
-          }
-        >
-          {ar ? 'تعطيل الوصول' : 'Disable access'}
-        </button>
-      </div>
-    </form>
+        <div className="role-actions">
+          <button className="primary" disabled={busy}>
+            {ar ? 'حفظ الدور' : 'Save role'}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy || !account.active}
+            onClick={() =>
+              void save(
+                '/api/admin/accounts/disable',
+                neonAdminDisableSchema.parse({ authUserId: account.authUserId }),
+              )
+            }
+          >
+            {ar ? 'تعطيل الوصول' : 'Disable access'}
+          </button>
+        </div>
+      </form>
+    </details>
   )
 }
 function StudentForm({
@@ -425,7 +481,9 @@ function StudentForm({
   cancel: () => void
 }) {
   const [studentId] = useState(() => student?.studentId ?? crypto.randomUUID())
-  const [name, setName] = useState(student?.name ?? '')
+  const [firstName, setFirstName] = useState(student?.firstName ?? '')
+  const [lastName, setLastName] = useState(student?.lastName ?? '')
+  const [nameError, setNameError] = useState<'required' | 'length' | ''>('')
   const [group, setGroup] = useState(student?.group ?? '')
   const [teacherId, setTeacherId] = useState(student?.teacherId ?? '')
   const [active, setActive] = useState(student?.active ?? true)
@@ -434,9 +492,19 @@ function StudentForm({
       className="role-editor"
       onSubmit={(e) => {
         e.preventDefault()
+        if (!firstName.trim()) {
+          setNameError('required')
+          return
+        }
+        if ([firstName.trim(), lastName.trim()].filter(Boolean).join(' ').length > 200) {
+          setNameError('length')
+          return
+        }
+        setNameError('')
         const value = neonAdminStudentSchema.safeParse({
           studentId,
-          name,
+          firstName,
+          lastName,
           group,
           teacherId,
           active,
@@ -446,17 +514,26 @@ function StudentForm({
     >
       <div className="role-fields">
         <label>
-          {ar ? 'اسم الطالب' : 'Student name'}
+          {ar ? 'الاسم الأول' : 'First name'}
           <input
             required
             maxLength={200}
             dir="auto"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
           />
         </label>
         <label>
-          {ar ? 'المجموعة' : 'Group'}
+          {ar ? 'اسم العائلة' : 'Last name'}
+          <input
+            maxLength={200}
+            dir="auto"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+          />
+        </label>
+        <label>
+          {ar ? 'المستوى' : 'Level'}
           <input
             maxLength={100}
             dir="auto"
@@ -482,6 +559,17 @@ function StudentForm({
           {ar ? 'نشط' : 'Active'}
         </label>
       </div>
+      {nameError && (
+        <p role="alert">
+          {nameError === 'required'
+            ? ar
+              ? 'الاسم الأول مطلوب.'
+              : 'First name is required.'
+            : ar
+              ? 'يجب ألا يزيد الاسم الكامل عن 200 حرف.'
+              : 'The full name must contain at most 200 characters.'}
+        </p>
+      )}
       <div className="role-actions">
         <button className="primary" disabled={busy}>
           {ar ? 'حفظ الطالب' : 'Save student'}
