@@ -39,7 +39,7 @@ const tables = [
 ] as const
 const rowSchema = z.record(z.string(), z.json())
 const backupSchema = z.strictObject({
-  version: z.literal(1),
+  version: z.union([z.literal(1), z.literal(2)]),
   createdAt: z.iso.datetime(),
   tables: z.array(z.strictObject({ name: z.string(), rows: z.array(rowSchema) })),
 })
@@ -69,11 +69,19 @@ function canonical(value: unknown): string {
 function digest(rows: Backup['tables'][number]['rows']) {
   return createHash('sha256').update(rows.map(canonical).sort().join('\n')).digest('hex')
 }
-async function snapshot(db: PoolClient): Promise<Backup> {
-  const data: Backup = { version: 1, createdAt: new Date().toISOString(), tables: [] }
+async function snapshot(db: PoolClient, structuredNames: boolean): Promise<Backup> {
+  const data: Backup = {
+    version: structuredNames ? 2 : 1,
+    createdAt: new Date().toISOString(),
+    tables: [],
+  }
   for (const table of tables) {
+    const columns =
+      table.name === 'public.students' && structuredNames
+        ? [...table.columns, 'first_name', 'last_name']
+        : table.columns
     const result = await db.query(
-      `SELECT row_to_json(item) AS row FROM (SELECT ${table.columns.map(quote).join(',')} FROM ${sqlTable(table.name)}) item`,
+      `SELECT row_to_json(item) AS row FROM (SELECT ${columns.map(quote).join(',')} FROM ${sqlTable(table.name)}) item`,
     )
     data.tables.push({
       name: table.name,
@@ -92,9 +100,14 @@ function validateBackup(backup: Backup) {
     if (
       !saved ||
       saved.name !== table.name ||
-      saved.rows.some(
-        (row) => canonical(Object.keys(row).sort()) !== canonical([...table.columns].sort()),
-      )
+      saved.rows.some((row) => {
+        const columns = Object.keys(row).sort()
+        const expected =
+          table.name === 'public.students' && backup.version === 2
+            ? [...table.columns, 'first_name', 'last_name']
+            : table.columns
+        return canonical(columns) !== canonical([...expected].sort())
+      })
     )
       throw new Error('Unexpected backup columns')
   }
@@ -134,11 +147,16 @@ async function main() {
     )
     if (command === 'export') {
       const banned = await db.query(
-        'SELECT count(*)::int AS count FROM neon_auth."user" WHERE banned IS TRUE',
+        `SELECT count(*)::int AS count FROM neon_auth."user" u WHERE COALESCE((to_jsonb(u)->>'banned')::boolean, false)`,
       )
       if (z.object({ count: z.literal(0) }).safeParse(banned.rows[0]).success === false)
         throw new Error('Banned identities need explicit migration handling')
-      const backup = await snapshot(db)
+      const names = await db.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name IN ('first_name', 'last_name')",
+      )
+      const count = z.object({ count: z.number() }).parse(names.rows[0]).count
+      if (count !== 0 && count !== 2) throw new Error('Incomplete student name migration')
+      const backup = await snapshot(db, count === 2)
       validateBackup(backup)
       await writeFile(file, JSON.stringify(backup), { mode: 0o600, flag: 'wx' })
       console.log(
@@ -171,7 +189,7 @@ async function main() {
           "SELECT setval(pg_get_serial_sequence('events', 'sequence'), GREATEST(COALESCE((SELECT max(sequence) FROM events), 1), 1), EXISTS(SELECT 1 FROM events))",
         )
       }
-      const actual = await snapshot(db)
+      const actual = await snapshot(db, backup.version === 2)
       for (const [index, table] of backup.tables.entries()) {
         const other = actual.tables[index]
         if (!other || digest(table.rows) !== digest(other.rows))

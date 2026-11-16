@@ -104,6 +104,13 @@
   padding: 0.8rem;
   border-bottom: 1px solid #dce9e8;
 }
+.role-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.role-students-table {
+  min-width: 38rem;
+}
 @media (max-width: 40rem) {
   .role-page {
     padding: 1rem;

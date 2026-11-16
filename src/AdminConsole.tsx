@@ -205,23 +205,47 @@ export function AdminConsole({
                   }}
                 />
               )}
-              {board.students.map((student) => (
-                <div className="role-row" key={student.studentId}>
-                  <span dir="auto">
-                    {student.name} · {student.group} ·{' '}
-                    {student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}
-                  </span>
-                  <button
-                    className="secondary"
-                    onClick={() => {
-                      setCreating(false)
-                      setEditing(student)
-                    }}
-                  >
-                    {ar ? 'تعديل' : 'Edit'}
-                  </button>
-                </div>
-              ))}
+              <div
+                className="role-table-scroll"
+                role="region"
+                aria-label={ar ? 'قائمة الطلاب' : 'Student list'}
+                tabIndex={0}
+              >
+                <table className="role-table role-students-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">{ar ? 'الاسم الأول' : 'First name'}</th>
+                      <th scope="col">{ar ? 'اسم العائلة' : 'Last name'}</th>
+                      <th scope="col">{ar ? 'المستوى' : 'Level'}</th>
+                      <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
+                      <th scope="col">{ar ? 'الإجراءات' : 'Actions'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {board.students.map((student) => (
+                      <tr key={student.studentId}>
+                        <td dir="auto">{student.firstName}</td>
+                        <td dir="auto">{student.lastName || '—'}</td>
+                        <td dir="auto">{student.group}</td>
+                        <td>
+                          {student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}
+                        </td>
+                        <td>
+                          <button
+                            className="secondary"
+                            onClick={() => {
+                              setCreating(false)
+                              setEditing(student)
+                            }}
+                          >
+                            {ar ? 'تعديل' : 'Edit'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
           )}
         </>
@@ -457,7 +481,9 @@ function StudentForm({
   cancel: () => void
 }) {
   const [studentId] = useState(() => student?.studentId ?? crypto.randomUUID())
-  const [name, setName] = useState(student?.name ?? '')
+  const [firstName, setFirstName] = useState(student?.firstName ?? '')
+  const [lastName, setLastName] = useState(student?.lastName ?? '')
+  const [nameError, setNameError] = useState<'required' | 'length' | ''>('')
   const [group, setGroup] = useState(student?.group ?? '')
   const [teacherId, setTeacherId] = useState(student?.teacherId ?? '')
   const [active, setActive] = useState(student?.active ?? true)
@@ -466,9 +492,19 @@ function StudentForm({
       className="role-editor"
       onSubmit={(e) => {
         e.preventDefault()
+        if (!firstName.trim()) {
+          setNameError('required')
+          return
+        }
+        if ([firstName.trim(), lastName.trim()].filter(Boolean).join(' ').length > 200) {
+          setNameError('length')
+          return
+        }
+        setNameError('')
         const value = neonAdminStudentSchema.safeParse({
           studentId,
-          name,
+          firstName,
+          lastName,
           group,
           teacherId,
           active,
@@ -478,17 +514,26 @@ function StudentForm({
     >
       <div className="role-fields">
         <label>
-          {ar ? 'اسم الطالب' : 'Student name'}
+          {ar ? 'الاسم الأول' : 'First name'}
           <input
             required
             maxLength={200}
             dir="auto"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
           />
         </label>
         <label>
-          {ar ? 'المجموعة' : 'Group'}
+          {ar ? 'اسم العائلة' : 'Last name'}
+          <input
+            maxLength={200}
+            dir="auto"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+          />
+        </label>
+        <label>
+          {ar ? 'المستوى' : 'Level'}
           <input
             maxLength={100}
             dir="auto"
@@ -514,6 +559,17 @@ function StudentForm({
           {ar ? 'نشط' : 'Active'}
         </label>
       </div>
+      {nameError && (
+        <p role="alert">
+          {nameError === 'required'
+            ? ar
+              ? 'الاسم الأول مطلوب.'
+              : 'First name is required.'
+            : ar
+              ? 'يجب ألا يزيد الاسم الكامل عن 200 حرف.'
+              : 'The full name must contain at most 200 characters.'}
+        </p>
+      )}
       <div className="role-actions">
         <button className="primary" disabled={busy}>
           {ar ? 'حفظ الطالب' : 'Save student'}

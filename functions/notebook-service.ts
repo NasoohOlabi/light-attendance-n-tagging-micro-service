@@ -142,7 +142,7 @@ async function adminBoard(db: PoolClient) {
   ).rows
   const students = (
     await db.query(
-      'SELECT id AS "studentId", name, group_name AS "group", active, teacher_id AS "teacherId" FROM students ORDER BY name, id',
+      'SELECT id AS "studentId", name, COALESCE(first_name, name) AS "firstName", COALESCE(last_name, \'\') AS "lastName", group_name AS "group", active, teacher_id AS "teacherId" FROM students ORDER BY name, id',
     )
   ).rows
   return neonAdminBoardSchema.parse({ accounts, teachers, students })
@@ -204,6 +204,12 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
     await db.query('UPDATE app_accounts SET active = false WHERE auth_user_id = $1', [authUserId])
   } else {
     const student = neonAdminStudentSchema.parse(body)
+    const firstName = 'firstName' in student ? student.firstName : null
+    const lastName = 'lastName' in student ? student.lastName : null
+    const name =
+      'name' in student
+        ? student.name
+        : [student.firstName, student.lastName].filter(Boolean).join(' ')
     const teacher = await db.query(
       `SELECT t.id FROM teachers t JOIN app_accounts a ON a.teacher_id = t.id
       WHERE t.id = $1 AND a.role = 'teacher' AND a.active AND (a.expires_at IS NULL OR a.expires_at > now())
@@ -212,9 +218,19 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
     )
     if (!teacher.rows.length) throw new HttpError(400)
     await db.query(
-      `INSERT INTO students (id, teacher_id, name, group_name, active) VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (id) DO UPDATE SET teacher_id = EXCLUDED.teacher_id, name = EXCLUDED.name, group_name = EXCLUDED.group_name, active = EXCLUDED.active`,
-      [student.studentId, student.teacherId, student.name, student.group, student.active],
+      `INSERT INTO students (id, teacher_id, name, group_name, active, first_name, last_name) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (id) DO UPDATE SET teacher_id = EXCLUDED.teacher_id, name = EXCLUDED.name, group_name = EXCLUDED.group_name, active = EXCLUDED.active,
+        first_name = CASE WHEN EXCLUDED.first_name IS NULL AND students.name = EXCLUDED.name THEN students.first_name ELSE EXCLUDED.first_name END,
+        last_name = CASE WHEN EXCLUDED.first_name IS NULL AND students.name = EXCLUDED.name THEN students.last_name ELSE EXCLUDED.last_name END`,
+      [
+        student.studentId,
+        student.teacherId,
+        name,
+        student.group,
+        student.active,
+        firstName,
+        lastName,
+      ],
     )
   }
   return adminBoard(db)

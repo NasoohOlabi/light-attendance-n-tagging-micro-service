@@ -209,7 +209,35 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
       },
     ],
     teachers: [{ teacherId, name: 'Synthetic Teacher', active: true }],
-    students: [{ studentId, name: 'Synthetic Student', group: 'Group A', active: true, teacherId }],
+    students: [
+      {
+        studentId,
+        name: 'Synthetic Student',
+        firstName: 'Synthetic Student',
+        lastName: '',
+        group: 'Group A',
+        active: true,
+        teacherId,
+      },
+      {
+        studentId: '20000000-0000-4000-8000-000000000002',
+        name: 'أحمد محمد علي',
+        firstName: 'أحمد محمد',
+        lastName: 'علي',
+        group: 'المستوى الثاني',
+        active: false,
+        teacherId,
+      },
+      {
+        studentId: '20000000-0000-4000-8000-000000000003',
+        name: 'Mononym',
+        firstName: 'Mononym',
+        lastName: '',
+        group: 'Level C',
+        active: true,
+        teacherId,
+      },
+    ],
   }
   await page.route(`${api}/**`, async (route) => {
     if (new URL(route.request().url()).pathname.startsWith('/api/auth/')) return route.fallback()
@@ -257,7 +285,17 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
           },
         },
       })
-    if (req.method() === 'POST') posts.push({ path, body: req.postDataJSON() })
+    if (req.method() === 'POST') {
+      const body = req.postDataJSON()
+      posts.push({ path, body })
+      if (path === '/api/admin/students' && body.studentId === board.students[1].studentId) {
+        board.students[1] = {
+          ...board.students[1],
+          ...body,
+          name: [body.firstName, body.lastName].filter(Boolean).join(' '),
+        }
+      }
+    }
     return route.fulfill({ headers, json: board })
   })
   await page.goto(`${origin}/?page=app`)
@@ -267,12 +305,20 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await expect(page.getByRole('heading', { name: 'Accounts' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Add student', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Students', level: 1 })).toBeVisible()
-  await expect(page.getByLabel('Student name')).toBeVisible()
+  await expect(page.getByLabel('First name')).toBeVisible()
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Accounts' })).toHaveCount(0)
+  await expect(page.getByRole('columnheader')).toHaveText([
+    'First name',
+    'Last name',
+    'Level',
+    'Active',
+    'Actions',
+  ])
   await page.getByRole('button', { name: 'Add student', exact: true }).click()
-  await page.getByLabel('Student name').fill('Synthetic Direct Student')
-  await page.getByLabel('Group', { exact: true }).fill('Group B')
+  await page.getByLabel('First name').fill('Synthetic Direct')
+  await page.getByLabel('Last name').fill('Student')
+  await page.getByLabel('Level', { exact: true }).fill('Group B')
   await page.locator('.role-editor select').selectOption(teacherId)
   await page.getByRole('button', { name: 'Save student' }).click()
   await expect(page.getByRole('status')).toHaveText('Saved.')
@@ -364,15 +410,90 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     .getByRole('button', { name: 'Accounts' })
     .click()
   await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible()
-  await expect(page.locator('.role-row')).toHaveCount(0)
+  await expect(page.getByRole('table')).toHaveCount(0)
   await expect(page.getByLabel('Role').filter({ visible: true })).toHaveCount(0)
   await page
     .getByRole('navigation', { name: 'Settings sections' })
     .getByRole('button', { name: 'Students' })
     .click()
+  const list = page.getByRole('region', { name: 'Student list' })
+  await expect(list.getByRole('columnheader')).toHaveText([
+    'First name',
+    'Last name',
+    'Level',
+    'Active',
+    'Actions',
+  ])
+  await expect(list.locator('th[scope="col"]')).toHaveCount(5)
+  const rows = list.locator('tbody tr')
+  await expect(rows.nth(0).locator('td')).toHaveText([
+    'Synthetic Student',
+    '—',
+    'Group A',
+    'Active',
+    'Edit',
+  ])
+  await expect(rows.nth(1).locator('td')).toHaveText([
+    'أحمد محمد',
+    'علي',
+    'المستوى الثاني',
+    'Inactive',
+    'Edit',
+  ])
+  await expect(rows.nth(2).locator('td')).toHaveText(['Mononym', '—', 'Level C', 'Active', 'Edit'])
+  await page.screenshot({
+    path: `.artifacts/verification/student-table-${testInfo.project.name}.png`,
+    fullPage: true,
+  })
+  await rows.nth(1).getByRole('button', { name: 'Edit' }).click()
+  await expect(page.getByLabel('First name')).toHaveValue('أحمد محمد')
+  await expect(page.getByLabel('Last name')).toHaveValue('علي')
+  await page.getByLabel('Last name').fill('خالد')
+  await page.getByRole('button', { name: 'Save student' }).click()
+  await expect.poll(() => posts.length).toBe(3)
+  expect(posts[2]).toEqual({
+    path: '/api/admin/students',
+    body: {
+      studentId: '20000000-0000-4000-8000-000000000002',
+      firstName: 'أحمد محمد',
+      lastName: 'خالد',
+      group: 'المستوى الثاني',
+      active: false,
+      teacherId,
+    },
+  })
+  posts.pop()
+  await rows.nth(1).getByRole('button', { name: 'Edit' }).click()
+  await expect(page.getByLabel('First name')).toHaveValue('أحمد محمد')
+  await expect(page.getByLabel('Last name')).toHaveValue('خالد')
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await page.setViewportSize({ width: 320, height: 844 })
+  await list.focus()
+  const beforeScroll = await list.evaluate((element) => element.scrollLeft)
+  await page.keyboard.press('ArrowRight')
+  await expect
+    .poll(() => list.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(beforeScroll)
+  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await expect(page.getByRole('columnheader')).toHaveText([
+    'الاسم الأول',
+    'اسم العائلة',
+    'المستوى',
+    'الحالة',
+    'الإجراءات',
+  ])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  )
+  await page.screenshot({
+    path: `.artifacts/verification/student-table-ar-${testInfo.project.name}.png`,
+    fullPage: true,
+  })
+  await page.getByRole('button', { name: 'English', exact: true }).click()
   await page.getByRole('button', { name: 'Add student' }).click()
-  await page.getByLabel('Student name').fill('Synthetic New Student')
-  await page.getByLabel('Group', { exact: true }).fill('Group B')
+  await page.getByLabel('First name').fill('Synthetic New')
+  await page.getByLabel('Last name').fill('Student')
+  await page.getByLabel('Level', { exact: true }).fill('Group B')
   await page
     .locator('form')
     .filter({ has: page.getByRole('button', { name: 'Save student' }) })
@@ -383,7 +504,8 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   expect(posts[2].path).toBe('/api/admin/students')
   expect(posts[2].body).toEqual({
     studentId: expect.stringMatching(/^[0-9a-f-]{36}$/),
-    name: 'Synthetic New Student',
+    firstName: 'Synthetic New',
+    lastName: 'Student',
     group: 'Group B',
     teacherId,
     active: true,
