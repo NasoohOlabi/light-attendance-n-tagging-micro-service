@@ -35,7 +35,7 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   })
   page.on('pageerror', (error) => failures.push(error.message))
   await page.goto('/')
-  await expect(page.getByText('v0.1.0 · In development')).toBeVisible()
+  await expect(page.getByText('v0.1.0 · In development')).toHaveCount(0)
   await expect(page.locator('.wartaq-home')).toBeVisible()
   await expect(page.locator('.wartaq-logo')).toHaveText(['وارتق', 'وارتق'])
   await expect(page.locator('.wartaq-logo img')).toHaveCount(0)
@@ -62,7 +62,7 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
     await expect(button).toBeFocused()
     await page.keyboard.press('Enter')
     if (language === 'العربية') {
-      await expect(page.getByText('v0.1.0 · قيد التطوير')).toBeVisible()
+      await expect(page.getByText('v0.1.0 · قيد التطوير')).toHaveCount(0)
       await expect(page).toHaveTitle('وارتق · دورة تلاوة القرآن')
       await expect(
         page.getByRole('heading', { name: 'تلاوة بعناية، ونمو مع كل آية.' }),
@@ -91,7 +91,7 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
   await expect(page).toHaveURL(/page=app/)
   await expect(page.locator('.workspace')).toBeVisible()
-  await expect(page.getByText('v0.1.0 · In development')).toBeVisible()
+  await expect(page.getByText('v0.1.0 · In development')).toHaveCount(0)
   await expect(page).toHaveTitle('Wartaq · Halaqa notebook')
   await expect(page.getByRole('group', { name: 'Language / اللغة' })).toHaveCount(1)
   await page.goBack()
@@ -99,7 +99,7 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.locator('.workspace')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
-  await expect(page.getByText('v0.1.0 · In development')).toBeVisible()
+  await expect(page.getByText('v0.1.0 · In development')).toHaveCount(0)
   await mobileLayout(page)
   await page.goBack()
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
@@ -119,7 +119,7 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
     fullPage: true,
   })
   await page.getByRole('button', { name: 'استكشف باستخدام طلاب تجريبيين', exact: true }).click()
-  await expect(page.getByText('v0.1.0 · قيد التطوير')).toBeVisible()
+  await expect(page.getByText('v0.1.0 · قيد التطوير')).toHaveCount(0)
   await mobileLayout(page)
   await page.screenshot({
     path: `.artifacts/wartaq-final/app-phone-${testInfo.project.name}.png`,

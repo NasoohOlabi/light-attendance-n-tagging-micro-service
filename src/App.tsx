@@ -36,7 +36,6 @@ export function App() {
         </a>
         <InstallApp />
         <AppUpdate />
-        <DevelopmentRelease />
         <AppContent />
       </div>
     </LanguageProvider>
@@ -1245,13 +1244,4 @@ function Empty({ text }: { text: string }) {
 function SkipText() {
   const { t } = useLanguage()
   return t('Skip to main content')
-}
-
-function DevelopmentRelease() {
-  const { language } = useLanguage()
-  return (
-    <p className="bg-slate-100 px-4 py-1 text-center text-xs text-slate-600">
-      {language === 'ar' ? 'v0.1.0 · قيد التطوير' : 'v0.1.0 · In development'}
-    </p>
-  )
 }
