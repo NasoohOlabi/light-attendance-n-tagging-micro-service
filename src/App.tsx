@@ -441,6 +441,7 @@ function Notebook({
               <AttendanceView
                 key={`${query.date}:${query.course}`}
                 enrollments={activeEnrollments}
+                courseSelected={!!query.course}
                 students={students.filter(
                   (student) =>
                     student.active &&
@@ -523,6 +524,16 @@ function Notebook({
   )
 }
 
+function studentLevel(
+  student: Student,
+  courseSelected: boolean,
+  enrollments: import('../shared/neon').Enrollment[],
+) {
+  return courseSelected
+    ? (enrollments.find((entry) => entry.studentId === student.studentId)?.level ?? '')
+    : student.group
+}
+
 function AttendanceView({
   students,
   allStudents,
@@ -531,7 +542,9 @@ function AttendanceView({
   date,
   save,
   enrollments,
+  courseSelected,
 }: {
+  courseSelected: boolean
   enrollments: import('../shared/neon').Enrollment[]
   students: Student[]
   allStudents: Student[]
@@ -548,6 +561,51 @@ function AttendanceView({
       .map(({ value }) => [value.studentId, value.status]),
   )
   const visible = search.trim() ? rankStudents(students, search) : students
+  const level = (student: Student) => studentLevel(student, courseSelected, enrollments)
+  const rows = (items: Student[]) => (
+    <div
+      className="role-table-scroll"
+      role="region"
+      aria-label={language === 'ar' ? 'قائمة الحضور' : 'Attendance list'}
+      tabIndex={0}
+    >
+      <table className="role-table roster-table">
+        <thead>
+          <tr>
+            <th scope="col">{t('Student')}</th>
+            <th scope="col">{language === 'ar' ? 'المستوى' : 'Level'}</th>
+            <th scope="col">{language === 'ar' ? 'الحضور' : 'Attendance'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((student) => (
+            <tr key={student.studentId}>
+              <td dir="auto">{student.name}</td>
+              <td dir="auto">{level(student) || '—'}</td>
+              <td>
+                <select
+                  aria-label={`${t('Attendance for')} ${student.name}`}
+                  value={draft[student.studentId] ?? current.get(student.studentId) ?? ''}
+                  onChange={(event) =>
+                    setDraft({ ...draft, [student.studentId]: event.target.value })
+                  }
+                >
+                  <option value="" disabled={current.has(student.studentId)}>
+                    {t('Not marked')}
+                  </option>
+                  {statuses.map((status) => (
+                    <option key={status} value={status}>
+                      {t(status)}
+                    </option>
+                  ))}
+                </select>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
   const changed = allStudents.filter(
     (student) =>
       draft[student.studentId] && draft[student.studentId] !== current.get(student.studentId),
@@ -598,76 +656,14 @@ function AttendanceView({
           >
             {t('Mark displayed students present')}
           </button>
-          {search.trim() ? (
-            <div className="divide-y divide-slate-100">
-              {visible.map((student) => (
-                <label
-                  key={student.studentId}
-                  className="flex-row flex-wrap items-center justify-between gap-3 py-3"
-                >
-                  <span dir="auto" className="text-base font-semibold">
-                    {student.name}
-                    <span className="ms-3 text-sm font-normal text-slate-500">{student.group}</span>
-                  </span>
-                  <select
-                    aria-label={`${t('Attendance for')} ${student.name}`}
-                    value={draft[student.studentId] ?? current.get(student.studentId) ?? ''}
-                    onChange={(event) =>
-                      setDraft({ ...draft, [student.studentId]: event.target.value })
-                    }
-                  >
-                    <option value="" disabled={current.has(student.studentId)}>
-                      {t('Not marked')}
-                    </option>
-                    {statuses.map((status) => (
-                      <option key={status} value={status}>
-                        {t(status)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+          {search.trim()
+            ? rows(visible)
+            : [...new Set(visible.map(level))].sort().map((group) => (
+                <details key={group} open className="attendance-group">
+                  <summary>{group || (language === 'ar' ? 'بلا مستوى' : 'No level')}</summary>
+                  {rows(visible.filter((student) => level(student) === group))}
+                </details>
               ))}
-            </div>
-          ) : (
-            [...new Set(visible.map((student) => student.group))].sort().map((group) => (
-              <details key={group} open className="attendance-group">
-                <summary>{group || (language === 'ar' ? 'بلا مجموعة' : 'Ungrouped')}</summary>
-                <div className="divide-y divide-slate-100">
-                  {visible
-                    .filter((student) => student.group === group)
-                    .map((student) => (
-                      <label
-                        key={student.studentId}
-                        className="flex-row flex-wrap items-center justify-between gap-3 py-3"
-                      >
-                        <span dir="auto" className="text-base font-semibold">
-                          {student.name}
-                          <span className="ms-3 text-sm font-normal text-slate-500">
-                            {student.group}
-                          </span>
-                        </span>
-                        <select
-                          aria-label={`${t('Attendance for')} ${student.name}`}
-                          value={draft[student.studentId] ?? current.get(student.studentId) ?? ''}
-                          onChange={(event) =>
-                            setDraft({ ...draft, [student.studentId]: event.target.value })
-                          }
-                        >
-                          <option value="" disabled={current.has(student.studentId)}>
-                            {t('Not marked')}
-                          </option>
-                          {statuses.map((status) => (
-                            <option key={status} value={status}>
-                              {t(status)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ))}
-                </div>
-              </details>
-            ))
-          )}
           <button
             className="primary mt-5"
             disabled={!changed.length}
@@ -947,11 +943,7 @@ function RosterView({
               {students.map((student) => (
                 <tr key={student.studentId}>
                   <td dir="auto">{student.name}</td>
-                  <td dir="auto">
-                    {(courseSelected
-                      ? enrollments.find((entry) => entry.studentId === student.studentId)?.level
-                      : student.group) || '—'}
-                  </td>
+                  <td dir="auto">{studentLevel(student, courseSelected, enrollments) || '—'}</td>
                   <td>{student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}</td>
                   <td>
                     <button
@@ -1244,9 +1236,26 @@ function History({
         {visible.toReversed().map((event) => (
           <li key={event.id} className="flex flex-wrap items-start justify-between gap-3 py-4">
             <div className="min-w-0 flex-1">
-              <p dir="auto" className="font-medium">
-                {describeEvent(event, projected.students, t)}
-              </p>
+              {event.payload.kind === 'student' ? (
+                <dl className="grid grid-cols-3 gap-2 break-words">
+                  <div>
+                    <dt>{t('Student')}</dt>
+                    <dd dir="auto">{event.payload.name}</dd>
+                  </div>
+                  <div>
+                    <dt>{language === 'ar' ? 'المستوى' : 'Level'}</dt>
+                    <dd dir="auto">{event.payload.group || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>{language === 'ar' ? 'الحالة' : 'Status'}</dt>
+                    <dd>{t(event.payload.active ? 'active' : 'inactive')}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <p dir="auto" className="font-medium">
+                  {describeEvent(event, projected.students, t)}
+                </p>
+              )}
               <p className="muted mt-1">
                 <bdi>{event.actor}</bdi> ·{' '}
                 {event.receivedAt
@@ -1283,7 +1292,7 @@ function describeEvent(
     students.find((student) => student.studentId === value.studentId)?.name ??
     t('General / unknown student')
   if (value.kind === 'student')
-    return `${t('Student')}: ${value.name} · ${value.group || t('No group')} · ${t(value.active ? 'active' : 'inactive')}`
+    return `${t('Student')}: ${value.name} · ${t(value.active ? 'active' : 'inactive')}`
   if (value.kind === 'attendance')
     return `${name} · ${value.date} · ${t(normalizeStatus(value.status))}`
   return `${name} · #${value.tags.join(' #')} · ${value.text}`

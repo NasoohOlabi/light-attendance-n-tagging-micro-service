@@ -14,4 +14,6 @@ The `sample notebook` test scopes an `li` containing the saved Arabic note, clic
 
 ## Gotchas
 
+Student snapshot history keeps its student identity separate from labelled level and active-state fields. Assert that a roster change and its correction retain those independent values; raw JSON must remain unchanged. Attendance/note descriptions retain their existing date/status/text semantics.
+
 Corrections append; there is no delete. Reversal-of-reversal is unsupported. Restoring intent uses a fresh ordinary event. Original malformed rows remain in database and are counted invalid, not erased.

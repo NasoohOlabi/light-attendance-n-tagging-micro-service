@@ -10,6 +10,8 @@ Sign in or choose **Explore with sample students**. The dashboard opens first. U
 
 ## Driving it with Playwright
 
+Both grouped and searched attendance use the same student-row renderer. Assert separate Student, Level and Attendance cells, with no level in the Student cell. Course selection uses only that enrollment's level, including a blank level; no-course uses the roster level. Accordion headings use the displayed level and do not require a repeated level beside each name. Exercise search, collapse/reopen, course switching and save without losing drafts. Check labelled columns and keyboard-reachable table scrolling at 320/390px in English and Arabic. `e2e/dashboard.spec.ts` and `e2e/courses.spec.ts` cover these alternate paths together.
+
 The `sample notebook` test adds ليلى, selects `getByLabel('Attendance for ليلى').selectOption('absent')`, clicks **Save attendance (1)** and asserts the matching Absent tally on Summary. Assert only Present, Absent and Excused options/columns in both languages, and that legacy early/late events contribute to Present rather than disappearing. Also exercise **Mark displayed students present**, **Session date**, **Group**, **Find a student**, **From** and **To** when those branches change; prove saved count matches displayed intended changes and unmarked students do not become absent. Existing status cannot be cleared silently: use History correction.
 
 ## Gotchas

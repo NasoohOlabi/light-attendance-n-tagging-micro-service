@@ -10,6 +10,8 @@ In Administrator **Settings → Students**, and the dashboard's dedicated **Add 
 
 ## How to get to it (user POV)
 
+The Student portal also keeps Student and Roster level in separate labelled fields; it must not imply that the roster level is every course's level. Account-to-student selectors show only the student's name. Student snapshot history exposes Level and Active as distinct fields, retaining the raw record under Record details. Check these in `e2e/roles.spec.ts` and `e2e/dashboard.spec.ts` alongside attendance so a fix cannot leave another rendering path unchanged.
+
 In the sample, open **Students**. Use **Student name**, optional **Group**, and **Add student**. Each row has Name/Group edits, **Save changes**, **Make inactive** or **Activate**.
 
 ## Driving it with Playwright
