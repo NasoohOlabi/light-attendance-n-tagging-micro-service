@@ -9,7 +9,7 @@ import {
   neonAdminStudentSchema,
 } from '../shared/neon'
 import { LanguageSwitch, useLanguage } from './i18n'
-import { WartaqLogo } from './brand/components'
+import { WorkspaceNavigation } from './WorkspaceNavigation'
 import { request } from './neon'
 import './roles.css'
 
@@ -80,177 +80,180 @@ export function AdminConsole({
     }
   }
   return (
-    <main id="main-content" className="role-page" tabIndex={-1}>
-      <header className="role-header">
-        <WartaqLogo />
-        <div className="header-actions">
-          <LanguageSwitch />
-          <button
-            className="icon-button"
-            aria-label={t('Sign out')}
-            title={t('Sign out')}
-            onClick={signOut}
-          >
-            <LogOut
-              className="icon-directional"
-              size={20}
-              strokeWidth={1.6}
-              aria-hidden="true"
-              focusable="false"
-            />
-          </button>
-        </div>
-      </header>
-      <div className="role-heading">
-        <div>
+    <div className="workspace">
+      <WorkspaceNavigation administrator assigned />
+      <main id="main-content" className="workspace-main role-page" tabIndex={-1}>
+        <header className="role-header">
           <span>{ar ? 'مسؤول' : 'Administrator'}</span>
-          <h1>
-            {initialCreateStudent ? (ar ? 'الطلاب' : 'Students') : ar ? 'الإعدادات' : 'Settings'}
-          </h1>
+          <div className="header-actions">
+            <LanguageSwitch />
+            <button
+              className="icon-button"
+              aria-label={t('Sign out')}
+              title={t('Sign out')}
+              onClick={signOut}
+            >
+              <LogOut
+                className="icon-directional"
+                size={20}
+                strokeWidth={1.6}
+                aria-hidden="true"
+                focusable="false"
+              />
+            </button>
+          </div>
+        </header>
+        <div className="role-heading">
+          <div>
+            <span>{ar ? 'مسؤول' : 'Administrator'}</span>
+            <h1>
+              {initialCreateStudent ? (ar ? 'الطلاب' : 'Students') : ar ? 'الإعدادات' : 'Settings'}
+            </h1>
+          </div>
+          <div className="role-actions">
+            <button
+              className="icon-button"
+              aria-label={t('Refresh')}
+              title={t('Refresh')}
+              onClick={() => setRevision((n) => n + 1)}
+            >
+              <RefreshCw size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
+            </button>
+            <button className="primary" onClick={openNotebook}>
+              {ar ? 'فتح الدفتر' : 'Open notebook'}
+            </button>
+          </div>
         </div>
-        <div className="role-actions">
-          <button
-            className="icon-button"
-            aria-label={t('Refresh')}
-            title={t('Refresh')}
-            onClick={() => setRevision((n) => n + 1)}
-          >
-            <RefreshCw size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
-          </button>
-          <button className="primary" onClick={openNotebook}>
-            {ar ? 'فتح الدفتر' : 'Open notebook'}
-          </button>
-        </div>
-      </div>
-      {error && <p role="alert">{errorMessage(error)}</p>}
-      {message && <p role="status">{message}</p>}
-      {!board && !error && <p role="status">{ar ? 'جارٍ التحميل…' : 'Loading…'}</p>}
-      {board && (
-        <>
-          {!initialCreateStudent && (
-            <nav className="role-tabs" aria-label={ar ? 'أقسام الإعدادات' : 'Settings sections'}>
-              <button
-                className="secondary"
-                aria-pressed={section === 'accounts'}
-                onClick={() => setSection('accounts')}
-              >
-                {ar ? 'الحسابات' : 'Accounts'}
-              </button>
-              <button
-                className="secondary"
-                aria-pressed={section === 'students'}
-                onClick={() => setSection('students')}
-              >
-                {ar ? 'الطلاب' : 'Students'}
-              </button>
-            </nav>
-          )}
-          {section === 'accounts' && !initialCreateStudent && (
-            <section className="panel role-section">
-              <h2 className="title">{ar ? 'الحسابات' : 'Accounts'}</h2>
-              {board.accounts.filter((account) => account.authUserId !== userId).length === 0 && (
-                <p>{ar ? 'لا توجد حسابات أخرى.' : 'No other accounts.'}</p>
-              )}
-              {board.accounts
-                .filter((account) => account.authUserId !== userId)
-                .map((account) => (
-                  <AccountForm
-                    key={`${account.authUserId}:${account.role}:${account.active}`}
-                    account={account}
-                    students={board.students}
-                    busy={busy}
-                    save={save}
-                    ar={ar}
-                  />
-                ))}
-            </section>
-          )}
-          {section === 'students' && (
-            <section className="panel role-section">
-              <div className="role-heading">
-                <h2 className="title">{ar ? 'الطلاب' : 'Students'}</h2>
+        {error && <p role="alert">{errorMessage(error)}</p>}
+        {message && <p role="status">{message}</p>}
+        {!board && !error && <p role="status">{ar ? 'جارٍ التحميل…' : 'Loading…'}</p>}
+        {board && (
+          <>
+            {!initialCreateStudent && (
+              <nav className="role-tabs" aria-label={ar ? 'أقسام الإعدادات' : 'Settings sections'}>
                 <button
                   className="secondary"
-                  onClick={() => {
-                    setEditing(null)
-                    setCreating(true)
-                  }}
+                  aria-pressed={section === 'accounts'}
+                  onClick={() => setSection('accounts')}
                 >
-                  {ar ? 'إضافة طالب' : 'Add student'}
+                  {ar ? 'الحسابات' : 'Accounts'}
                 </button>
-              </div>
-              {(creating || editing) && (
-                <StudentForm
-                  key={editing?.studentId ?? 'new'}
-                  student={editing}
-                  teachers={board.teachers.filter((teacher) =>
-                    board.accounts.some(
-                      (account) =>
-                        account.teacherId === teacher.teacherId &&
-                        account.role === 'teacher' &&
-                        account.active,
-                    ),
-                  )}
-                  busy={busy}
-                  ar={ar}
-                  save={async (value) => {
-                    if (await save('/api/admin/students', neonAdminStudentSchema.parse(value))) {
+                <button
+                  className="secondary"
+                  aria-pressed={section === 'students'}
+                  onClick={() => setSection('students')}
+                >
+                  {ar ? 'الطلاب' : 'Students'}
+                </button>
+              </nav>
+            )}
+            {section === 'accounts' && !initialCreateStudent && (
+              <section className="panel role-section">
+                <h2 className="title">{ar ? 'الحسابات' : 'Accounts'}</h2>
+                {board.accounts.filter((account) => account.authUserId !== userId).length === 0 && (
+                  <p>{ar ? 'لا توجد حسابات أخرى.' : 'No other accounts.'}</p>
+                )}
+                {board.accounts
+                  .filter((account) => account.authUserId !== userId)
+                  .map((account) => (
+                    <AccountForm
+                      key={`${account.authUserId}:${account.role}:${account.active}`}
+                      account={account}
+                      students={board.students}
+                      busy={busy}
+                      save={save}
+                      ar={ar}
+                    />
+                  ))}
+              </section>
+            )}
+            {section === 'students' && (
+              <section className="panel role-section">
+                <div className="role-heading">
+                  <h2 className="title">{ar ? 'الطلاب' : 'Students'}</h2>
+                  <button
+                    className="secondary"
+                    onClick={() => {
+                      setEditing(null)
+                      setCreating(true)
+                    }}
+                  >
+                    {ar ? 'إضافة طالب' : 'Add student'}
+                  </button>
+                </div>
+                {(creating || editing) && (
+                  <StudentForm
+                    key={editing?.studentId ?? 'new'}
+                    student={editing}
+                    teachers={board.teachers.filter((teacher) =>
+                      board.accounts.some(
+                        (account) =>
+                          account.teacherId === teacher.teacherId &&
+                          account.role === 'teacher' &&
+                          account.active,
+                      ),
+                    )}
+                    busy={busy}
+                    ar={ar}
+                    save={async (value) => {
+                      if (await save('/api/admin/students', neonAdminStudentSchema.parse(value))) {
+                        setEditing(null)
+                        setCreating(false)
+                      }
+                    }}
+                    cancel={() => {
                       setEditing(null)
                       setCreating(false)
-                    }
-                  }}
-                  cancel={() => {
-                    setEditing(null)
-                    setCreating(false)
-                  }}
-                />
-              )}
-              <div
-                className="role-table-scroll"
-                role="region"
-                aria-label={ar ? 'قائمة الطلاب' : 'Student list'}
-                tabIndex={0}
-              >
-                <table className="role-table role-students-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">{ar ? 'الاسم الأول' : 'First name'}</th>
-                      <th scope="col">{ar ? 'اسم العائلة' : 'Last name'}</th>
-                      <th scope="col">{ar ? 'المستوى' : 'Level'}</th>
-                      <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
-                      <th scope="col">{ar ? 'الإجراءات' : 'Actions'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {board.students.map((student) => (
-                      <tr key={student.studentId}>
-                        <td dir="auto">{student.firstName}</td>
-                        <td dir="auto">{student.lastName || '—'}</td>
-                        <td dir="auto">{student.group}</td>
-                        <td>
-                          {student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}
-                        </td>
-                        <td>
-                          <button
-                            className="secondary"
-                            onClick={() => {
-                              setCreating(false)
-                              setEditing(student)
-                            }}
-                          >
-                            {ar ? 'تعديل' : 'Edit'}
-                          </button>
-                        </td>
+                    }}
+                  />
+                )}
+                <div
+                  className="role-table-scroll"
+                  role="region"
+                  aria-label={ar ? 'قائمة الطلاب' : 'Student list'}
+                  tabIndex={0}
+                >
+                  <table className="role-table role-students-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">{ar ? 'الاسم الأول' : 'First name'}</th>
+                        <th scope="col">{ar ? 'اسم العائلة' : 'Last name'}</th>
+                        <th scope="col">{ar ? 'المستوى' : 'Level'}</th>
+                        <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
+                        <th scope="col">{ar ? 'الإجراءات' : 'Actions'}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-        </>
-      )}
-    </main>
+                    </thead>
+                    <tbody>
+                      {board.students.map((student) => (
+                        <tr key={student.studentId}>
+                          <td dir="auto">{student.firstName}</td>
+                          <td dir="auto">{student.lastName || '—'}</td>
+                          <td dir="auto">{student.group}</td>
+                          <td>
+                            {student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}
+                          </td>
+                          <td>
+                            <button
+                              className="secondary"
+                              onClick={() => {
+                                setCreating(false)
+                                setEditing(student)
+                              }}
+                            >
+                              {ar ? 'تعديل' : 'Edit'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+          </>
+        )}
+      </main>
+    </div>
   )
 }
 function AccountForm({
