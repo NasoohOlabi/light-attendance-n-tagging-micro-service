@@ -171,7 +171,7 @@ test('student sees only their attendance and loses it after access is denied', a
   expect(new Set(paths)).toEqual(new Set(['/api/me', '/api/student/attendance']))
 })
 
-test('administrator assigns roles and creates an assigned student', async ({ page }) => {
+test('administrator assigns roles and creates an assigned student', async ({ page }, testInfo) => {
   await mockAuth(page, adminId)
   const posts: { path: string; body: unknown }[] = []
   let notebookReads = 0
@@ -262,18 +262,21 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   })
   await page.goto(`${origin}/?page=app`)
   await expect(page.getByRole('button', { name: 'Take attendance' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Accounts' })).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Accounts' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Add student', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Students', level: 1 })).toBeVisible()
   await expect(page.getByLabel('Student name')).toBeVisible()
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Accounts' })).toBeHidden()
+  await expect(page.getByRole('heading', { name: 'Accounts' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Add student', exact: true }).click()
   await page.getByLabel('Student name').fill('Synthetic Direct Student')
   await page.getByLabel('Group', { exact: true }).fill('Group B')
   await page.locator('.role-editor select').selectOption(teacherId)
   await page.getByRole('button', { name: 'Save student' }).click()
   await expect(page.getByRole('status')).toHaveText('Saved.')
-  await expect(page.getByRole('heading', { name: 'Accounts' })).toBeHidden()
+  await expect(page.getByRole('heading', { name: 'Accounts' })).toHaveCount(0)
   expect(posts[0].path).toBe('/api/admin/students')
   posts.length = 0
   await page.getByRole('button', { name: 'Open notebook', exact: true }).click()
@@ -291,11 +294,35 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
   await page.goto(`${origin}/?page=app&view=administration`)
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
-  const account = page.locator('form').filter({ hasText: 'student@example.test' })
+  await expect(page.getByText('admin@example.test')).toHaveCount(0)
+  await expect(page.getByLabel('Role').filter({ visible: true })).toHaveCount(0)
+  await mkdir('.artifacts/verification', { recursive: true })
+  await page.screenshot({
+    path: `.artifacts/verification/settings-overview-${testInfo.project.name}.png`,
+    fullPage: true,
+  })
+  const account = page.locator('details').filter({ hasText: 'student@example.test' })
+  await account.locator('summary').focus()
+  await page.keyboard.press('Enter')
+  await expect(account.getByLabel('Role')).toBeVisible()
+  await page.screenshot({
+    path: `.artifacts/verification/settings-editor-${testInfo.project.name}.png`,
+    fullPage: true,
+  })
   await page.getByRole('button', { name: 'العربية', exact: true }).click()
   await expect(
     account.getByRole('button', { name: 'إعادة تعيين كلمة المرور', exact: true }),
   ).toBeVisible()
+  for (const width of [320, 390, 844]) {
+    await page.setViewportSize({ width, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    )
+  }
+  await page.screenshot({
+    path: `.artifacts/verification/settings-editor-ar-${testInfo.project.name}.png`,
+    fullPage: true,
+  })
   await page.getByRole('button', { name: 'English', exact: true }).click()
   await account.getByLabel('Role').selectOption('student')
   await account.locator('select').nth(1).selectOption(studentId)
@@ -305,7 +332,8 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     path: '/api/admin/accounts/grant',
     body: { role: 'student', authUserId: studentUserId, studentId, expiresAt: null },
   })
-  const teacher = page.locator('form').filter({ hasText: 'teacher@example.test' })
+  const teacher = page.locator('details').filter({ hasText: 'teacher@example.test' })
+  await teacher.locator('summary').click()
   await teacher.getByLabel('New password').fill('synthetic-password-one')
   await teacher.getByLabel('Confirm password').fill('synthetic-password-two')
   await teacher.getByRole('button', { name: 'Reset password' }).click()
@@ -326,9 +354,22 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
       expiresAt: null,
     },
   })
-  const self = page.locator('form').filter({ hasText: 'admin@example.test' })
-  await expect(self.getByRole('button', { name: 'Save role' })).toBeDisabled()
-  await expect(self.getByRole('button', { name: 'Disable access' })).toBeDisabled()
+  await page
+    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('button', { name: 'Students' })
+    .click()
+  await expect(page.getByLabel('Role')).toHaveCount(0)
+  await page
+    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('button', { name: 'Accounts' })
+    .click()
+  await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible()
+  await expect(page.locator('.role-row')).toHaveCount(0)
+  await expect(page.getByLabel('Role').filter({ visible: true })).toHaveCount(0)
+  await page
+    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('button', { name: 'Students' })
+    .click()
   await page.getByRole('button', { name: 'Add student' }).click()
   await page.getByLabel('Student name').fill('Synthetic New Student')
   await page.getByLabel('Group', { exact: true }).fill('Group B')
@@ -402,5 +443,13 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
+  board.accounts.splice(1)
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click()
+  await expect(page.getByText('No other accounts.')).toBeVisible()
+  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await expect(page.getByText('لا توجد حسابات أخرى.')).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  )
   expect(posts).toHaveLength(3)
 })

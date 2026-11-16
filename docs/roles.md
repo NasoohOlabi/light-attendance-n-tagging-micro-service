@@ -12,4 +12,6 @@ Settings is an explicit destination; the Administrator starts on the notebook da
 
 Access changes take effect on the next request, not by push; already downloaded data cannot be retracted. The administrator directory is limited to 1,000 accounts. See [Railway setup](railway-setup.md) for provisioning and [architecture](architecture.md) for event semantics.
 
-The Settings gear opens account roles and roster management at `view=settings`; older `view=administration` links remain compatible. Dashboard **Add student** opens a separate student destination that keeps account roles hidden after saving or canceling.
+The Settings gear opens account roles and roster management at `view=settings`; older `view=administration` links remain compatible. Settings separates **Accounts** and **Students**. Accounts lists other identities as compact rows; open **Manage** to edit a role, access or password. The acting Administrator's account is omitted from this directory rather than shown as a disabled form. If no other identities exist, the directory shows **No other accounts.** Server-side self-protection still applies.
+
+Dashboard **Add student** opens a separate student destination that never renders account management, including after saving or canceling. Entry and reload without an explicit Settings link open the notebook dashboard.
