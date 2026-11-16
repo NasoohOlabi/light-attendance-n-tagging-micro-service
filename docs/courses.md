@@ -25,3 +25,5 @@ Administrators can manually close and reopen a course from the course list. Clos
 Apply `bun run db:migrate` through `neon/006-closed-courses.sql` before deployment. Existing and new courses default to open. Version 5 backups preserve course status; older backups restore courses as open and cannot compare successfully with closed courses. Test against a disposable database first.
 
 Manage students records **Handbook received** independently for each existing enrollment. It defaults to false and survives withdrawal, re-enrollment, level and grade changes.
+
+Course actions stay on one line. On phones, the five touch-sized icons sit directly beneath the separate course name and status cells; wider screens keep the three-column layout. Accessible names and tooltips identify each icon.
