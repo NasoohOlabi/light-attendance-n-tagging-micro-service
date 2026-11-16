@@ -20,6 +20,8 @@ For local authenticated use, set private server variables against a disposable d
 
 ## Transfer and recovery
 
+Course closure requires `neon/006-closed-courses.sql` before deployment. Existing courses default open; version 5 backups preserve status. Older backups import courses as open and comparison refuses to hide closed target courses.
+
 The pushed code backup is `backup/neon-current-2026-11-15` at `77cedae`. The data snapshot is separate: it contains personal roster and password hashes. Keep it in ignored `.local`, restrict its Windows ACL and retain a protected external copy. Git ignore does not encrypt a file.
 
 The private transfer CLI uses source `DATABASE_URL_UNPOOLED` for export and destination `MIGRATION_TARGET_DATABASE_URL` for import/compare:

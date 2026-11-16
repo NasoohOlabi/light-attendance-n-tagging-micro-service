@@ -1,0 +1,1 @@
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS open boolean NOT NULL DEFAULT true;

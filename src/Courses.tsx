@@ -99,10 +99,11 @@ export function Courses({
               aria-label={ar ? 'قائمة الدورات' : 'Course list'}
               tabIndex={0}
             >
-              <table className="role-table w-full table-fixed">
+              <table className="role-table course-list-table w-full table-fixed">
                 <thead>
                   <tr>
                     <th className="w-1/3">{ar ? 'الدورة' : 'Course'}</th>
+                    <th className="w-1/4">{ar ? 'الحالة' : 'Status'}</th>
                     <th>{ar ? 'الإجراءات' : 'Actions'}</th>
                   </tr>
                 </thead>
@@ -110,8 +111,38 @@ export function Courses({
                   {courses.map((item) => (
                     <tr key={item.id}>
                       <td dir="auto">{item.name}</td>
+                      <td>{item.open ? (ar ? 'مفتوحة' : 'Open') : ar ? 'مغلقة' : 'Closed'}</td>
                       <td>
                         <div className="flex flex-wrap gap-2">
+                          <button
+                            className="secondary"
+                            disabled={busy}
+                            onClick={() =>
+                              void submit('/api/admin/courses/status', {
+                                id: item.id,
+                                open: !item.open,
+                              })
+                            }
+                          >
+                            {item.open ? (ar ? 'إغلاق' : 'Close') : ar ? 'إعادة فتح' : 'Reopen'}
+                          </button>
+                          <button
+                            className="secondary"
+                            onClick={() =>
+                              setQuery(
+                                {
+                                  view: 'notebook',
+                                  tab: 'history',
+                                  course: item.id,
+                                  courseView: '',
+                                  q: '',
+                                },
+                                true,
+                              )
+                            }
+                          >
+                            {ar ? 'السجل' : 'History'}
+                          </button>
                           <button className="secondary" onClick={() => go('edit', item.id)}>
                             {ar ? 'تعديل' : 'Edit'}
                           </button>

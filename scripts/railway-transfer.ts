@@ -44,7 +44,7 @@ const courseTables = [
     columns: ['id', 'course_id', 'student_id', 'level', 'practical', 'theory'],
   },
 ] as const
-type Version = 1 | 2 | 3 | 4
+type Version = 1 | 2 | 3 | 4 | 5
 function tablesFor(version: Version) {
   if (version < 3) return [...baseTables]
   return [...baseTables.slice(0, -1), ...courseTables, baseTables[baseTables.length - 1]]
@@ -55,6 +55,7 @@ function columnsFor(
 ): readonly string[] {
   if (table.name === 'public.students' && version >= 2)
     return [...table.columns, 'first_name', 'last_name']
+  if (table.name === 'public.courses' && version >= 5) return [...table.columns, 'open']
   if (table.name === 'public.course_enrollments' && version >= 4)
     return [...table.columns, 'active']
   if (table.name === 'public.events' && version >= 3) return [...table.columns, 'enrollment_id']
@@ -62,7 +63,7 @@ function columnsFor(
 }
 const rowSchema = z.record(z.string(), z.json())
 const backupSchema = z.strictObject({
-  version: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  version: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
   createdAt: z.iso.datetime(),
   tables: z.array(z.strictObject({ name: z.string(), rows: z.array(rowSchema) })),
 })
@@ -147,8 +148,19 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND ((table_name = 'courses' AND column_name IN ('id', 'name')) OR (table_name = 'course_enrollments' AND column_name IN ('id', 'course_id', 'student_id', 'level', 'practical', 'theory')))) AS course_columns,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'events' AND column_name = 'enrollment_id') AS enrollment,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'active' AND data_type = 'boolean' AND is_nullable = 'NO' AND column_default = 'true') AS membership,
-    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'active') AS membership_column`)
-  const { names, courses, enrollment, course_columns, membership, membership_column } = z
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'active') AS membership_column,
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name = 'open' AND data_type = 'boolean' AND is_nullable = 'NO' AND column_default = 'true') AS course_open,
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name = 'open') AS course_open_column`)
+  const {
+    names,
+    courses,
+    enrollment,
+    course_columns,
+    membership,
+    membership_column,
+    course_open,
+    course_open_column,
+  } = z
     .object({
       names: z.number(),
       courses: z.number(),
@@ -156,6 +168,8 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
       course_columns: z.number(),
       membership: z.number(),
       membership_column: z.number(),
+      course_open: z.number(),
+      course_open_column: z.number(),
     })
     .parse(result.rows[0])
   if (
@@ -166,11 +180,13 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     )
   )
     throw new Error('Incomplete application migration')
+  if (course_open !== course_open_column || (course_open && !membership))
+    throw new Error('Incomplete application migration')
   if (membership !== membership_column) throw new Error('Incomplete application migration')
   if (membership && courses !== 2) throw new Error('Incomplete application migration')
   if (courses === 2 && names !== 2)
     throw new Error('Student name migration required for course backup')
-  return courses === 2 ? (membership ? 4 : 3) : names === 2 ? 2 : 1
+  return courses === 2 ? (membership ? (course_open ? 5 : 4) : 3) : names === 2 ? 2 : 1
 }
 async function main() {
   const [command, path] = process.argv.slice(2)
@@ -249,6 +265,10 @@ async function main() {
       if (backup.version < 4 && targetVersion >= 4) {
         const inactive = await db.query('SELECT 1 FROM course_enrollments WHERE NOT active LIMIT 1')
         if (inactive.rowCount) throw new Error('Legacy backup cannot represent inactive enrollment')
+      }
+      if (backup.version < 5 && targetVersion >= 5) {
+        const closed = await db.query('SELECT 1 FROM courses WHERE NOT open LIMIT 1')
+        if (closed.rowCount) throw new Error('Legacy backup cannot represent closed courses')
       }
       const actual = await snapshot(db, backup.version)
       for (const [index, table] of backup.tables.entries()) {

@@ -1,5 +1,5 @@
 import type { LedgerEvent, Payload, Student } from './ledger'
-import type { Enrollment } from './neon'
+import type { Course, Enrollment } from './neon'
 
 export function assignedEvents(events: LedgerEvent[], students: Student[]): LedgerEvent[] {
   const ids = new Set(students.map((student) => student.studentId))
@@ -19,6 +19,7 @@ export function validateAssignedPayloads(
   students: Student[],
   events: LedgerEvent[],
   enrollments?: Enrollment[],
+  courses?: Course[],
 ): void {
   const ids = new Set(students.map((student) => student.studentId))
   const allowed = new Set(
@@ -32,7 +33,11 @@ export function validateAssignedPayloads(
         !enrollments ||
         (payload.enrollmentId
           ? enrollments.some(
-              (e) => e.id === payload.enrollmentId && e.studentId === payload.studentId && e.active,
+              (e) =>
+                e.id === payload.enrollmentId &&
+                e.studentId === payload.studentId &&
+                e.active &&
+                (!courses || courses.some((course) => course.id === e.courseId && course.open)),
             )
           : !enrollments.some((e) => e.studentId === payload.studentId))
       )

@@ -140,6 +140,7 @@ function Notebook({
   const ledger = useLedger(demo !== null, demo === 'assigned', neon)
   const assigned = !!neon || demo === 'assigned'
   const baseProjection = projectEvents(ledger.events)
+  const closedCourse = ledger.courses.find((course) => course.id === query.course && !course.open)
   const selectedEnrollments = ledger.enrollments.filter((entry) => entry.courseId === query.course)
   const activeEnrollments = selectedEnrollments.filter((entry) => entry.active)
   const selectedIds = new Set(selectedEnrollments.map((entry) => entry.id))
@@ -281,19 +282,34 @@ function Notebook({
           <label className="mb-4">
             {language === 'ar' ? 'الدورة' : 'Course'}
             <select
-              value={query.course}
+              value={closedCourse ? '__closed__' : query.course}
               onChange={(event) => setQuery({ course: event.target.value, student: '' }, true)}
             >
+              {closedCourse && (
+                <option value="__closed__" disabled>
+                  {language === 'ar' ? 'اختر دورة' : 'Select a course'}
+                </option>
+              )}
               <option value="">
                 {language === 'ar' ? 'السجل السابق / بلا دورة' : 'Previous / no course'}
               </option>
-              {ledger.courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
-              ))}
+              {ledger.courses
+                .filter((course) => course.open)
+                .map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.name}
+                  </option>
+                ))}
             </select>
           </label>
+        )}
+        {neon && query.view !== 'courses' && query.course && closedCourse && (
+          <p role="status">
+            <strong dir="auto">{closedCourse.name}</strong>{' '}
+            {language === 'ar'
+              ? 'الدورة مغلقة. السجل والتصحيحات متاحة، ولا يمكن تسجيل حضور جديد.'
+              : 'This course is closed. History and corrections remain available; new attendance is disabled.'}
+          </p>
         )}
         <div
           className="mb-6 flex flex-wrap items-end gap-3"
@@ -445,12 +461,16 @@ function Notebook({
                 students={students.filter(
                   (student) =>
                     student.active &&
+                    (!query.course ||
+                      ledger.courses.some((course) => course.id === query.course && course.open)) &&
                     (query.course ||
                       !ledger.enrollments.some((entry) => entry.studentId === student.studentId)),
                 )}
                 allStudents={projected.students.filter(
                   (student) =>
                     student.active &&
+                    (!query.course ||
+                      ledger.courses.some((course) => course.id === query.course && course.open)) &&
                     (query.course ||
                       !ledger.enrollments.some((entry) => entry.studentId === student.studentId)),
                 )}

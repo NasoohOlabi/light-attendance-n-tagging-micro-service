@@ -14,4 +14,8 @@ The notebook **Students** list and both grouped/searched **Attendance** use the 
 
 Inactive enrollments remain available for historical attendance, corrections and grades. Current attendance and current enrolled-roster/dashboard counts exclude them. Teacher assignment and Student privacy restrictions still apply.
 
-Apply `bun run db:migrate` through `neon/005-active-enrollments.sql` to the target Railway database before deploying this workflow. It adds an active membership flag, defaulting existing enrollments to active, without deleting data. Backups use version 4 to preserve that flag; versions 1–3 remain supported without silently hiding inactive memberships. Test against a disposable database first; synthetic tests do not verify the live provider.
+Migration `neon/005-active-enrollments.sql` adds an active membership flag, defaulting existing enrollments to active, without deleting data. Backup versions 4 and later preserve that flag; versions 1–3 remain supported without silently hiding inactive memberships. Test against a disposable database first; synthetic tests do not verify the live provider.
+
+Administrators can manually close and reopen a course from the course list. Closing does not depend on grades and preserves enrollments, grades and history. Closed courses remain in the management list but are omitted from notebook selectors; a previously saved course URL can still show history and corrections, while new attendance is rejected. Reopening permits attendance again. Notes remain student-scoped.
+
+Apply `bun run db:migrate` through `neon/006-closed-courses.sql` before deployment. Existing and new courses default to open. Version 5 backups preserve course status; older backups restore courses as open and cannot compare successfully with closed courses. Test against a disposable database first.

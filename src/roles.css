@@ -130,6 +130,17 @@
   }
 }
 
+@media (max-width: 40rem) {
+  .course-list-table th,
+  .course-list-table td {
+    padding-inline: 0.25rem;
+  }
+  .course-list-table button {
+    padding-inline: 0.5rem;
+    overflow-wrap: normal;
+  }
+}
+
 .course-students-table {
   min-width: 58rem;
 }

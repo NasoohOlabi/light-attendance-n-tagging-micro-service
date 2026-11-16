@@ -16,7 +16,9 @@ export const neonStudentSchema = z.object({
   group: z.string().trim().max(100),
   active: z.boolean(),
 })
-export const courseSchema = z.object({ id: z.uuid(), name: z.string().trim().min(1).max(200) })
+export const courseInputSchema = z.object({ id: z.uuid(), name: z.string().trim().min(1).max(200) })
+export const courseSchema = courseInputSchema.extend({ open: z.boolean().default(true) })
+export const courseStatusSchema = z.strictObject({ id: z.uuid(), open: z.boolean() })
 export const enrollmentSchema = z.object({
   id: z.uuid(),
   courseId: z.uuid(),

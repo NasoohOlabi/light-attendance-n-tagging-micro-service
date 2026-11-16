@@ -25,8 +25,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     { kind: 'student', studentId: secondStudentId, name: 'New Student', group: 'A', active: true },
   ]
   const courses = [
-    { id: courseA, name: 'Course A' },
-    { id: courseB, name: 'Course B' },
+    { id: courseA, name: 'Course A', open: true },
+    { id: courseB, name: 'Course B', open: true },
   ]
   const enrollments = [
     {
@@ -99,11 +99,17 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     const path = new URL(route.request().url()).pathname
     if (path.startsWith('/api/auth/')) return route.fallback()
     if (path === '/api/me') return route.fulfill({ json: { account: teacher } })
+    if (path === '/api/admin/courses/status') {
+      const body = route.request().postDataJSON()
+      const course = courses.find((item) => item.id === body.id)
+      if (course) course.open = body.open
+      return route.fulfill({ json: { saved: true } })
+    }
     if (path === '/api/admin/courses') {
       const course = courseSchema.parse(route.request().postDataJSON())
       attemptedCourseIds.push(course.id)
       const index = courses.findIndex((entry) => entry.id === course.id)
-      if (index >= 0) courses[index] = course
+      if (index >= 0) courses[index] = { ...course, open: courses[index].open }
       else courses.push(course)
       if (dropCourseResponse) {
         dropCourseResponse = false
@@ -248,14 +254,15 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
                 : '\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062f\u0648\u0631\u0627\u062a',
           })
           .locator('tbody tr button')
-        await expect(actions).toHaveCount(6)
+        await expect(actions).toHaveCount(10)
         const bounds = await actions.evaluateAll((buttons) =>
           buttons.map((button) => {
             const rect = button.getBoundingClientRect()
-            return { left: rect.left, right: rect.right }
+            return { left: rect.left, right: rect.right, height: rect.height }
           }),
         )
         expect(bounds.every((rect) => rect.left >= 0 && rect.right <= width)).toBe(true)
+        expect(bounds.every((rect) => rect.height <= 80)).toBe(true)
         await page.screenshot({
           path: `.artifacts/verification/course-list-${width}-${language}.png`,
           fullPage: true,
@@ -452,11 +459,40 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseA)
   await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveValue('present')
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
-  await page
-    .getByRole('row')
-    .filter({ hasText: 'Course A' })
-    .getByRole('button', { name: 'Manage students' })
-    .click()
+  const courseRow = page.getByRole('row').filter({ hasText: 'Course A' })
+  await courseRow.getByRole('button', { name: 'Close', exact: true }).click()
+  await expect(courseRow).toContainText('Closed')
+  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await expect(courseRow).toContainText('مغلقة')
+  await expect(courseRow.getByRole('button', { name: 'إعادة فتح' })).toBeVisible()
+  await page.screenshot({
+    path: `.artifacts/verification/closed-course-${testInfo.project.name}-ar.png`,
+    fullPage: true,
+  })
+  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await page.reload()
+  await expect(courseRow).toContainText('Closed')
+  await courseRow.getByRole('button', { name: 'History', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'This course is closed' })).toBeVisible()
+  await expect(
+    page
+      .getByRole('combobox', { name: 'Course', exact: true })
+      .locator(`option[value="${courseA}"]`),
+  ).toHaveCount(0)
+  await expect(page.locator('li').filter({ hasText: 'Synthetic Student' })).toContainText('present')
+  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
+  await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  await courseRow.getByRole('button', { name: 'Reopen', exact: true }).click()
+  await expect(courseRow).toContainText('Open')
+  await courseRow.getByRole('button', { name: 'Grades' }).click()
+  await expect(page.getByLabel('Practical: Synthetic Student')).toHaveValue('0')
+  await expect(page.getByLabel('Theory: Synthetic Student')).toHaveValue('100')
+  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseA)
+  await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
+  await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  await courseRow.getByRole('button', { name: 'Manage students' }).click()
   await page.getByRole('switch', { name: 'Enrolled: Synthetic Student' }).click()
   await expect.poll(() => enrollments[0].active).toBe(false)
   await page.getByRole('button', { name: 'History & corrections', exact: true }).click()

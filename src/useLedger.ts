@@ -155,6 +155,7 @@ export function useLedger(
             current.students,
             current.events,
             current.enrollments,
+            current.courses,
           )
           const snapshot = remaining.length
             ? ((writeStarted = true), await postEvents(neon.userId, remaining))

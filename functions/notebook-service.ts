@@ -3,7 +3,8 @@ import { hashPassword } from 'better-auth/crypto'
 import type { Pool, PoolClient } from 'pg'
 import {
   courseBoardSchema,
-  courseSchema,
+  courseInputSchema,
+  courseStatusSchema,
   enrollmentSchema,
   enrollmentMembershipSchema,
   enrollmentGradesSchema,
@@ -60,14 +61,16 @@ async function courseBoard(db: PoolClient, teacher: z.infer<typeof neonTeacherSc
   ).rows
   const courses =
     teacher.role === 'administrator'
-      ? (await db.query('SELECT id, name FROM courses ORDER BY name, id')).rows
+      ? (await db.query('SELECT id, name, open FROM courses ORDER BY id FOR SHARE')).rows
       : (
           await db.query(
-            'SELECT DISTINCT c.id, c.name FROM courses c JOIN course_enrollments ce ON ce.course_id = c.id JOIN students s ON s.id = ce.student_id WHERE s.teacher_id = $1 AND s.active ORDER BY c.name, c.id',
+            'SELECT c.id, c.name, c.open FROM courses c WHERE EXISTS (SELECT 1 FROM course_enrollments ce JOIN students s ON s.id = ce.student_id WHERE ce.course_id = c.id AND s.teacher_id = $1 AND s.active) ORDER BY c.id FOR SHARE OF c',
             [teacher.id],
           )
         ).rows
-  return courseBoardSchema.parse({ courses, enrollments })
+  const board = courseBoardSchema.parse({ courses, enrollments })
+  board.courses.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+  return board
 }
 
 async function snapshot(db: PoolClient, teacher: z.infer<typeof neonTeacherSchema>) {
@@ -220,11 +223,19 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
       )
     }
   } else if (path === '/api/admin/courses') {
-    const course = courseSchema.parse(body)
+    const course = courseInputSchema.parse(body)
     await db.query(
       'INSERT INTO courses (id, name) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name',
       [course.id, course.name],
     )
+    return { saved: true }
+  } else if (path === '/api/admin/courses/status') {
+    const status = courseStatusSchema.parse(body)
+    const result = await db.query('UPDATE courses SET open = $2 WHERE id = $1 RETURNING id', [
+      status.id,
+      status.open,
+    ])
+    if (!result.rowCount) throw new HttpError(400)
     return { saved: true }
   } else if (path === '/api/admin/enrollments/grades') {
     const grades = enrollmentGradesSchema.parse(body)
@@ -392,6 +403,7 @@ export function createHandler(
         '/api/admin/accounts/reset-password',
         '/api/admin/students',
         '/api/admin/courses',
+        '/api/admin/courses/status',
         '/api/admin/enrollments',
         '/api/admin/enrollments/membership',
         '/api/admin/enrollments/grades',
@@ -407,6 +419,7 @@ export function createHandler(
         '/api/admin/accounts/reset-password',
         '/api/admin/students',
         '/api/admin/courses',
+        '/api/admin/courses/status',
         '/api/admin/enrollments',
         '/api/admin/enrollments/membership',
         '/api/admin/enrollments/grades',
@@ -420,6 +433,7 @@ export function createHandler(
         '/api/admin/accounts/reset-password',
         '/api/admin/students',
         '/api/admin/courses',
+        '/api/admin/courses/status',
         '/api/admin/enrollments',
         '/api/admin/enrollments/membership',
         '/api/admin/enrollments/grades',
@@ -579,6 +593,7 @@ export function createHandler(
               current.students,
               current.events,
               current.enrollments,
+              current.courses,
             )
           } catch {
             throw new HttpError(403)
