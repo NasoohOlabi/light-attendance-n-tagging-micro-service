@@ -1,5 +1,7 @@
 # Halaqa verification features
 
+The v0.1.0 development note appears on the public homepage, sign-in and notebook screens. `e2e/home.spec.ts` checks the English/Arabic wording across page transitions and mobile overflow.
+
 Run the affected scenarios and the full UI suite as directed by the [verification skill](../SKILL.md). The synthetic same-origin fixtures exercise real browser controls and storage; they do not establish live Railway behavior.
 
 | Area                                    | Proof                                                |
