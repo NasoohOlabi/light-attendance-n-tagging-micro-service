@@ -112,3 +112,39 @@ test('event boundary rejects unknown payloads and preserves note text', () => {
   expect(eventSchema.parse(note).payload).toEqual(note.payload)
   expect(eventSchema.safeParse({ ...note, payload: { kind: 'unknown' } }).success).toBe(false)
 })
+
+test('course enrollment and legacy attendance project independently and corrections stay scoped', () => {
+  const studentId = crypto.randomUUID()
+  const a = crypto.randomUUID()
+  const b = crypto.randomUUID()
+  const date = '2026-11-13'
+  const old = makeEvent('teacher', { kind: 'attendance', studentId, date, status: 'absent' })
+  const first = makeEvent('teacher', {
+    kind: 'attendance',
+    studentId,
+    enrollmentId: a,
+    date,
+    status: 'present',
+  })
+  const second = makeEvent('teacher', {
+    kind: 'attendance',
+    studentId,
+    enrollmentId: b,
+    date,
+    status: 'late',
+  })
+  const changed = makeEvent('teacher', {
+    kind: 'attendance',
+    studentId,
+    enrollmentId: a,
+    date,
+    status: 'excused',
+  })
+  const undo = makeEvent('teacher', {
+    kind: 'reversal',
+    targetId: changed.id,
+    reason: 'Correction',
+  })
+  const result = projectEvents([old, first, second, changed, undo])
+  expect(result.attendance.map(({ value }) => value.status)).toEqual(['absent', 'present', 'late'])
+})

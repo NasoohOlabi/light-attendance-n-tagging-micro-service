@@ -95,13 +95,15 @@ export function StudentAttendance({ userId, signOut }: { userId: string; signOut
             <table className="role-table">
               <thead>
                 <tr>
+                  <th>{ar ? 'الدورة' : 'Course'}</th>
                   <th>{t('Date')}</th>
                   <th>{ar ? 'الحالة' : 'Status'}</th>
                 </tr>
               </thead>
               <tbody>
                 {data.attendance.map((item) => (
-                  <tr key={item.date}>
+                  <tr key={`${item.enrollmentId ?? 'legacy'}:${item.date}`}>
+                    <td>{item.course ?? (ar ? 'سجل سابق' : 'Previous record')}</td>
                     <td>
                       <bdi>{item.date}</bdi>
                     </td>
