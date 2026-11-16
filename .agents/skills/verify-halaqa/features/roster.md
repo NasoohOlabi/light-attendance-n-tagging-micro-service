@@ -2,7 +2,7 @@
 
 ## Sub-features
 
-Administrators manage assignments in Administration. The sample supports local roster edits; authenticated Teachers see their assigned roster.
+Administrators manage assignments in Settings. The sample supports local roster edits; authenticated Teachers see their assigned roster.
 
 ## How to get to it (user POV)
 

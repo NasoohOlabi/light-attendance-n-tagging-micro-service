@@ -101,7 +101,9 @@ export function AdminConsole({
       <div className="role-heading">
         <div>
           <span>{ar ? 'مسؤول' : 'Administrator'}</span>
-          <h1>{ar ? 'إدارة الحسابات والطلاب' : 'Accounts and students'}</h1>
+          <h1>
+            {initialCreateStudent ? (ar ? 'الطلاب' : 'Students') : ar ? 'الإعدادات' : 'Settings'}
+          </h1>
         </div>
         <div className="role-actions">
           <button
@@ -122,7 +124,7 @@ export function AdminConsole({
       {!board && !error && <p role="status">{ar ? 'جارٍ التحميل…' : 'Loading…'}</p>}
       {board && (
         <>
-          <section className="panel role-section" hidden={initialCreateStudent && creating}>
+          <section className="panel role-section" hidden={initialCreateStudent}>
             <h2 className="title">{ar ? 'الحسابات' : 'Accounts'}</h2>
             {board.accounts.map((account) => (
               <AccountForm

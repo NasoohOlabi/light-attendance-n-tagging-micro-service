@@ -20,7 +20,7 @@ const arabic = {
   'Assigned teacher sample notebook.': 'دفتر تجريبي للمعلم المعيّن.',
   'Sample notebook.': 'دفتر تجريبي.',
   'Changes stay in memory and disappear when you leave. No server requests are made.':
-    'تبقى التغييرات في الذاكرة وتختفي عند المغادرة. لا تُرسل طلبات إلى ??????.',
+    'تبقى التغييرات في الذاكرة وتختفي عند المغادرة. لا تُرسل طلبات إلى الخادم.',
   Notebook: 'الدفتر',
   Attendance: 'الحضور',
   Notes: 'الملاحظات',

@@ -1,6 +1,6 @@
 # Railway setup and migration
 
-Railway replaces Neon hosting, managed Auth and Postgres. A Bun server serves React, Better Auth at `/api/auth`, and the notebook API on one HTTPS origin. The four application tables retain all role/assignment restrictions. Better Auth uses separate tables in the retained `neon_auth` schema; the name preserves queries without contacting Neon. Source filenames containing `neon` remain for compatibility.
+Railway replaces Neon hosting, managed Auth and Postgres. A Bun server serves React, Better Auth at `/api/auth`, and the notebook API on one HTTPS origin. The six application tables retain all role/assignment restrictions and store courses and student enrollments. See [courses](courses.md) for enrollment fields and attendance scope. Better Auth uses separate tables in the retained `neon_auth` schema; the name preserves queries without contacting Neon. Source filenames containing `neon` remain for compatibility.
 
 ## Deployment
 
@@ -24,7 +24,7 @@ bun scripts/railway-transfer.ts import .local/neon-backup.json
 bun scripts/railway-transfer.ts compare .local/neon-backup.json
 ```
 
-Export takes a consistent read-only snapshot, refusing unsupported credentials and banned identities. Import requires an empty migrated destination, commits atomically after comparing every transferred row, and preserves event sequence and its next value. Hash comparisons include original credential hashes. UUIDs, application grants and roster assignments are retained. Sessions, signing keys, OAuth/SMTP configuration and organization tables are excluded; users sign in again at the new origin. Administrators can reset another credential user's password in Administration without SMTP; reset invalidates that user's sessions.
+Export takes a consistent read-only snapshot, refusing unsupported credentials and banned identities. Import requires an empty migrated destination, commits atomically after comparing every transferred row, and preserves event sequence and its next value. Hash comparisons include original credential hashes. UUIDs, application grants and roster assignments are retained. Sessions, signing keys, OAuth/SMTP configuration and organization tables are excluded; users sign in again at the new origin. Administrators can reset another credential user's password in Settings without SMTP; reset invalidates that user's sessions.
 
 Take a final snapshot after stopping old-host writes and compare the destination before cutover. At the 2026-11-15 cutover, the source snapshot still exactly matched the copied data. The one active source application grant was then set inactive, preventing old Pages/installed clients from writing to a separate database. The original grant is retained privately in `.local/neon-cutover-original-grants.json` and the original backup; Railway retains its active Administrator grant. The source data and Neon services remain for recovery. Once Railway accepts writes, returning to Neon requires reconciling new events before restoring those original grants; a hosting rollback alone cannot transfer database writes. Never overwrite a nonempty destination.
 
@@ -59,4 +59,4 @@ bun run neon:admin students upsert .local/students.json
 bun run neon:admin teacher disable <teacher-uuid>
 ```
 
-A Teacher input contains `id`, an existing signup `email` or `authUserId`, `name`, `mode` (`read_write`, `read_only`, or `write_only`), and optional ISO `expiresAt`. A Student grant uses `role: "student"`, an identity, an existing `studentId`, and optional `expiresAt`. A roster input is an array of objects with `id`, `teacherId`, `name`, `group`, and `active`. Preserve stable IDs and keep real identities and records in private files. The browser Administration screen manages other accounts and roster assignments; it cannot change, disable or reset the acting Administrator.
+A Teacher input contains `id`, an existing signup `email` or `authUserId`, `name`, `mode` (`read_write`, `read_only`, or `write_only`), and optional ISO `expiresAt`. A Student grant uses `role: "student"`, an identity, an existing `studentId`, and optional `expiresAt`. A roster input is an array of objects with `id`, `teacherId`, `name`, `group`, and `active`. Preserve stable IDs and keep real identities and records in private files. The browser Settings screen manages other accounts and roster assignments; it cannot change, disable or reset the acting Administrator.

@@ -330,6 +330,10 @@
   .workspace-tab-long {
     display: none;
   }
+  .workspace-rail nav[data-courses='true'] {
+    grid-template-columns: repeat(7, minmax(44px, 1fr));
+    overflow-x: auto;
+  }
   .workspace-tab-short {
     display: inline;
   }
