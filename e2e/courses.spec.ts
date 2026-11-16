@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import { courseSchema } from '../shared/neon'
 
@@ -10,6 +10,29 @@ const courseA = '30000000-0000-4000-8000-000000000001'
 const courseB = '30000000-0000-4000-8000-000000000002'
 const enrollA = '40000000-0000-4000-8000-000000000001'
 const enrollB = '40000000-0000-4000-8000-000000000002'
+
+async function expectCompactLevel(list: Locator) {
+  const geometry = await list.locator('table').evaluate((table) => {
+    const headers = [...table.querySelectorAll('thead th')]
+    const level = table.querySelector('tbody tr td:nth-child(2)')
+    if (!headers[1] || !level) throw new Error('Student and level columns must be present')
+    const textCenter = (element: Element) => {
+      const range = document.createRange()
+      range.selectNodeContents(element)
+      const bounds = range.getBoundingClientRect()
+      return (bounds.left + bounds.right) / 2
+    }
+    return {
+      widths: headers.map((header) => header.getBoundingClientRect().width),
+      levelAlignment: Math.abs(textCenter(headers[1]) - textCenter(level)),
+    }
+  })
+  expect(geometry.widths[1]).toBeLessThanOrEqual(112)
+  expect(geometry.widths[0]).toBeGreaterThan(geometry.widths[1] * 2)
+  expect(geometry.levelAlignment).toBeLessThanOrEqual(2)
+  if (geometry.widths.length === 4)
+    expect(geometry.widths.slice(1).every((width) => width <= 128)).toBe(true)
+}
 
 test('course enrollment and same-day attendance stay separate', async ({ page }, testInfo) => {
   const teacher = {
@@ -174,6 +197,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     'Active',
     '',
   ])
+  await expectCompactLevel(list)
   const courseFilter = page.getByRole('combobox', { name: 'Course', exact: true })
   await courseFilter.selectOption(courseA)
   await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', '—', 'Active', ''])
@@ -182,6 +206,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.reload()
   await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Advanced', 'Active', ''])
   await mkdir('.artifacts/verification', { recursive: true })
+  if (testInfo.project.name === 'chromium') await page.setViewportSize({ width: 1715, height: 993 })
+  await expectCompactLevel(list)
   if (testInfo.project.name === 'mobile') {
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 844 })
@@ -211,6 +237,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .filter({ hasText: 'Synthetic Student' })
   await expect(attendanceRow.getByRole('cell').nth(1)).toHaveText('Advanced')
   await expect(attendanceRow.getByRole('cell').first()).toHaveText('Synthetic Student')
+  await expectCompactLevel(page.getByRole('region', { name: 'Attendance list' }))
   await page.getByRole('button', { name: 'All my students' }).click()
   await courseFilter.selectOption(courseA)
   await expect(attendanceRow.getByRole('cell').nth(1)).toHaveText('—')
@@ -221,6 +248,11 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await page.getByRole('button', { name: 'العربية', exact: true }).click()
   const arabicList = page.getByRole('region', { name: 'قائمة الطلاب' })
+  await expectCompactLevel(arabicList)
+  await page.screenshot({
+    path: `.artifacts/verification/roster-layout-${testInfo.project.name}-ar.png`,
+    fullPage: true,
+  })
   await expect(arabicList.getByRole('columnheader')).toHaveText([
     'الطالب',
     'المستوى',

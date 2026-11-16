@@ -590,6 +590,11 @@ function AttendanceView({
       tabIndex={0}
     >
       <table className="role-table roster-table">
+        <colgroup>
+          <col />
+          <col className="roster-level-column" />
+          <col className="roster-attendance-column" />
+        </colgroup>
         <thead>
           <tr>
             <th scope="col">{t('Student')}</th>
@@ -600,8 +605,12 @@ function AttendanceView({
         <tbody>
           {items.map((student) => (
             <tr key={student.studentId}>
-              <td dir="auto">{student.name}</td>
-              <td dir="auto">{level(student) || '—'}</td>
+              <td>
+                <bdi>{student.name}</bdi>
+              </td>
+              <td>
+                <bdi>{level(student) || '—'}</bdi>
+              </td>
               <td>
                 <select
                   aria-label={`${t('Attendance for')} ${student.name}`}
@@ -951,6 +960,12 @@ function RosterView({
           tabIndex={0}
         >
           <table className="role-table roster-table">
+            <colgroup>
+              <col />
+              <col className="roster-level-column" />
+              <col className="roster-active-column" />
+              <col className="roster-actions-column" />
+            </colgroup>
             <thead>
               <tr>
                 <th scope="col">{t('Student')}</th>
@@ -962,8 +977,12 @@ function RosterView({
             <tbody>
               {students.map((student) => (
                 <tr key={student.studentId}>
-                  <td dir="auto">{student.name}</td>
-                  <td dir="auto">{studentLevel(student, courseSelected, enrollments) || '—'}</td>
+                  <td>
+                    <bdi>{student.name}</bdi>
+                  </td>
+                  <td>
+                    <bdi>{studentLevel(student, courseSelected, enrollments) || '—'}</bdi>
+                  </td>
                   <td>{student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}</td>
                   <td>
                     <button

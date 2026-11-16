@@ -5,3 +5,5 @@ Administrators maintain the canonical student roster and assign each student to 
 The server checks the authenticated role, active state, expiry, Teacher access mode and current assignment. Teachers see active assigned students and can submit student-specific attendance and notes according to their mode. Reassignment changes staff access to the student's history. Administrators have the full notebook; Students receive only their own projected attendance. Signup alone grants no access. See [roles](roles.md).
 
 Administrator student forms store optional WhatsApp number, general location and birth year (year only), alongside the existing roster level. Blank values clear these fields; legacy updates that omit them preserve them. They are not exposed in Student attendance responses.
+
+Notebook Students and attendance tables give the remaining width to student names. Level, status and action columns have compact, stable widths, with centered headers and values. Text direction is isolated inside cells so Arabic, Latin names and short level values stay aligned. Phone tables retain their labelled columns within bounded horizontal scrolling.
