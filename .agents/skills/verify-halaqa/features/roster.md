@@ -4,6 +4,8 @@
 
 Administrators manage assignments in Settings. The sample supports local roster edits; authenticated Teachers see their assigned roster.
 
+In the notebook **Students** list, verify distinct Student, Level, Active and Actions columns rather than concatenated name/level text. With no course selected, Level shows the roster group value. With a course selected, it shows only the matching enrollment level; a blank enrollment shows an em dash. Use one synthetic student with different roster, Course A and Course B levels, switch courses and reload, and verify the exact Level cell and Open student action. Preserve visible headers and bounded keyboard scrolling at 320/390px in English and Arabic.
+
 In Administrator **Settings → Students**, and the dashboard's dedicated **Add student** destination, verify five separate table columns: **First name**, **Last name**, **Level**, **Active**, **Actions**. Create and edit a synthetic student with separate given/family names, save, and reopen Edit to confirm each field persisted independently. Include a compound Arabic given/family name, a mononym with blank family name, active/inactive students and a legacy unsplit name. Level uses the roster group value. Legacy names remain intact until edited.
 
 ## How to get to it (user POV)
