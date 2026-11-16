@@ -16,10 +16,27 @@ export const neonStudentSchema = z.object({
   group: z.string().trim().max(100),
   active: z.boolean(),
 })
+export const courseSchema = z.object({ id: z.uuid(), name: z.string().trim().min(1).max(200) })
+export const enrollmentSchema = z.object({
+  id: z.uuid(),
+  courseId: z.uuid(),
+  studentId: z.uuid(),
+  level: z.string().trim().max(200),
+  practical: z.number().min(0).max(100).nullable(),
+  theory: z.number().min(0).max(100).nullable(),
+})
+export const courseBoardSchema = z.object({
+  courses: z.array(courseSchema),
+  enrollments: z.array(enrollmentSchema),
+})
+export type Course = z.infer<typeof courseSchema>
+export type Enrollment = z.infer<typeof enrollmentSchema>
 export const neonSnapshotSchema = z.object({
   teacher: neonTeacherSchema,
   students: z.array(neonStudentSchema),
   events: z.array(eventSchema),
+  courses: z.array(courseSchema).default([]),
+  enrollments: z.array(enrollmentSchema).default([]),
 })
 export const neonBatchSchema = z.object({ events: z.array(eventSchema).min(1).max(500) })
 export const neonErrorSchema = z.object({ error: z.string() })
@@ -40,7 +57,14 @@ export const neonAccountSchema = z.union([neonTeacherSchema, neonStudentAccountS
 export type NeonAccount = z.infer<typeof neonAccountSchema>
 export const neonStudentAttendanceSchema = z.object({
   student: z.object({ studentId: z.uuid(), name: z.string(), group: z.string() }),
-  attendance: z.array(z.object({ date: z.iso.date(), status: statusSchema })),
+  attendance: z.array(
+    z.object({
+      date: z.iso.date(),
+      status: statusSchema,
+      course: z.string().nullable().optional(),
+      enrollmentId: z.uuid().optional(),
+    }),
+  ),
 })
 export const neonAdminGrantSchema = z.discriminatedUnion('role', [
   z.strictObject({

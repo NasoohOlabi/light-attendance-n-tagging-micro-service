@@ -24,8 +24,9 @@ export function useQueryState() {
   return {
     page: z.enum(['home', 'app']).safeParse(query.get('page')).data ?? 'home',
     view:
-      z.enum(['settings', 'administration', 'add-student', 'notebook']).safeParse(query.get('view'))
-        .data ?? 'notebook',
+      z
+        .enum(['settings', 'administration', 'add-student', 'notebook', 'courses'])
+        .safeParse(query.get('view')).data ?? 'notebook',
     tab: tabSchema.safeParse(query.get('tab')).data ?? 'dashboard',
     date: z.iso.date().safeParse(query.get('date')).data ?? today(),
     from: z.iso.date().safeParse(query.get('from')).data ?? today().slice(0, 7) + '-01',
@@ -34,6 +35,7 @@ export function useQueryState() {
     group: query.get('group') ?? '',
     tag: query.get('tag') ?? '',
     student: query.get('student') ?? '',
+    course: z.uuid().safeParse(query.get('course')).data ?? '',
     all: query.get('all') === '1',
   }
 }
@@ -48,6 +50,7 @@ const allowedKeys = new Set([
   'group',
   'tag',
   'student',
+  'course',
   'all',
 ])
 export function sanitizedSearch(search: string) {

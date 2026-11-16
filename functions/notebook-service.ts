@@ -2,6 +2,9 @@
 import { hashPassword } from 'better-auth/crypto'
 import type { Pool, PoolClient } from 'pg'
 import {
+  courseBoardSchema,
+  courseSchema,
+  enrollmentSchema,
   neonAdminBoardSchema,
   neonAdminDisableSchema,
   neonAdminGrantSchema,
@@ -39,6 +42,29 @@ class HttpError extends Error {
   constructor(public status: number) {
     super()
   }
+}
+
+async function courseBoard(db: PoolClient, teacher: z.infer<typeof neonTeacherSchema>) {
+  const scope = teacher.role === 'administrator' ? 's.active' : 's.teacher_id = $1 AND s.active'
+  const values = teacher.role === 'administrator' ? [] : [teacher.id]
+  const enrollments = (
+    await db.query(
+      `SELECT ce.id, ce.course_id AS "courseId", ce.student_id AS "studentId", ce.level,
+    ce.practical::float8 AS practical, ce.theory::float8 AS theory
+    FROM course_enrollments ce JOIN students s ON s.id = ce.student_id WHERE ${scope} ORDER BY ce.id FOR SHARE OF ce`,
+      values,
+    )
+  ).rows
+  const courses =
+    teacher.role === 'administrator'
+      ? (await db.query('SELECT id, name FROM courses ORDER BY name, id')).rows
+      : (
+          await db.query(
+            'SELECT DISTINCT c.id, c.name FROM courses c JOIN course_enrollments ce ON ce.course_id = c.id JOIN students s ON s.id = ce.student_id WHERE s.teacher_id = $1 AND s.active ORDER BY c.name, c.id',
+            [teacher.id],
+          )
+        ).rows
+  return courseBoardSchema.parse({ courses, enrollments })
 }
 
 async function snapshot(db: PoolClient, teacher: z.infer<typeof neonTeacherSchema>) {
@@ -80,7 +106,12 @@ async function snapshot(db: PoolClient, teacher: z.infer<typeof neonTeacherSchem
         payload: e.payload,
       }),
     )
-  return neonSnapshotSchema.parse({ teacher, students, events })
+  return neonSnapshotSchema.parse({
+    teacher,
+    students,
+    events,
+    ...(await courseBoard(db, teacher)),
+  })
 }
 
 async function readBody(request: Request) {
@@ -185,6 +216,50 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
         [grant.authUserId, grant.role, staffId, expiry],
       )
     }
+  } else if (path === '/api/admin/courses') {
+    const course = courseSchema.parse(body)
+    await db.query(
+      'INSERT INTO courses (id, name) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name',
+      [course.id, course.name],
+    )
+    return { saved: true }
+  } else if (path === '/api/admin/enrollments') {
+    const enrollment = enrollmentSchema.parse(body)
+    const student = await db.query('SELECT id FROM students WHERE id = $1 FOR UPDATE', [
+      enrollment.studentId,
+    ])
+    if (!student.rows.length) throw new HttpError(400)
+    const course = await db.query('SELECT id FROM courses WHERE id = $1 FOR SHARE', [
+      enrollment.courseId,
+    ])
+    if (!course.rows.length) throw new HttpError(400)
+    const existing = await db.query(
+      'SELECT id, student_id, course_id FROM course_enrollments WHERE id = $1 OR (student_id = $2 AND course_id = $3) FOR UPDATE',
+      [enrollment.id, enrollment.studentId, enrollment.courseId],
+    )
+    if (
+      existing.rows.some(
+        (row) =>
+          row.id !== enrollment.id ||
+          row.student_id !== enrollment.studentId ||
+          row.course_id !== enrollment.courseId,
+      )
+    )
+      throw new HttpError(409)
+    await db.query(
+      `INSERT INTO course_enrollments (id, course_id, student_id, level, practical, theory)
+      VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (course_id, student_id)
+      DO UPDATE SET level = EXCLUDED.level, practical = EXCLUDED.practical, theory = EXCLUDED.theory`,
+      [
+        enrollment.id,
+        enrollment.courseId,
+        enrollment.studentId,
+        enrollment.level,
+        enrollment.practical,
+        enrollment.theory,
+      ],
+    )
+    return { saved: true }
   } else if (path === '/api/admin/accounts/reset-password') {
     const { authUserId, password } = neonAdminPasswordResetSchema.parse(body)
     if (authUserId === subject) throw new HttpError(403)
@@ -272,6 +347,8 @@ export function createHandler(
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
         '/api/admin/students',
+        '/api/admin/courses',
+        '/api/admin/enrollments',
       ].includes(path)
     )
       return reply({ error: 'Not found' }, 404)
@@ -282,6 +359,8 @@ export function createHandler(
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
         '/api/admin/students',
+        '/api/admin/courses',
+        '/api/admin/enrollments',
       ].includes(path) &&
         request.method !== 'POST') ||
       (![
@@ -290,6 +369,8 @@ export function createHandler(
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
         '/api/admin/students',
+        '/api/admin/courses',
+        '/api/admin/enrollments',
       ].includes(path) &&
         request.method !== 'GET')
     )
@@ -356,9 +437,25 @@ export function createHandler(
               payload: e.payload,
             }),
           )
+          const courseRows = z
+            .array(z.object({ id: z.uuid(), name: z.string() }))
+            .parse(
+              (
+                await db.query(
+                  'SELECT ce.id, c.name FROM course_enrollments ce JOIN courses c ON c.id = ce.course_id WHERE ce.student_id = $1',
+                  [student.id],
+                )
+              ).rows,
+            )
           const attendance = projectEvents(events).attendance.map(({ value }) => ({
             date: value.date,
             status: value.status,
+            ...(value.enrollmentId
+              ? {
+                  enrollmentId: value.enrollmentId,
+                  course: courseRows.find((entry) => entry.id === value.enrollmentId)?.name ?? null,
+                }
+              : {}),
           }))
           const response = neonStudentAttendanceSchema.parse({
             student: { studentId: student.id, name: student.name, group: student.group_name },
@@ -412,11 +509,23 @@ export function createHandler(
         const current = await snapshot(db, teacher)
         if (batch) {
           if (batch.events.some((e) => e.actor !== teacher.name)) throw new HttpError(403)
+          const newEvents = batch.events.filter((event) => {
+            const existing = current.events.find((item) => item.id === event.id)
+            if (!existing) return true
+            if (
+              existing.actor !== event.actor ||
+              existing.clientTime !== event.clientTime ||
+              JSON.stringify(existing.payload) !== JSON.stringify(event.payload)
+            )
+              throw new HttpError(409)
+            return false
+          })
           try {
             validateAssignedPayloads(
-              batch.events.map((e) => e.payload),
+              newEvents.map((e) => e.payload),
               current.students,
               current.events,
+              current.enrollments,
             )
           } catch {
             throw new HttpError(403)
@@ -429,7 +538,7 @@ export function createHandler(
                 : payload
             if (!studentId || !('studentId' in studentId)) throw new HttpError(403)
             const inserted = await db.query(
-              'INSERT INTO events (id, teacher_id, student_id, actor, client_time, payload) VALUES ($1, $2, $3, $4, $5, $6::jsonb) ON CONFLICT (id) DO NOTHING RETURNING id',
+              'INSERT INTO events (id, teacher_id, student_id, actor, client_time, payload, enrollment_id) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7) ON CONFLICT (id) DO NOTHING RETURNING id',
               [
                 event.id,
                 teacher.id,
@@ -437,6 +546,7 @@ export function createHandler(
                 teacher.name,
                 event.clientTime,
                 JSON.stringify(payload),
+                studentId.kind === 'attendance' ? (studentId.enrollmentId ?? null) : null,
               ],
             )
             if (!inserted.rowCount) {
@@ -471,7 +581,13 @@ export function createHandler(
       }
     } catch (error) {
       const status =
-        error instanceof HttpError ? error.status : error instanceof z.ZodError ? 400 : 500
+        error instanceof HttpError
+          ? error.status
+          : error instanceof z.ZodError
+            ? 400
+            : error instanceof Error && 'code' in error && error.code === '23505'
+              ? 409
+              : 500
       return reply(
         {
           error:

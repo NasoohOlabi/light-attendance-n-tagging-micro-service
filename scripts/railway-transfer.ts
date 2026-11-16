@@ -5,7 +5,7 @@ import { Pool, type PoolClient } from 'pg'
 import { z } from 'zod'
 
 // Provider sessions and signing keys deliberately stay on the old host.
-const tables = [
+const baseTables = [
   {
     name: 'neon_auth.user',
     columns: ['id', 'name', 'email', 'emailVerified', 'image', 'createdAt', 'updatedAt'],
@@ -37,9 +37,30 @@ const tables = [
     ],
   },
 ] as const
+const courseTables = [
+  { name: 'public.courses', columns: ['id', 'name'] },
+  {
+    name: 'public.course_enrollments',
+    columns: ['id', 'course_id', 'student_id', 'level', 'practical', 'theory'],
+  },
+] as const
+type Version = 1 | 2 | 3
+function tablesFor(version: Version) {
+  if (version < 3) return [...baseTables]
+  return [...baseTables.slice(0, -1), ...courseTables, baseTables[baseTables.length - 1]]
+}
+function columnsFor(
+  table: ReturnType<typeof tablesFor>[number],
+  version: Version,
+): readonly string[] {
+  if (table.name === 'public.students' && version >= 2)
+    return [...table.columns, 'first_name', 'last_name']
+  if (table.name === 'public.events' && version >= 3) return [...table.columns, 'enrollment_id']
+  return table.columns
+}
 const rowSchema = z.record(z.string(), z.json())
 const backupSchema = z.strictObject({
-  version: z.union([z.literal(1), z.literal(2)]),
+  version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   createdAt: z.iso.datetime(),
   tables: z.array(z.strictObject({ name: z.string(), rows: z.array(rowSchema) })),
 })
@@ -69,17 +90,14 @@ function canonical(value: unknown): string {
 function digest(rows: Backup['tables'][number]['rows']) {
   return createHash('sha256').update(rows.map(canonical).sort().join('\n')).digest('hex')
 }
-async function snapshot(db: PoolClient, structuredNames: boolean): Promise<Backup> {
+async function snapshot(db: PoolClient, version: Version): Promise<Backup> {
   const data: Backup = {
-    version: structuredNames ? 2 : 1,
+    version,
     createdAt: new Date().toISOString(),
     tables: [],
   }
-  for (const table of tables) {
-    const columns =
-      table.name === 'public.students' && structuredNames
-        ? [...table.columns, 'first_name', 'last_name']
-        : table.columns
+  for (const table of tablesFor(version)) {
+    const columns = columnsFor(table, version)
     const result = await db.query(
       `SELECT row_to_json(item) AS row FROM (SELECT ${columns.map(quote).join(',')} FROM ${sqlTable(table.name)}) item`,
     )
@@ -94,6 +112,7 @@ async function snapshot(db: PoolClient, structuredNames: boolean): Promise<Backu
   return data
 }
 function validateBackup(backup: Backup) {
+  const tables = tablesFor(backup.version)
   if (backup.tables.length !== tables.length) throw new Error('Unexpected backup tables')
   for (const [index, table] of tables.entries()) {
     const saved = backup.tables[index]
@@ -102,10 +121,7 @@ function validateBackup(backup: Backup) {
       saved.name !== table.name ||
       saved.rows.some((row) => {
         const columns = Object.keys(row).sort()
-        const expected =
-          table.name === 'public.students' && backup.version === 2
-            ? [...table.columns, 'first_name', 'last_name']
-            : table.columns
+        const expected = columnsFor(table, backup.version)
         return canonical(columns) !== canonical([...expected].sort())
       })
     )
@@ -121,6 +137,32 @@ function validateBackup(backup: Backup) {
     )
   )
     throw new Error('Unsupported credential provider or hash; migration stopped')
+}
+async function schemaVersion(db: PoolClient): Promise<Version> {
+  const result = await db.query(`SELECT
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name IN ('first_name', 'last_name')) AS names,
+    (SELECT count(*)::int FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('courses', 'course_enrollments')) AS courses,
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND ((table_name = 'courses' AND column_name IN ('id', 'name')) OR (table_name = 'course_enrollments' AND column_name IN ('id', 'course_id', 'student_id', 'level', 'practical', 'theory')))) AS course_columns,
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'events' AND column_name = 'enrollment_id') AS enrollment`)
+  const { names, courses, enrollment, course_columns } = z
+    .object({
+      names: z.number(),
+      courses: z.number(),
+      enrollment: z.number(),
+      course_columns: z.number(),
+    })
+    .parse(result.rows[0])
+  if (
+    (names !== 0 && names !== 2) ||
+    !(
+      (courses === 0 && enrollment === 0 && course_columns === 0) ||
+      (courses === 2 && enrollment === 1 && course_columns === 8)
+    )
+  )
+    throw new Error('Incomplete application migration')
+  if (courses === 2 && names !== 2)
+    throw new Error('Student name migration required for course backup')
+  return courses === 2 ? 3 : names === 2 ? 2 : 1
 }
 async function main() {
   const [command, path] = process.argv.slice(2)
@@ -151,12 +193,7 @@ async function main() {
       )
       if (z.object({ count: z.literal(0) }).safeParse(banned.rows[0]).success === false)
         throw new Error('Banned identities need explicit migration handling')
-      const names = await db.query(
-        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name IN ('first_name', 'last_name')",
-      )
-      const count = z.object({ count: z.number() }).parse(names.rows[0]).count
-      if (count !== 0 && count !== 2) throw new Error('Incomplete student name migration')
-      const backup = await snapshot(db, count === 2)
+      const backup = await snapshot(db, await schemaVersion(db))
       validateBackup(backup)
       await writeFile(file, JSON.stringify(backup), { mode: 0o600, flag: 'wx' })
       console.log(
@@ -167,9 +204,12 @@ async function main() {
     } else {
       const backup = backupSchema.parse(JSON.parse(await readFile(file, 'utf8')))
       validateBackup(backup)
+      const targetVersion = await schemaVersion(db)
+      if (targetVersion < backup.version) throw new Error('Target schema is older than backup')
+      const targetTables = tablesFor(targetVersion)
       if (command === 'import') {
         await db.query("SELECT pg_advisory_xact_lock(hashtextextended('railway-transfer', 0))")
-        for (const table of tables) {
+        for (const table of targetTables) {
           const result = await db.query(
             `SELECT count(*)::int AS count FROM ${sqlTable(table.name)}`,
           )
@@ -189,7 +229,16 @@ async function main() {
           "SELECT setval(pg_get_serial_sequence('events', 'sequence'), GREATEST(COALESCE((SELECT max(sequence) FROM events), 1), 1), EXISTS(SELECT 1 FROM events))",
         )
       }
-      const actual = await snapshot(db, backup.version === 2)
+      if (backup.version < 3 && targetVersion === 3) {
+        for (const table of courseTables) {
+          const result = await db.query(
+            `SELECT count(*)::int AS count FROM ${sqlTable(table.name)}`,
+          )
+          if (!z.object({ count: z.literal(0) }).safeParse(result.rows[0]).success)
+            throw new Error('Legacy backup cannot represent target courses')
+        }
+      }
+      const actual = await snapshot(db, backup.version)
       for (const [index, table] of backup.tables.entries()) {
         const other = actual.tables[index]
         if (!other || digest(table.rows) !== digest(other.rows))
