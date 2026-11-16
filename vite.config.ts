@@ -86,12 +86,26 @@ self.addEventListener('fetch', (event) => {
   }
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: './',
   plugins: [
     pwa(),
     react(),
     tailwindcss(),
+    ...(mode === 'verification'
+      ? [
+          {
+            name: 'verification-api-boundary',
+            configurePreviewServer(server) {
+              server.middlewares.use('/api', (_request, response) => {
+                response.statusCode = 401
+                response.setHeader('Content-Type', 'application/json')
+                response.end('null')
+              })
+            },
+          } satisfies Plugin,
+        ]
+      : []),
     {
       name: 'development-security-policy',
       transformIndexHtml(html, context) {
@@ -102,4 +116,4 @@ export default defineConfig({
     },
   ],
   server: { port: 5173, strictPort: true, proxy: { '/api': 'http://127.0.0.1:3000' } },
-})
+}))

@@ -100,21 +100,31 @@ export function Courses({
               aria-label={ar ? 'قائمة الدورات' : 'Course list'}
               tabIndex={0}
             >
-              <table className="role-table course-list-table w-full table-fixed">
-                <thead>
-                  <tr>
-                    <th className="w-1/3">{ar ? 'الدورة' : 'Course'}</th>
-                    <th className="w-1/4">{ar ? 'الحالة' : 'Status'}</th>
-                    <th>{ar ? 'الإجراءات' : 'Actions'}</th>
+              <table className="role-table course-list-table w-full table-fixed" role="table">
+                <thead role="rowgroup">
+                  <tr role="row">
+                    <th scope="col" role="columnheader">
+                      {ar ? 'الدورة' : 'Course'}
+                    </th>
+                    <th scope="col" role="columnheader">
+                      {ar ? 'الحالة' : 'Status'}
+                    </th>
+                    <th scope="col" role="columnheader">
+                      {ar ? 'الإجراءات' : 'Actions'}
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody role="rowgroup">
                   {courses.map((item) => (
-                    <tr key={item.id}>
-                      <td dir="auto">{item.name}</td>
-                      <td>{item.open ? (ar ? 'مفتوحة' : 'Open') : ar ? 'مغلقة' : 'Closed'}</td>
-                      <td>
-                        <div className="flex flex-wrap gap-2">
+                    <tr key={item.id} role="row">
+                      <td dir="auto" role="cell">
+                        {item.name}
+                      </td>
+                      <td role="cell">
+                        {item.open ? (ar ? 'مفتوحة' : 'Open') : ar ? 'مغلقة' : 'Closed'}
+                      </td>
+                      <td role="cell">
+                        <div className="flex gap-2">
                           <button
                             className="icon-button"
                             aria-label={

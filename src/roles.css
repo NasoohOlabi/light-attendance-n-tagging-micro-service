@@ -130,10 +130,41 @@
   }
 }
 
+.course-list-table th:nth-child(2) {
+  width: 20%;
+}
+.course-list-table th:nth-child(3) {
+  width: 17.35rem;
+}
+
 @media (max-width: 40rem) {
+  .course-list-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
   .course-list-table th,
   .course-list-table td {
     padding-inline: 0.25rem;
+    overflow-wrap: anywhere;
+  }
+  .course-list-table th:nth-child(2) {
+    width: auto;
+  }
+  .course-list-table th:nth-child(3) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .course-list-table td:nth-child(-n + 2) {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+  .course-list-table td:nth-child(3) {
+    grid-column: 1 / -1;
   }
   .course-list-table button {
     padding-inline: 0.5rem;

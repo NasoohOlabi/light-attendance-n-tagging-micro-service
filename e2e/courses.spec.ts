@@ -299,11 +299,27 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
         const bounds = await actions.evaluateAll((buttons) =>
           buttons.map((button) => {
             const rect = button.getBoundingClientRect()
-            return { left: rect.left, right: rect.right, height: rect.height }
+            return {
+              left: rect.left,
+              right: rect.right,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+            }
           }),
         )
         expect(bounds.every((rect) => rect.left >= 0 && rect.right <= width)).toBe(true)
-        expect(bounds.every((rect) => rect.height <= 80)).toBe(true)
+        expect(bounds.every((rect) => rect.width >= 44 && rect.height >= 44)).toBe(true)
+        for (const row of [bounds.slice(0, 5), bounds.slice(5)]) {
+          expect(new Set(row.map((rect) => rect.top)).size).toBe(1)
+          const ordered = row.toSorted((a, b) => a.left - b.left)
+          expect(ordered.slice(1).every((rect, index) => rect.left >= ordered[index].right)).toBe(
+            true,
+          )
+        }
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        ).toBe(true)
         await page.screenshot({
           path: `.artifacts/verification/course-list-${width}-${language}.png`,
           fullPage: true,
