@@ -49,6 +49,15 @@ integration(
       )
       await pool.query(activeMigration)
       await pool.query(activeMigration)
+      const courseMigration = await readFile(
+        new URL('../neon/006-closed-courses.sql', import.meta.url),
+        'utf8',
+      )
+      await pool.query(courseMigration)
+      await pool.query(courseMigration)
+      const profileMigration = await readFile('neon/007-student-profiles-handbooks.sql', 'utf8')
+      await pool.query(profileMigration)
+      await pool.query(profileMigration)
       for (const [id, subject] of [
         [adminId, subjects.admin],
         [teacherId, subjects.teacher],
@@ -71,6 +80,7 @@ integration(
         const response = await call('/api/admin/courses', subjects.admin, {
           id: courseIds[i],
           name: `Synthetic course ${i + 1}`,
+          open: true,
         })
         expect(response.status, await response.clone().text()).toBe(200)
         const withoutEnrollment = neonSnapshotSchema.parse(
@@ -79,6 +89,7 @@ integration(
         expect(withoutEnrollment.courses).toContainEqual({
           id: courseIds[i],
           name: `Synthetic course ${i + 1}`,
+          open: true,
         })
         const enrolled = await call('/api/admin/enrollments', subjects.admin, {
           id: enrollmentIds[i],
@@ -90,6 +101,39 @@ integration(
         })
         expect(enrolled.status, await enrolled.clone().text()).toBe(200)
       }
+      expect(
+        (
+          await call('/api/admin/enrollments/handbook', subjects.teacher, {
+            id: enrollmentIds[0],
+            handbookReceived: true,
+          })
+        ).status,
+      ).toBe(403)
+      expect(
+        (
+          await call('/api/admin/enrollments/handbook', subjects.admin, {
+            id: enrollmentIds[0],
+            handbookReceived: true,
+            level: 'illegal',
+          })
+        ).status,
+      ).toBe(400)
+      expect(
+        (
+          await call('/api/admin/enrollments/handbook', subjects.admin, {
+            id: enrollmentIds[0],
+            handbookReceived: true,
+          })
+        ).status,
+      ).toBe(200)
+      expect(
+        (
+          await pool.query(
+            'SELECT handbook_received FROM course_enrollments WHERE id = ANY($1::uuid[]) ORDER BY handbook_received DESC',
+            [enrollmentIds],
+          )
+        ).rows,
+      ).toEqual([{ handbook_received: true }, { handbook_received: false }])
       expect(
         (
           await call('/api/admin/enrollments', subjects.admin, {
@@ -288,6 +332,9 @@ integration(
           studentId: newStudent,
           teacherId,
           name: 'Synthetic new student',
+          whatsapp: '+963 (123) 456',
+          location: 'Synthetic area',
+          birthYear: 2000,
           group: '',
           active: true,
         },
@@ -304,6 +351,62 @@ integration(
         (await pool.query('SELECT id FROM course_enrollments WHERE student_id = $1', [newStudent]))
           .rowCount,
       ).toBe(1)
+      expect(
+        (
+          await pool.query('SELECT whatsapp, location, birth_year FROM students WHERE id = $1', [
+            newStudent,
+          ])
+        ).rows[0],
+      ).toEqual({ whatsapp: '+963 (123) 456', location: 'Synthetic area', birth_year: 2000 })
+      expect(
+        (
+          await call('/api/admin/students', subjects.admin, {
+            studentId: newStudent,
+            teacherId,
+            name: 'Synthetic new student',
+            group: '',
+            active: true,
+          })
+        ).status,
+      ).toBe(200)
+      expect(
+        (await pool.query('SELECT birth_year FROM students WHERE id = $1', [newStudent])).rows[0]
+          .birth_year,
+      ).toBe(2000)
+      expect(
+        (
+          await call('/api/admin/students', subjects.admin, {
+            studentId: newStudent,
+            teacherId,
+            name: 'Synthetic new student',
+            group: '',
+            active: true,
+            birthYear: null,
+            whatsapp: '',
+            location: null,
+          })
+        ).status,
+      ).toBe(200)
+      expect(
+        (
+          await pool.query('SELECT whatsapp, location, birth_year FROM students WHERE id = $1', [
+            newStudent,
+          ])
+        ).rows[0],
+      ).toEqual({ whatsapp: null, location: null, birth_year: null })
+      expect(
+        (
+          await pool.query('SELECT handbook_received FROM course_enrollments WHERE id = $1', [
+            enrollmentIds[0],
+          ])
+        ).rows[0].handbook_received,
+      ).toBe(true)
+      const privateResponse = JSON.stringify(
+        await (await call('/api/student/attendance', subjects.student)).json(),
+      )
+      expect(privateResponse).not.toContain('birthYear')
+      expect(privateResponse).not.toContain('whatsapp')
+      expect(privateResponse).not.toContain('location')
       await pool.query('DELETE FROM course_enrollments WHERE student_id = $1', [newStudent])
       await pool.query('DELETE FROM students WHERE id = $1', [newStudent])
       const count = await pool.query(
@@ -374,6 +477,51 @@ integration(
           })
         ).status,
       ).toBe(403)
+      expect(
+        (
+          await call('/api/admin/courses/status', subjects.teacher, {
+            id: courseIds[0],
+            open: false,
+          })
+        ).status,
+      ).toBe(403)
+      expect(
+        (
+          await call('/api/admin/courses/status', subjects.student, {
+            id: courseIds[0],
+            open: false,
+          })
+        ).status,
+      ).toBe(403)
+      expect(
+        (await call('/api/admin/courses/status', subjects.admin, { id: courseIds[0], open: false }))
+          .status,
+      ).toBe(200)
+      expect(
+        (
+          await call('/api/admin/courses', subjects.admin, {
+            id: courseIds[0],
+            name: 'Synthetic course 1',
+          })
+        ).status,
+      ).toBe(200)
+      const closedBoard = neonSnapshotSchema.parse(
+        await (await call('/api/notebook', subjects.teacher)).json(),
+      )
+      expect(closedBoard.courses.find((course) => course.id === courseIds[0])?.open).toBe(false)
+      expect(closedBoard.enrollments.find((entry) => entry.id === enrollmentIds[0])).toMatchObject({
+        practical: 0,
+        theory: null,
+      })
+      expect((await call('/api/events', subjects.teacher, { events: [first] })).status).toBe(200)
+      const stale = makeEvent('Synthetic course teacher', {
+        kind: 'attendance',
+        studentId,
+        enrollmentId: enrollmentIds[0],
+        date: '2026-12-01',
+        status: 'present',
+      })
+      expect((await call('/api/events', subjects.teacher, { events: [stale] })).status).toBe(403)
       const correction = makeEvent('Synthetic course teacher', {
         kind: 'reversal',
         targetId: first.id,
@@ -386,6 +534,11 @@ integration(
       ).attendance
       expect(effective).toHaveLength(1)
       expect(effective[0]?.value.enrollmentId).toBe(enrollmentIds[1])
+      expect(
+        (await call('/api/admin/courses/status', subjects.admin, { id: courseIds[0], open: true }))
+          .status,
+      ).toBe(200)
+      expect((await call('/api/events', subjects.teacher, { events: [stale] })).status).toBe(200)
     } finally {
       await pool.query('DELETE FROM events WHERE student_id = ANY($1::uuid[])', [
         [studentId, otherStudentId],

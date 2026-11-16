@@ -331,6 +331,9 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     'First name',
     'Last name',
     'Level',
+    'WhatsApp',
+    'Location',
+    'Birth year',
     'Active',
     'Actions',
   ])
@@ -488,15 +491,21 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     'First name',
     'Last name',
     'Level',
+    'WhatsApp',
+    'Location',
+    'Birth year',
     'Active',
     'Actions',
   ])
-  await expect(list.locator('th[scope="col"]')).toHaveCount(5)
+  await expect(list.locator('th[scope="col"]')).toHaveCount(8)
   const rows = list.locator('tbody tr')
   await expect(rows.nth(0).locator('td')).toHaveText([
     'Synthetic Student',
     '—',
     'Group A',
+    '—',
+    '—',
+    '—',
     'Active',
     'Edit',
   ])
@@ -504,10 +513,22 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     'أحمد محمد',
     'علي',
     'المستوى الثاني',
+    '—',
+    '—',
+    '—',
     'Inactive',
     'Edit',
   ])
-  await expect(rows.nth(2).locator('td')).toHaveText(['Mononym', '—', 'Level C', 'Active', 'Edit'])
+  await expect(rows.nth(2).locator('td')).toHaveText([
+    'Mononym',
+    '—',
+    'Level C',
+    '—',
+    '—',
+    '—',
+    'Active',
+    'Edit',
+  ])
   await page.screenshot({
     path: `.artifacts/verification/student-table-${testInfo.project.name}.png`,
     fullPage: true,
@@ -516,6 +537,9 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await expect(page.getByLabel('First name')).toHaveValue('أحمد محمد')
   await expect(page.getByLabel('Last name')).toHaveValue('علي')
   await page.getByLabel('Last name').fill('خالد')
+  await page.getByLabel('WhatsApp number').fill('+963 123')
+  await page.getByLabel('Location').fill('Area')
+  await page.getByLabel('Birth year').fill('2000')
   await page.getByRole('button', { name: 'Save student' }).click()
   await expect.poll(() => posts.length).toBe(3)
   expect(posts[2]).toEqual({
@@ -527,12 +551,34 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
       group: 'المستوى الثاني',
       active: false,
       teacherId,
+      whatsapp: '+963 123',
+      location: 'Area',
+      birthYear: 2000,
     },
   })
   posts.pop()
   await rows.nth(1).getByRole('button', { name: 'Edit' }).click()
   await expect(page.getByLabel('First name')).toHaveValue('أحمد محمد')
   await expect(page.getByLabel('Last name')).toHaveValue('خالد')
+  await expect(page.getByLabel('WhatsApp number')).toHaveValue('+963 123')
+  await expect(page.getByLabel('Location')).toHaveValue('Area')
+  await expect(page.getByLabel('Birth year')).toHaveValue('2000')
+  if (testInfo.project.name === 'mobile') {
+    await page.setViewportSize({ width: 320, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    )
+  }
+  await page.locator('form.role-editor').screenshot({
+    path: `.artifacts/verification/student-profile-${testInfo.project.name}-en.png`,
+  })
+  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await expect(page.getByLabel('سنة الميلاد')).toHaveValue('2000')
+  await expect(page.getByLabel('سنة الميلاد')).toHaveAttribute('type', 'number')
+  await page.locator('form.role-editor').screenshot({
+    path: `.artifacts/verification/student-profile-${testInfo.project.name}-ar.png`,
+  })
+  await page.getByRole('button', { name: 'English', exact: true }).click()
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await page.setViewportSize({ width: 320, height: 844 })
   await list.focus()
@@ -546,6 +592,9 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     'الاسم الأول',
     'اسم العائلة',
     'المستوى',
+    'واتساب',
+    'المنطقة',
+    'سنة الميلاد',
     'الحالة',
     'الإجراءات',
   ])
@@ -576,6 +625,9 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     group: 'Group B',
     teacherId,
     active: true,
+    whatsapp: null,
+    location: null,
+    birthYear: null,
   })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
     true,

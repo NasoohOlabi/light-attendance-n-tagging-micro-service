@@ -489,4 +489,20 @@
 
 .roster-table {
   min-width: 36rem;
+  table-layout: fixed;
+}
+.roster-level-column,
+.roster-actions-column {
+  width: 6rem;
+}
+.roster-active-column {
+  width: 7rem;
+}
+.roster-attendance-column {
+  width: 12rem;
+}
+.roster-table th:not(:first-child),
+.roster-table td:not(:first-child) {
+  text-align: center;
+  padding-inline: 0.5rem;
 }

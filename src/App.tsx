@@ -140,6 +140,7 @@ function Notebook({
   const ledger = useLedger(demo !== null, demo === 'assigned', neon)
   const assigned = !!neon || demo === 'assigned'
   const baseProjection = projectEvents(ledger.events)
+  const closedCourse = ledger.courses.find((course) => course.id === query.course && !course.open)
   const selectedEnrollments = ledger.enrollments.filter((entry) => entry.courseId === query.course)
   const activeEnrollments = selectedEnrollments.filter((entry) => entry.active)
   const selectedIds = new Set(selectedEnrollments.map((entry) => entry.id))
@@ -281,23 +282,38 @@ function Notebook({
           <label className="mb-4">
             {language === 'ar' ? 'الدورة' : 'Course'}
             <select
-              value={query.course}
+              value={closedCourse ? '__closed__' : query.course}
               onChange={(event) => setQuery({ course: event.target.value, student: '' }, true)}
             >
+              {closedCourse && (
+                <option value="__closed__" disabled>
+                  {language === 'ar' ? 'اختر دورة' : 'Select a course'}
+                </option>
+              )}
               <option value="">
                 {language === 'ar' ? 'السجل السابق / بلا دورة' : 'Previous / no course'}
               </option>
-              {ledger.courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
-              ))}
+              {ledger.courses
+                .filter((course) => course.open)
+                .map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.name}
+                  </option>
+                ))}
             </select>
           </label>
         )}
+        {neon && query.view !== 'courses' && query.course && closedCourse && (
+          <p role="status">
+            <strong dir="auto">{closedCourse.name}</strong>{' '}
+            {language === 'ar'
+              ? 'الدورة مغلقة. السجل والتصحيحات متاحة، ولا يمكن تسجيل حضور جديد.'
+              : 'This course is closed. History and corrections remain available; new attendance is disabled.'}
+          </p>
+        )}
         <div
           className="mb-6 flex flex-wrap items-end gap-3"
-          hidden={query.tab === 'dashboard' || query.view === 'courses'}
+          hidden={query.tab === 'dashboard' || query.tab === 'summary' || query.view === 'courses'}
         >
           <label className="grow">
             {t('Find a student')}
@@ -445,12 +461,16 @@ function Notebook({
                 students={students.filter(
                   (student) =>
                     student.active &&
+                    (!query.course ||
+                      ledger.courses.some((course) => course.id === query.course && course.open)) &&
                     (query.course ||
                       !ledger.enrollments.some((entry) => entry.studentId === student.studentId)),
                 )}
                 allStudents={projected.students.filter(
                   (student) =>
                     student.active &&
+                    (!query.course ||
+                      ledger.courses.some((course) => course.id === query.course && course.open)) &&
                     (query.course ||
                       !ledger.enrollments.some((entry) => entry.studentId === student.studentId)),
                 )}
@@ -477,7 +497,9 @@ function Notebook({
                 enrollments={selectedEnrollments}
               />
             )}
-            {query.tab === 'summary' && <Summary students={students} projected={projected} />}
+            {query.tab === 'summary' && (
+              <Summary students={projected.students} projected={projected} />
+            )}
             {query.tab === 'history' && (
               <History
                 projected={projected}
@@ -570,6 +592,11 @@ function AttendanceView({
       tabIndex={0}
     >
       <table className="role-table roster-table">
+        <colgroup>
+          <col />
+          <col className="roster-level-column" />
+          <col className="roster-attendance-column" />
+        </colgroup>
         <thead>
           <tr>
             <th scope="col">{t('Student')}</th>
@@ -580,8 +607,12 @@ function AttendanceView({
         <tbody>
           {items.map((student) => (
             <tr key={student.studentId}>
-              <td dir="auto">{student.name}</td>
-              <td dir="auto">{level(student) || '—'}</td>
+              <td>
+                <bdi>{student.name}</bdi>
+              </td>
+              <td>
+                <bdi>{level(student) || '—'}</bdi>
+              </td>
               <td>
                 <select
                   aria-label={`${t('Attendance for')} ${student.name}`}
@@ -931,6 +962,12 @@ function RosterView({
           tabIndex={0}
         >
           <table className="role-table roster-table">
+            <colgroup>
+              <col />
+              <col className="roster-level-column" />
+              <col className="roster-active-column" />
+              <col className="roster-actions-column" />
+            </colgroup>
             <thead>
               <tr>
                 <th scope="col">{t('Student')}</th>
@@ -942,8 +979,12 @@ function RosterView({
             <tbody>
               {students.map((student) => (
                 <tr key={student.studentId}>
-                  <td dir="auto">{student.name}</td>
-                  <td dir="auto">{studentLevel(student, courseSelected, enrollments) || '—'}</td>
+                  <td>
+                    <bdi>{student.name}</bdi>
+                  </td>
+                  <td>
+                    <bdi>{studentLevel(student, courseSelected, enrollments) || '—'}</bdi>
+                  </td>
                   <td>{student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}</td>
                   <td>
                     <button
@@ -1032,39 +1073,13 @@ function StudentEditor({ student, save }: { student: Student; save: Save }) {
 
 function Summary({ students, projected }: { students: Student[]; projected: Projection }) {
   const { t, language } = useLanguage()
-  const query = useQueryState()
   const ids = new Set(students.map((student) => student.studentId))
-  const records = projected.attendance.filter(
-    ({ value }) => ids.has(value.studentId) && value.date >= query.from && value.date <= query.to,
-  )
+  const records = projected.attendance.filter(({ value }) => ids.has(value.studentId))
   return (
     <section className="panel">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <h2 className="title">{t('Attendance overview')}</h2>
-        <div className="flex min-w-0 max-w-full flex-wrap gap-3">
-          <label>
-            {t('From')}
-            <input
-              type="date"
-              value={query.from}
-              onChange={(event) => setQuery({ from: event.target.value })}
-            />
-          </label>
-          <label>
-            {t('To')}
-            <input
-              type="date"
-              value={query.to}
-              onChange={(event) => setQuery({ to: event.target.value })}
-            />
-          </label>
-        </div>
       </div>
-      {query.from > query.to && (
-        <p role="alert" className="text-red-700">
-          {t('The end date must be on or after the start date.')}
-        </p>
-      )}
       <p className="muted mb-5">
         {language === 'ar'
           ? `${records.length} جلسات محددة للطلاب. لا تُحتسب الأيام غير المحددة.`
@@ -1132,12 +1147,8 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
                 ))}
                 <td className="p-3 text-center">
                   {
-                    projected.notes.filter(
-                      ({ value }) =>
-                        value.studentId === student.studentId &&
-                        value.date >= query.from &&
-                        value.date <= query.to,
-                    ).length
+                    projected.notes.filter(({ value }) => value.studentId === student.studentId)
+                      .length
                   }
                 </td>
               </tr>

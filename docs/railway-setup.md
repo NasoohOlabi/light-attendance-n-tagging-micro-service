@@ -20,6 +20,8 @@ For local authenticated use, set private server variables against a disposable d
 
 ## Transfer and recovery
 
+Course closure requires `neon/006-closed-courses.sql` before deployment. Existing courses default open; version 5 backups preserve status. Older backups import courses as open and comparison refuses to hide closed target courses.
+
 The pushed code backup is `backup/neon-current-2026-11-15` at `77cedae`. The data snapshot is separate: it contains personal roster and password hashes. Keep it in ignored `.local`, restrict its Windows ACL and retain a protected external copy. Git ignore does not encrypt a file.
 
 The private transfer CLI uses source `DATABASE_URL_UNPOOLED` for export and destination `MIGRATION_TARGET_DATABASE_URL` for import/compare:
@@ -66,3 +68,5 @@ bun run neon:admin teacher disable <teacher-uuid>
 ```
 
 A Teacher input contains `id`, an existing signup `email` or `authUserId`, `name`, `mode` (`read_write`, `read_only`, or `write_only`), and optional ISO `expiresAt`. A Student grant uses `role: "student"`, an identity, an existing `studentId`, and optional `expiresAt`. A roster input is an array of objects with `id`, `teacherId`, `name`, `group`, and `active`. Preserve stable IDs and keep real identities and records in private files. The browser Settings screen manages other accounts and roster assignments; it cannot change, disable or reset the acting Administrator.
+
+Apply `neon/007-student-profiles-handbooks.sql` before deploying this version. Version 6 backups preserve optional student profile fields and each enrollment handbook flag. Older backups restore blank profiles and false handbook flags; comparisons reject targets containing values older backups cannot represent. Private roster imports accept optional `whatsapp`, `location` and numeric `birthYear`; omitted fields are preserved. Null clears any profile field, and blank text clears WhatsApp or location. Test on a disposable database first.
