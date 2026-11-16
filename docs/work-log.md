@@ -775,3 +775,10 @@
 **Cleanup:** Closed Dependabot PRs #1, #2, #3 and #6 as superseded by the updates merged in #50, and #4 as obsolete for Railway. Dependabot then opened #51 for another action in the still-present disabled Pages file. Closed that obsolete update too and removed `.github/workflows/pages.yml`, whose two jobs were already guarded by false. Railway and the inactive nightly policy are unchanged. Preserve historical notes, recovery branches, private snapshots and ignored verification evidence. No loose source changes are discarded. The remaining follow-up is this inert-workflow removal and publication record.
 
 **Final verification:** `bun run verify:release` passed on the cleanup tree: 20 tests/84 assertions, all 58 browser cases, lint, strict build/artifact, formatting, file/history secret scans and a clean dependency audit. Four optional disposable-database integrations remain unconfigured and five existing React lint warnings remain nonblocking. The cleanup PR must pass CI, deploy its exact final main commit and return healthy with the same frontend artifacts before handback. No additional application changes are included.
+
+## 2026-11-16 23:07 Asia/Damascus � Course action icons
+
+- Request: compact the course list actions on phones using icons.
+- Changes: replaced action labels with existing Lucide icons, retaining localized accessible names and tooltips.
+- Verification: bun run verify passed (four database integration tests skipped); bun run verify:ui passed 58 desktop/mobile tests on port 4273.
+- Limits: synthetic browser checks do not verify live Railway or physical devices.
