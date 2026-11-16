@@ -12,6 +12,8 @@ Select a course in the notebook to mark its enrolled students and see that cours
 
 **Summary** shows all recorded dates for the selected course and every student available in that course's authorized history, including inactive memberships. Course selection is its only filter; saved date ranges, student search, group and student filters from other pages do not narrow these totals. Student note counts cover all dates and remain student-scoped. **Previous / no course** summarizes unscoped attendance. Attendance, Notes and History retain their own controls.
 
+The overview bars show Present, Absent and Excused as percentages of recorded student-sessions, rounded to one decimal place. Unmarked days are excluded; these are session shares rather than an average of individual student rates. With no recorded attendance, the overview shows an empty-state message. The student table retains exact counts.
+
 The notebook **Students** list and both grouped/searched **Attendance** use the same course-level rule and keep student identity separate from the labelled Level column. With a course selected, Level shows only that student's level in that enrollment; a blank level displays an em dash. Attendance accordions group by this displayed level. Switching courses can show a different level for the same student. In **Previous / no course**, Level shows the existing roster level (the roster group value). Course levels never fall back to that roster value or to another enrollment. The existing Group filter still filters roster groups.
 
 Inactive enrollments remain available for historical attendance, corrections and grades. Current attendance and current enrolled-roster/dashboard counts exclude them. Teacher assignment and Student privacy restrictions still apply.

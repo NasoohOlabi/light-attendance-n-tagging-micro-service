@@ -16,6 +16,8 @@ The `sample notebook` test adds ليلى, selects `getByLabel('Attendance for ل
 
 For Summary, use historical and current attendance in two courses. Assert course switching and reload retain independent all-date totals and inactive membership history. Saved `from`, `to`, `date`, `q`, `group`, `student` and `all` parameters must not narrow Summary. Date, search and group controls are absent on this page; other tabs retain their controls. Check desktop/mobile in English/Arabic. Previous / no course counts only unscoped attendance.
 
+Overview meters display each status's percentage of recorded student-sessions to one decimal place, with unmarked days excluded. In `e2e/summary.spec.ts`, verify mixed-status rounding, zero-share status, course switching, and no-records messaging without fabricated percentages. Check meter accessibility, flat brand styling, RTL fill direction and phone overflow; per-student table cells keep exact counts.
+
 ## Gotchas
 
 Same student/date uses last surviving event in database sequence, never device clock. Undoing newest attendance reveals the prior surviving status. Filtered-out/inactive students must not be saved by group marking. Summary ignores saved date ranges, including reversed bounds.
