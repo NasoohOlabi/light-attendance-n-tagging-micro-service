@@ -37,6 +37,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       practical: null,
       theory: null,
       active: true,
+      handbookReceived: false,
     },
     {
       id: enrollB,
@@ -46,6 +47,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       practical: null,
       theory: null,
       active: true,
+      handbookReceived: false,
     },
   ]
   const board = {
@@ -122,7 +124,13 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       const body = route.request().postDataJSON()
       const index = enrollments.findIndex((entry) => entry.id === body.id)
       if (index >= 0) enrollments[index] = { ...enrollments[index], ...body }
-      else enrollments.push({ ...body, practical: null, theory: null })
+      else enrollments.push({ ...body, practical: null, theory: null, handbookReceived: false })
+      return route.fulfill({ json: { saved: true } })
+    }
+    if (path === '/api/admin/enrollments/handbook') {
+      const body = route.request().postDataJSON()
+      const entry = enrollments.find((item) => item.id === body.id)
+      if (entry) entry.handbookReceived = body.handbookReceived
       return route.fulfill({ json: { saved: true } })
     }
     if (path === '/api/admin/enrollments/grades') {
@@ -146,6 +154,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
         active: true,
         practical: null,
         theory: null,
+        handbookReceived: false,
       })
       return route.fulfill({ json: board })
     }
@@ -338,7 +347,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       const table = page.getByRole('region', {
         name: '\u0637\u0644\u0627\u0628 \u0627\u0644\u062f\u0648\u0631\u0629',
       })
-      await expect(table.getByRole('columnheader')).toHaveCount(6)
+      await expect(table.getByRole('columnheader')).toHaveCount(7)
       expect(await table.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
         true,
       )
@@ -363,16 +372,37 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByLabel('Last name').fill('Student')
   await page.getByLabel('Level', { exact: true }).fill('Roster')
   await page.getByLabel('Course level').fill('Course level')
+  await page.getByLabel('WhatsApp number').fill('+963 123')
+  await page.getByLabel('Location').fill('Area')
+  await page.getByLabel('Birth year').fill('2000')
   await page.getByLabel('Teacher').selectOption(teacherId)
   await page.getByRole('button', { name: 'Save student' }).click()
   await expect(page.getByRole('heading', { name: /Manage students/ })).toBeVisible()
   await expect.poll(() => enrollments.length).toBe(4)
+  expect(board.students.find((student) => student.firstName === 'Quick')).toMatchObject({
+    whatsapp: '+963 123',
+    location: 'Area',
+    birthYear: 2000,
+  })
   await page.getByRole('button', { name: 'Back to courses' }).click()
   await page
     .getByRole('row')
     .filter({ hasText: 'Course A' })
     .getByRole('button', { name: 'Manage students' })
     .click()
+  await expect(page.getByLabel('Handbook received: Synthetic Student')).not.toBeChecked()
+  await page.getByLabel('Handbook received: Synthetic Student').click()
+  await expect(page.getByLabel('Handbook received: Synthetic Student')).toBeChecked()
+  await page.reload()
+  await expect(page.getByLabel('Handbook received: Synthetic Student')).toBeChecked()
+  const handbookBounds = await page.getByLabel('Handbook received: Synthetic Student').boundingBox()
+  expect(handbookBounds?.width).toBeGreaterThanOrEqual(44)
+  expect(handbookBounds?.height).toBeGreaterThanOrEqual(44)
+  await page.getByLabel('Handbook received: Synthetic Student').scrollIntoViewIfNeeded()
+  await page.screenshot({
+    path: `.artifacts/verification/handbook-${testInfo.project.name}.png`,
+    fullPage: true,
+  })
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('')
   await page.getByLabel('Course level: Synthetic Student').fill('Draft A')
   await page.getByRole('button', { name: 'Back to courses' }).click()
@@ -381,6 +411,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .filter({ hasText: 'Course B' })
     .getByRole('button', { name: 'Manage students' })
     .click()
+  await expect(page.getByLabel('Handbook received: Synthetic Student')).not.toBeChecked()
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('Advanced')
   await page.getByLabel('Course level: Synthetic Student').fill('Updated B')
   await page

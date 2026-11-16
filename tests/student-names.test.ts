@@ -26,3 +26,34 @@ test('student names validate structured input and retain legacy name-only compat
   ])
     expect(neonAdminStudentSchema.safeParse({ ...fields, ...invalid }).success).toBe(false)
 })
+
+test('optional profile fields validate boundaries and clearing', () => {
+  const base = {
+    studentId: crypto.randomUUID(),
+    teacherId: crypto.randomUUID(),
+    name: 'Synthetic',
+    group: '',
+    active: true,
+  }
+  expect(
+    neonAdminStudentSchema.safeParse({
+      ...base,
+      whatsapp: '+963 (123) 456',
+      location: 'Area',
+      birthYear: 2000,
+    }).success,
+  ).toBe(true)
+  expect(
+    neonAdminStudentSchema.safeParse({ ...base, whatsapp: null, location: '', birthYear: null })
+      .success,
+  ).toBe(true)
+  for (const profile of [
+    { birthYear: 1899 },
+    { birthYear: new Date().getFullYear() + 1 },
+    { birthYear: 2000.5 },
+    { whatsapp: 'x'.repeat(41) },
+    { location: 'x'.repeat(201) },
+  ]) {
+    expect(neonAdminStudentSchema.safeParse({ ...base, ...profile }).success).toBe(false)
+  }
+})

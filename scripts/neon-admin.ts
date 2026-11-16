@@ -48,6 +48,9 @@ const studentInput = z
       name: z.string().trim().min(1).max(200),
       group: z.string().trim().max(100),
       active: z.boolean(),
+      whatsapp: z.string().trim().max(40).nullable().optional(),
+      location: z.string().trim().max(200).nullable().optional(),
+      birthYear: z.number().int().min(1900).max(new Date().getFullYear()).nullable().optional(),
     }),
   )
   .max(10000)
@@ -168,11 +171,26 @@ async function main() {
       await transaction(pool, async (client) => {
         for (const student of students)
           await client.query(
-            `INSERT INTO students (id, teacher_id, name, group_name, active) VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO students (id, teacher_id, name, group_name, active, whatsapp, location, birth_year) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (id) DO UPDATE SET teacher_id = EXCLUDED.teacher_id, name = EXCLUDED.name, group_name = EXCLUDED.group_name, active = EXCLUDED.active,
               first_name = CASE WHEN students.name = EXCLUDED.name THEN students.first_name ELSE NULL END,
-              last_name = CASE WHEN students.name = EXCLUDED.name THEN students.last_name ELSE NULL END`,
-            [student.id, student.teacherId, student.name, student.group, student.active],
+              last_name = CASE WHEN students.name = EXCLUDED.name THEN students.last_name ELSE NULL END,
+              whatsapp = CASE WHEN $9 THEN EXCLUDED.whatsapp ELSE students.whatsapp END,
+              location = CASE WHEN $10 THEN EXCLUDED.location ELSE students.location END,
+              birth_year = CASE WHEN $11 THEN EXCLUDED.birth_year ELSE students.birth_year END`,
+            [
+              student.id,
+              student.teacherId,
+              student.name,
+              student.group,
+              student.active,
+              student.whatsapp || null,
+              student.location || null,
+              student.birthYear ?? null,
+              student.whatsapp !== undefined,
+              student.location !== undefined,
+              student.birthYear !== undefined,
+            ],
           )
       })
       console.log('Students saved')

@@ -248,6 +248,7 @@ export function Courses({
                       <th>{ar ? 'مستوى القائمة' : 'Roster level'}</th>
                       <th>{ar ? 'مستوى الدورة' : 'Course level'}</th>
                       <th>{ar ? 'مسجل' : 'Enrolled'}</th>
+                      <th>{ar ? 'استلم الكتاب' : 'Handbook received'}</th>
                       <th>{ar ? 'الإجراءات' : 'Actions'}</th>
                     </tr>
                   </thead>
@@ -302,6 +303,22 @@ export function Courses({
                               checked={entry?.active ?? false}
                               disabled={busy}
                               onChange={(event) => saveMembership(event.target.checked)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="checkbox"
+                              className="h-11 w-11"
+                              aria-label={`${ar ? 'استلم الكتاب' : 'Handbook received'}: ${student.firstName} ${student.lastName}`}
+                              checked={entry?.handbookReceived ?? false}
+                              disabled={busy || !entry}
+                              onChange={(event) =>
+                                entry &&
+                                void submit('/api/admin/enrollments/handbook', {
+                                  id: entry.id,
+                                  handbookReceived: event.target.checked,
+                                })
+                              }
                             />
                           </td>
                           <td>

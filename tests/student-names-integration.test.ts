@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { mkdir, readFile, unlink } from 'node:fs/promises'
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { Pool } from 'pg'
 import { z } from 'zod'
 import { createHandler } from '../functions/notebook-service'
@@ -18,6 +18,7 @@ integration('student names survive migration, structured saves and legacy writes
   let addedBanColumn = false
   const exportPath = `.local/student-names-${student}.json`
   const bannedPath = `.local/student-names-banned-${student}.json`
+  const importPath = `.local/student-profile-import-${student}.json`
   try {
     for (const file of [
       'railway/001-auth.sql',
@@ -46,6 +47,13 @@ integration('student names survive migration, structured saves and legacy writes
     const migration = await readFile('neon/004-student-names.sql', 'utf8')
     await pool.query(migration)
     await pool.query(migration)
+    for (const file of [
+      'neon/003-courses.sql',
+      'neon/005-active-enrollments.sql',
+      'neon/006-closed-courses.sql',
+      'neon/007-student-profiles-handbooks.sql',
+    ])
+      await pool.query(await readFile(file, 'utf8'))
     const handler = createHandler(pool, async () => admin, ['https://app.example'])
     const call = (body?: unknown) =>
       handler(
@@ -93,7 +101,7 @@ integration('student names survive migration, structured saves and legacy writes
     expect(await exportBackup(exportPath)).toBe(0)
     const backup = z
       .object({
-        version: z.union([z.literal(2), z.literal(3), z.literal(4)]),
+        version: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
         tables: z.array(
           z.object({
             name: z.string(),
@@ -135,9 +143,55 @@ integration('student names survive migration, structured saves and legacy writes
       (await pool.query('SELECT first_name, last_name FROM students WHERE id = $1', [student]))
         .rows[0],
     ).toEqual({ first_name: null, last_name: null })
+    const importRoster = async (profile: object) => {
+      await writeFile(
+        importPath,
+        JSON.stringify([
+          {
+            id: student,
+            teacherId: teacher,
+            name: 'Replacement Legacy Name',
+            group: 'Level A',
+            active: true,
+            ...profile,
+          },
+        ]),
+      )
+      const child = Bun.spawn(
+        [process.execPath, 'scripts/neon-admin.ts', 'students', 'upsert', importPath],
+        {
+          env: { ...process.env, DATABASE_URL_UNPOOLED: databaseUrl },
+          stdout: 'ignore',
+          stderr: 'ignore',
+        },
+      )
+      expect(await child.exited).toBe(0)
+    }
+    const profile = { whatsapp: '+٩٦٣ 123', location: 'Synthetic area', birthYear: 2000 }
+    await importRoster(profile)
+    await importRoster({})
+    expect(
+      (
+        await pool.query('SELECT whatsapp, location, birth_year FROM students WHERE id = $1', [
+          student,
+        ])
+      ).rows[0],
+    ).toEqual({
+      whatsapp: profile.whatsapp,
+      location: profile.location,
+      birth_year: profile.birthYear,
+    })
+    await importRoster({ whatsapp: '', location: null, birthYear: null })
+    expect(
+      (
+        await pool.query('SELECT whatsapp, location, birth_year FROM students WHERE id = $1', [
+          student,
+        ])
+      ).rows[0],
+    ).toEqual({ whatsapp: null, location: null, birth_year: null })
   } finally {
     await Promise.all(
-      [exportPath, bannedPath].map(async (path) => {
+      [exportPath, bannedPath, importPath].map(async (path) => {
         try {
           await unlink(path)
         } catch (error) {

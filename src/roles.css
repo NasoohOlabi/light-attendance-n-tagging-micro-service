@@ -109,7 +109,7 @@
   overflow-x: auto;
 }
 .role-students-table {
-  min-width: 38rem;
+  min-width: 64rem;
 }
 @media (max-width: 40rem) {
   .role-page {
@@ -142,7 +142,7 @@
 }
 
 .course-students-table {
-  min-width: 58rem;
+  min-width: 68rem;
 }
 .course-students-table input[role='switch'] {
   appearance: none;

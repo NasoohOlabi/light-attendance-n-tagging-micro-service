@@ -68,7 +68,7 @@ export async function handle(request: Request): Promise<Response> {
   if (url.pathname === '/health' && request.method === 'GET') {
     try {
       await pool.query(
-        'SELECT course_enrollments.active, courses.open FROM app_accounts, teachers, students, courses, course_enrollments, events, neon_auth."user", neon_auth.account, neon_auth.session, neon_auth.verification LIMIT 0',
+        'SELECT course_enrollments.active, course_enrollments.handbook_received, students.whatsapp, students.location, students.birth_year, courses.open FROM app_accounts, teachers, students, courses, course_enrollments, events, neon_auth."user", neon_auth.account, neon_auth.session, neon_auth.verification LIMIT 0',
       )
       return Response.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
     } catch {

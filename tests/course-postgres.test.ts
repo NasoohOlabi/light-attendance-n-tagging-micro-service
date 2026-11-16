@@ -55,6 +55,9 @@ integration(
       )
       await pool.query(courseMigration)
       await pool.query(courseMigration)
+      const profileMigration = await readFile('neon/007-student-profiles-handbooks.sql', 'utf8')
+      await pool.query(profileMigration)
+      await pool.query(profileMigration)
       for (const [id, subject] of [
         [adminId, subjects.admin],
         [teacherId, subjects.teacher],
@@ -98,6 +101,39 @@ integration(
         })
         expect(enrolled.status, await enrolled.clone().text()).toBe(200)
       }
+      expect(
+        (
+          await call('/api/admin/enrollments/handbook', subjects.teacher, {
+            id: enrollmentIds[0],
+            handbookReceived: true,
+          })
+        ).status,
+      ).toBe(403)
+      expect(
+        (
+          await call('/api/admin/enrollments/handbook', subjects.admin, {
+            id: enrollmentIds[0],
+            handbookReceived: true,
+            level: 'illegal',
+          })
+        ).status,
+      ).toBe(400)
+      expect(
+        (
+          await call('/api/admin/enrollments/handbook', subjects.admin, {
+            id: enrollmentIds[0],
+            handbookReceived: true,
+          })
+        ).status,
+      ).toBe(200)
+      expect(
+        (
+          await pool.query(
+            'SELECT handbook_received FROM course_enrollments WHERE id = ANY($1::uuid[]) ORDER BY handbook_received DESC',
+            [enrollmentIds],
+          )
+        ).rows,
+      ).toEqual([{ handbook_received: true }, { handbook_received: false }])
       expect(
         (
           await call('/api/admin/enrollments', subjects.admin, {
@@ -296,6 +332,9 @@ integration(
           studentId: newStudent,
           teacherId,
           name: 'Synthetic new student',
+          whatsapp: '+963 (123) 456',
+          location: 'Synthetic area',
+          birthYear: 2000,
           group: '',
           active: true,
         },
@@ -312,6 +351,62 @@ integration(
         (await pool.query('SELECT id FROM course_enrollments WHERE student_id = $1', [newStudent]))
           .rowCount,
       ).toBe(1)
+      expect(
+        (
+          await pool.query('SELECT whatsapp, location, birth_year FROM students WHERE id = $1', [
+            newStudent,
+          ])
+        ).rows[0],
+      ).toEqual({ whatsapp: '+963 (123) 456', location: 'Synthetic area', birth_year: 2000 })
+      expect(
+        (
+          await call('/api/admin/students', subjects.admin, {
+            studentId: newStudent,
+            teacherId,
+            name: 'Synthetic new student',
+            group: '',
+            active: true,
+          })
+        ).status,
+      ).toBe(200)
+      expect(
+        (await pool.query('SELECT birth_year FROM students WHERE id = $1', [newStudent])).rows[0]
+          .birth_year,
+      ).toBe(2000)
+      expect(
+        (
+          await call('/api/admin/students', subjects.admin, {
+            studentId: newStudent,
+            teacherId,
+            name: 'Synthetic new student',
+            group: '',
+            active: true,
+            birthYear: null,
+            whatsapp: '',
+            location: null,
+          })
+        ).status,
+      ).toBe(200)
+      expect(
+        (
+          await pool.query('SELECT whatsapp, location, birth_year FROM students WHERE id = $1', [
+            newStudent,
+          ])
+        ).rows[0],
+      ).toEqual({ whatsapp: null, location: null, birth_year: null })
+      expect(
+        (
+          await pool.query('SELECT handbook_received FROM course_enrollments WHERE id = $1', [
+            enrollmentIds[0],
+          ])
+        ).rows[0].handbook_received,
+      ).toBe(true)
+      const privateResponse = JSON.stringify(
+        await (await call('/api/student/attendance', subjects.student)).json(),
+      )
+      expect(privateResponse).not.toContain('birthYear')
+      expect(privateResponse).not.toContain('whatsapp')
+      expect(privateResponse).not.toContain('location')
       await pool.query('DELETE FROM course_enrollments WHERE student_id = $1', [newStudent])
       await pool.query('DELETE FROM students WHERE id = $1', [newStudent])
       const count = await pool.query(

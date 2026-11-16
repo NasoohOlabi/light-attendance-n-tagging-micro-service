@@ -27,6 +27,11 @@ export const enrollmentSchema = z.object({
   practical: z.number().min(0).max(100).nullable(),
   theory: z.number().min(0).max(100).nullable(),
   active: z.boolean().default(true),
+  handbookReceived: z.boolean().default(false),
+})
+export const enrollmentHandbookSchema = z.strictObject({
+  id: z.uuid(),
+  handbookReceived: z.boolean(),
 })
 export const enrollmentMembershipSchema = z.strictObject({
   id: z.uuid(),
@@ -114,6 +119,9 @@ const studentFields = {
   teacherId: z.uuid(),
   group: z.string().trim().max(100),
   active: z.boolean(),
+  whatsapp: z.string().trim().max(40).nullable().optional(),
+  location: z.string().trim().max(200).nullable().optional(),
+  birthYear: z.number().int().min(1900).max(new Date().getFullYear()).nullable().optional(),
 }
 export const neonAdminStudentSchema = z.union([
   z.strictObject({ ...studentFields, name: z.string().trim().min(1).max(200) }),
@@ -158,6 +166,9 @@ export const neonAdminBoardSchema = z.object({
       group: z.string(),
       active: z.boolean(),
       teacherId: z.uuid(),
+      whatsapp: z.string().nullable().default(null),
+      location: z.string().nullable().default(null),
+      birthYear: z.number().int().nullable().default(null),
     }),
   ),
 })

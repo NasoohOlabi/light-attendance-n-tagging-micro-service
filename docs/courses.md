@@ -19,3 +19,5 @@ Migration `neon/005-active-enrollments.sql` adds an active membership flag, defa
 Administrators can manually close and reopen a course from the course list. Closing does not depend on grades and preserves enrollments, grades and history. Closed courses remain in the management list but are omitted from notebook selectors; a previously saved course URL can still show history and corrections, while new attendance is rejected. Reopening permits attendance again. Notes remain student-scoped.
 
 Apply `bun run db:migrate` through `neon/006-closed-courses.sql` before deployment. Existing and new courses default to open. Version 5 backups preserve course status; older backups restore courses as open and cannot compare successfully with closed courses. Test against a disposable database first.
+
+Manage students records **Handbook received** independently for each existing enrollment. It defaults to false and survives withdrawal, re-enrollment, level and grade changes.

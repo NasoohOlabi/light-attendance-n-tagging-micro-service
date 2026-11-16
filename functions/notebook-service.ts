@@ -7,6 +7,7 @@ import {
   courseStatusSchema,
   enrollmentSchema,
   enrollmentMembershipSchema,
+  enrollmentHandbookSchema,
   enrollmentGradesSchema,
   neonAdminBoardSchema,
   neonAdminDisableSchema,
@@ -54,7 +55,7 @@ async function courseBoard(db: PoolClient, teacher: z.infer<typeof neonTeacherSc
   const enrollments = (
     await db.query(
       `SELECT ce.id, ce.course_id AS "courseId", ce.student_id AS "studentId", ce.level,
-    ce.practical::float8 AS practical, ce.theory::float8 AS theory, ce.active
+    ce.practical::float8 AS practical, ce.theory::float8 AS theory, ce.active, ce.handbook_received AS "handbookReceived"
     FROM course_enrollments ce JOIN students s ON s.id = ce.student_id WHERE ${scope} ORDER BY ce.id FOR SHARE OF ce`,
       values,
     )
@@ -179,7 +180,7 @@ async function adminBoard(db: PoolClient) {
   ).rows
   const students = (
     await db.query(
-      'SELECT id AS "studentId", name, COALESCE(first_name, name) AS "firstName", COALESCE(last_name, \'\') AS "lastName", group_name AS "group", active, teacher_id AS "teacherId" FROM students ORDER BY name, id',
+      'SELECT id AS "studentId", name, COALESCE(first_name, name) AS "firstName", COALESCE(last_name, \'\') AS "lastName", group_name AS "group", active, teacher_id AS "teacherId", whatsapp, location, birth_year AS "birthYear" FROM students ORDER BY name, id',
     )
   ).rows
   return neonAdminBoardSchema.parse({ accounts, teachers, students })
@@ -235,6 +236,14 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
       status.id,
       status.open,
     ])
+    if (!result.rowCount) throw new HttpError(400)
+    return { saved: true }
+  } else if (path === '/api/admin/enrollments/handbook') {
+    const value = enrollmentHandbookSchema.parse(body)
+    const result = await db.query(
+      'UPDATE course_enrollments SET handbook_received = $2 WHERE id = $1 RETURNING id',
+      [value.id, value.handbookReceived],
+    )
     if (!result.rowCount) throw new HttpError(400)
     return { saved: true }
   } else if (path === '/api/admin/enrollments/grades') {
@@ -336,10 +345,13 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
     )
     if (!teacher.rows.length) throw new HttpError(400)
     await db.query(
-      `INSERT INTO students (id, teacher_id, name, group_name, active, first_name, last_name) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO students (id, teacher_id, name, group_name, active, first_name, last_name, whatsapp, location, birth_year) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       ON CONFLICT (id) DO UPDATE SET teacher_id = EXCLUDED.teacher_id, name = EXCLUDED.name, group_name = EXCLUDED.group_name, active = EXCLUDED.active,
         first_name = CASE WHEN EXCLUDED.first_name IS NULL AND students.name = EXCLUDED.name THEN students.first_name ELSE EXCLUDED.first_name END,
-        last_name = CASE WHEN EXCLUDED.first_name IS NULL AND students.name = EXCLUDED.name THEN students.last_name ELSE EXCLUDED.last_name END`,
+        last_name = CASE WHEN EXCLUDED.first_name IS NULL AND students.name = EXCLUDED.name THEN students.last_name ELSE EXCLUDED.last_name END,
+        whatsapp = CASE WHEN $11 THEN EXCLUDED.whatsapp ELSE students.whatsapp END,
+        location = CASE WHEN $12 THEN EXCLUDED.location ELSE students.location END,
+        birth_year = CASE WHEN $13 THEN EXCLUDED.birth_year ELSE students.birth_year END`,
       [
         student.studentId,
         student.teacherId,
@@ -348,6 +360,12 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
         student.active,
         firstName,
         lastName,
+        student.whatsapp || null,
+        student.location || null,
+        student.birthYear ?? null,
+        student.whatsapp !== undefined,
+        student.location !== undefined,
+        student.birthYear !== undefined,
       ],
     )
     if (combined) {
@@ -407,6 +425,7 @@ export function createHandler(
         '/api/admin/enrollments',
         '/api/admin/enrollments/membership',
         '/api/admin/enrollments/grades',
+        '/api/admin/enrollments/handbook',
         '/api/admin/students/enroll',
       ].includes(path)
     )
@@ -423,6 +442,7 @@ export function createHandler(
         '/api/admin/enrollments',
         '/api/admin/enrollments/membership',
         '/api/admin/enrollments/grades',
+        '/api/admin/enrollments/handbook',
         '/api/admin/students/enroll',
       ].includes(path) &&
         request.method !== 'POST') ||
@@ -437,6 +457,7 @@ export function createHandler(
         '/api/admin/enrollments',
         '/api/admin/enrollments/membership',
         '/api/admin/enrollments/grades',
+        '/api/admin/enrollments/handbook',
         '/api/admin/students/enroll',
       ].includes(path) &&
         request.method !== 'GET')

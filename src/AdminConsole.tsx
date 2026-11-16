@@ -17,6 +17,7 @@ import './roles.css'
 type Board = z.infer<typeof neonAdminBoardSchema>
 type Account = Board['accounts'][number]
 type Student = Board['students'][number]
+const maximumBirthYear = new Date().getFullYear()
 export function AdminConsole({
   userId,
   signOut,
@@ -255,6 +256,9 @@ export function AdminConsole({
                           <th scope="col">{ar ? 'الاسم الأول' : 'First name'}</th>
                           <th scope="col">{ar ? 'اسم العائلة' : 'Last name'}</th>
                           <th scope="col">{ar ? 'المستوى' : 'Level'}</th>
+                          <th scope="col">{ar ? 'واتساب' : 'WhatsApp'}</th>
+                          <th scope="col">{ar ? 'المنطقة' : 'Location'}</th>
+                          <th scope="col">{ar ? 'سنة الميلاد' : 'Birth year'}</th>
                           <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
                           <th scope="col">{ar ? 'الإجراءات' : 'Actions'}</th>
                         </tr>
@@ -265,6 +269,9 @@ export function AdminConsole({
                             <td dir="auto">{student.firstName}</td>
                             <td dir="auto">{student.lastName || '—'}</td>
                             <td dir="auto">{student.group}</td>
+                            <td dir="ltr">{student.whatsapp || '—'}</td>
+                            <td dir="auto">{student.location || '—'}</td>
+                            <td>{student.birthYear ?? '—'}</td>
                             <td>
                               {student.active
                                 ? ar
@@ -533,6 +540,9 @@ function StudentForm({
   const [lastName, setLastName] = useState(student?.lastName ?? '')
   const [nameError, setNameError] = useState<'required' | 'length' | ''>('')
   const [group, setGroup] = useState(student?.group ?? '')
+  const [whatsapp, setWhatsapp] = useState(student?.whatsapp ?? '')
+  const [location, setLocation] = useState(student?.location ?? '')
+  const [birthYear, setBirthYear] = useState(student?.birthYear?.toString() ?? '')
   const [courseLevel, setCourseLevel] = useState<string | null>(null)
   const [teacherId, setTeacherId] = useState(student?.teacherId ?? '')
   const [active, setActive] = useState(student?.active ?? true)
@@ -555,6 +565,9 @@ function StudentForm({
           firstName,
           lastName,
           group,
+          whatsapp: whatsapp || null,
+          location: location || null,
+          birthYear: birthYear ? Number(birthYear) : null,
           teacherId,
           active,
         })
@@ -604,6 +617,36 @@ function StudentForm({
             dir="auto"
             value={group}
             onChange={(e) => setGroup(e.target.value)}
+          />
+        </label>
+        <label>
+          {ar ? 'رقم واتساب' : 'WhatsApp number'}
+          <input
+            type="tel"
+            dir="ltr"
+            maxLength={40}
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+          />
+        </label>
+        <label>
+          {ar ? 'المنطقة' : 'Location'}
+          <input
+            maxLength={200}
+            dir="auto"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          />
+        </label>
+        <label>
+          {ar ? 'سنة الميلاد' : 'Birth year'}
+          <input
+            type="number"
+            min={1900}
+            max={maximumBirthYear}
+            step={1}
+            value={birthYear}
+            onChange={(e) => setBirthYear(e.target.value)}
           />
         </label>
         <label>

@@ -14,7 +14,7 @@ integration(
     if (!url) throw new Error('Disposable database required')
     const admin = new Pool({ connectionString: url })
     const names = Array.from(
-      { length: 6 },
+      { length: 7 },
       () => `transfer_${crypto.randomUUID().replaceAll('-', '')}`,
     )
     const pools: Pool[] = []
@@ -27,7 +27,7 @@ integration(
       !localPath.startsWith('transfer-test-')
     )
       throw new Error('Refusing cleanup outside the disposable transfer directory')
-    const files = [1, 2, 3, 4, 5].map((version) => resolve(directory, `v${version}.json`))
+    const files = [1, 2, 3, 4, 5, 6].map((version) => resolve(directory, `v${version}.json`))
     const run = (command: string, file: string, dbUrl: string, succeeds = true) => {
       const result = Bun.spawnSync(
         [process.execPath, 'run', 'scripts/railway-transfer.ts', command, file],
@@ -133,11 +133,22 @@ integration(
       await source.query('UPDATE courses SET open = false WHERE id = $1', [courseA])
       run('export', files[4], urls[0])
       run('compare', files[3], urls[0], false)
+      await migrate(source, 'neon/007-student-profiles-handbooks.sql')
+      await migrate(source, 'neon/007-student-profiles-handbooks.sql')
+      await source.query(
+        "UPDATE students SET whatsapp = '+123', location = 'Area', birth_year = 2000",
+      )
+      await source.query('UPDATE course_enrollments SET handbook_received = true WHERE id = $1', [
+        enrollmentA,
+      ])
+      run('export', files[5], urls[0])
+      run('compare', files[4], urls[0], false)
       for (let index = 0; index < targets.length; index++) {
         await migrate(targets[index], 'neon/003-courses.sql')
         await migrate(targets[index], 'neon/004-student-names.sql')
         await migrate(targets[index], 'neon/005-active-enrollments.sql')
         await migrate(targets[index], 'neon/006-closed-courses.sql')
+        await migrate(targets[index], 'neon/007-student-profiles-handbooks.sql')
         run('import', files[index], urls[index + 1])
         run('compare', files[index], urls[index + 1])
       }
@@ -149,7 +160,17 @@ integration(
                 .version,
           ),
         ),
-      ).toEqual([1, 2, 3, 4, 5])
+      ).toEqual([1, 2, 3, 4, 5, 6])
+      expect(
+        (await targets[5].query('SELECT whatsapp, location, birth_year FROM students')).rows[0],
+      ).toEqual({ whatsapp: '+123', location: 'Area', birth_year: 2000 })
+      expect(
+        (
+          await targets[5].query('SELECT handbook_received FROM course_enrollments WHERE id = $1', [
+            enrollmentA,
+          ])
+        ).rows[0].handbook_received,
+      ).toBe(true)
       const stored = await targets[2].query(
         'SELECT level, practical::text, theory::text FROM course_enrollments ORDER BY level',
       )
