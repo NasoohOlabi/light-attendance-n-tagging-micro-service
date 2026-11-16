@@ -20,17 +20,18 @@ export function hasWaitingPwaUpdate() {
 export function registerPwa() {
   if (initialized || !import.meta.env.PROD || !('serviceWorker' in navigator)) return
   initialized = true
+  const hadController = !!navigator.serviceWorker.controller
   void navigator.serviceWorker
     .register(`${import.meta.env.BASE_URL}sw.js`)
     .then((registration) => {
-      const refresh = () => setWaiting(!!registration.waiting)
       const watchInstalling = () => {
         const worker = registration.installing
-        worker?.addEventListener('statechange', refresh)
-        refresh()
+        worker?.addEventListener('statechange', () => {
+          if (hadController && worker.state === 'activated') setWaiting(true)
+        })
+        if (hadController && registration.waiting) setWaiting(true)
       }
       registration.addEventListener('updatefound', watchInstalling)
-      navigator.serviceWorker.addEventListener('controllerchange', refresh)
       watchInstalling()
     })
     .catch(() => {})

@@ -10,6 +10,17 @@ const prefix = '/notebook/'
 const assets = new Map<string, Buffer>()
 let workerRevision = 0
 let delayNavigation = false
+let legacyWorker = false
+let htmlVersion = 'one'
+const legacyWorkerSource = `
+const scope = new URL(self.registration.scope)
+const cacheName = 'wartaq-' + encodeURIComponent(scope.pathname) + '-legacy'
+const index = new URL('index.html', scope).href
+self.addEventListener('install', event => event.waitUntil(caches.open(cacheName).then(cache => cache.add(index))))
+self.addEventListener('fetch', event => {
+  if (event.request.mode === 'navigate') event.respondWith(caches.open(cacheName).then(cache => cache.match(index)))
+})
+`
 
 test.beforeAll(async () => {
   async function readAssets(directory: string, path = '') {
@@ -48,10 +59,18 @@ test.beforeAll(async () => {
     }
     response.writeHead(200, {
       'content-type': types[file.split('.').pop() ?? ''] ?? 'application/octet-stream',
-      'cache-control': 'no-store',
+      'cache-control': file === 'index.html' ? 'no-cache' : 'no-store',
     })
     const content =
-      file === 'sw.js' ? body.toString() + `\n// synthetic update ${workerRevision}` : body
+      file === 'sw.js'
+        ? legacyWorker
+          ? legacyWorkerSource
+          : body.toString() + `\n// synthetic update ${workerRevision}`
+        : file === 'index.html'
+          ? body
+              .toString()
+              .replace('</head>', `<meta name="test-version" content="${htmlVersion}"></head>`)
+          : body
     if (delayNavigation && file === 'index.html') setTimeout(() => response.end(content), 5000)
     else response.end(content)
   })
@@ -177,41 +196,71 @@ test('cached public shell opens without waiting for a stalled navigation', async
   }
 })
 
-test('PWA update waits while the current notebook has an unsaved note', async ({
+test('normal refresh upgrades a legacy worker without disturbing another tab', async ({
   page,
   context,
 }) => {
-  await page.goto(origin + prefix)
-  await page.evaluate(() => navigator.serviceWorker.ready)
-  await page.reload()
-  await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
-  await page.getByRole('button', { name: 'Notes', exact: true }).click()
-  await page.getByLabel('Note', { exact: true }).fill('Unsaved note — ملاحظة')
-  await page.evaluate(async () => {
-    await caches.open('other-project-sentinel')
-  })
-  workerRevision++
-  await page.evaluate(async () => {
-    const registration = await navigator.serviceWorker.getRegistration()
-    await registration?.update()
-  })
-  await expect
-    .poll(() =>
-      page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())?.waiting),
+  legacyWorker = true
+  htmlVersion = 'one'
+  try {
+    await page.goto(origin + prefix)
+    await page.evaluate(() => navigator.serviceWorker.ready)
+    await page.reload()
+    await expect(page.locator('meta[name=test-version]')).toHaveAttribute('content', 'one')
+    const secondPage = await context.newPage()
+    await secondPage.goto(origin + prefix)
+    await secondPage
+      .getByRole('button', { name: 'Explore with sample students', exact: true })
+      .click()
+    await secondPage.getByRole('button', { name: 'Notes', exact: true }).click()
+    await secondPage.getByLabel('Note', { exact: true }).fill('Unsaved synthetic note')
+    await page.evaluate(async () => {
+      await caches.open('other-project-sentinel')
+      const legacy = await caches.open('wartaq-' + encodeURIComponent('/notebook/') + '-legacy')
+      await legacy.put('./assets/old-lazy.js', new Response('old lazy asset'))
+      localStorage.setItem('synthetic-pending', 'preserved')
+      const oldWorker = (await navigator.serviceWorker.getRegistration())?.active
+      oldWorker?.addEventListener('statechange', () => {
+        if (oldWorker.state === 'redundant')
+          document.documentElement.dataset.oldWorker = 'redundant'
+      })
+    })
+    htmlVersion = 'two'
+    legacyWorker = false
+    await page.evaluate(async () => {
+      await (await navigator.serviceWorker.getRegistration())?.update()
+    })
+    await expect(page.locator('html')).toHaveAttribute('data-old-worker', 'redundant')
+    await page.reload()
+    await expect(page.locator('meta[name=test-version]')).toHaveAttribute('content', 'two')
+    await expect(secondPage.getByLabel('Note', { exact: true })).toHaveValue(
+      'Unsaved synthetic note',
     )
-    .toBe(true)
-  await expect(page.getByLabel('Note', { exact: true })).toHaveValue('Unsaved note — ملاحظة')
-  const notice = page.locator('.update-notice')
-  await expect(notice).toContainText('A newer version is available')
-  await expect(notice).toContainText('close all Wartaq browser and app windows')
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
-  await expect(notice).toContainText('يتوفر إصدار أحدث')
-  await expect(page.getByLabel('الملاحظة', { exact: true })).toHaveValue('Unsaved note — ملاحظة')
-  const secondPage = await context.newPage()
-  await secondPage.goto(origin + prefix)
-  await expect(secondPage.locator('.update-notice')).toBeVisible()
-  await secondPage.close()
-  expect(await page.evaluate(() => caches.has('other-project-sentinel'))).toBe(true)
+    expect(await page.evaluate(() => caches.has('other-project-sentinel'))).toBe(true)
+    expect(
+      await page.evaluate(() => fetch('./assets/old-lazy.js').then((response) => response.text())),
+    ).toBe('old lazy asset')
+    expect(await secondPage.evaluate(() => localStorage.getItem('synthetic-pending'))).toBe(
+      'preserved',
+    )
+    workerRevision++
+    await page.evaluate(async () => {
+      await (await navigator.serviceWorker.getRegistration())?.update()
+    })
+    await expect(page.locator('.update-notice')).toContainText('refresh this page')
+    await page.getByRole('button', { name: 'العربية', exact: true }).click()
+    await expect(page.locator('.update-notice')).toContainText('حدّث الصفحة')
+    htmlVersion = 'three'
+    await page.reload()
+    await expect(page.locator('meta[name=test-version]')).toHaveAttribute('content', 'three')
+    await context.setOffline(true)
+    await page.reload()
+    await expect(page.locator('meta[name=test-version]')).toHaveAttribute('content', 'two')
+    await context.setOffline(false)
+  } finally {
+    legacyWorker = false
+    htmlVersion = 'one'
+  }
 })
 
 test('install button calls the deferred native prompt once and localizes dismissal feedback', async ({
