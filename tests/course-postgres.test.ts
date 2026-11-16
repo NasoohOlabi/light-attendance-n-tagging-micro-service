@@ -43,6 +43,12 @@ integration(
       const migration = await readFile(new URL('../neon/003-courses.sql', import.meta.url), 'utf8')
       await pool.query(migration)
       await pool.query(migration)
+      const activeMigration = await readFile(
+        new URL('../neon/005-active-enrollments.sql', import.meta.url),
+        'utf8',
+      )
+      await pool.query(activeMigration)
+      await pool.query(activeMigration)
       for (const [id, subject] of [
         [adminId, subjects.admin],
         [teacherId, subjects.teacher],
@@ -67,6 +73,13 @@ integration(
           name: `Synthetic course ${i + 1}`,
         })
         expect(response.status, await response.clone().text()).toBe(200)
+        const withoutEnrollment = neonSnapshotSchema.parse(
+          await (await call('/api/notebook', subjects.admin)).json(),
+        )
+        expect(withoutEnrollment.courses).toContainEqual({
+          id: courseIds[i],
+          name: `Synthetic course ${i + 1}`,
+        })
         const enrolled = await call('/api/admin/enrollments', subjects.admin, {
           id: enrollmentIds[i],
           courseId: courseIds[i],
@@ -161,11 +174,146 @@ integration(
       expect(
         (await call('/api/events', subjects.teacher, { events: [first, second] })).status,
       ).toBe(200)
+      const membership = {
+        id: enrollmentIds[0],
+        courseId: courseIds[0],
+        studentId,
+        level: 'Changed',
+        active: false,
+      }
+      for (const subject of [subjects.teacher, subjects.student]) {
+        for (const path of [
+          '/api/admin/enrollments/membership',
+          '/api/admin/enrollments/grades',
+          '/api/admin/students/enroll',
+        ])
+          expect((await call(path, subject, {})).status).toBe(403)
+      }
+      expect(
+        (await call('/api/admin/enrollments/membership', subjects.admin, membership)).status,
+      ).toBe(200)
+      expect(
+        (
+          await pool.query(
+            'SELECT level, practical::float8, theory::float8 FROM course_enrollments WHERE id = $1',
+            [enrollmentIds[0]],
+          )
+        ).rows[0],
+      ).toEqual({ level: 'Changed', practical: 75.5, theory: 100 })
+      const inactiveCorrection = makeEvent('Synthetic course teacher', {
+        kind: 'reversal',
+        targetId: first.id,
+        reason: 'Synthetic correction while inactive',
+      })
+      expect(
+        (await call('/api/events', subjects.teacher, { events: [inactiveCorrection] })).status,
+      ).toBe(200)
+      expect((await call('/api/events', subjects.teacher, { events: [first] })).status).toBe(200)
+      const inactiveMark = makeEvent('Synthetic course teacher', {
+        kind: 'attendance',
+        studentId,
+        enrollmentId: enrollmentIds[0],
+        status: 'present',
+        date: '2026-11-18',
+      })
+      expect((await call('/api/events', subjects.teacher, { events: [inactiveMark] })).status).toBe(
+        403,
+      )
+      expect(
+        (
+          await call('/api/admin/enrollments/grades', subjects.admin, {
+            id: enrollmentIds[0],
+            practical: 0,
+            theory: null,
+          })
+        ).status,
+      ).toBe(200)
+      expect(
+        (
+          await call('/api/admin/enrollments', subjects.admin, {
+            ...membership,
+            active: undefined,
+            practical: 0,
+            theory: null,
+          })
+        ).status,
+      ).toBe(200)
+      let row = (
+        await pool.query(
+          'SELECT id, level, active, practical::float8, theory::float8 FROM course_enrollments WHERE id = $1',
+          [enrollmentIds[0]],
+        )
+      ).rows[0]
+      expect(row).toEqual({
+        id: enrollmentIds[0],
+        level: 'Changed',
+        active: false,
+        practical: 0,
+        theory: null,
+      })
+      expect(
+        (
+          await call('/api/admin/enrollments/membership', subjects.admin, {
+            ...membership,
+            active: true,
+          })
+        ).status,
+      ).toBe(200)
+      row = (
+        await pool.query(
+          'SELECT id, level, active, practical::float8, theory::float8 FROM course_enrollments WHERE id = $1',
+          [enrollmentIds[0]],
+        )
+      ).rows[0]
+      expect(row).toEqual({
+        id: enrollmentIds[0],
+        level: 'Changed',
+        active: true,
+        practical: 0,
+        theory: null,
+      })
+      expect(
+        (
+          await call('/api/admin/enrollments/grades', subjects.admin, {
+            id: crypto.randomUUID(),
+            practical: 0,
+            theory: 0,
+          })
+        ).status,
+      ).toBe(400)
+      const newStudent = crypto.randomUUID()
+      const newEnrollment = crypto.randomUUID()
+      const combined = {
+        student: {
+          studentId: newStudent,
+          teacherId,
+          name: 'Synthetic new student',
+          group: '',
+          active: true,
+        },
+        enrollment: { id: newEnrollment, courseId: crypto.randomUUID(), level: '' },
+      }
+      expect((await call('/api/admin/students/enroll', subjects.admin, combined)).status).toBe(400)
+      expect(
+        (await pool.query('SELECT id FROM students WHERE id = $1', [newStudent])).rowCount,
+      ).toBe(0)
+      combined.enrollment.courseId = courseIds[0]
+      expect((await call('/api/admin/students/enroll', subjects.admin, combined)).status).toBe(200)
+      expect((await call('/api/admin/students/enroll', subjects.admin, combined)).status).toBe(200)
+      expect(
+        (await pool.query('SELECT id FROM course_enrollments WHERE student_id = $1', [newStudent]))
+          .rowCount,
+      ).toBe(1)
+      await pool.query('DELETE FROM course_enrollments WHERE student_id = $1', [newStudent])
+      await pool.query('DELETE FROM students WHERE id = $1', [newStudent])
       const count = await pool.query(
         'SELECT enrollment_id FROM events WHERE student_id = $1 ORDER BY sequence',
         [studentId],
       )
-      expect(count.rows.map((row) => row.enrollment_id)).toEqual(enrollmentIds)
+      expect(count.rows.map((row) => row.enrollment_id)).toEqual([
+        ...enrollmentIds,
+        enrollmentIds[0],
+      ])
       const unscoped = makeEvent('Synthetic course teacher', {
         kind: 'attendance',
         studentId,
@@ -215,12 +363,9 @@ integration(
       const studentBody: unknown = await studentResponse.json()
       expect(Object.keys(Object(studentBody)).sort()).toEqual(['attendance', 'student'])
       const student = neonStudentAttendanceSchema.parse(studentBody)
-      expect(student.attendance).toHaveLength(2)
-      expect(student.attendance.map((entry) => entry.status)).toEqual(['present', 'absent'])
-      expect(student.attendance.map((entry) => entry.course)).toEqual([
-        'Synthetic course 1',
-        'Synthetic course 2',
-      ])
+      expect(student.attendance).toHaveLength(1)
+      expect(student.attendance.map((entry) => entry.status)).toEqual(['absent'])
+      expect(student.attendance.map((entry) => entry.course)).toEqual(['Synthetic course 2'])
       expect(
         (
           await call('/api/admin/courses', subjects.teacher, {

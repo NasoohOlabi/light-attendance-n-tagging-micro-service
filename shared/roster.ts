@@ -32,7 +32,7 @@ export function validateAssignedPayloads(
         !enrollments ||
         (payload.enrollmentId
           ? enrollments.some(
-              (e) => e.id === payload.enrollmentId && e.studentId === payload.studentId,
+              (e) => e.id === payload.enrollmentId && e.studentId === payload.studentId && e.active,
             )
           : !enrollments.some((e) => e.studentId === payload.studentId))
       )

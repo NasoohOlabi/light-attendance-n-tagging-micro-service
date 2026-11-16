@@ -104,6 +104,11 @@ function AppContent() {
                 userId={userId}
                 signOut={signOut}
                 initialCreateStudent={query.view === 'add-student'}
+                courseId={
+                  query.view === 'add-student' && query.courseView === 'students'
+                    ? query.course
+                    : ''
+                }
                 openNotebook={() => setQuery({ view: 'notebook' }, true)}
               />
             ) : (
@@ -136,6 +141,7 @@ function Notebook({
   const assigned = !!neon || demo === 'assigned'
   const baseProjection = projectEvents(ledger.events)
   const selectedEnrollments = ledger.enrollments.filter((entry) => entry.courseId === query.course)
+  const activeEnrollments = selectedEnrollments.filter((entry) => entry.active)
   const selectedIds = new Set(selectedEnrollments.map((entry) => entry.id))
   const scopedEvents = baseProjection.events.filter((event) => {
     const payload = event.payload
@@ -154,7 +160,10 @@ function Notebook({
   const scopedProjection = projectEvents(scopedEvents)
   const courseStudents = ledger.roster.filter((student) =>
     query.course
-      ? selectedEnrollments.some((entry) => entry.studentId === student.studentId)
+      ? (query.tab === 'dashboard' || query.tab === 'attendance' || query.tab === 'roster'
+          ? activeEnrollments
+          : selectedEnrollments
+        ).some((entry) => entry.studentId === student.studentId)
       : true,
   )
   const projected = assigned ? { ...scopedProjection, students: courseStudents } : baseProjection
@@ -194,11 +203,15 @@ function Notebook({
           <div className="workspace-context" dir="auto">
             <span>
               {t('Halaqa notebook')} /{' '}
-              {query.tab === 'dashboard'
+              {query.view === 'courses'
                 ? language === 'ar'
-                  ? 'الرئيسية'
-                  : 'Dashboard'
-                : t(tabs.find((tab) => tab.id === query.tab)?.label ?? 'Attendance')}
+                  ? 'الدورات'
+                  : 'Courses'
+                : query.tab === 'dashboard'
+                  ? language === 'ar'
+                    ? 'الرئيسية'
+                    : 'Dashboard'
+                  : t(tabs.find((tab) => tab.id === query.tab)?.label ?? 'Attendance')}
             </span>
             {neon && (
               <span>
@@ -244,17 +257,20 @@ function Notebook({
             </button>
           </div>
         </div>
-        <header className="workspace-welcome">
-          <div>
-            <p dir="auto">{neon?.teacher.name ?? t('Demo teacher')}</p>
-            <h1>{t('Halaqa notebook')}</h1>
-            <span>{t('Record attendance. Leave a note. Keep the next teacher in the loop.')}</span>
-          </div>
-          <div className="workspace-count">
-            <strong>{projected.students.length}</strong>
-            <span>{t('Students')}</span>
-          </div>
-        </header>
+        {query.view !== 'courses' && (
+          <header className="workspace-welcome">
+            <div>
+              <h1>{t('Halaqa notebook')}</h1>
+              <span>
+                {t('Record attendance. Leave a note. Keep the next teacher in the loop.')}
+              </span>
+            </div>
+            <div className="workspace-count">
+              <strong>{projected.students.length}</strong>
+              <span>{t('Students')}</span>
+            </div>
+          </header>
+        )}
         {demo && (
           <p className="mb-5 rounded-lg bg-amber-100 p-3 text-amber-900">
             {demo === 'assigned' ? t('Assigned teacher sample notebook.') : t('Sample notebook.')}{' '}
@@ -400,7 +416,6 @@ function Notebook({
             userId={neon.userId}
             courses={ledger.courses}
             enrollments={ledger.enrollments}
-            students={ledger.roster}
             refresh={ledger.refresh}
           />
         )}
@@ -417,7 +432,7 @@ function Notebook({
                 onAttendance={() => setQuery({ tab: 'attendance', q: '', group: '' }, true)}
                 onAdd={() =>
                   neon
-                    ? setQuery({ view: 'add-student' }, true)
+                    ? setQuery({ view: 'add-student', courseView: '' }, true)
                     : setQuery({ tab: 'roster', q: '', group: '' }, true)
                 }
               />
@@ -425,7 +440,7 @@ function Notebook({
             {query.tab === 'attendance' && (
               <AttendanceView
                 key={`${query.date}:${query.course}`}
-                enrollments={selectedEnrollments}
+                enrollments={activeEnrollments}
                 students={students.filter(
                   (student) =>
                     student.active &&

@@ -10,7 +10,8 @@ import {
 } from '../shared/neon'
 import { LanguageSwitch, useLanguage } from './i18n'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
-import { request } from './neon'
+import { getNotebook, request } from './neon'
+import { setQuery } from './queryState'
 import './roles.css'
 
 type Board = z.infer<typeof neonAdminBoardSchema>
@@ -21,11 +22,13 @@ export function AdminConsole({
   signOut,
   openNotebook,
   initialCreateStudent = false,
+  courseId = '',
 }: {
   userId: string
   signOut: () => void
   openNotebook: () => void
   initialCreateStudent?: boolean
+  courseId?: string
 }) {
   const { language, t, errorMessage } = useLanguage()
   const ar = language === 'ar'
@@ -36,6 +39,23 @@ export function AdminConsole({
   const [editing, setEditing] = useState<Student | null>(null)
   const [creating, setCreating] = useState(initialCreateStudent)
   const [revision, setRevision] = useState(0)
+  const [courseName, setCourseName] = useState('')
+  const [enrollmentId] = useState(() => crypto.randomUUID())
+  useEffect(() => {
+    if (!courseId) return
+    let cancelled = false
+    getNotebook(userId)
+      .then((snapshot) => {
+        if (!cancelled)
+          setCourseName(snapshot.courses.find((course) => course.id === courseId)?.name ?? '')
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) setError(cause instanceof Error ? cause.message : 'Load failed')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [courseId, userId])
   const [section, setSection] = useState<'accounts' | 'students'>(
     initialCreateStudent ? 'students' : 'accounts',
   )
@@ -171,15 +191,17 @@ export function AdminConsole({
               <section className="panel role-section">
                 <div className="role-heading">
                   <h2 className="title">{ar ? 'الطلاب' : 'Students'}</h2>
-                  <button
-                    className="secondary"
-                    onClick={() => {
-                      setEditing(null)
-                      setCreating(true)
-                    }}
-                  >
-                    {ar ? 'إضافة طالب' : 'Add student'}
-                  </button>
+                  {!courseId && (
+                    <button
+                      className="secondary"
+                      onClick={() => {
+                        setEditing(null)
+                        setCreating(true)
+                      }}
+                    >
+                      {ar ? 'إضافة طالب' : 'Add student'}
+                    </button>
+                  )}
                 </div>
                 {(creating || editing) && (
                   <StudentForm
@@ -193,61 +215,82 @@ export function AdminConsole({
                           account.active,
                       ),
                     )}
-                    busy={busy}
+                    busy={busy || (!!courseId && !courseName)}
                     ar={ar}
-                    save={async (value) => {
-                      if (await save('/api/admin/students', neonAdminStudentSchema.parse(value))) {
+                    courseName={courseId ? courseName : ''}
+                    save={async (value, level) => {
+                      const path = courseId ? '/api/admin/students/enroll' : '/api/admin/students'
+                      const body = courseId
+                        ? { student: value, enrollment: { id: enrollmentId, courseId, level } }
+                        : value
+                      if (await save(path, body)) {
+                        if (courseId) {
+                          setQuery({ view: 'courses', courseView: 'students' }, true)
+                          return
+                        }
                         setEditing(null)
                         setCreating(false)
                       }
                     }}
                     cancel={() => {
+                      if (courseId) {
+                        setQuery({ view: 'courses', courseView: 'students' }, true)
+                        return
+                      }
                       setEditing(null)
                       setCreating(false)
                     }}
                   />
                 )}
-                <div
-                  className="role-table-scroll"
-                  role="region"
-                  aria-label={ar ? 'قائمة الطلاب' : 'Student list'}
-                  tabIndex={0}
-                >
-                  <table className="role-table role-students-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">{ar ? 'الاسم الأول' : 'First name'}</th>
-                        <th scope="col">{ar ? 'اسم العائلة' : 'Last name'}</th>
-                        <th scope="col">{ar ? 'المستوى' : 'Level'}</th>
-                        <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
-                        <th scope="col">{ar ? 'الإجراءات' : 'Actions'}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {board.students.map((student) => (
-                        <tr key={student.studentId}>
-                          <td dir="auto">{student.firstName}</td>
-                          <td dir="auto">{student.lastName || '—'}</td>
-                          <td dir="auto">{student.group}</td>
-                          <td>
-                            {student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}
-                          </td>
-                          <td>
-                            <button
-                              className="secondary"
-                              onClick={() => {
-                                setCreating(false)
-                                setEditing(student)
-                              }}
-                            >
-                              {ar ? 'تعديل' : 'Edit'}
-                            </button>
-                          </td>
+                {!courseId && (
+                  <div
+                    className="role-table-scroll"
+                    role="region"
+                    aria-label={ar ? 'قائمة الطلاب' : 'Student list'}
+                    tabIndex={0}
+                  >
+                    <table className="role-table role-students-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">{ar ? 'الاسم الأول' : 'First name'}</th>
+                          <th scope="col">{ar ? 'اسم العائلة' : 'Last name'}</th>
+                          <th scope="col">{ar ? 'المستوى' : 'Level'}</th>
+                          <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
+                          <th scope="col">{ar ? 'الإجراءات' : 'Actions'}</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {board.students.map((student) => (
+                          <tr key={student.studentId}>
+                            <td dir="auto">{student.firstName}</td>
+                            <td dir="auto">{student.lastName || '—'}</td>
+                            <td dir="auto">{student.group}</td>
+                            <td>
+                              {student.active
+                                ? ar
+                                  ? 'نشط'
+                                  : 'Active'
+                                : ar
+                                  ? 'غير نشط'
+                                  : 'Inactive'}
+                            </td>
+                            <td>
+                              <button
+                                className="secondary"
+                                onClick={() => {
+                                  setCreating(false)
+                                  setEditing(student)
+                                }}
+                              >
+                                {ar ? 'تعديل' : 'Edit'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </section>
             )}
           </>
@@ -475,19 +518,22 @@ function StudentForm({
   ar,
   save,
   cancel,
+  courseName,
 }: {
   student: Student | null
   teachers: Board['teachers']
   busy: boolean
   ar: boolean
-  save: (value: z.infer<typeof neonAdminStudentSchema>) => void
+  save: (value: z.infer<typeof neonAdminStudentSchema>, level: string) => void
   cancel: () => void
+  courseName: string
 }) {
   const [studentId] = useState(() => student?.studentId ?? crypto.randomUUID())
   const [firstName, setFirstName] = useState(student?.firstName ?? '')
   const [lastName, setLastName] = useState(student?.lastName ?? '')
   const [nameError, setNameError] = useState<'required' | 'length' | ''>('')
   const [group, setGroup] = useState(student?.group ?? '')
+  const [courseLevel, setCourseLevel] = useState<string | null>(null)
   const [teacherId, setTeacherId] = useState(student?.teacherId ?? '')
   const [active, setActive] = useState(student?.active ?? true)
   return (
@@ -512,10 +558,26 @@ function StudentForm({
           teacherId,
           active,
         })
-        if (value.success) save(value.data)
+        if (value.success) save(value.data, courseLevel ?? group)
       }}
     >
+      {courseName && (
+        <p>
+          {ar ? 'الدورة' : 'Course'}: <strong dir="auto">{courseName}</strong>
+        </p>
+      )}
       <div className="role-fields">
+        {courseName && (
+          <label>
+            {ar ? 'مستوى الدورة' : 'Course level'}
+            <input
+              maxLength={200}
+              dir="auto"
+              value={courseLevel ?? group}
+              onChange={(event) => setCourseLevel(event.target.value)}
+            />
+          </label>
+        )}
         <label>
           {ar ? 'الاسم الأول' : 'First name'}
           <input

@@ -129,3 +129,48 @@
     padding-bottom: calc(90px + env(safe-area-inset-bottom));
   }
 }
+
+.course-students-table {
+  min-width: 58rem;
+}
+.course-students-table input[role='switch'] {
+  appearance: none;
+  position: relative;
+  width: 48px;
+  min-width: 48px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.course-students-table input[role='switch']::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 9px;
+  inset-inline-start: 0;
+  width: 48px;
+  height: 26px;
+  border-radius: 13px;
+  background: #81999d;
+}
+.course-students-table input[role='switch']::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 12px;
+  inset-inline-start: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+}
+.course-students-table input[role='switch']:checked::before {
+  background: #007d8d;
+}
+.course-students-table input[role='switch']:checked::after {
+  inset-inline-start: 25px;
+}
+.course-students-table input[role='switch']:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
