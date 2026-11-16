@@ -2,7 +2,7 @@
 
 ## Sub-features
 
-Individual statuses, group marking of displayed active students, calendar date, unmarked distinction and inclusive summary bounds.
+Present, Absent and Excused only; group marking of displayed active students, calendar date, unmarked distinction and inclusive summary bounds. Historical early/late marks display and count as Present while their raw events remain unchanged.
 
 ## How to get to it (user POV)
 
@@ -10,8 +10,10 @@ Sign in or choose **Explore with sample students**. The dashboard opens first. U
 
 ## Driving it with Playwright
 
-The `sample notebook` test adds ليلى, selects `getByLabel('Attendance for ليلى').selectOption('late')`, clicks **Save attendance (1)** and asserts `getByLabel('late: 1')` on Summary. Also exercise **Mark displayed students present**, **Session date**, **Group**, **Find a student**, **From** and **To** when those branches change; prove saved count matches displayed intended changes and unmarked students do not become absent. Existing status cannot be cleared silently: use History correction.
+The `sample notebook` test adds ليلى, selects `getByLabel('Attendance for ليلى').selectOption('absent')`, clicks **Save attendance (1)** and asserts the matching Absent tally on Summary. Assert only Present, Absent and Excused options/columns in both languages, and that legacy early/late events contribute to Present rather than disappearing. Also exercise **Mark displayed students present**, **Session date**, **Group**, **Find a student**, **From** and **To** when those branches change; prove saved count matches displayed intended changes and unmarked students do not become absent. Existing status cannot be cleared silently: use History correction.
 
 ## Gotchas
 
 Same student/date uses last surviving event in database sequence, never device clock. Undoing newest attendance reveals the prior surviving status. Filtered-out/inactive students must not be saved by group marking. Summary dates are inclusive; reversed bounds show an error.
+
+Keep a legacy raw mark in projection/API tests, reverse a newer mark to reveal it as Present, and verify the original status remains in the raw event. An identical legacy retry stays idempotent; reusing its ID for a different raw status still conflicts even if both statuses project to Present. Course enrollment scopes remain independent.

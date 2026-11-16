@@ -21,23 +21,25 @@ describe('append-only projection', () => {
     expect(result.duplicates).toBe(1)
   })
   test('later sequence position wins even if device clock moves backwards; correction restores earlier state', () => {
-    const late: LedgerEvent = {
+    const olderClock: LedgerEvent = {
       ...makeEvent('teacher', {
         ...attendance.payload,
         kind: 'attendance',
         studentId,
         date: '2026-11-13',
-        status: 'late',
+        status: 'absent',
       }),
       clientTime: '2000-01-01T00:00:00.000Z',
     }
-    expect(projectEvents([student, attendance, late]).attendance[0].value.status).toBe('late')
+    expect(projectEvents([student, attendance, olderClock]).attendance[0].value.status).toBe(
+      'absent',
+    )
     const correction = makeEvent('teacher', {
       kind: 'reversal',
-      targetId: late.id,
+      targetId: olderClock.id,
       reason: 'Wrong student',
     })
-    const result = projectEvents([student, attendance, late, correction, correction])
+    const result = projectEvents([student, attendance, olderClock, correction, correction])
     expect(result.attendance[0].value.status).toBe('present')
     expect(result.events).toHaveLength(4)
   })
@@ -146,5 +148,45 @@ test('course enrollment and legacy attendance project independently and correcti
     reason: 'Correction',
   })
   const result = projectEvents([old, first, second, changed, undo])
-  expect(result.attendance.map(({ value }) => value.status)).toEqual(['absent', 'present', 'late'])
+  expect(result.attendance.map(({ value }) => value.status)).toEqual([
+    'absent',
+    'present',
+    'present',
+  ])
+})
+
+test('legacy statuses stay raw across retries, conflicts and corrections', () => {
+  const studentId = crypto.randomUUID()
+  const early = makeEvent('teacher', {
+    kind: 'attendance',
+    studentId,
+    date: '2026-11-13',
+    status: 'early',
+  })
+  const late = makeEvent('teacher', {
+    kind: 'attendance',
+    studentId,
+    date: '2026-11-14',
+    status: 'late',
+  })
+  const absent = makeEvent('teacher', {
+    kind: 'attendance',
+    studentId,
+    date: '2026-11-13',
+    status: 'absent',
+  })
+  const correction = makeEvent('teacher', {
+    kind: 'reversal',
+    targetId: absent.id,
+    reason: 'Correction',
+  })
+  const conflict = eventSchema.parse({ ...late, payload: { ...late.payload, status: 'present' } })
+  const result = projectEvents([early, late, late, conflict, absent, correction])
+  expect(result.attendance.map(({ value }) => value.status)).toEqual(['present', 'present'])
+  expect(result.events.slice(0, 2)).toEqual([early, late])
+  expect(result.events[0].payload).toMatchObject({ status: 'early' })
+  expect(result.events[1].payload).toMatchObject({ status: 'late' })
+  expect(eventSchema.parse(early)).toEqual(early)
+  expect(result.duplicates).toBe(2)
+  expect(result.conflicts).toBe(1)
 })

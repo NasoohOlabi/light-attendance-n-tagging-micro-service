@@ -3,6 +3,7 @@ import { LanguageProvider, LanguageSwitch, useLanguage, type TranslationKey } fr
 import { useEffect, useState } from 'react'
 import {
   projectEvents,
+  normalizeStatus,
   statuses,
   statusSchema,
   type LedgerEvent,
@@ -36,7 +37,6 @@ export function App() {
         </a>
         <InstallApp />
         <AppUpdate />
-        <DevelopmentRelease />
         <AppContent />
       </div>
     </LanguageProvider>
@@ -453,7 +453,13 @@ function Notebook({
               />
             )}
             {query.tab === 'roster' && (
-              <RosterView students={students} save={ledger.save} assigned={assigned} />
+              <RosterView
+                students={students}
+                save={ledger.save}
+                assigned={assigned}
+                courseSelected={!!query.course}
+                enrollments={selectedEnrollments}
+              />
             )}
             {query.tab === 'summary' && <Summary students={students} projected={projected} />}
             {query.tab === 'history' && (
@@ -855,12 +861,17 @@ function RosterView({
   students,
   save,
   assigned,
+  courseSelected,
+  enrollments,
 }: {
   students: Student[]
   save: Save
   assigned: boolean
+  courseSelected: boolean
+  enrollments: import('../shared/neon').Enrollment[]
 }) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  const ar = language === 'ar'
   const [name, setName] = useState('')
   const [group, setGroup] = useState('')
   return (
@@ -901,37 +912,60 @@ function RosterView({
           <button className="primary">{t('Add student')}</button>
         </form>
       )}
-      <div className="divide-y divide-slate-100">
-        {students.map((student) =>
-          assigned ? (
-            <div key={student.studentId} className="flex items-center justify-between py-4">
-              <span>
-                <bdi>{student.name}</bdi>
-                {student.group && (
-                  <>
-                    {' '}
-                    · <bdi>{student.group}</bdi>
-                  </>
-                )}
-              </span>
-              <button
-                className="icon-button"
-                aria-label={t('Open student')}
-                title={t('Open student')}
-                onClick={() => setQuery({ student: student.studentId, tab: 'attendance' }, true)}
-              >
-                <UserRound size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
-              </button>
-            </div>
-          ) : (
+      {assigned ? (
+        <div
+          className="role-table-scroll"
+          role="region"
+          aria-label={ar ? 'قائمة الطلاب' : 'Student list'}
+          tabIndex={0}
+        >
+          <table className="role-table roster-table">
+            <thead>
+              <tr>
+                <th scope="col">{t('Student')}</th>
+                <th scope="col">{ar ? 'المستوى' : 'Level'}</th>
+                <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
+                <th scope="col">{ar ? 'الإجراءات' : 'Actions'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((student) => (
+                <tr key={student.studentId}>
+                  <td dir="auto">{student.name}</td>
+                  <td dir="auto">
+                    {(courseSelected
+                      ? enrollments.find((entry) => entry.studentId === student.studentId)?.level
+                      : student.group) || '—'}
+                  </td>
+                  <td>{student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}</td>
+                  <td>
+                    <button
+                      className="icon-button"
+                      aria-label={t('Open student')}
+                      title={t('Open student')}
+                      onClick={() =>
+                        setQuery({ student: student.studentId, tab: 'attendance' }, true)
+                      }
+                    >
+                      <UserRound size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="divide-y divide-slate-100">
+          {students.map((student) => (
             <StudentEditor
               key={`${student.studentId}:${student.name}:${student.group}:${student.active}`}
               student={student}
               save={save}
             />
-          ),
-        )}
-      </div>
+          ))}
+        </div>
+      )}
       {!students.length && (
         <Empty
           text={
@@ -1235,7 +1269,8 @@ function describeEvent(
     t('General / unknown student')
   if (value.kind === 'student')
     return `${t('Student')}: ${value.name} · ${value.group || t('No group')} · ${t(value.active ? 'active' : 'inactive')}`
-  if (value.kind === 'attendance') return `${name} · ${value.date} · ${t(value.status)}`
+  if (value.kind === 'attendance')
+    return `${name} · ${value.date} · ${t(normalizeStatus(value.status))}`
   return `${name} · #${value.tags.join(' #')} · ${value.text}`
 }
 function Empty({ text }: { text: string }) {
@@ -1245,13 +1280,4 @@ function Empty({ text }: { text: string }) {
 function SkipText() {
   const { t } = useLanguage()
   return t('Skip to main content')
-}
-
-function DevelopmentRelease() {
-  const { language } = useLanguage()
-  return (
-    <p className="bg-slate-100 px-4 py-1 text-center text-xs text-slate-600">
-      {language === 'ar' ? 'v0.1.0 · قيد التطوير' : 'v0.1.0 · In development'}
-    </p>
-  )
 }

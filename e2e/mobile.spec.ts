@@ -86,7 +86,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
     await usableLayout(page)
   }
   await page.getByRole('button', { name: 'الحضور', exact: true }).click()
-  await page.getByLabel(`الحضور للطالب ${longName}`).selectOption('late')
+  await page.getByLabel(`الحضور للطالب ${longName}`).selectOption('absent')
   await page.getByRole('button', { name: 'حفظ الحضور (1)', exact: true }).click()
   await expect(page.getByRole('status')).not.toContainText('saved')
   await page.getByRole('button', { name: 'الملاحظات', exact: true }).click()

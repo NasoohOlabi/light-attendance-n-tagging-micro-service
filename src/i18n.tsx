@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useState } from 'react'
 const arabic = {
   'Your account is awaiting approval or no longer has access. Contact your manager.':
     'حسابك ينتظر الموافقة أو لم يعد لديه صلاحية. تواصل مع المسؤول.',
-  early: 'مبكر',
   'Explore with sample students': 'استكشف باستخدام طلاب تجريبيين',
   'Explore assigned teacher sample': 'استكشف نموذج المعلم المعيّن',
   'Your halaqa, one shared notebook.': 'حلقتك، دفتر مشترك واحد.',
@@ -49,7 +48,6 @@ const arabic = {
   'Not marked': 'غير محدد',
   present: 'حاضر',
   absent: 'غائب',
-  late: 'متأخر',
   excused: 'معذور',
   'Save attendance': 'حفظ الحضور',
   'Attendance for': 'الحضور للطالب',

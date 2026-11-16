@@ -27,8 +27,6 @@ const copy = {
     status: 'الحالة',
     present: 'حاضر',
     absent: 'غائب',
-    early: 'مبكر',
-    late: 'متأخر',
     markAll: 'تحديد الجميع حاضرين',
     excused: 'بعذر',
     save: 'حفظ الحضور',
@@ -77,8 +75,6 @@ const copy = {
     status: 'Status',
     present: 'Present',
     absent: 'Absent',
-    early: 'Early',
-    late: 'Late',
     markAll: 'Mark all present',
     excused: 'Excused',
     save: 'Save attendance',
@@ -128,9 +124,7 @@ export function DeskDraft({ language }: DraftProps) {
   const filtered = students.filter((student) =>
     `${student.ar} ${student.en}`.toLowerCase().includes(search.toLowerCase()),
   )
-  const present = students.filter((student) =>
-    ['present', 'early', 'late'].includes(student.status),
-  ).length
+  const present = students.filter((student) => student.status === 'present').length
   const absent = students.filter((student) => student.status === 'absent').length
 
   function changeStatus(id: number, status: Status) {
@@ -334,13 +328,7 @@ export function DeskDraft({ language }: DraftProps) {
                           value={student.status}
                           onChange={(event) => {
                             const value = event.target.value
-                            if (
-                              value === 'present' ||
-                              value === 'early' ||
-                              value === 'late' ||
-                              value === 'absent' ||
-                              value === 'excused'
-                            )
+                            if (value === 'present' || value === 'absent' || value === 'excused')
                               changeStatus(student.id, value)
                           }}
                         >

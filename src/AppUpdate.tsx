@@ -11,8 +11,8 @@ export function AppUpdate() {
   return (
     <p className="update-notice" role="status">
       {language === 'ar'
-        ? 'يتوفر إصدار أحدث. أكمل حفظ عملك، ثم أغلق جميع نوافذ وارتق في المتصفح والتطبيق وأعد فتحه للتحديث.'
-        : 'A newer version is available. Finish saving your work, then close all Wartaq browser and app windows and reopen to update.'}
+        ? 'يتوفر إصدار أحدث. احفظ عملك ثم حدّث الصفحة للتحديث.'
+        : 'A newer version is available. Save your work, then refresh this page to update.'}
     </p>
   )
 }

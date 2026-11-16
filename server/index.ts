@@ -121,7 +121,9 @@ export async function handle(request: Request): Promise<Response> {
     return new Response('Not found', { status: 404 })
   const file = Bun.file(`dist${path === '/' ? '/index.html' : path}`)
   if (!(await file.exists())) return new Response('Not found', { status: 404 })
-  return new Response(file, { headers: { 'X-Content-Type-Options': 'nosniff' } })
+  return new Response(file, {
+    headers: { 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' },
+  })
 }
 
 if (import.meta.main) Bun.serve({ port: config.PORT, hostname: '0.0.0.0', fetch: handle })

@@ -21,7 +21,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     expiresAt: null,
   }
   const students = [
-    { kind: 'student', studentId, name: 'Synthetic Student', group: 'A', active: true },
+    { kind: 'student', studentId, name: 'Synthetic Student', group: 'Roster level', active: true },
     { kind: 'student', studentId: secondStudentId, name: 'New Student', group: 'A', active: true },
   ]
   const courses = [
@@ -30,7 +30,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   ]
   const enrollments = [
     { id: enrollA, courseId: courseA, studentId, level: '', practical: null, theory: null },
-    { id: enrollB, courseId: courseB, studentId, level: '', practical: null, theory: null },
+    { id: enrollB, courseId: courseB, studentId, level: 'Advanced', practical: null, theory: null },
   ]
   const events: unknown[] = []
   const attemptedCourseIds: string[] = []
@@ -85,6 +85,76 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     return route.fulfill({ json: { teacher, students, courses, enrollments, events } })
   })
   await page.goto('/?page=app')
+  await page.getByRole('button', { name: 'Students', exact: true }).click()
+  const list = page.getByRole('region', { name: 'Student list' })
+  const row = list
+    .getByRole('row')
+    .filter({ has: page.getByRole('cell', { name: 'Synthetic Student', exact: true }) })
+  await expect(list.getByRole('columnheader')).toHaveText(['Student', 'Level', 'Active', 'Actions'])
+  await expect(row.getByRole('cell')).toHaveText([
+    'Synthetic Student',
+    'Roster level',
+    'Active',
+    '',
+  ])
+  const courseFilter = page.getByRole('combobox', { name: 'Course', exact: true })
+  await courseFilter.selectOption(courseA)
+  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', '—', 'Active', ''])
+  await courseFilter.selectOption(courseB)
+  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Advanced', 'Active', ''])
+  await page.reload()
+  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Advanced', 'Active', ''])
+  await mkdir('.artifacts/verification', { recursive: true })
+  if (testInfo.project.name === 'mobile') {
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 })
+      await expect(list).toHaveAttribute('tabindex', '0')
+      expect(await list.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true)
+      await list.focus()
+      await page.keyboard.press('ArrowRight')
+      await expect.poll(() => list.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0)
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true)
+      await page.screenshot({
+        path: `.artifacts/verification/student-levels-${width}-en.png`,
+        fullPage: true,
+      })
+    }
+  }
+  await page.screenshot({
+    path: `.artifacts/verification/student-levels-${testInfo.project.name}-en.png`,
+    fullPage: true,
+  })
+  await row.getByRole('button', { name: 'Open student' }).click()
+  await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
+  await page.getByRole('button', { name: 'All my students' }).click()
+  await page.getByRole('button', { name: 'Students', exact: true }).click()
+  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  const arabicList = page.getByRole('region', { name: 'قائمة الطلاب' })
+  await expect(arabicList.getByRole('columnheader')).toHaveText([
+    'الطالب',
+    'المستوى',
+    'الحالة',
+    'الإجراءات',
+  ])
+  if (testInfo.project.name === 'mobile') {
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 })
+      await expect(arabicList).toHaveAttribute('tabindex', '0')
+      expect(
+        await arabicList.evaluate((element) => element.scrollWidth > element.clientWidth),
+      ).toBe(true)
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true)
+      await page.screenshot({
+        path: `.artifacts/verification/student-levels-${width}-ar.png`,
+        fullPage: true,
+      })
+    }
+  }
+  await page.getByRole('button', { name: 'English', exact: true }).click()
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await page.getByLabel('Course name').fill('Created course')
   await page.getByRole('button', { name: 'Save course' }).click()
@@ -118,6 +188,25 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('button', { name: 'Save enrollment' }).click()
   await expect.poll(() => enrollments[0].level).toBe('Intermediate')
   expect(enrollments[0]).toMatchObject({ practical: 0, theory: 100 })
+  await page.getByRole('button', { name: 'Students', exact: true }).click()
+  await courseFilter.selectOption(courseA)
+  await expect(row.getByRole('cell')).toHaveText([
+    'Synthetic Student',
+    'Intermediate',
+    'Active',
+    '',
+  ])
+  await courseFilter.selectOption(courseB)
+  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Advanced', 'Active', ''])
+  await courseFilter.selectOption(courseA)
+  await page.reload()
+  await expect(row.getByRole('cell')).toHaveText([
+    'Synthetic Student',
+    'Intermediate',
+    'Active',
+    '',
+  ])
+  await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({
     path: `.artifacts/verification/courses-${testInfo.project.name}-en.png`,
@@ -125,11 +214,24 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   })
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseA)
-  await page.getByLabel('Attendance for Synthetic Student').selectOption('present')
-  await page.getByRole('button', { name: 'Save attendance (1)' }).click()
-  await expect.poll(() => events.length).toBe(1)
+  const date = await page.getByLabel('Session date').inputValue()
+  events.push({
+    id: '50000000-0000-4000-8000-000000000001',
+    actor: 'Admin',
+    clientTime: new Date().toISOString(),
+    receivedAt: '',
+    payload: { kind: 'attendance', studentId, enrollmentId: enrollA, date, status: 'late' },
+  })
+  await page.reload()
+  await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveValue('present')
+  await page.getByRole('button', { name: 'History & corrections', exact: true }).click()
+  const legacyRecord = page.locator('li').filter({ hasText: 'Synthetic Student' })
+  await expect(legacyRecord).toContainText('present')
+  await legacyRecord.getByText('Record details').click()
+  await expect(legacyRecord.locator('pre')).toContainText('"status": "late"')
+  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseB)
-  await page.getByLabel('Attendance for Synthetic Student').selectOption('late')
+  await page.getByLabel('Attendance for Synthetic Student').selectOption('absent')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await expect.poll(() => events.length).toBe(2)
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseA)

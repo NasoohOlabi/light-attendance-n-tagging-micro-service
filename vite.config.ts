@@ -38,11 +38,11 @@ const cacheName = prefix + ${JSON.stringify(version)}
 const urls = ${JSON.stringify(files)}.map((file) => new URL(file, scope).href)
 const index = new URL('index.html', scope).href
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(urls)))
+  event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(urls)).then(() => self.skipWaiting()))
 })
 self.addEventListener('activate', (event) => {
   event.waitUntil(caches.keys().then((keys) => Promise.all(
-    keys.filter((key) => key.startsWith(prefix) && key !== cacheName).map((key) => caches.delete(key))
+    keys.filter((key) => key.startsWith(prefix) && key !== cacheName).slice(0, -1).map((key) => caches.delete(key))
   )))
 })
 self.addEventListener('fetch', (event) => {
@@ -52,11 +52,32 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     const safeQuery = !url.search || (url.searchParams.size === 1 && ['app', 'home'].includes(url.searchParams.get('page')))
     if (!safeQuery || (url.pathname !== scope.pathname && url.pathname !== new URL('index.html', scope).pathname)) return
-    event.respondWith(caches.open(cacheName).then((cache) => cache.match(index).then((response) => response || fetch(request))))
+    event.respondWith((async () => {
+      const cache = await caches.open(cacheName)
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 1000)
+      try {
+        const response = await fetch(request, { signal: controller.signal, cache: 'no-cache' })
+        return response
+      } catch (error) {
+        return (await cache.match(index)) || Promise.reject(error)
+      } finally {
+        clearTimeout(timeout)
+      }
+    })())
     return
   }
-  if (!url.search && urls.includes(url.href)) {
-    event.respondWith(caches.open(cacheName).then((cache) => cache.match(request).then((response) => response || fetch(request))))
+  if (!url.search && (urls.includes(url.href) || url.pathname.startsWith(new URL('assets/', scope).pathname))) {
+    event.respondWith((async () => {
+      const current = await (await caches.open(cacheName)).match(request)
+      if (current) return current
+      const previous = (await caches.keys()).filter((key) => key.startsWith(prefix) && key !== cacheName)
+      for (const key of previous) {
+        const cached = await (await caches.open(key)).match(request)
+        if (cached) return cached
+      }
+      return fetch(request)
+    })())
   }
 })
 `

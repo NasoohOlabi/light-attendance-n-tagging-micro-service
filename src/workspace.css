@@ -486,3 +486,7 @@
     display: none;
   }
 }
+
+.roster-table {
+  min-width: 36rem;
+}
