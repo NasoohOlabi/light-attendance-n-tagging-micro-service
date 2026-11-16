@@ -14,7 +14,7 @@ integration(
     if (!url) throw new Error('Disposable database required')
     const admin = new Pool({ connectionString: url })
     const names = Array.from(
-      { length: 4 },
+      { length: 5 },
       () => `transfer_${crypto.randomUUID().replaceAll('-', '')}`,
     )
     const pools: Pool[] = []
@@ -27,7 +27,7 @@ integration(
       !localPath.startsWith('transfer-test-')
     )
       throw new Error('Refusing cleanup outside the disposable transfer directory')
-    const files = [1, 2, 3].map((version) => resolve(directory, `v${version}.json`))
+    const files = [1, 2, 3, 4].map((version) => resolve(directory, `v${version}.json`))
     const run = (command: string, file: string, dbUrl: string, succeeds = true) => {
       const result = Bun.spawnSync(
         [process.execPath, 'run', 'scripts/railway-transfer.ts', command, file],
@@ -116,9 +116,19 @@ integration(
         )
       }
       run('export', files[2], urls[0])
+      await source.query('ALTER TABLE course_enrollments ADD COLUMN active text')
+      run('export', resolve(directory, 'partial-active.json'), urls[0], false)
+      await source.query('ALTER TABLE course_enrollments DROP COLUMN active')
+      await migrate(source, 'neon/005-active-enrollments.sql')
+      await source.query('UPDATE course_enrollments SET active = false WHERE id = $1', [
+        enrollmentA,
+      ])
+      run('export', files[3], urls[0])
+      run('compare', files[2], urls[0], false)
       for (let index = 0; index < targets.length; index++) {
         await migrate(targets[index], 'neon/003-courses.sql')
         await migrate(targets[index], 'neon/004-student-names.sql')
+        await migrate(targets[index], 'neon/005-active-enrollments.sql')
         run('import', files[index], urls[index + 1])
         run('compare', files[index], urls[index + 1])
       }
@@ -130,7 +140,7 @@ integration(
                 .version,
           ),
         ),
-      ).toEqual([1, 2, 3])
+      ).toEqual([1, 2, 3, 4])
       const stored = await targets[2].query(
         'SELECT level, practical::text, theory::text FROM course_enrollments ORDER BY level',
       )
@@ -148,6 +158,13 @@ integration(
       expect(
         (await targets[2].query('SELECT first_name, last_name FROM students')).rows[0],
       ).toEqual({ first_name: 'First', last_name: 'Last' })
+      expect(
+        (
+          await targets[3].query('SELECT active FROM course_enrollments WHERE id = $1', [
+            enrollmentA,
+          ])
+        ).rows[0].active,
+      ).toBe(false)
       await targets[0].query("INSERT INTO courses (id, name) VALUES ($1, 'Extra course')", [
         crypto.randomUUID(),
       ])

@@ -41,9 +41,17 @@ export function WorkspaceNavigation({
         </button>
         {administrator && (
           <button
-            className={query.view === 'courses' ? 'active' : ''}
-            aria-current={query.view === 'courses' ? 'page' : undefined}
-            onClick={() => setQuery({ view: 'courses' }, true)}
+            className={
+              query.view === 'courses' || (query.view === 'add-student' && !!query.courseView)
+                ? 'active'
+                : ''
+            }
+            aria-current={
+              query.view === 'courses' || (query.view === 'add-student' && !!query.courseView)
+                ? 'page'
+                : undefined
+            }
+            onClick={() => setQuery({ view: 'courses', courseView: '', course: '', q: '' }, true)}
           >
             <BookOpen size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
             <span>{language === 'ar' ? 'الدورات' : 'Courses'}</span>

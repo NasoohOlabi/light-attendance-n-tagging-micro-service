@@ -29,9 +29,46 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     { id: courseB, name: 'Course B' },
   ]
   const enrollments = [
-    { id: enrollA, courseId: courseA, studentId, level: '', practical: null, theory: null },
-    { id: enrollB, courseId: courseB, studentId, level: 'Advanced', practical: null, theory: null },
+    {
+      id: enrollA,
+      courseId: courseA,
+      studentId,
+      level: '',
+      practical: null,
+      theory: null,
+      active: true,
+    },
+    {
+      id: enrollB,
+      courseId: courseB,
+      studentId,
+      level: 'Advanced',
+      practical: null,
+      theory: null,
+      active: true,
+    },
   ]
+  const board = {
+    accounts: [
+      {
+        authUserId: teacherId,
+        email: 'admin@example.test',
+        name: 'Admin',
+        role: 'teacher',
+        active: true,
+        expiresAt: null,
+        teacherId,
+        studentId: null,
+      },
+    ],
+    teachers: [{ teacherId, name: 'Admin', active: true }],
+    students: students.map((student) => ({
+      ...student,
+      firstName: student.name.split(' ')[0],
+      lastName: student.name.split(' ')[1],
+      teacherId,
+    })),
+  }
   const events: unknown[] = []
   const attemptedCourseIds: string[] = []
   let dropCourseResponse = true
@@ -74,12 +111,37 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       }
       return route.fulfill({ json: { saved: true } })
     }
-    if (path === '/api/admin/enrollments') {
+    if (path === '/api/admin') return route.fulfill({ json: board })
+    if (path === '/api/admin/enrollments/membership') {
       const body = route.request().postDataJSON()
       const index = enrollments.findIndex((entry) => entry.id === body.id)
-      if (index >= 0) enrollments[index] = body
-      else enrollments.push(body)
+      if (index >= 0) enrollments[index] = { ...enrollments[index], ...body }
+      else enrollments.push({ ...body, practical: null, theory: null })
       return route.fulfill({ json: { saved: true } })
+    }
+    if (path === '/api/admin/enrollments/grades') {
+      const body = route.request().postDataJSON()
+      const index = enrollments.findIndex((entry) => entry.id === body.id)
+      enrollments[index] = { ...enrollments[index], ...body }
+      return route.fulfill({ json: { saved: true } })
+    }
+    if (path === '/api/admin/students/enroll') {
+      const body = route.request().postDataJSON()
+      const student = {
+        ...body.student,
+        name: `${body.student.firstName} ${body.student.lastName}`,
+        kind: 'student',
+      }
+      students.push(student)
+      board.students.push(student)
+      enrollments.push({
+        ...body.enrollment,
+        studentId: student.studentId,
+        active: true,
+        practical: null,
+        theory: null,
+      })
+      return route.fulfill({ json: board })
     }
     if (path === '/api/events') events.push(...route.request().postDataJSON().events)
     return route.fulfill({ json: { teacher, students, courses, enrollments, events } })
@@ -156,57 +218,156 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   }
   await page.getByRole('button', { name: 'English', exact: true }).click()
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  await page.getByRole('button', { name: 'Create course' }).click()
   await page.getByLabel('Course name').fill('Created course')
   await page.getByRole('button', { name: 'Save course' }).click()
   await expect(page.getByRole('alert')).toBeVisible()
   await page.getByRole('button', { name: 'Save course' }).click()
-  await expect(page.getByRole('status')).toContainText('Saved')
-  expect(attemptedCourseIds).toHaveLength(2)
+  await expect.poll(() => courses.length).toBe(3)
+  await expect.poll(() => attemptedCourseIds.length).toBe(2)
   expect(attemptedCourseIds[0]).toBe(attemptedCourseIds[1])
-  expect(courses).toHaveLength(3)
-  await expect(page.getByRole('button', { name: 'Courses', exact: true })).toHaveAttribute(
-    'aria-current',
-    'page',
-  )
-  await expect(page.getByRole('combobox', { name: 'Course', exact: true })).toHaveValue(
-    courses[2].id,
-  )
-  await page.getByRole('combobox', { name: 'Student', exact: true }).selectOption(secondStudentId)
-  await page.getByLabel('Level', { exact: true }).fill('Beginner')
-  await page.getByRole('button', { name: 'Save enrollment' }).click()
+  await page.getByRole('button', { name: 'Create course' }).click()
+  await page.getByLabel('Course name').fill('Another course')
+  await page.getByRole('button', { name: 'Save course' }).click()
+  await expect.poll(() => courses.length).toBe(4)
+  expect(courses[2].id).not.toBe(courses[3].id)
+  await expect(page.getByRole('row').filter({ hasText: 'Created course' })).toBeVisible()
+  await page
+    .getByRole('row')
+    .filter({ hasText: 'Created course' })
+    .getByRole('button', { name: 'Manage students' })
+    .click()
+  await page.getByRole('searchbox', { name: 'Find a student' }).fill('New')
+  const newRow = page.getByRole('row').filter({ hasText: 'New' })
+  await newRow.getByLabel('Course level: New Student').fill('Beginner')
+  await page.getByRole('searchbox', { name: 'Find a student' }).fill('Synthetic')
+  await page.getByRole('searchbox', { name: 'Find a student' }).fill('New')
+  await expect(newRow.getByLabel('Course level: New Student')).toHaveValue('Beginner')
+  await newRow.getByRole('switch').click()
   await expect.poll(() => enrollments.length).toBe(3)
-  await expect(page.locator('tr').filter({ hasText: 'New Student' })).toContainText('Beginner')
   await page.reload()
-  await page.getByRole('button', { name: 'Courses', exact: true }).click()
-  await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courses[2].id)
-  await expect(page.locator('tr').filter({ hasText: 'New Student' })).toContainText('Beginner')
-  await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseA)
-  await page.getByRole('combobox', { name: 'Student', exact: true }).selectOption(studentId)
-  await page.getByLabel('Level', { exact: true }).fill('Intermediate')
-  await page.getByLabel('Practical', { exact: true }).fill('0')
-  await page.getByLabel('Theory', { exact: true }).fill('100')
-  await page.getByRole('button', { name: 'Save enrollment' }).click()
+  await expect(newRow.getByLabel('Course level: New Student')).toHaveValue('Beginner')
+  await newRow.getByRole('switch').click()
+  await expect.poll(() => enrollments[2].active).toBe(false)
+  await newRow.getByRole('switch').click()
+  await expect.poll(() => enrollments[2].active).toBe(true)
+  if (testInfo.project.name === 'mobile') {
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 })
+      const table = page.getByRole('region', { name: 'Course students' })
+      expect(await table.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+        true,
+      )
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true)
+      const box = await newRow.getByRole('switch').boundingBox()
+      expect(box?.width).toBeGreaterThanOrEqual(44)
+      expect(box?.height).toBeGreaterThanOrEqual(44)
+      await page.screenshot({
+        path: `.artifacts/verification/course-students-${width}-en.png`,
+        fullPage: true,
+      })
+    }
+    await page
+      .getByRole('button', { name: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', exact: true })
+      .click()
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 })
+      const table = page.getByRole('region', {
+        name: '\u0637\u0644\u0627\u0628 \u0627\u0644\u062f\u0648\u0631\u0629',
+      })
+      await expect(table.getByRole('columnheader')).toHaveCount(6)
+      expect(await table.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+        true,
+      )
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true)
+      await page.screenshot({
+        path: `.artifacts/verification/course-students-${width}-ar.png`,
+        fullPage: true,
+      })
+    }
+    await page.getByRole('button', { name: 'English', exact: true }).click()
+  }
+  await page.getByRole('button', { name: 'Add new student to this course' }).click()
+  await page.reload()
+  await expect(page.getByText('Created course')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save role' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByRole('heading', { name: /Manage students/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Add new student to this course' }).click()
+  await page.getByLabel('First name').fill('Quick')
+  await page.getByLabel('Last name').fill('Student')
+  await page.getByLabel('Level', { exact: true }).fill('Roster')
+  await page.getByLabel('Course level').fill('Course level')
+  await page.getByLabel('Teacher').selectOption(teacherId)
+  await page.getByRole('button', { name: 'Save student' }).click()
+  await expect(page.getByRole('heading', { name: /Manage students/ })).toBeVisible()
+  await expect.poll(() => enrollments.length).toBe(4)
+  await page.getByRole('button', { name: 'Back to courses' }).click()
+  await page
+    .getByRole('row')
+    .filter({ hasText: 'Course A' })
+    .getByRole('button', { name: 'Manage students' })
+    .click()
+  await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('')
+  await page.getByLabel('Course level: Synthetic Student').fill('Draft A')
+  await page.getByRole('button', { name: 'Back to courses' }).click()
+  await page
+    .getByRole('row')
+    .filter({ hasText: 'Course B' })
+    .getByRole('button', { name: 'Manage students' })
+    .click()
+  await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('Advanced')
+  await page.getByLabel('Course level: Synthetic Student').fill('Updated B')
+  await page
+    .getByRole('row')
+    .filter({ hasText: 'Synthetic' })
+    .getByRole('button', { name: 'Save level' })
+    .click()
+  await expect.poll(() => enrollments[1].level).toBe('Updated B')
+  expect(enrollments[1].id).toBe(enrollB)
+  await page.getByRole('button', { name: 'Back to courses' }).click()
+  await page
+    .getByRole('row')
+    .filter({ hasText: 'Course A' })
+    .getByRole('button', { name: 'Manage students' })
+    .click()
+  await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('Draft A')
+  await page.getByLabel('Course level: Synthetic Student').fill('Intermediate')
+  await page
+    .getByRole('row')
+    .filter({ hasText: 'Synthetic' })
+    .getByRole('button', { name: 'Save level' })
+    .click()
   await expect.poll(() => enrollments[0].level).toBe('Intermediate')
-  expect(enrollments[0]).toMatchObject({ practical: 0, theory: 100 })
-  await page.getByRole('button', { name: 'Students', exact: true }).click()
-  await courseFilter.selectOption(courseA)
-  await expect(row.getByRole('cell')).toHaveText([
-    'Synthetic Student',
-    'Intermediate',
-    'Active',
-    '',
-  ])
-  await courseFilter.selectOption(courseB)
-  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Advanced', 'Active', ''])
-  await courseFilter.selectOption(courseA)
+  await page.getByRole('button', { name: 'Back to courses' }).click()
+  await page
+    .getByRole('row')
+    .filter({ hasText: 'Course A' })
+    .getByRole('button', { name: 'Grades' })
+    .click()
+  await page.getByLabel('Practical: Synthetic Student').fill('0')
+  await page.getByLabel('Theory: Synthetic Student').fill('100')
+  await page
+    .getByRole('row')
+    .filter({ hasText: 'Synthetic' })
+    .getByRole('button', { name: 'Save grades' })
+    .click()
+  await expect.poll(() => enrollments[0].theory).toBe(100)
+  expect(enrollments[0]).toMatchObject({
+    level: 'Intermediate',
+    active: true,
+    practical: 0,
+    theory: 100,
+  })
   await page.reload()
-  await expect(row.getByRole('cell')).toHaveText([
-    'Synthetic Student',
-    'Intermediate',
-    'Active',
-    '',
-  ])
-  await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  await expect(page.getByLabel('Practical: Synthetic Student')).toHaveValue('0')
+  await page.goBack()
+  await page.goForward()
+  await expect(page.getByLabel('Theory: Synthetic Student')).toHaveValue('100')
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({
     path: `.artifacts/verification/courses-${testInfo.project.name}-en.png`,
@@ -236,14 +397,18 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect.poll(() => events.length).toBe(2)
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseA)
   await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveValue('present')
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
-  await page.getByRole('button', { name: 'الدورات', exact: true }).click()
-  await page.getByRole('combobox', { name: 'الدورة', exact: true }).selectOption(courseA)
-  await expect(page.getByLabel('عملي', { exact: true })).toBeVisible()
-  await expect(page.getByLabel('نظري', { exact: true })).toBeVisible()
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  )
+  await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  await page
+    .getByRole('row')
+    .filter({ hasText: 'Course A' })
+    .getByRole('button', { name: 'Manage students' })
+    .click()
+  await page.getByRole('switch', { name: 'Enrolled: Synthetic Student' }).click()
+  await expect.poll(() => enrollments[0].active).toBe(false)
+  await page.getByRole('button', { name: 'History & corrections', exact: true }).click()
+  await expect(page.locator('li').filter({ hasText: 'Synthetic Student' })).toContainText('present')
+  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
+  await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveCount(0)
   if (testInfo.project.name === 'mobile') {
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 844 })

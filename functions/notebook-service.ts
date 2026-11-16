@@ -5,11 +5,14 @@ import {
   courseBoardSchema,
   courseSchema,
   enrollmentSchema,
+  enrollmentMembershipSchema,
+  enrollmentGradesSchema,
   neonAdminBoardSchema,
   neonAdminDisableSchema,
   neonAdminGrantSchema,
   neonAdminPasswordResetSchema,
   neonAdminStudentSchema,
+  neonAdminStudentEnrollSchema,
   neonBatchSchema,
   neonSnapshotSchema,
   neonStudentAttendanceSchema,
@@ -50,7 +53,7 @@ async function courseBoard(db: PoolClient, teacher: z.infer<typeof neonTeacherSc
   const enrollments = (
     await db.query(
       `SELECT ce.id, ce.course_id AS "courseId", ce.student_id AS "studentId", ce.level,
-    ce.practical::float8 AS practical, ce.theory::float8 AS theory
+    ce.practical::float8 AS practical, ce.theory::float8 AS theory, ce.active
     FROM course_enrollments ce JOIN students s ON s.id = ce.student_id WHERE ${scope} ORDER BY ce.id FOR SHARE OF ce`,
       values,
     )
@@ -223,8 +226,19 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
       [course.id, course.name],
     )
     return { saved: true }
-  } else if (path === '/api/admin/enrollments') {
-    const enrollment = enrollmentSchema.parse(body)
+  } else if (path === '/api/admin/enrollments/grades') {
+    const grades = enrollmentGradesSchema.parse(body)
+    const result = await db.query(
+      'UPDATE course_enrollments SET practical = $2, theory = $3 WHERE id = $1 RETURNING id',
+      [grades.id, grades.practical, grades.theory],
+    )
+    if (!result.rowCount) throw new HttpError(400)
+    return { saved: true }
+  } else if (path === '/api/admin/enrollments' || path === '/api/admin/enrollments/membership') {
+    const legacy = path === '/api/admin/enrollments'
+    const enrollment = legacy
+      ? enrollmentSchema.extend({ active: z.boolean().optional() }).parse(body)
+      : enrollmentMembershipSchema.parse(body)
     const student = await db.query('SELECT id FROM students WHERE id = $1 FOR UPDATE', [
       enrollment.studentId,
     ])
@@ -246,19 +260,35 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
       )
     )
       throw new HttpError(409)
-    await db.query(
-      `INSERT INTO course_enrollments (id, course_id, student_id, level, practical, theory)
-      VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (course_id, student_id)
-      DO UPDATE SET level = EXCLUDED.level, practical = EXCLUDED.practical, theory = EXCLUDED.theory`,
-      [
-        enrollment.id,
-        enrollment.courseId,
-        enrollment.studentId,
-        enrollment.level,
-        enrollment.practical,
-        enrollment.theory,
-      ],
-    )
+    if (legacy && 'practical' in enrollment) {
+      await db.query(
+        `INSERT INTO course_enrollments (id, course_id, student_id, level, practical, theory, active)
+        VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, true)) ON CONFLICT (course_id, student_id)
+        DO UPDATE SET level = EXCLUDED.level, practical = EXCLUDED.practical, theory = EXCLUDED.theory, active = COALESCE($7, course_enrollments.active)`,
+        [
+          enrollment.id,
+          enrollment.courseId,
+          enrollment.studentId,
+          enrollment.level,
+          enrollment.practical,
+          enrollment.theory,
+          enrollment.active ?? null,
+        ],
+      )
+    } else {
+      await db.query(
+        `INSERT INTO course_enrollments (id, course_id, student_id, level, active)
+        VALUES ($1, $2, $3, $4, $5) ON CONFLICT (course_id, student_id)
+        DO UPDATE SET level = EXCLUDED.level, active = EXCLUDED.active`,
+        [
+          enrollment.id,
+          enrollment.courseId,
+          enrollment.studentId,
+          enrollment.level,
+          enrollment.active,
+        ],
+      )
+    }
     return { saved: true }
   } else if (path === '/api/admin/accounts/reset-password') {
     const { authUserId, password } = neonAdminPasswordResetSchema.parse(body)
@@ -278,7 +308,9 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
     await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [authUserId])
     await db.query('UPDATE app_accounts SET active = false WHERE auth_user_id = $1', [authUserId])
   } else {
-    const student = neonAdminStudentSchema.parse(body)
+    const combined =
+      path === '/api/admin/students/enroll' ? neonAdminStudentEnrollSchema.parse(body) : null
+    const student = combined ? combined.student : neonAdminStudentSchema.parse(body)
     const firstName = 'firstName' in student ? student.firstName : null
     const lastName = 'lastName' in student ? student.lastName : null
     const name =
@@ -307,6 +339,18 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
         lastName,
       ],
     )
+    if (combined) {
+      await manage(
+        db,
+        '/api/admin/enrollments/membership',
+        {
+          ...combined.enrollment,
+          studentId: student.studentId,
+          active: true,
+        },
+        subject,
+      )
+    }
   }
   return adminBoard(db)
 }
@@ -349,6 +393,9 @@ export function createHandler(
         '/api/admin/students',
         '/api/admin/courses',
         '/api/admin/enrollments',
+        '/api/admin/enrollments/membership',
+        '/api/admin/enrollments/grades',
+        '/api/admin/students/enroll',
       ].includes(path)
     )
       return reply({ error: 'Not found' }, 404)
@@ -361,6 +408,9 @@ export function createHandler(
         '/api/admin/students',
         '/api/admin/courses',
         '/api/admin/enrollments',
+        '/api/admin/enrollments/membership',
+        '/api/admin/enrollments/grades',
+        '/api/admin/students/enroll',
       ].includes(path) &&
         request.method !== 'POST') ||
       (![
@@ -371,6 +421,9 @@ export function createHandler(
         '/api/admin/students',
         '/api/admin/courses',
         '/api/admin/enrollments',
+        '/api/admin/enrollments/membership',
+        '/api/admin/enrollments/grades',
+        '/api/admin/students/enroll',
       ].includes(path) &&
         request.method !== 'GET')
     )

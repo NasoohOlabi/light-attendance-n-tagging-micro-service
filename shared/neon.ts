@@ -24,6 +24,19 @@ export const enrollmentSchema = z.object({
   level: z.string().trim().max(200),
   practical: z.number().min(0).max(100).nullable(),
   theory: z.number().min(0).max(100).nullable(),
+  active: z.boolean().default(true),
+})
+export const enrollmentMembershipSchema = z.strictObject({
+  id: z.uuid(),
+  courseId: z.uuid(),
+  studentId: z.uuid(),
+  level: z.string().trim().max(200),
+  active: z.boolean(),
+})
+export const enrollmentGradesSchema = z.strictObject({
+  id: z.uuid(),
+  practical: z.number().min(0).max(100).nullable(),
+  theory: z.number().min(0).max(100).nullable(),
 })
 export const courseBoardSchema = z.object({
   courses: z.array(courseSchema),
@@ -112,6 +125,14 @@ export const neonAdminStudentSchema = z.union([
       ({ firstName, lastName }) => [firstName, lastName].filter(Boolean).join(' ').length <= 200,
     ),
 ])
+export const neonAdminStudentEnrollSchema = z.strictObject({
+  student: neonAdminStudentSchema,
+  enrollment: z.strictObject({
+    id: z.uuid(),
+    courseId: z.uuid(),
+    level: z.string().trim().max(200),
+  }),
+})
 export const neonAdminBoardSchema = z.object({
   accounts: z.array(
     z.object({

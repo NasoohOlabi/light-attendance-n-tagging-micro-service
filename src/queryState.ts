@@ -36,6 +36,9 @@ export function useQueryState() {
     tag: query.get('tag') ?? '',
     student: query.get('student') ?? '',
     course: z.uuid().safeParse(query.get('course')).data ?? '',
+    courseView:
+      z.enum(['create', 'edit', 'students', 'grades']).safeParse(query.get('courseView')).data ??
+      '',
     all: query.get('all') === '1',
   }
 }
@@ -51,6 +54,7 @@ const allowedKeys = new Set([
   'tag',
   'student',
   'course',
+  'courseView',
   'all',
 ])
 export function sanitizedSearch(search: string) {
