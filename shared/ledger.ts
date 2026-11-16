@@ -2,8 +2,14 @@ import { z } from 'zod'
 
 const id = z.uuid()
 const date = z.iso.date()
-export const statuses = ['present', 'early', 'late', 'absent', 'excused'] as const
+export const statuses = ['present', 'absent', 'excused'] as const
 export const statusSchema = z.enum(statuses)
+const persistedStatusSchema = z.enum([...statuses, 'early', 'late'])
+export function normalizeStatus(
+  status: z.infer<typeof persistedStatusSchema>,
+): z.infer<typeof statusSchema> {
+  return status === 'early' || status === 'late' ? 'present' : status
+}
 const studentSchema = z.object({
   kind: z.literal('student'),
   studentId: id,
@@ -16,8 +22,9 @@ const attendanceSchema = z.object({
   studentId: id,
   enrollmentId: id.optional(),
   date,
-  status: statusSchema,
+  status: persistedStatusSchema,
 })
+const projectedAttendanceSchema = attendanceSchema.extend({ status: statusSchema })
 const noteSchema = z.object({
   kind: z.literal('note'),
   studentId: z.union([id, z.literal('')]),
@@ -46,7 +53,7 @@ export const eventSchema = z.object({
 export type LedgerEvent = z.infer<typeof eventSchema>
 export type Payload = z.infer<typeof payloadSchema>
 export type Student = z.infer<typeof studentSchema>
-export type Attendance = z.infer<typeof attendanceSchema>
+export type Attendance = z.infer<typeof projectedAttendanceSchema>
 export type Status = z.infer<typeof statusSchema>
 export function makeEvent(actor: string, payload: Payload): LedgerEvent {
   return eventSchema.parse({
@@ -97,7 +104,7 @@ export function projectEvents(events: LedgerEvent[]) {
       case 'attendance':
         attendance.set(`${value.studentId}:${value.enrollmentId ?? ''}:${value.date}`, {
           event,
-          value,
+          value: { ...value, status: normalizeStatus(value.status) },
         })
         break
       case 'note':

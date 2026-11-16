@@ -18,6 +18,7 @@ The orchestrator scopes tasks, reviews diffs, runs gates and owns final commits/
 
 - Run `bun run verify` before completing any repository change. For UI changes use `.agents/skills/verify-halaqa/SKILL.md` and the affected feature map. Run `bun run verify:release` before stable promotion/publication. Fix failed checks; document provider checks that cannot run locally.
 - Append events only. Teacher transport permits GET and POST. Corrections reference existing event IDs. Projection uses database sequence order, never device clocks.
+- Attendance choices and totals are Present, Absent and Excused. Project legacy early/late marks as Present while preserving original event payloads and exact retry identity.
 - Parse external data with Zod. Use named payload variants and derive types from schemas. Single quotes, no semicolons; React functions and hooks; Tailwind for the teacher UI.
 - Give distinct student/course values their own labelled table columns; keep those columns on phones within bounded scrolling instead of concatenating name, level or status. In a selected course, show only that student's enrollment level; outside courses, show the current roster level. A blank course level stays blank, without a roster/other-course fallback.
 - Keep view filters in `src/queryState.ts`. Railway uses same-origin HttpOnly Better Auth sessions; server session checks establish identity; never put tokens or database URLs in query parameters, source, assets or logs. Only public Auth/API endpoints may be bundled.

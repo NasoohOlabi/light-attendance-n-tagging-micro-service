@@ -1,7 +1,7 @@
 ﻿import { describe, expect, test } from 'bun:test'
 import type { Pool } from 'pg'
 import { createHandler } from '../functions/notebook-service'
-import type { LedgerEvent } from '../shared/ledger'
+import { eventSchema, type LedgerEvent } from '../shared/ledger'
 
 const teacherId = '11111111-1111-4111-8111-111111111111'
 const studentId = '22222222-2222-4222-8222-222222222222'
@@ -162,7 +162,7 @@ describe('Neon API boundary', () => {
       actor: 'Private teacher',
       client_time: new Date(event.clientTime),
       received_at: new Date(),
-      payload: event.payload,
+      payload: { ...event.payload, status: 'late' },
     })
     const response = await call('/api/student/attendance')
     expect(response.status).toBe(200)
@@ -215,5 +215,21 @@ describe('Neon API boundary', () => {
       ).status,
     ).toBe(409)
     expect(rows).toHaveLength(1)
+    const legacy = eventSchema.parse({
+      ...event,
+      id: '55555555-5555-4555-8555-555555555555',
+      payload: { ...event.payload, status: 'early' },
+    })
+    expect((await call('/api/events', 'valid', { events: [legacy] })).status).toBe(200)
+    expect((await call('/api/events', 'valid', { events: [legacy] })).status).toBe(200)
+    expect(
+      (
+        await call('/api/events', 'valid', {
+          events: [{ ...legacy, payload: { ...legacy.payload, status: 'present' } }],
+        })
+      ).status,
+    ).toBe(409)
+    expect(rows).toHaveLength(2)
+    expect(rows[1].payload).toEqual(legacy.payload)
   })
 })

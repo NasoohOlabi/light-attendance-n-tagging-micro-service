@@ -317,7 +317,7 @@ try {
   const studentBody = await studentResponse.json()
   const attendance = neonStudentAttendanceSchema.parse(studentBody)
   assert.equal(attendance.student.studentId, a.studentId)
-  assert.deepEqual(attendance.attendance, [{ date: '2026-11-13', status: 'late' }])
+  assert.deepEqual(attendance.attendance, [{ date: '2026-11-13', status: 'present' }])
   assert.deepEqual(Object.keys(studentBody).sort(), ['attendance', 'student'])
   assert.equal(JSON.stringify(studentBody).includes('Private synthetic note'), false)
   assert.equal(JSON.stringify(studentBody).includes(b.studentId), false)

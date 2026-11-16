@@ -6,6 +6,8 @@ Teachers see active assigned students and their events, subject to server-enforc
 
 ## Events and projection
 
+Attendance has three current statuses: **Present**, **Absent** and **Excused**. Existing `early` and `late` values remain valid in raw events and pending retries for compatibility; projection counts both as `present`. Controls, summaries, dashboards, human-readable history and Student responses use the three-status view. Original event payloads and exact duplicate-ID comparisons remain unchanged, so normalization never rewrites audit history or turns conflicting retries into identical records.
+
 `shared/ledger.ts` defines validated event payloads: student snapshots, attendance, notes and reversals. Corrections append a reversal referencing a preceding non-reversal event; originals remain in history. Duplicate reversals are harmless; forward references and reversal-of-reversal are invalid. Projection uses database sequence order, never client time. The latest surviving attendance for a student/enrollment/date wins; historical unscoped events use a separate student/date namespace. Enrollment IDs are bound to their student by a database foreign key and validated against the active assigned roster before insertion; reversing it can reveal an earlier status. Notes remain separate. Duplicate event IDs count once, with conflicting values flagged. The API serializes validated payload JSON without a transport version field. Strict snapshot validation fails closed on malformed records; projection counts invalid correction references and conflicting IDs.
 
 ## Delivery

@@ -214,11 +214,24 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   })
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseA)
-  await page.getByLabel('Attendance for Synthetic Student').selectOption('present')
-  await page.getByRole('button', { name: 'Save attendance (1)' }).click()
-  await expect.poll(() => events.length).toBe(1)
+  const date = await page.getByLabel('Session date').inputValue()
+  events.push({
+    id: '50000000-0000-4000-8000-000000000001',
+    actor: 'Admin',
+    clientTime: new Date().toISOString(),
+    receivedAt: '',
+    payload: { kind: 'attendance', studentId, enrollmentId: enrollA, date, status: 'late' },
+  })
+  await page.reload()
+  await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveValue('present')
+  await page.getByRole('button', { name: 'History & corrections', exact: true }).click()
+  const legacyRecord = page.locator('li').filter({ hasText: 'Synthetic Student' })
+  await expect(legacyRecord).toContainText('present')
+  await legacyRecord.getByText('Record details').click()
+  await expect(legacyRecord.locator('pre')).toContainText('"status": "late"')
+  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseB)
-  await page.getByLabel('Attendance for Synthetic Student').selectOption('late')
+  await page.getByLabel('Attendance for Synthetic Student').selectOption('absent')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await expect.poll(() => events.length).toBe(2)
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseA)

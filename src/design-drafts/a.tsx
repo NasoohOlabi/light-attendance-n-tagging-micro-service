@@ -24,9 +24,7 @@ export function CourtyardDraft({ language }: DraftProps) {
   const [date, setDate] = useState('2026-11-13')
   const labels: Record<string, string> = {
     present: t('حاضر', 'Present'),
-    early: t('مبكر', 'Early'),
     absent: t('غائب', 'Absent'),
-    late: t('متأخر', 'Late'),
     excused: t('معذور', 'Excused'),
   }
   const tagLabel = (tag: Tag) =>

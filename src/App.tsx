@@ -3,6 +3,7 @@ import { LanguageProvider, LanguageSwitch, useLanguage, type TranslationKey } fr
 import { useEffect, useState } from 'react'
 import {
   projectEvents,
+  normalizeStatus,
   statuses,
   statusSchema,
   type LedgerEvent,
@@ -1268,7 +1269,8 @@ function describeEvent(
     t('General / unknown student')
   if (value.kind === 'student')
     return `${t('Student')}: ${value.name} · ${value.group || t('No group')} · ${t(value.active ? 'active' : 'inactive')}`
-  if (value.kind === 'attendance') return `${name} · ${value.date} · ${t(value.status)}`
+  if (value.kind === 'attendance')
+    return `${name} · ${value.date} · ${t(normalizeStatus(value.status))}`
   return `${name} · #${value.tags.join(' #')} · ${value.text}`
 }
 function Empty({ text }: { text: string }) {
