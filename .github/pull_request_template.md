@@ -12,4 +12,4 @@ Describe the user problem and resulting behavior. Link the task/specification ID
 ## Merge danger
 
 State behavioral/security risks, provider checks still needed and rollback steps.
-One coherent change; target `nightly` for candidates or `main` for verified stable promotion.
+One coherent change; target `main` for all changes during the v0.1.0 development release. Nightly builds and deployments are disabled.

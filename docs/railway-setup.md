@@ -6,6 +6,8 @@ Railway replaces Neon hosting, managed Auth and Postgres. A Bun server serves Re
 
 Use existing project `perfect-insight`, environment `production`, and the repository service. Authenticate with `railway login`; no token is needed after browser consent. Keep credentials in private files/service variables.
 
+During the v0.1.0 development release, all changes deploy from `main`. There is no nightly Railway environment or service; nightly builds and deployments remain disabled until the owner explicitly requests them. Keep the existing production application and Postgres service only.
+
 `Dockerfile` builds the frontend and installs frozen production dependencies. Its allowlisted context excludes private inputs and Git history. Configure Docker builds, health path `/health`, and port 3000 on the Railway service. Health verifies database tables. Set server-only `DATABASE_URL` to the private Railway Postgres connection, `BETTER_AUTH_SECRET` to a random value of at least 32 characters, `BETTER_AUTH_URL` to the public HTTPS origin, and `PORT=3000`. No browser endpoint variables are needed. Deploy verified `main` only. Legacy Pages publishing is retired.
 
 Apply `railway/001-auth.sql`, then ordered `neon/*.sql` application migrations to the new database. These are repeatable; preserve the Neon source data and record any access pause separately. Run `bun run verify:release` before stable promotion. The service's main deployment trigger has **Wait for CI** enabled.
