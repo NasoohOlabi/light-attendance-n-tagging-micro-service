@@ -1,0 +1,3 @@
+﻿# Courses and enrollment
+
+Use synthetic identities and records. On desktop and mobile, create a course, enroll an existing roster student, enter level and optional practical (عملي) and theory (نظري) scores, save and reload. Confirm roster values and score boundaries. Enroll one student in two courses, mark different statuses on the same date, switch course and verify each status and summary independently. Check history corrections remain scoped. Verify Student sees only their own course attendance and Teacher cannot write another teacher's enrollment. `e2e/courses.spec.ts` covers the synthetic browser flow; `tests/course-postgres.test.ts` exercises database constraints and access when configured with a disposable database.

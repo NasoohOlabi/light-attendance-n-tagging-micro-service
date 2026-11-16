@@ -14,6 +14,7 @@ const studentSchema = z.object({
 const attendanceSchema = z.object({
   kind: z.literal('attendance'),
   studentId: id,
+  enrollmentId: id.optional(),
   date,
   status: statusSchema,
 })
@@ -94,7 +95,10 @@ export function projectEvents(events: LedgerEvent[]) {
         students.set(value.studentId, value)
         break
       case 'attendance':
-        attendance.set(`${value.studentId}:${value.date}`, { event, value })
+        attendance.set(`${value.studentId}:${value.enrollmentId ?? ''}:${value.date}`, {
+          event,
+          value,
+        })
         break
       case 'note':
         notes.push({ event, value })

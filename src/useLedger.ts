@@ -12,7 +12,7 @@ import { assignedEvents, validateAssignedPayloads } from '../shared/roster'
 import type { Student } from '../shared/ledger'
 import { demoEvents } from './demo'
 import { apiUrl, getNotebook, postEvents } from './neon'
-import type { NeonTeacher } from '../shared/neon'
+import type { Course, Enrollment, NeonTeacher } from '../shared/neon'
 
 export function useLedger(
   demo: boolean,
@@ -26,6 +26,8 @@ export function useLedger(
   const [roster, setRoster] = useState<Student[]>(() =>
     assignedDemo ? projectEvents(events).students.slice(0, 1) : [],
   )
+  const [courses, setCourses] = useState<Course[]>([])
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [pending, setPending] = useState<LedgerEvent[]>([])
   const [storageBlocked, setStorageBlocked] = useState(() =>
     neon && !navigator.locks
@@ -66,6 +68,8 @@ export function useLedger(
         if (!cancelled) {
           setEvents(snapshot.events)
           setRoster(snapshot.students)
+          setCourses(snapshot.courses)
+          setEnrollments(snapshot.enrollments)
           setLoaded(true)
         }
       })
@@ -85,6 +89,8 @@ export function useLedger(
       const snapshot = await getNotebook(neonUserId)
       setEvents(snapshot.events)
       setRoster(snapshot.students)
+      setCourses(snapshot.courses)
+      setEnrollments(snapshot.enrollments)
       setLoaded(true)
       setError('')
     } catch (cause) {
@@ -135,11 +141,6 @@ export function useLedger(
           if (!neon.teacher.canWrite) throw new Error('Your account has read-only access.')
           const current = await getNotebook(neon.userId)
           setRoster(current.students)
-          validateAssignedPayloads(
-            batch.map((event) => event.payload),
-            current.students,
-            current.events,
-          )
           if (
             projectEvents([...current.events, ...batch]).conflicts >
             projectEvents(current.events).conflicts
@@ -149,11 +150,19 @@ export function useLedger(
             )
           const ids = new Set(current.events.map((event) => event.id))
           const remaining = batch.filter((event) => !ids.has(event.id))
+          validateAssignedPayloads(
+            remaining.map((event) => event.payload),
+            current.students,
+            current.events,
+            current.enrollments,
+          )
           const snapshot = remaining.length
             ? ((writeStarted = true), await postEvents(neon.userId, remaining))
             : current
           setEvents(snapshot.events)
           setRoster(snapshot.students)
+          setCourses(snapshot.courses)
+          setEnrollments(snapshot.enrollments)
           localStorage.removeItem(key)
           return true
         })
@@ -229,6 +238,8 @@ export function useLedger(
   return {
     events: neon || assignedDemo ? assignedEvents(events, roster) : events,
     roster,
+    courses,
+    enrollments,
     pending,
     storageBlocked,
     loaded,

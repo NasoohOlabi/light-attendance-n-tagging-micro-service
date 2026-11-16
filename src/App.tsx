@@ -1,4 +1,4 @@
-import { House, LogOut, RefreshCw, Settings2, UserRound } from 'lucide-react'
+import { BookOpen, House, LogOut, RefreshCw, Settings2, UserRound } from 'lucide-react'
 import { LanguageProvider, LanguageSwitch, useLanguage, type TranslationKey } from './i18n'
 import { useEffect, useState } from 'react'
 import {
@@ -20,6 +20,7 @@ import { useLedger } from './useLedger'
 import { NeonAuth } from './NeonAuth'
 import { AdminConsole } from './AdminConsole'
 import { StudentAttendance } from './StudentAttendance'
+import { Courses } from './Courses'
 import type { NeonTeacher } from '../shared/neon'
 
 const tabs: { id: Exclude<Tab, 'dashboard'>; label: TranslationKey }[] = [
@@ -138,7 +139,29 @@ function Notebook({
   const ledger = useLedger(demo !== null, demo === 'assigned', neon)
   const assigned = !!neon || demo === 'assigned'
   const baseProjection = projectEvents(ledger.events)
-  const projected = assigned ? { ...baseProjection, students: ledger.roster } : baseProjection
+  const selectedEnrollments = ledger.enrollments.filter((entry) => entry.courseId === query.course)
+  const selectedIds = new Set(selectedEnrollments.map((entry) => entry.id))
+  const scopedEvents = baseProjection.events.filter((event) => {
+    const payload = event.payload
+    const target =
+      payload.kind === 'reversal'
+        ? baseProjection.events.find((item) => item.id === payload.targetId)
+        : event
+    return (
+      !target ||
+      target.payload.kind !== 'attendance' ||
+      (query.course
+        ? !!target.payload.enrollmentId && selectedIds.has(target.payload.enrollmentId)
+        : !target.payload.enrollmentId)
+    )
+  })
+  const scopedProjection = projectEvents(scopedEvents)
+  const courseStudents = ledger.roster.filter((student) =>
+    query.course
+      ? selectedEnrollments.some((entry) => entry.studentId === student.studentId)
+      : true,
+  )
+  const projected = assigned ? { ...scopedProjection, students: courseStudents } : baseProjection
   const groups = [
     ...new Set(projected.students.map((student) => student.group).filter(Boolean)),
   ].sort()
@@ -171,12 +194,14 @@ function Notebook({
           <WartaqLogo />
           <span>{t('Halaqa notebook')}</span>
         </div>
-        <nav aria-label={t('Notebook')}>
+        <nav aria-label={t('Notebook')} data-courses={neon?.teacher.role === 'administrator'}>
           <button
-            className={query.tab === 'dashboard' ? 'active' : ''}
+            className={query.view !== 'courses' && query.tab === 'dashboard' ? 'active' : ''}
             aria-label={language === 'ar' ? 'الرئيسية' : 'Dashboard'}
-            aria-current={query.tab === 'dashboard' ? 'page' : undefined}
-            onClick={() => setQuery({ tab: 'dashboard' }, true)}
+            aria-current={
+              query.view !== 'courses' && query.tab === 'dashboard' ? 'page' : undefined
+            }
+            onClick={() => setQuery({ tab: 'dashboard', view: 'notebook' }, true)}
           >
             <House size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
             <span className="workspace-tab-long">
@@ -186,14 +211,27 @@ function Notebook({
               {language === 'ar' ? 'الرئيسية' : 'Home'}
             </span>
           </button>
+          {neon?.teacher.role === 'administrator' && (
+            <button
+              className={query.view === 'courses' ? 'active' : ''}
+              aria-current={query.view === 'courses' ? 'page' : undefined}
+              onClick={() => setQuery({ view: 'courses' }, true)}
+            >
+              <BookOpen size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
+              <span>{language === 'ar' ? 'الدورات' : 'Courses'}</span>
+            </button>
+          )}
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              className={query.tab === tab.id ? 'active' : ''}
+              className={query.view !== 'courses' && query.tab === tab.id ? 'active' : ''}
               aria-label={t(tab.label)}
-              aria-current={query.tab === tab.id ? 'page' : undefined}
+              aria-current={query.view !== 'courses' && query.tab === tab.id ? 'page' : undefined}
               onClick={() =>
-                setQuery({ tab: tab.id, ...(assigned ? {} : { student: '' }), tag: '' }, true)
+                setQuery(
+                  { tab: tab.id, view: 'notebook', ...(assigned ? {} : { student: '' }), tag: '' },
+                  true,
+                )
               }
             >
               <WartaqIcon name={tab.id === 'roster' ? 'students' : tab.id} />
@@ -291,7 +329,28 @@ function Notebook({
             {t('Changes stay in memory and disappear when you leave. No server requests are made.')}
           </p>
         )}
-        <div className="mb-6 flex flex-wrap items-end gap-3" hidden={query.tab === 'dashboard'}>
+        {neon && query.view !== 'courses' && (
+          <label className="mb-4">
+            {language === 'ar' ? 'الدورة' : 'Course'}
+            <select
+              value={query.course}
+              onChange={(event) => setQuery({ course: event.target.value, student: '' }, true)}
+            >
+              <option value="">
+                {language === 'ar' ? 'السجل السابق / بلا دورة' : 'Previous / no course'}
+              </option>
+              {ledger.courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div
+          className="mb-6 flex flex-wrap items-end gap-3"
+          hidden={query.tab === 'dashboard' || query.view === 'courses'}
+        >
           <label className="grow">
             {t('Find a student')}
             <input
@@ -404,7 +463,19 @@ function Notebook({
         {!ledger.loaded && !ledger.error && (
           <p role="status">{t('Loading the shared notebook…')}</p>
         )}
-        <div className={query.tab === 'attendance' ? 'workspace-content' : ''}>
+        {query.view === 'courses' && neon?.teacher.role === 'administrator' && (
+          <Courses
+            userId={neon.userId}
+            courses={ledger.courses}
+            enrollments={ledger.enrollments}
+            students={ledger.roster}
+            refresh={ledger.refresh}
+          />
+        )}
+        <div
+          hidden={query.view === 'courses'}
+          className={query.tab === 'attendance' ? 'workspace-content' : ''}
+        >
           <fieldset disabled={disabled && query.tab !== 'dashboard'} className="min-w-0">
             {query.tab === 'dashboard' && (
               <NotebookDashboard
@@ -421,9 +492,20 @@ function Notebook({
             )}
             {query.tab === 'attendance' && (
               <AttendanceView
-                key={query.date}
-                students={students.filter((student) => student.active)}
-                allStudents={projected.students.filter((student) => student.active)}
+                key={`${query.date}:${query.course}`}
+                enrollments={selectedEnrollments}
+                students={students.filter(
+                  (student) =>
+                    student.active &&
+                    (query.course ||
+                      !ledger.enrollments.some((entry) => entry.studentId === student.studentId)),
+                )}
+                allStudents={projected.students.filter(
+                  (student) =>
+                    student.active &&
+                    (query.course ||
+                      !ledger.enrollments.some((entry) => entry.studentId === student.studentId)),
+                )}
                 search={query.q}
                 projected={projected}
                 date={query.date}
@@ -495,7 +577,9 @@ function AttendanceView({
   projected,
   date,
   save,
+  enrollments,
 }: {
+  enrollments: import('../shared/neon').Enrollment[]
   students: Student[]
   allStudents: Student[]
   search: string
@@ -638,6 +722,13 @@ function AttendanceView({
               const payloads: Payload[] = changed.map((student) => ({
                 kind: 'attendance',
                 studentId: student.studentId,
+                ...(enrollments.find((entry) => entry.studentId === student.studentId)
+                  ? {
+                      enrollmentId: enrollments.find(
+                        (entry) => entry.studentId === student.studentId,
+                      )?.id,
+                    }
+                  : {}),
                 date,
                 status: statusSchema.parse(draft[student.studentId]),
               }))
