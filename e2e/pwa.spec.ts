@@ -177,7 +177,10 @@ test('cached public shell opens without waiting for a stalled navigation', async
   }
 })
 
-test('PWA update waits while the current notebook has an unsaved note', async ({ page }) => {
+test('PWA update waits while the current notebook has an unsaved note', async ({
+  page,
+  context,
+}) => {
   await page.goto(origin + prefix)
   await page.evaluate(() => navigator.serviceWorker.ready)
   await page.reload()
@@ -198,6 +201,16 @@ test('PWA update waits while the current notebook has an unsaved note', async ({
     )
     .toBe(true)
   await expect(page.getByLabel('Note', { exact: true })).toHaveValue('Unsaved note — ملاحظة')
+  const notice = page.locator('.update-notice')
+  await expect(notice).toContainText('A newer version is available')
+  await expect(notice).toContainText('close all Wartaq browser and app windows')
+  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await expect(notice).toContainText('يتوفر إصدار أحدث')
+  await expect(page.getByLabel('الملاحظة', { exact: true })).toHaveValue('Unsaved note — ملاحظة')
+  const secondPage = await context.newPage()
+  await secondPage.goto(origin + prefix)
+  await expect(secondPage.locator('.update-notice')).toBeVisible()
+  await secondPage.close()
   expect(await page.evaluate(() => caches.has('other-project-sentinel'))).toBe(true)
 })
 

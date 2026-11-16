@@ -1,4 +1,4 @@
-import { BookOpen, House, LogOut, RefreshCw, Settings2, UserRound } from 'lucide-react'
+import { LogOut, RefreshCw, Settings2, UserRound } from 'lucide-react'
 import { LanguageProvider, LanguageSwitch, useLanguage, type TranslationKey } from './i18n'
 import { useEffect, useState } from 'react'
 import {
@@ -9,12 +9,13 @@ import {
   type Payload,
   type Student,
 } from '../shared/ledger'
-import { navigatePage, setQuery, useQueryState, type Tab } from './queryState'
+import { navigatePage, setQuery, useQueryState } from './queryState'
 import { HomePage } from './HomePage'
 import { NotebookDashboard } from './NotebookDashboard'
 import { rankStudents } from './studentSearch'
 import { InstallApp } from './InstallApp'
-import { WartaqIcon, WartaqLogo } from './brand/components'
+import { AppUpdate } from './AppUpdate'
+import { WorkspaceNavigation, tabs } from './WorkspaceNavigation'
 import './workspace.css'
 import { useLedger } from './useLedger'
 import { NeonAuth } from './NeonAuth'
@@ -23,13 +24,6 @@ import { StudentAttendance } from './StudentAttendance'
 import { Courses } from './Courses'
 import type { NeonTeacher } from '../shared/neon'
 
-const tabs: { id: Exclude<Tab, 'dashboard'>; label: TranslationKey }[] = [
-  { id: 'attendance', label: 'Attendance' },
-  { id: 'notes', label: 'Notes' },
-  { id: 'roster', label: 'Students' },
-  { id: 'summary', label: 'Summary' },
-  { id: 'history', label: 'History & corrections' },
-]
 type Projection = ReturnType<typeof projectEvents>
 type Save = (payloads: Payload[]) => Promise<boolean>
 
@@ -41,6 +35,7 @@ export function App() {
           <SkipText />
         </a>
         <InstallApp />
+        <AppUpdate />
         <DevelopmentRelease />
         <AppContent />
       </div>
@@ -105,7 +100,7 @@ function AppContent() {
                 query.view === 'administration' ||
                 query.view === 'add-student') ? (
               <AdminConsole
-                key={userId}
+                key={`${userId}:${query.view === 'add-student'}`}
                 userId={userId}
                 signOut={signOut}
                 initialCreateStudent={query.view === 'add-student'}
@@ -190,77 +185,10 @@ function Notebook({
     !!(neon && !neon.teacher.canWrite)
   return (
     <div className="workspace">
-      <aside className="workspace-rail">
-        <div className="workspace-brand">
-          <WartaqLogo />
-          <span>{t('Halaqa notebook')}</span>
-        </div>
-        <nav aria-label={t('Notebook')} data-courses={neon?.teacher.role === 'administrator'}>
-          <button
-            className={query.view !== 'courses' && query.tab === 'dashboard' ? 'active' : ''}
-            aria-label={language === 'ar' ? 'الرئيسية' : 'Dashboard'}
-            aria-current={
-              query.view !== 'courses' && query.tab === 'dashboard' ? 'page' : undefined
-            }
-            onClick={() => setQuery({ tab: 'dashboard', view: 'notebook' }, true)}
-          >
-            <House size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
-            <span className="workspace-tab-long">
-              {language === 'ar' ? 'الرئيسية' : 'Dashboard'}
-            </span>
-            <span className="workspace-tab-short" aria-hidden="true">
-              {language === 'ar' ? 'الرئيسية' : 'Home'}
-            </span>
-          </button>
-          {neon?.teacher.role === 'administrator' && (
-            <button
-              className={query.view === 'courses' ? 'active' : ''}
-              aria-current={query.view === 'courses' ? 'page' : undefined}
-              onClick={() => setQuery({ view: 'courses' }, true)}
-            >
-              <BookOpen size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
-              <span>{language === 'ar' ? 'الدورات' : 'Courses'}</span>
-            </button>
-          )}
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={query.view !== 'courses' && query.tab === tab.id ? 'active' : ''}
-              aria-label={t(tab.label)}
-              aria-current={query.view !== 'courses' && query.tab === tab.id ? 'page' : undefined}
-              onClick={() =>
-                setQuery(
-                  { tab: tab.id, view: 'notebook', ...(assigned ? {} : { student: '' }), tag: '' },
-                  true,
-                )
-              }
-            >
-              <WartaqIcon name={tab.id === 'roster' ? 'students' : tab.id} />
-              <span
-                className={
-                  ['attendance', 'history'].includes(tab.id) ? 'workspace-tab-long' : undefined
-                }
-              >
-                {t(tab.label)}
-              </span>
-              {['attendance', 'history'].includes(tab.id) && (
-                <span className="workspace-tab-short" aria-hidden="true">
-                  {tab.id === 'attendance'
-                    ? language === 'ar'
-                      ? 'الحضور'
-                      : 'Attend'
-                    : language === 'ar'
-                      ? 'السجل'
-                      : 'History'}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-        <div className="workspace-identity">
-          <span>{t('Attendance & notes · الحضور والملاحظات')}</span>
-        </div>
-      </aside>
+      <WorkspaceNavigation
+        administrator={neon?.teacher.role === 'administrator'}
+        assigned={assigned}
+      />
       <main id="main-content" tabIndex={-1} className="workspace-main">
         <div className="workspace-topline">
           <div className="workspace-context" dir="auto">
@@ -288,12 +216,15 @@ function Notebook({
             <LanguageSwitch />
             {neon?.teacher.role === 'administrator' && (
               <button
-                className="icon-button"
+                className="icon-button settings-action"
                 aria-label={language === 'ar' ? 'الإعدادات' : 'Settings'}
                 title={language === 'ar' ? 'الإعدادات' : 'Settings'}
                 onClick={() => setQuery({ view: 'settings' }, true)}
               >
                 <Settings2 size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
+                <span className="settings-label">
+                  {language === 'ar' ? 'الإعدادات' : 'Settings'}
+                </span>
               </button>
             )}
             <button

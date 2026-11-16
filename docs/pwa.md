@@ -18,7 +18,7 @@ The worker does not cache Auth/API responses, cross-origin traffic, non-GET requ
 
 The sign-in form appears while the managed session is being checked. You can type, switch language, return home or explore samples immediately; submitting waits for the session check to finish. Tap the growing bookmark during session/account loading. A failed session check, or one still pending after ten seconds, offers **Try again** without clearing typed input. Retry cancels the previous session fetch through the SDK. Private notebook content still waits for server approval; no persistent session, role or notebook cache is added.
 
-Updates use the browser's normal waiting lifecycle, without forced activation, tab reloads or claiming an open page. Finish work and close the open site/app windows before reopening to activate a waiting version. Cache names contain the repository scope; cleanup only removes this scope's older versions. Existing ledger pending batches and retry protections are unchanged. See [service-worker lifecycle guidance](https://web.dev/articles/service-worker-lifecycle).
+A bilingual notice appears when a newer worker is waiting, including when the page opens with an update already waiting. Updates use the browser's normal waiting lifecycle, without forced activation, tab reloads or claiming an open page. Finish work and close the open site/app windows before reopening to activate a waiting version. Cache names contain the repository scope; cleanup only removes this scope's older versions. Existing ledger pending batches and retry protections are unchanged. See [service-worker lifecycle guidance](https://web.dev/articles/service-worker-lifecycle).
 
 ## Verification
 

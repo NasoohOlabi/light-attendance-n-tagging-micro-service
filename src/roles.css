@@ -119,3 +119,13 @@
     padding-bottom: 1rem;
   }
 }
+.workspace .role-page {
+  max-width: 80rem;
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .workspace .role-page {
+    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+  }
+}

@@ -472,3 +472,17 @@
 .dashboard-trend meter::-moz-meter-bar {
   background: #007d8d;
 }
+.settings-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding-inline: 10px;
+  flex: none;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .settings-label {
+    display: none;
+  }
+}
