@@ -68,10 +68,16 @@ export function StudentAttendance({ userId, signOut }: { userId: string; signOut
           <span>{ar ? 'طالب' : 'Student'}</span>
           <h1>{ar ? 'حضوري' : 'My attendance'}</h1>
           {data && (
-            <p dir="auto">
-              {data.student.name}
-              {data.student.group && ` · ${data.student.group}`}
-            </p>
+            <dl className="grid grid-cols-2 gap-2 break-words">
+              <div>
+                <dt>{ar ? 'الطالب' : 'Student'}</dt>
+                <dd dir="auto">{data.student.name}</dd>
+              </div>
+              <div>
+                <dt>{ar ? 'مستوى السجل' : 'Roster level'}</dt>
+                <dd dir="auto">{data.student.group || '—'}</dd>
+              </div>
+            </dl>
           )}
         </div>
         <button

@@ -391,7 +391,7 @@ function AccountForm({
                 <option value="">{ar ? 'اختر طالباً' : 'Choose a student'}</option>
                 {students.map((student) => (
                   <option key={student.studentId} value={student.studentId}>
-                    {student.name} · {student.group}
+                    {student.name}
                   </option>
                 ))}
               </select>

@@ -147,12 +147,28 @@ test('student sees only their attendance and loses it after access is denied', a
   await page.goto(`${origin}/?page=app`)
   await expect(page.getByRole('heading', { name: 'My attendance' })).toBeVisible()
   await expect(page.getByText('Synthetic Student')).toBeVisible()
+  await expect(page.locator('dl')).toContainText('Roster level')
+  await expect(page.locator('dl dd')).toHaveText(['Synthetic Student', 'Synthetic Group'])
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const fields = await page
+      .locator('dl > div')
+      .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top))
+    expect(new Set(fields).size).toBe(1)
+  }
   await expect(page.getByText('2026-11-12')).toBeVisible()
   await expect(page.getByText('present', { exact: true })).toBeVisible()
   await compactHeader(page, '.role-header')
   await expect(page.getByRole('button', { name: /Notes|Students|History|Settings/ })).toHaveCount(0)
   await page.getByRole('button', { name: 'العربية', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'حضوري' })).toBeVisible()
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const fields = await page
+      .locator('dl > div')
+      .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top))
+    expect(new Set(fields).size).toBe(1)
+  }
   await expect(page.getByText('حاضر', { exact: true })).toBeVisible()
   await compactHeader(page, '.role-header')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
@@ -419,6 +435,9 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   })
   await page.getByRole('button', { name: 'English', exact: true }).click()
   await account.getByLabel('Role').selectOption('student')
+  await expect(account.locator('select').nth(1).locator(`option[value="${studentId}"]`)).toHaveText(
+    'Synthetic Student',
+  )
   await account.locator('select').nth(1).selectOption(studentId)
   await account.getByRole('button', { name: 'Save role' }).click()
   await expect(page.getByRole('status')).toHaveText('Saved.')
