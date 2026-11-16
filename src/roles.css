@@ -40,9 +40,37 @@
   padding: 1.25rem 0;
   border-top: 1px solid #dce9e8;
 }
-.role-account {
-  display: grid;
+.role-account summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 1rem;
+  cursor: pointer;
+  min-height: 44px;
+}
+.role-account summary > span:first-child {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.role-manage {
+  color: #007d8d;
+  font-weight: 600;
+}
+.role-account[open] .role-manage::after {
+  content: ' \2212';
+}
+.role-account:not([open]) .role-manage::after {
+  content: ' +';
+}
+.role-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.role-tabs [aria-pressed='true'] {
+  background: #007d8d;
+  color: white;
 }
 .role-fields {
   display: flex;
@@ -75,6 +103,13 @@
   text-align: start;
   padding: 0.8rem;
   border-bottom: 1px solid #dce9e8;
+}
+.role-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.role-students-table {
+  min-width: 38rem;
 }
 @media (max-width: 40rem) {
   .role-page {

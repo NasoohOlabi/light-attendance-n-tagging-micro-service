@@ -10,6 +10,8 @@ Use existing project `perfect-insight`, environment `production`, and the reposi
 
 Apply `railway/001-auth.sql`, then ordered `neon/*.sql` application migrations to the new database. These are repeatable; preserve the Neon source data and record any access pause separately. Run `bun run verify:release` before stable promotion. The service's main deployment trigger has **Wait for CI** enabled.
 
+The separate-name student editor requires `neon/004-student-names.sql` before deploying its API/UI. The migration adds nullable `first_name` and `last_name` columns without guessing how existing full names should split. Current backups use version 3 to retain name parts, courses, enrollment levels/scores and attendance enrollment references in dependency order. Version 1 (original schema) and version 2 (name parts only) remain supported; legacy comparisons refuse to hide courses in the target. Partial schemas fail closed. Keep the protected original recovery snapshots unchanged.
+
 For local authenticated use, set private server variables against a disposable database and run `bun run build`, then `bun run server/index.ts`. Open port 3000 directly so Auth and notebook share the configured origin. Plain Vite preview supports the public shell/sample; authenticated operation needs Bun.
 
 ## Transfer and recovery

@@ -1,0 +1,163 @@
+import { expect, test } from 'bun:test'
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
+import { isAbsolute, relative, resolve } from 'node:path'
+import { Pool } from 'pg'
+import { z } from 'zod'
+
+// The database user must be allowed to create disposable databases on a synthetic-only server.
+const url = process.env.TEST_STUDENT_TRANSFER_DATABASE_URL
+const integration = url ? test : test.skip
+
+integration(
+  'versioned backups round-trip students, courses, enrollments and events',
+  async () => {
+    if (!url) throw new Error('Disposable database required')
+    const admin = new Pool({ connectionString: url })
+    const names = Array.from(
+      { length: 4 },
+      () => `transfer_${crypto.randomUUID().replaceAll('-', '')}`,
+    )
+    const pools: Pool[] = []
+    await mkdir(resolve('.local'), { recursive: true })
+    const directory = await mkdtemp(resolve('.local/transfer-test-'))
+    const localPath = relative(resolve('.local'), directory)
+    if (
+      isAbsolute(localPath) ||
+      localPath.startsWith('..') ||
+      !localPath.startsWith('transfer-test-')
+    )
+      throw new Error('Refusing cleanup outside the disposable transfer directory')
+    const files = [1, 2, 3].map((version) => resolve(directory, `v${version}.json`))
+    const run = (command: string, file: string, dbUrl: string, succeeds = true) => {
+      const result = Bun.spawnSync(
+        [process.execPath, 'run', 'scripts/railway-transfer.ts', command, file],
+        {
+          env: {
+            ...process.env,
+            DATABASE_URL_UNPOOLED: dbUrl,
+            MIGRATION_TARGET_DATABASE_URL: dbUrl,
+          },
+          stdout: 'pipe',
+          stderr: 'pipe',
+        },
+      )
+      if (succeeds) expect(result.exitCode, result.stderr.toString()).toBe(0)
+      else expect(result.exitCode).not.toBe(0)
+    }
+    const migrate = async (pool: Pool, file: string) =>
+      pool.query((await readFile(file, 'utf8')).replace(/^\uFEFF/, ''))
+    try {
+      for (const name of names) await admin.query(`CREATE DATABASE "${name}"`)
+      const urls = names.map((name) => {
+        const target = new URL(url)
+        target.pathname = `/${name}`
+        return target.toString()
+      })
+      for (const dbUrl of urls) pools.push(new Pool({ connectionString: dbUrl }))
+      for (const pool of pools) {
+        for (const file of [
+          'railway/001-auth.sql',
+          'neon/001-notebook.sql',
+          'neon/002-application-roles.sql',
+        ])
+          await migrate(pool, file)
+      }
+      const [source, ...targets] = pools
+      const teacher = crypto.randomUUID(),
+        student = crypto.randomUUID()
+      const courseA = crypto.randomUUID(),
+        courseB = crypto.randomUUID()
+      const enrollmentA = crypto.randomUUID(),
+        enrollmentB = crypto.randomUUID()
+      await source.query(
+        "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, 'synthetic', 'Synthetic teacher', 'read_write')",
+        [teacher],
+      )
+      await source.query(
+        "INSERT INTO students (id, teacher_id, name, group_name) VALUES ($1, $2, 'Legacy name', 'Level')",
+        [student, teacher],
+      )
+      run('export', files[0], urls[0])
+      await migrate(source, 'neon/004-student-names.sql')
+      await source.query(
+        "UPDATE students SET name = 'First Last', first_name = 'First', last_name = 'Last' WHERE id = $1",
+        [student],
+      )
+      run('export', files[1], urls[0])
+      await source.query('CREATE TABLE courses (id uuid PRIMARY KEY, name text NOT NULL)')
+      run('export', resolve(directory, 'partial.json'), urls[0], false)
+      await source.query('DROP TABLE courses')
+      await migrate(source, 'neon/003-courses.sql')
+      await source.query(
+        "INSERT INTO courses (id, name) VALUES ($1, 'Course A'), ($2, 'Course B')",
+        [courseA, courseB],
+      )
+      await source.query(
+        "INSERT INTO course_enrollments (id, course_id, student_id, level, practical, theory) VALUES ($1, $2, $3, 'One', 87.5, 92), ($4, $5, $3, 'Two', 71, 81.5)",
+        [enrollmentA, courseA, student, enrollmentB, courseB],
+      )
+      for (const enrollment of [enrollmentA, enrollmentB]) {
+        const event = crypto.randomUUID()
+        await source.query(
+          "INSERT INTO events (id, teacher_id, student_id, enrollment_id, actor, client_time, payload) VALUES ($1, $2, $3, $4, 'Synthetic teacher', now(), $5)",
+          [
+            event,
+            teacher,
+            student,
+            enrollment,
+            JSON.stringify({
+              kind: 'attendance',
+              studentId: student,
+              enrollmentId: enrollment,
+              date: '2026-11-16',
+              status: 'present',
+            }),
+          ],
+        )
+      }
+      run('export', files[2], urls[0])
+      for (let index = 0; index < targets.length; index++) {
+        await migrate(targets[index], 'neon/003-courses.sql')
+        await migrate(targets[index], 'neon/004-student-names.sql')
+        run('import', files[index], urls[index + 1])
+        run('compare', files[index], urls[index + 1])
+      }
+      expect(
+        await Promise.all(
+          files.map(
+            async (file) =>
+              z.object({ version: z.number() }).parse(JSON.parse(await readFile(file, 'utf8')))
+                .version,
+          ),
+        ),
+      ).toEqual([1, 2, 3])
+      const stored = await targets[2].query(
+        'SELECT level, practical::text, theory::text FROM course_enrollments ORDER BY level',
+      )
+      expect(stored.rows).toEqual([
+        { level: 'One', practical: '87.5', theory: '92' },
+        { level: 'Two', practical: '71', theory: '81.5' },
+      ])
+      expect(
+        (
+          await targets[2].query(
+            "SELECT count(*)::int AS count FROM events WHERE enrollment_id::text = payload->>'enrollmentId'",
+          )
+        ).rows[0].count,
+      ).toBe(2)
+      expect(
+        (await targets[2].query('SELECT first_name, last_name FROM students')).rows[0],
+      ).toEqual({ first_name: 'First', last_name: 'Last' })
+      await targets[0].query("INSERT INTO courses (id, name) VALUES ($1, 'Extra course')", [
+        crypto.randomUUID(),
+      ])
+      run('compare', files[0], urls[1], false)
+    } finally {
+      await Promise.all(pools.map((pool) => pool.end()))
+      for (const name of names) await admin.query(`DROP DATABASE IF EXISTS "${name}"`)
+      await admin.end()
+      await rm(directory, { recursive: true, force: true })
+    }
+  },
+  120000,
+)
