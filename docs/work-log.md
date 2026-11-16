@@ -718,9 +718,11 @@
 
 **Request/reason:** Owner explained that Statistics should filter only by course after the current-month range hid the imported historical attendance. Started clean at `df29d87` on `feat/closed-courses`; created `fix/course-wide-statistics` in the existing checkout, preserving the three earlier unpublished commits.
 
+**Concurrent provenance:** During verification another active release task created `6a208a3` on this branch and included this section's draft alongside its release notes. Preserved that commit and its release entry; coordinated the final index/commit ownership with that task. This task owns the Statistics implementation, regression and documentation updates only.
+
 **Changes/provenance:** Terra removed Summary's date inputs, date-range validation and attendance/note date predicates. Summary receives the full authorized course projection instead of the roster narrowed by saved student, group, search or active-state filters; its shared roster filter controls are hidden. Course selection still scopes attendance, includes historical inactive memberships and respects server access. Notes remain student-scoped across all dates. Other notebook pages retain their controls and URL state. The orchestrator reviewed the implementation and updated course behavior and the verification feature map. No database, event or permission changes.
 
-**Verification:** Pending final gates.
+**Verification:** The focused browser regression failed on the starting source and passed after the change. Final `bun run verify` passed 20 tests/84 assertions, lint, strict build and artifact checks; four optional database integrations skipped because no disposable database is configured for this UI-only task. `bun run verify:ui` passed all 58 desktop/mobile scenarios on port 4273, preserving the existing 4173 process. The new scenario checks historical attendance, correction revealing a legacy Present mark, inactive student/enrollment history, stale reversed date bounds and roster filters, all-date notes, course switching/reload and unscoped attendance. Reviewed synthetic English desktop and Arabic mobile screenshots; retained browser report/results under ignored `.artifacts/`. Touched-file formatting, file secret scan and whitespace checks passed. Five existing nonblocking React lint warnings remain.
 
 **Limits/delivery:** Synthetic browser proof does not establish live Railway behavior or physical-device behavior. No production data was changed. No push or deployment is included; prior unpublished work remains intact.
 

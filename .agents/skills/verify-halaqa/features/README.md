@@ -4,15 +4,15 @@ The public homepage, sign-in and notebook screens have no development-release ba
 
 Run the affected scenarios and the full UI suite as directed by the [verification skill](../SKILL.md). The synthetic same-origin fixtures exercise real browser controls and storage; they do not establish live Railway behavior.
 
-| Area                                    | Proof                                                |
-| --------------------------------------- | ---------------------------------------------------- |
-| [Attendance and summary](attendance.md) | Mark, filter, date bounds and correction projection. |
-| [Notes](notes.md)                       | Student notes, tags and feed filters.                |
-| [Roster](roster.md)                     | Assigned students and sample roster editing.         |
-| [Corrections](corrections.md)           | Append reversal and retain original history.         |
-| [Access and delivery](access.md)        | Session, role scope, retries, storage and tabs.      |
-| [Courses](courses.md)                   | Course enrollment and independent attendance.        |
-| [Assignments](assigned.md)              | Teacher scope and reassignment.                      |
+| Area                                    | Proof                                                       |
+| --------------------------------------- | ----------------------------------------------------------- |
+| [Attendance and summary](attendance.md) | Mark, filter, course-wide totals and correction projection. |
+| [Notes](notes.md)                       | Student notes, tags and feed filters.                       |
+| [Roster](roster.md)                     | Assigned students and sample roster editing.                |
+| [Corrections](corrections.md)           | Append reversal and retain original history.                |
+| [Access and delivery](access.md)        | Session, role scope, retries, storage and tabs.             |
+| [Courses](courses.md)                   | Course enrollment and independent attendance.               |
+| [Assignments](assigned.md)              | Teacher scope and reassignment.                             |
 
 `e2e/neon.spec.ts` covers sign-in, session restoration, account switching, failed and uncertain requests, retries, storage denial/corruption, competing tabs, malformed snapshots and reassignment. `e2e/roles.spec.ts` covers Student privacy and denial, Administrator approval, roster management, self-protection and reset validation. `tests/neon-api.test.ts` tests server authorization and projection; `tests/railway-integration.test.ts` exercises password reset against a disposable database. The historically named files exercise Railway-compatible same-origin boundaries.
 
