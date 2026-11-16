@@ -1,4 +1,5 @@
 ﻿import { useEffect, useState } from 'react'
+import { ClipboardList, History, Lock, LockOpen, Pencil, UsersRound } from 'lucide-react'
 import { neonAdminBoardSchema, type Course, type Enrollment } from '../shared/neon'
 import { request } from './neon'
 import { useLanguage } from './i18n'
@@ -115,7 +116,13 @@ export function Courses({
                       <td>
                         <div className="flex flex-wrap gap-2">
                           <button
-                            className="secondary"
+                            className="icon-button"
+                            aria-label={
+                              item.open ? (ar ? 'إغلاق' : 'Close') : ar ? 'إعادة فتح' : 'Reopen'
+                            }
+                            title={
+                              item.open ? (ar ? 'إغلاق' : 'Close') : ar ? 'إعادة فتح' : 'Reopen'
+                            }
                             disabled={busy}
                             onClick={() =>
                               void submit('/api/admin/courses/status', {
@@ -124,10 +131,16 @@ export function Courses({
                               })
                             }
                           >
-                            {item.open ? (ar ? 'إغلاق' : 'Close') : ar ? 'إعادة فتح' : 'Reopen'}
+                            {item.open ? (
+                              <Lock aria-hidden="true" />
+                            ) : (
+                              <LockOpen aria-hidden="true" />
+                            )}
                           </button>
                           <button
-                            className="secondary"
+                            className="icon-button"
+                            aria-label={ar ? 'السجل' : 'History'}
+                            title={ar ? 'السجل' : 'History'}
                             onClick={() =>
                               setQuery(
                                 {
@@ -141,16 +154,31 @@ export function Courses({
                               )
                             }
                           >
-                            {ar ? 'السجل' : 'History'}
+                            <History aria-hidden="true" />
                           </button>
-                          <button className="secondary" onClick={() => go('edit', item.id)}>
-                            {ar ? 'تعديل' : 'Edit'}
+                          <button
+                            className="icon-button"
+                            aria-label={ar ? 'تعديل' : 'Edit'}
+                            title={ar ? 'تعديل' : 'Edit'}
+                            onClick={() => go('edit', item.id)}
+                          >
+                            <Pencil aria-hidden="true" />
                           </button>
-                          <button className="secondary" onClick={() => go('students', item.id)}>
-                            {ar ? 'إدارة الطلاب' : 'Manage students'}
+                          <button
+                            className="icon-button"
+                            aria-label={ar ? 'إدارة الطلاب' : 'Manage students'}
+                            title={ar ? 'إدارة الطلاب' : 'Manage students'}
+                            onClick={() => go('students', item.id)}
+                          >
+                            <UsersRound aria-hidden="true" />
                           </button>
-                          <button className="secondary" onClick={() => go('grades', item.id)}>
-                            {ar ? 'الدرجات' : 'Grades'}
+                          <button
+                            className="icon-button"
+                            aria-label={ar ? 'الدرجات' : 'Grades'}
+                            title={ar ? 'الدرجات' : 'Grades'}
+                            onClick={() => go('grades', item.id)}
+                          >
+                            <ClipboardList aria-hidden="true" />
                           </button>
                         </div>
                       </td>
