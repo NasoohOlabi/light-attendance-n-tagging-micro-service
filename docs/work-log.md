@@ -713,3 +713,23 @@
 **Verification:** Added the browser regression before the fix and reproduced a 243.89px level column against the compact-width assertion. After the correction, focused desktop/mobile scenarios passed, including actual width and header/value alignment checks. Screenshot review caught a longer course level wrapping inside a word; reduced horizontal padding in compact cells and repeated the targeted check. Final `bun run verify` passed 20 tests/84 assertions, lint, strict build and artifact checks; four optional database integrations skipped because no disposable database is configured for this layout-only task. Final `bun run verify:ui` passed all 56 browser cases. Reviewed synthetic 1715px Arabic/English roster screenshots and phone paths at 320/390px, including empty levels and independent course levels. Five existing nonblocking React warnings remain. No temporary instrumentation was added.
 
 **Limits/delivery:** Browser proof uses synthetic same-origin fixtures and emulated phones, not live provider records or physical devices. No push or deployment was performed. Prior course closure and student-profile/handbook changes remain intact and unpublished.
+
+## 2026-11-16 17:08 - Show Statistics for the complete selected course, Asia/Damascus (UTC+03:00)
+
+**Request/reason:** Owner explained that Statistics should filter only by course after the current-month range hid the imported historical attendance. Started clean at `df29d87` on `feat/closed-courses`; created `fix/course-wide-statistics` in the existing checkout, preserving the three earlier unpublished commits.
+
+**Changes/provenance:** Terra removed Summary's date inputs, date-range validation and attendance/note date predicates. Summary receives the full authorized course projection instead of the roster narrowed by saved student, group, search or active-state filters; its shared roster filter controls are hidden. Course selection still scopes attendance, includes historical inactive memberships and respects server access. Notes remain student-scoped across all dates. Other notebook pages retain their controls and URL state. The orchestrator reviewed the implementation and updated course behavior and the verification feature map. No database, event or permission changes.
+
+**Verification:** Pending final gates.
+
+**Limits/delivery:** Synthetic browser proof does not establish live Railway behavior or physical-device behavior. No production data was changed. No push or deployment is included; prior unpublished work remains intact.
+
+## 2026-11-16 17:10 - Prepare verified course/profile release for publication, Asia/Damascus (UTC+03:00)
+
+**Request/reason:** Owner explicitly authorized commit, push, merge and deployment of the completed course closure, student profiles, enrollment handbook receipt and column-layout changes. Started clean at `df29d87`; retained the three local implementation commits on `feat/closed-courses`.
+
+**Release gate/review:** `bun run verify:release` passed with real disposable Postgres integrations: 24 tests/244 assertions, all 56 desktop/mobile browser cases, lint, strict build/artifact, repository formatting, file/history secret scans and a clean dependency audit. Five existing nonblocking React warnings remain. Reviewed the branch against unchanged origin/main `38b22de` using the blocking/non-blocking PR checklist; no issues found. The existing provider deployment remains on main until the verified PR merges; Wait for CI and the disabled-nightly policy remain unchanged.
+
+**Production migration:** Over authenticated private Railway SSH with a temporary task key, applied tracked migrations 006 and 007 twice in one bounded, advisory-locked transaction. Locked affected tables in the application's read order, verified all five new columns/types/nullability/defaults, and verified initial course/profile/handbook defaults. Database-side aggregate fingerprints proved all six application tables' pre-existing fields and records unchanged, including events. Existing courses remain open, profiles blank and handbook flags false until explicitly edited. No credentials or roster contents were emitted. Initial local argument quoting/key-path issues and a generated-script syntax error were corrected before the successful migration; the syntax error occurred before any database connection. Temporary access will be removed after actual-origin deployment verification.
+
+**Next/limits:** Push the reviewed branch, create a PR targeting main, wait for its checks, merge, verify the Railway deployment's exact main commit and exercise synthetic actual-origin user paths. Disposable/local and intercepted tests do not replace that provider proof. No PR merge or deployment is claimed in this entry.
