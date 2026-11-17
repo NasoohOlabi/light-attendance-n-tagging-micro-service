@@ -1679,3 +1679,11 @@ The focused Chromium test reproduced the lower placement and passed after the ch
 Railway's production trigger reports `main` with `checkSuites: true` (Wait for CI). Exact-main deployment, health, and the synthetic layout check against the shipped build follow PR checks. Physical phones and live authenticated sessions are outside this layout check.
 
 At 23:40, `bun run verify:release` passed again after integrating the mobile divider fix from main `42fe9bc`. The combined run passed 118 browser cases and 33 local tests. Four optional database tests skipped.
+
+## 2026-11-17 23:41 Asia/Damascus — Promote students on course closure
+
+Closing from Courses or Grades now advances an active passing enrollment's whole-number course level by one on the student's roster record. The server uses saved thresholds, scores, corrected attendance and any effective override. Closure and the roster updates commit together. Higher roster levels, custom labels and historical enrollment levels remain intact. This change applies on closure going forward and needs no database migration.
+
+The disposable PostgreSQL regression passed with 122 assertions covering closure, corrected and legacy attendance, overrides, fractional and Arabic numeric values, inactive records, preserved enrollment levels, and retry/reopen behavior. Real Better Auth sessions in Chromium at 390px and 1280px exercised both Close course buttons, saw level 2 then 3 in Manage students, and confirmed the roster after reload and the original course levels in Postgres. Fixtures were synthetic. Railway's main deployment trigger reports Wait for CI enabled. Physical-device checks are outside this verification.
+
+The local release gate passed with 116 browser cases and 35 tests, including the disposable course and same-origin Auth database cases. Two optional name and backup suites were skipped. After integrating the newer Courses header changes from `7ec2978`, `bun run verify` passed again with 294 assertions, and all 20 focused Courses and table browser cases passed. The integration retained both existing work-log entries. GitHub CI verifies the combined revision before merge.

@@ -21,6 +21,10 @@ integration(
     const courseIds = [crypto.randomUUID(), crypto.randomUUID()]
     const enrollmentIds = [crypto.randomUUID(), crypto.randomUUID()]
     const otherEnrollmentId = crypto.randomUUID()
+    const promotionCourse = crypto.randomUUID()
+    const promotionStudents = Array.from({ length: 11 }, () => crypto.randomUUID())
+    const promotionEntries = promotionStudents.map(() => crypto.randomUUID())
+    const previousEntry = crypto.randomUUID()
     const subjects = {
       admin: `course-admin-${adminId}`,
       teacher: `course-teacher-${teacherId}`,
@@ -770,19 +774,132 @@ integration(
           .status,
       ).toBe(200)
       expect((await call('/api/events', subjects.teacher, { events: [stale] })).status).toBe(200)
+
+      await pool.query('INSERT INTO courses (id, name) VALUES ($1, $2)', [
+        promotionCourse,
+        'Promotion test',
+      ])
+      const groups = ['1', '1', '1', '', '5', 'Custom', '1', '1', '1', '1', '1']
+      const levels = [
+        '1.0',
+        '1',
+        '1',
+        '\u0662\u066b\u0660',
+        '1',
+        '1',
+        '1',
+        '1',
+        'Named',
+        '1',
+        '1.00000000000000001',
+      ]
+      for (let i = 0; i < promotionStudents.length; i++) {
+        await pool.query(
+          'INSERT INTO students (id, teacher_id, name, group_name, active) VALUES ($1, $2, $3, $4, $5)',
+          [promotionStudents[i], teacherId, `Promotion ${i}`, groups[i], i !== 7],
+        )
+        await pool.query(
+          'INSERT INTO course_enrollments (id, course_id, student_id, level, practical, theory, active) VALUES ($1, $2, $3, $4, 90, 90, $5)',
+          [promotionEntries[i], promotionCourse, promotionStudents[i], levels[i], i !== 6],
+        )
+        const mark = makeEvent('Synthetic course teacher', {
+          kind: 'attendance',
+          studentId: promotionStudents[i],
+          enrollmentId: promotionEntries[i],
+          date: '2026-11-01',
+          status: i === 1 ? 'absent' : 'late',
+        })
+        await pool.query(
+          'INSERT INTO events (id, teacher_id, student_id, actor, client_time, payload, enrollment_id) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)',
+          [
+            mark.id,
+            teacherId,
+            promotionStudents[i],
+            mark.actor,
+            mark.clientTime,
+            JSON.stringify(mark.payload),
+            promotionEntries[i],
+          ],
+        )
+        if (i === 1 || i === 9) {
+          const correction = makeEvent('Synthetic course teacher', {
+            kind: 'reversal',
+            targetId: mark.id,
+            reason: 'Correction',
+          })
+          await pool.query(
+            'INSERT INTO events (id, teacher_id, student_id, actor, client_time, payload) VALUES ($1, $2, $3, $4, $5, $6::jsonb)',
+            [
+              correction.id,
+              teacherId,
+              promotionStudents[i],
+              correction.actor,
+              correction.clientTime,
+              JSON.stringify(correction.payload),
+            ],
+          )
+        }
+      }
+      await pool.query(
+        'INSERT INTO course_enrollments (id, course_id, student_id, level) VALUES ($1, $2, $3, $4)',
+        [previousEntry, courseIds[1], promotionStudents[0], '0'],
+      )
+      for (const [index, result] of [
+        [1, 'pass'],
+        [2, 'fail'],
+        [9, 'pass'],
+        [9, 'calculated'],
+      ] as const) {
+        expect(
+          (
+            await call('/api/admin/enrollments/decision', subjects.admin, {
+              id: promotionEntries[index],
+              requestId: crypto.randomUUID(),
+              result,
+              note: 'Synthetic decision',
+            })
+          ).status,
+        ).toBe(200)
+      }
+      const status = (open: boolean) =>
+        call('/api/admin/courses/status', subjects.admin, { id: promotionCourse, open })
+      expect((await status(false)).status).toBe(200)
+      expect((await status(false)).status).toBe(200)
+      expect((await status(true)).status).toBe(200)
+      expect((await status(false)).status).toBe(200)
+      const promoted = await pool.query(
+        'SELECT id, group_name FROM students WHERE id = ANY($1::uuid[])',
+        [promotionStudents],
+      )
+      expect(
+        promotionStudents.map((id) => promoted.rows.find((row) => row.id === id)?.group_name),
+      ).toEqual(['2', '2', '1', '3', '5', 'Custom', '1', '1', '1', '1', '1'])
+      expect(
+        (await pool.query('SELECT level FROM course_enrollments WHERE id = $1', [previousEntry]))
+          .rows[0].level,
+      ).toBe('0')
+      const savedLevels = await pool.query(
+        'SELECT id, level FROM course_enrollments WHERE id = ANY($1::uuid[])',
+        [promotionEntries],
+      )
+      expect(
+        promotionEntries.map((id) => savedLevels.rows.find((row) => row.id === id)?.level),
+      ).toEqual(levels)
     } finally {
       await pool.query('DELETE FROM events WHERE student_id = ANY($1::uuid[])', [
-        [studentId, otherStudentId],
+        [studentId, otherStudentId, ...promotionStudents],
       ])
       await pool.query('DELETE FROM course_enrollments WHERE student_id = ANY($1::uuid[])', [
-        [studentId, otherStudentId],
+        [studentId, otherStudentId, ...promotionStudents],
       ])
-      await pool.query('DELETE FROM courses WHERE id = ANY($1::uuid[])', [courseIds])
+      await pool.query('DELETE FROM courses WHERE id = ANY($1::uuid[])', [
+        [...courseIds, promotionCourse],
+      ])
       await pool.query('DELETE FROM app_accounts WHERE auth_user_id = ANY($1::text[])', [
         Object.values(subjects),
       ])
       await pool.query('DELETE FROM students WHERE id = ANY($1::uuid[])', [
-        [studentId, otherStudentId],
+        [studentId, otherStudentId, ...promotionStudents],
       ])
       await pool.query('DELETE FROM teachers WHERE id = ANY($1::uuid[])', [
         [adminId, teacherId, otherTeacherId],
