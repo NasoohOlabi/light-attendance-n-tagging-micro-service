@@ -7,6 +7,8 @@
 } from '@tanstack/react-table'
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react'
 import { useLanguage } from './i18n'
+import { SortPills } from './SortPills'
+import { TableFilters } from './TableFilters'
 import { setTableQuery, useTableQuery } from './queryState'
 
 type Value = string | number | null | undefined
@@ -101,133 +103,50 @@ export function useDataTable<T>(
   }
 }
 
+export function TableControls<T>({ model }: { model: ReturnType<typeof useDataTable<T>> }) {
+  const { language } = useLanguage()
+  const ar = language === 'ar'
+  const sorting = model.table.getState().sorting
+  const setSorting = model.table.setSorting
+  return (
+    <>
+      <SortPills
+        columns={model.columns}
+        sorting={sorting}
+        setSorting={setSorting}
+        reset={model.reset}
+        resetSort={model.resetSort}
+        ar={ar}
+        filtersEnabled={model.filtersEnabled}
+      />
+      {model.filtersEnabled && <TableFilters model={model} ar={ar} />}
+    </>
+  )
+}
+
 export function TableHeader<T>({
   model,
   actions = false,
+  showControls = true,
 }: {
   model: ReturnType<typeof useDataTable<T>>
   actions?: boolean
+  showControls?: boolean
 }) {
   const { language } = useLanguage()
   const ar = language === 'ar'
   const sorting = model.table.getState().sorting
   const setSorting = model.table.setSorting
-  const available = model.columns.filter((column) => !sorting.some((item) => item.id === column.id))
   return (
     <>
-      <caption className="table-controls">
-        <details>
-          <summary>{ar ? 'فرز مخصص' : 'Custom sort'}</summary>
-          <p>
-            {ar
-              ? 'انقر عنوان العمود للفرز، واستخدم Shift مع النقر لإضافة ترتيب.'
-              : 'Click a column heading to sort; Shift-click to add a sort.'}
-            {model.filtersEnabled &&
-              (ar
-                ? ' تجتمع الفلاتر معاً: النص يحتوي القيمة والخيارات تطابقها.'
-                : ' All filters combine (AND): text contains the value and choices match exactly.')}
-          </p>
-          {sorting.map((item, index) => (
-            <div className="table-sort-criterion" key={item.id}>
-              <span>{index + 1}.</span>
-              <select
-                aria-label={`${ar ? 'عمود الفرز' : 'Sort column'} ${index + 1}`}
-                value={item.id}
-                onChange={(event) =>
-                  setSorting(
-                    sorting.map((entry, i) =>
-                      i === index ? { ...entry, id: event.target.value } : entry,
-                    ),
-                  )
-                }
-              >
-                {model.columns
-                  .filter(
-                    (column) =>
-                      column.id === item.id || !sorting.some((entry) => entry.id === column.id),
-                  )
-                  .map((column) => (
-                    <option key={column.id} value={column.id}>
-                      {column.label}
-                    </option>
-                  ))}
-              </select>
-              <select
-                aria-label={`${ar ? 'اتجاه الفرز' : 'Sort direction'} ${index + 1}`}
-                value={item.desc ? 'desc' : 'asc'}
-                onChange={(event) =>
-                  setSorting(
-                    sorting.map((entry, i) =>
-                      i === index ? { ...entry, desc: event.target.value === 'desc' } : entry,
-                    ),
-                  )
-                }
-              >
-                <option value="asc">{ar ? 'تصاعدي' : 'Ascending'}</option>
-                <option value="desc">{ar ? 'تنازلي' : 'Descending'}</option>
-              </select>
-              <button
-                type="button"
-                disabled={index === 0}
-                aria-label={`${ar ? 'رفع الأولوية' : 'Move up'} ${index + 1}`}
-                onClick={() =>
-                  setSorting(
-                    sorting.map((entry, i) =>
-                      i === index - 1 ? item : i === index ? sorting[index - 1] : entry,
-                    ),
-                  )
-                }
-              >
-                &#8593;
-              </button>
-              <button
-                type="button"
-                disabled={index === sorting.length - 1}
-                aria-label={`${ar ? 'خفض الأولوية' : 'Move down'} ${index + 1}`}
-                onClick={() =>
-                  setSorting(
-                    sorting.map((entry, i) =>
-                      i === index + 1 ? item : i === index ? sorting[index + 1] : entry,
-                    ),
-                  )
-                }
-              >
-                &#8595;
-              </button>
-              <button
-                type="button"
-                aria-label={`${ar ? 'إزالة الفرز' : 'Remove sort'} ${index + 1}`}
-                onClick={() => setSorting(sorting.filter((_, i) => i !== index))}
-              >
-                &times;
-              </button>
-            </div>
-          ))}
-          <div className="table-sort-actions">
-            <button
-              type="button"
-              disabled={!available.length}
-              onClick={() => {
-                const first = available[0]
-                if (first) setSorting([...sorting, { id: first.id, desc: false }])
-              }}
-            >
-              {ar ? 'إضافة ترتيب' : 'Add sort'}
-            </button>
-          </div>
-        </details>
-        <button type="button" onClick={model.resetSort}>
-          {ar ? 'إعادة ضبط الفرز' : 'Reset sort'}
-        </button>
-        {model.filtersEnabled && (
-          <button type="button" onClick={model.reset}>
-            {ar ? 'مسح الفرز والتصفية' : 'Clear sort and filters'}
-          </button>
-        )}
-      </caption>
+      {showControls && (
+        <caption className="table-controls">
+          <TableControls model={model} />
+        </caption>
+      )}
       <thead>
         <tr>
-          {model.columns.map(({ id, label, choices }) => {
+          {model.columns.map(({ id, label }) => {
             const column = model.table.getColumn(id)
             if (!column) return null
             const sort = column.getIsSorted()
@@ -282,35 +201,6 @@ export function TableHeader<T>({
                     focusable="false"
                   />
                 </button>
-                {model.filtersEnabled && (
-                  <div className="table-filter-row">
-                    {choices ? (
-                      <select
-                        className="table-filter"
-                        aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
-                        value={String(column.getFilterValue() ?? '')}
-                        onChange={(event) => column.setFilterValue(event.target.value)}
-                      >
-                        <option value="">{ar ? 'الكل' : 'All'}</option>
-                        {choices.map((choice, choiceIndex) => (
-                          <option key={choiceIndex} value={String(choiceIndex + 1)}>
-                            {choice}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        className="table-filter"
-                        type="search"
-                        maxLength={200}
-                        dir="auto"
-                        aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
-                        value={String(column.getFilterValue() ?? '')}
-                        onChange={(event) => column.setFilterValue(event.target.value)}
-                      />
-                    )}
-                  </div>
-                )}
               </th>
             )
           })}

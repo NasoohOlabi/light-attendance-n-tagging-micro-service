@@ -1,4 +1,4 @@
-import { TableHeader, useDataTable } from './DataTable'
+import { TableControls, TableHeader, useDataTable } from './DataTable'
 import { useEffect, useState } from 'react'
 import { ClipboardList, History, Lock, LockOpen, Pencil, Save, UsersRound } from 'lucide-react'
 import { neonAdminBoardSchema, type Course, type Enrollment } from '../shared/neon'
@@ -282,19 +282,21 @@ export function Courses({
       )}
       {course && (query.courseView === 'students' || query.courseView === 'grades') && (
         <>
-          <button className="secondary" onClick={() => go('', '')}>
-            {ar ? 'العودة للدورات' : 'Back to courses'}
-          </button>
-          <h1 className="title">
-            {course.name} —{' '}
-            {query.courseView === 'students'
-              ? ar
-                ? 'إدارة الطلاب'
-                : 'Manage students'
-              : ar
-                ? 'الدرجات'
-                : 'Grades'}
-          </h1>
+          {query.courseView === 'students' && (
+            <>
+              <button className="secondary" onClick={() => go('', '')}>
+                {ar ? 'العودة للدورات' : 'Back to courses'}
+              </button>
+              <h1 className="title">
+                {course.name} — {ar ? 'إدارة الطلاب' : 'Manage students'}
+              </h1>
+            </>
+          )}
+          {query.courseView === 'grades' && !board && (
+            <h1 className="title">
+              {course.name} — {ar ? 'الدرجات' : 'Grades'}
+            </h1>
+          )}
           {query.courseView === 'students' && (
             <>
               <button
@@ -561,6 +563,12 @@ function GradePage({
   )
   return (
     <>
+      <div className="grade-title-bar">
+        <h1 className="title">
+          {course.name} — {ar ? 'الدرجات' : 'Grades'}
+        </h1>
+        <TableControls model={gradeTable} />
+      </div>
       <form
         className="flex flex-wrap items-end justify-end gap-3"
         dir="ltr"
@@ -613,7 +621,7 @@ function GradePage({
         tabIndex={0}
       >
         <table className="mobile-record-table role-table min-w-[68rem] [&_th]:whitespace-nowrap [&_input]:w-24">
-          <TableHeader model={gradeTable} actions />
+          <TableHeader model={gradeTable} actions showControls={false} />
           <tbody>
             {gradeTable.rows.map((entry) => {
               const student = students.find((item) => item.studentId === entry.studentId)
