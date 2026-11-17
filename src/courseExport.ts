@@ -96,7 +96,11 @@ export async function courseWorkbook({
       .map((entry) => {
         const student = students.find((item) => item.studentId === entry.studentId)
         const counts = courseAttendance(attendance, entry)
-        const result = savedGradeResult(course, entry, counts.ratio)
+        const decision = entry.gradeDecisions.at(-1)
+        const result =
+          decision && decision.result !== 'calculated'
+            ? decision.result
+            : savedGradeResult(course, entry, counts.ratio)
         return [
           student?.firstName || student?.name || '',
           student?.lastName ?? '',

@@ -10,6 +10,8 @@ import {
   enrollmentMembershipSchema,
   enrollmentHandbookSchema,
   enrollmentGradesSchema,
+  gradeDecisionInputSchema,
+  gradeDecisionSchema,
   neonAdminBoardSchema,
   neonAdminDisableSchema,
   neonAdminGrantSchema,
@@ -65,7 +67,8 @@ async function courseBoard(
   const enrollments = (
     await db.query(
       `SELECT ce.id, ce.course_id AS "courseId", ce.student_id AS "studentId", ce.level,
-    ce.practical::float8 AS practical, ce.theory::float8 AS theory, ce.notes, ce.active, ce.handbook_received AS "handbookReceived"
+    ce.practical::float8 AS practical, ce.theory::float8 AS theory, ce.notes, ce.active, ce.handbook_received AS "handbookReceived",
+    ${teacher.role === 'administrator' ? 'ce.grade_decisions' : "'[]'::jsonb"} AS "gradeDecisions"
     FROM course_enrollments ce JOIN students s ON s.id = ce.student_id WHERE ${scope} ORDER BY ce.id FOR SHARE OF ce`,
       values,
     )
@@ -286,6 +289,31 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
     )
     if (!result.rowCount) throw new HttpError(400)
     return { saved: true }
+  } else if (path === '/api/admin/enrollments/decision') {
+    const decision = gradeDecisionInputSchema.parse(body)
+    const row = await db.query(
+      'SELECT grade_decisions FROM course_enrollments WHERE id = $1 FOR UPDATE',
+      [decision.id],
+    )
+    if (!row.rowCount) throw new HttpError(400)
+    const history = z.array(gradeDecisionSchema).parse(row.rows[0].grade_decisions)
+    const existing = history.find((item) => item.requestId === decision.requestId)
+    if (existing) {
+      if (
+        existing.result !== decision.result ||
+        existing.note !== decision.note ||
+        existing.actor !== subject
+      )
+        throw new HttpError(409)
+    } else {
+      await db.query(
+        `UPDATE course_enrollments SET grade_decisions = grade_decisions || jsonb_build_array(jsonb_build_object(
+          'requestId', $2::text, 'result', $3::text, 'note', $4::text, 'actor', $5::text,
+          'at', to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'))) WHERE id = $1`,
+        [decision.id, decision.requestId, decision.result, decision.note, subject],
+      )
+    }
+    return { saved: true }
   } else if (path === '/api/admin/enrollments/grades') {
     const grades = enrollmentGradesSchema.parse(body)
     const result = await db.query(
@@ -472,6 +500,7 @@ export function createHandler(
         '/api/admin/enrollments',
         '/api/admin/enrollments/membership',
         '/api/admin/enrollments/grades',
+        '/api/admin/enrollments/decision',
         '/api/admin/enrollments/handbook',
         '/api/admin/students/enroll',
       ].includes(path)
@@ -490,6 +519,7 @@ export function createHandler(
         '/api/admin/enrollments',
         '/api/admin/enrollments/membership',
         '/api/admin/enrollments/grades',
+        '/api/admin/enrollments/decision',
         '/api/admin/enrollments/handbook',
         '/api/admin/students/enroll',
       ].includes(path) &&
@@ -506,6 +536,7 @@ export function createHandler(
         '/api/admin/enrollments',
         '/api/admin/enrollments/membership',
         '/api/admin/enrollments/grades',
+        '/api/admin/enrollments/decision',
         '/api/admin/enrollments/handbook',
         '/api/admin/students/enroll',
       ].includes(path) &&

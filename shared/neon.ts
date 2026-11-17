@@ -35,6 +35,16 @@ export const courseSchema = courseInputSchema.extend({
   theoryMinimum: percentage.default(80),
 })
 export const courseStatusSchema = z.strictObject({ id: z.uuid(), open: z.boolean() })
+export const gradeDecisionSchema = z.strictObject({
+  requestId: z.uuid(),
+  result: z.enum(['pass', 'fail', 'calculated']),
+  note: z.string().trim().min(1).max(2000),
+  actor: z.string().min(1),
+  at: z.iso.datetime(),
+})
+export const gradeDecisionInputSchema = gradeDecisionSchema
+  .pick({ requestId: true, result: true, note: true })
+  .extend({ id: z.uuid() })
 export const enrollmentSchema = z.object({
   id: z.uuid(),
   courseId: z.uuid(),
@@ -45,6 +55,7 @@ export const enrollmentSchema = z.object({
   active: z.boolean().default(true),
   handbookReceived: z.boolean().default(false),
   notes: z.string().default(''),
+  gradeDecisions: z.array(gradeDecisionSchema).default([]),
 })
 export const enrollmentHandbookSchema = z.strictObject({
   id: z.uuid(),

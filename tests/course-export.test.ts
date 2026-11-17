@@ -65,11 +65,23 @@ test('workbook contains projected course data and literal strings', async () => 
     ...entry,
     id: crypto.randomUUID(),
     studentId: crypto.randomUUID(),
+    gradeDecisions: [
+      {
+        requestId: crypto.randomUUID(),
+        result: 'pass',
+        note: 'private decision note',
+        actor: 'Synthetic Admin',
+        at: '2026-01-01T00:00:00.000Z',
+      },
+    ],
   })
   const blob = await courseWorkbook({
     course,
     entries: [entry, other, noRecords],
-    students: [{ studentId, name: '=Student', firstName: '=Student', lastName: 'عربي' }],
+    students: [
+      { studentId, name: '=Student', firstName: '=Student', lastName: 'عربي' },
+      { studentId: noRecords.studentId, name: 'Legacy Student', firstName: '', lastName: '' },
+    ],
     attendance: projectEvents([first, correction, present, absent, excused, foreign]).attendance,
     ar: false,
   })
@@ -90,6 +102,8 @@ test('workbook contains projected course data and literal strings', async () => 
     ['A5', 'B5', 'C5', 'D5', 'E5', 'F5', 'G5', 'H5', 'I5', 'J5', 'K5', 'L5'].map(cell),
   ).toEqual(['=Student', 'عربي', null, 'No', 0, null, 1, 1, 1, 3, (1 / 3) * 100, 'Pending'])
   expect(['G6', 'H6', 'I6', 'J6', 'K6'].map(cell)).toEqual([0, 0, 0, 0, null])
+  expect(cell('A6')).toBe('Legacy Student')
+  expect(cell('L6')).toBe('Pass')
   expect(sheet).not.toContain('r="A7"')
   const xml = Object.values(archive)
     .map((bytes) => strFromU8(bytes))
@@ -98,6 +112,7 @@ test('workbook contains projected course data and literal strings', async () => 
   expect(xml).toContain('عربي')
   expect(xml).toContain('=دورة')
   expect(xml).not.toContain('<f>')
+  expect(xml).not.toContain('private decision note')
   expect(xml).toContain('Pending')
   expect(xml).toContain('Total recorded')
 })
