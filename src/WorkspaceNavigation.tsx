@@ -1,7 +1,7 @@
 import { ProfileMenu, type Profile } from './ProfileMenu'
 import { BookOpen, House } from 'lucide-react'
 import { useLanguage, type TranslationKey } from './i18n'
-import { setQuery, useQueryState, type Tab } from './queryState'
+import { navigateNotebook, setQuery, useQueryState, type Tab } from './queryState'
 import { WartaqIcon, WartaqLogo } from './brand/components'
 
 export const tabs: { id: Exclude<Tab, 'dashboard'>; label: TranslationKey }[] = [
@@ -15,6 +15,7 @@ export const tabs: { id: Exclude<Tab, 'dashboard'>; label: TranslationKey }[] = 
 export function WorkspaceNavigation({
   administrator,
   courseName,
+  defaultCourse,
   assigned,
   profile,
   leave,
@@ -23,6 +24,7 @@ export function WorkspaceNavigation({
 }: {
   administrator: boolean
   courseName?: string
+  defaultCourse?: string
   assigned: boolean
   profile?: Profile
   leave: () => void
@@ -62,7 +64,7 @@ export function WorkspaceNavigation({
           className={query.view === 'notebook' && query.tab === 'dashboard' ? 'active' : ''}
           aria-label={language === 'ar' ? 'الرئيسية' : 'Dashboard'}
           aria-current={query.view === 'notebook' && query.tab === 'dashboard' ? 'page' : undefined}
-          onClick={() => setQuery({ tab: 'dashboard', view: 'notebook' }, true)}
+          onClick={() => navigateNotebook('dashboard', defaultCourse)}
         >
           <House size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
           <span className="workspace-tab-long">{language === 'ar' ? 'الرئيسية' : 'Dashboard'}</span>
@@ -95,19 +97,10 @@ export function WorkspaceNavigation({
             aria-label={t(tab.label)}
             aria-current={query.view === 'notebook' && query.tab === tab.id ? 'page' : undefined}
             onClick={() =>
-              setQuery(
-                {
-                  tab: tab.id,
-                  view: 'notebook',
-                  ...(tab.id === 'roster'
-                    ? { course: '', student: '' }
-                    : assigned
-                      ? {}
-                      : { student: '' }),
-                  tag: '',
-                },
-                true,
-              )
+              navigateNotebook(tab.id, defaultCourse, {
+                ...(tab.id === 'roster' || !assigned ? { student: '' } : {}),
+                tag: '',
+              })
             }
           >
             <WartaqIcon name={tab.id === 'roster' ? 'students' : tab.id} />
