@@ -1639,3 +1639,7 @@ Matched all 32 nonblank teacher cells in the supplied workbook to seven existing
 ### 22:17 Asia/Damascus — Select the current course and mark its roster
 
 Courses shows Make current beside the name. Attendance names the course and shows an alphabetical roster with enrollment teacher, level and status. Missing or closed courses direct staff to select an open course. Attendance ignores the search and numbered roster filters from other tabs. Administrators can save an enrollment teacher in Manage students. Desktop and mobile checks covered the course action, teacher edit and readback, sample saves, summary history, and table controls. No new production attendance was recorded.
+
+### 22:20 Asia/Damascus — Release verification
+
+The integrated release gate passed with 116 desktop/mobile browser cases, 33 local tests and all build, format, artifact and security checks. All four optional database suites were also run on disposable PostgreSQL: course 111 assertions, transfer 70, student names 50, and authenticated Railway API 34. Tests used synthetic identities. The live import was verified independently by the idempotent production readback.

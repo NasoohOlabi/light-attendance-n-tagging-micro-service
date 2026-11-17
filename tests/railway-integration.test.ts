@@ -13,6 +13,8 @@ let adminId = ''
 const adminTeacherId = crypto.randomUUID()
 const teacherId = crypto.randomUUID()
 const studentId = crypto.randomUUID()
+const courseId = crypto.randomUUID()
+const enrollmentId = crypto.randomUUID()
 const origin = 'http://127.0.0.1:39377'
 const password = 'synthetic-password-12345'
 const email = `synthetic-${crypto.randomUUID()}@example.test`
@@ -30,6 +32,8 @@ afterAll(async () => {
     await pool.query('DELETE FROM neon_auth."user" WHERE id = $1', [adminId])
   }
   await pool.query('DELETE FROM teachers WHERE id = $1', [adminTeacherId])
+  await pool.query('DELETE FROM course_enrollments WHERE id = $1', [enrollmentId])
+  await pool.query('DELETE FROM courses WHERE id = $1', [courseId])
   await pool.query('DELETE FROM students WHERE id = $1', [studentId])
   await pool.query('DELETE FROM teachers WHERE id = $1', [teacherId])
   await pool.end()
@@ -120,12 +124,23 @@ integration(
       "UPDATE app_accounts SET role = 'teacher', student_id = NULL, teacher_id = $2 WHERE auth_user_id = $1",
       [userId, teacherId],
     )
+    await pool.query("INSERT INTO courses (id, name) VALUES ($1, 'Synthetic course')", [courseId])
+    await pool.query(
+      'INSERT INTO course_enrollments (id, course_id, student_id) VALUES ($1, $2, $3)',
+      [enrollmentId, courseId, studentId],
+    )
     const event = {
       id: crypto.randomUUID(),
       actor: 'Synthetic teacher',
       clientTime: new Date().toISOString(),
       receivedAt: '',
-      payload: { kind: 'attendance', studentId, date: '2026-11-15', status: 'present' },
+      payload: {
+        kind: 'attendance',
+        studentId,
+        enrollmentId,
+        date: '2026-11-15',
+        status: 'present',
+      },
     }
     const save = () =>
       fetch(`${origin}/api/events`, {

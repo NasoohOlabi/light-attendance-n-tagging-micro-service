@@ -169,6 +169,7 @@ integration('student names survive migration, structured saves and legacy writes
           z.literal(8),
           z.literal(9),
           z.literal(10),
+          z.literal(11),
         ]),
         tables: z.array(
           z.object({
@@ -178,7 +179,7 @@ integration('student names survive migration, structured saves and legacy writes
         ),
       })
       .parse(JSON.parse(await readFile(exportPath, 'utf8')))
-    expect(backup.version).toBe(10)
+    expect(backup.version).toBe(11)
     expect(
       backup.tables
         .find((table) => table.name === 'public.students')
