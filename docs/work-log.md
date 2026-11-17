@@ -1491,3 +1491,9 @@
 **Verification/limits:** Rerun the full release gate on the combined tree before committing and pushing for fresh CI. Prior green checks establish the earlier head only. Four optional database suites, provider writes and physical-device checks remain outside synthetic proof. Exact-main Railway identity, health and shipped layout follow merge.
 
 **Combined release gate at 2026-11-17 20:58 Asia/Damascus:** `bun run verify:release` passed 108 browser cases, 30 local tests/124 assertions, build/lint/artifact/format/security checks, installed-parser verification, exact dated advisory policy and the unfiltered production audit. Four optional database suites skipped. Main's account links and padded mobile records both pass. Preserve main's dated policy and require fresh CI on this integration before merge/publication.
+
+## 2026-11-17 21:11 Asia/Damascus (UTC+03:00) - Space mobile workspace content below the header
+
+**Request and change** The Grades panel touched the mobile navigation header. Add 16px of top padding to the shared mobile workspace content, matching its existing side inset. Document the spacing and extend the Grades layout check.
+
+**Verification and limits** The new assertion measured 0px on the unchanged local build and Railway deployment `6dde296`. After the change, `bun run verify:release` passed 108 desktop/mobile browser cases and 30 local tests with 124 assertions, plus build, lint, artifact, formatting, secret scans and the dependency gate. Grades clears the header at 320, 390 and 430px in English and Arabic. Four optional database suites skipped. Browser emulation covers layout. The Railway check uses synthetic API responses, and physical-device behavior remains unverified. Exact-main deployment verification follows the PR merge.

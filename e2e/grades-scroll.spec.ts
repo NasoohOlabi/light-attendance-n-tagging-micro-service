@@ -142,6 +142,10 @@ test('long grades remain navigable in both languages', async ({ page }, testInfo
       ).toBe(true)
       for (const width of [320, 390, 430]) {
         await page.setViewportSize({ width, height: 844 })
+        const header = await page.locator('.workspace-rail').boundingBox()
+        const panel = await page.locator('section.panel').filter({ has: region }).boundingBox()
+        if (!header || !panel) throw new Error('Missing mobile workspace bounds')
+        expect(panel.y - (header.y + header.height)).toBeGreaterThanOrEqual(16)
         const row = region.locator('tbody tr').first()
         const layout = await row.evaluate((element) => {
           const cells = [...element.querySelectorAll('td')]
