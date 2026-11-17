@@ -192,7 +192,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
               requestId: body.requestId,
               result: body.result,
               note: body.note.trim(),
-              actor: 'synthetic-admin',
+              actor: teacherId,
               at: new Date().toISOString(),
             },
           ],
@@ -613,7 +613,10 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(compactGradeRow).toContainText('Effective: Pass')
   await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
   await page.getByRole('dialog').getByRole('combobox').selectOption('fail')
-  await page.getByRole('dialog').getByLabel('Decision note (required)').fill('Reviewed failure')
+  await page
+    .getByRole('dialog')
+    .getByLabel('Decision note (required)')
+    .fill('Reviewed failure\nSecond line')
   await page.getByRole('dialog').getByRole('button', { name: 'Save decision' }).click()
   await expect(compactGradeRow).toContainText('Effective: Fail')
   await expect(compactGradeRow).toHaveCSS('background-color', 'rgb(252, 238, 238)')
@@ -623,9 +626,35 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('dialog').getByLabel('Decision note (required)').fill('Restore')
   await page.getByRole('dialog').getByRole('button', { name: 'Save decision' }).click()
   await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
+  const storedDecisions = enrollmentSchema.parse(enrollments[0]).gradeDecisions
+  const requestCount = decisionRequests.length
   await page.getByRole('dialog').getByText('Decision history').click()
   await expect(page.getByRole('dialog')).toContainText('Reviewed')
   await expect(page.getByRole('dialog')).toContainText('Restore')
+  const history = dialog.locator('.decision-history')
+  const decisions = history.locator('li')
+  await expect(decisions).toHaveCount(3)
+  await expect(decisions.nth(0)).toContainText('Calculated')
+  await expect(decisions.nth(1)).toContainText('Fail')
+  await expect(decisions.nth(1).locator('p')).toHaveText('Reviewed failure\nSecond line')
+  await expect(decisions.nth(2)).toContainText('Pass')
+  const time = decisions.first().locator('time')
+  const timestamp = await time.getAttribute('datetime')
+  expect(timestamp).toBeTruthy()
+  const formatted = await time.evaluate((element) =>
+    new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(
+      new Date(element.getAttribute('datetime') ?? ''),
+    ),
+  )
+  await expect(time).toHaveText(formatted)
+  await expect(decisions.first().getByText(teacherId)).toBeHidden()
+  await decisions.first().getByText('Administrator ID').click()
+  await expect(decisions.first().getByText(teacherId)).toBeVisible()
+  expect(enrollmentSchema.parse(enrollments[0]).gradeDecisions).toEqual(storedDecisions)
+  expect(decisionRequests).toHaveLength(requestCount)
+  await page.screenshot({
+    path: `.artifacts/verification/decision-history-desktop-en-${testInfo.project.name}.png`,
+  })
   const resultCell = compactGradeRow.locator('td[data-label="Result"]')
   await expect(compactGradeRow.locator('td').first()).toHaveCSS('vertical-align', 'top')
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click()
@@ -671,6 +700,20 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   expect(mobileOverrideBounds?.y).toBe(mobileSaveBounds?.y)
   await arabicOverride.click()
   await expect(page.getByRole('dialog')).toBeVisible()
+  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))
+  await dialog.locator('.decision-history > summary').click()
+  await expect(dialog.locator('.decision-history li')).toHaveCount(3)
+  const arabicTime = dialog.locator('.decision-history time').first()
+  const arabicFormatted = await arabicTime.evaluate((element) =>
+    new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(
+      new Date(element.getAttribute('datetime') ?? ''),
+    ),
+  )
+  await expect(arabicTime).toHaveText(arabicFormatted)
+  expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await page.screenshot({
+    path: `.artifacts/verification/decision-history-320-ar-dark-${testInfo.project.name}.png`,
+  })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.getByRole('dialog').getByRole('button', { name: 'إلغاء' }).click()
   await expect(arabicOverride).toBeFocused()
@@ -683,6 +726,24 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
   await page.getByRole('dialog').getByText('Decision history').click()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await expect(dialog.locator('.decision-history li').first().locator('p')).toHaveText(
+    'x'.repeat(300),
+  )
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(
+        (value) => document.documentElement.setAttribute('data-theme', value),
+        theme,
+      )
+      expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+        true,
+      )
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      )
+    }
+  }
   const resultWidth = await resultCell.evaluate((cell) => cell.getBoundingClientRect().width)
   const recordWidth = await compactGradeRow.evaluate(
     (record) => record.getBoundingClientRect().width,

@@ -651,6 +651,49 @@
 .grade-dialog select {
   width: 100%;
 }
+.decision-history {
+  margin-top: 1rem;
+  border-block: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+.decision-history summary {
+  cursor: pointer;
+  padding-block: 0.65rem;
+}
+.decision-history > summary {
+  font-weight: 600;
+}
+.decision-history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.decision-history li {
+  min-width: 0;
+  padding: 0.75rem 0;
+  border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+.decision-history-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+}
+.decision-history time,
+.decision-history-actor {
+  font-size: 0.875rem;
+}
+.decision-history p {
+  margin: 0.5rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.decision-history-actor summary {
+  padding-block: 0.5rem;
+}
+.decision-history-actor span {
+  display: block;
+  overflow-wrap: anywhere;
+}
 .grade-dialog > button {
   margin-top: 0.75rem;
 }

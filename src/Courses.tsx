@@ -922,18 +922,40 @@ function GradePage({
                           </button>
                         </form>
                         {entry.gradeDecisions.length > 0 && (
-                          <details>
-                            <summary>{ar ? 'سجل القرارات' : 'Decision history'}</summary>
+                          <details className="decision-history">
+                            <summary>
+                              {ar ? 'سجل القرارات' : 'Decision history'} (
+                              {entry.gradeDecisions.length})
+                            </summary>
                             <ul>
-                              {entry.gradeDecisions.map((item) => (
-                                <li key={item.requestId} dir="auto" className="break-all">
-                                  {item.at} / {item.actor} /{' '}
-                                  {item.result === 'calculated'
-                                    ? ar
-                                      ? 'المحسوبة'
-                                      : 'Calculated'
-                                    : resultLabel(item.result)}{' '}
-                                  / {item.note}
+                              {[...entry.gradeDecisions].reverse().map((item) => (
+                                <li key={item.requestId}>
+                                  <div className="decision-history-heading">
+                                    <strong
+                                      className={
+                                        item.result === 'calculated'
+                                          ? undefined
+                                          : `grade-${item.result}`
+                                      }
+                                    >
+                                      {item.result === 'calculated'
+                                        ? ar
+                                          ? 'المحسوبة'
+                                          : 'Calculated'
+                                        : resultLabel(item.result)}
+                                    </strong>
+                                    <time dateTime={item.at}>
+                                      {new Intl.DateTimeFormat(ar ? 'ar' : 'en', {
+                                        dateStyle: 'medium',
+                                        timeStyle: 'short',
+                                      }).format(new Date(item.at))}
+                                    </time>
+                                  </div>
+                                  <p dir="auto">{item.note}</p>
+                                  <details className="decision-history-actor">
+                                    <summary>{ar ? 'معرّف المسؤول' : 'Administrator ID'}</summary>
+                                    <span dir="ltr">{item.actor}</span>
+                                  </details>
                                 </li>
                               ))}
                             </ul>
