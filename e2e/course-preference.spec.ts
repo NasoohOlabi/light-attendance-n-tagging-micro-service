@@ -1,4 +1,5 @@
-﻿import { expect, test } from '@playwright/test'
+import { clickRecordAction } from './recordActions'
+import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import { compactHeader } from './headerLayout'
 
@@ -77,17 +78,9 @@ test('remembers a validated course per account and keeps the header compact', as
   await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByText('Choose an open course to take attendance.')).toBeVisible()
   await page.getByRole('button', { name: 'Go to courses', exact: true }).click()
-  await page
-    .getByRole('row')
-    .filter({ hasText: branded })
-    .getByRole('button', { name: 'Make current' })
-    .click()
-  await expect(
-    page
-      .getByRole('row')
-      .filter({ hasText: branded })
-      .getByRole('button', { name: 'Current course' }),
-  ).toBeDisabled()
+  const course = page.getByRole('row').filter({ hasText: branded })
+  await clickRecordAction(course, 'Make current')
+  await expect(course.getByText('Current course', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await expect(defaultPicker).toHaveValue(first)
   await expect(label).toHaveText('\u0665')
@@ -119,11 +112,7 @@ test('remembers a validated course per account and keeps the header compact', as
   await expect(defaultPicker).toHaveCount(0)
   await expect(label).toHaveText('\u0665')
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
-  await page
-    .getByRole('row')
-    .filter({ hasText: longName })
-    .getByRole('button', { name: 'History' })
-    .click()
+  await clickRecordAction(page.getByRole('row').filter({ hasText: longName }), 'History')
   await expect(label).toHaveText(longName)
   await page.goto('/?page=app')
   await expect(defaultPicker).toHaveValue(first)

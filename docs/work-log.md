@@ -1653,3 +1653,9 @@ Courses shows Make current beside the name. Attendance names the course and show
 ### 22:20 Asia/Damascus — Release verification
 
 The integrated release gate passed with 116 desktop/mobile browser cases, 33 local tests and all build, format, artifact and security checks. All four optional database suites were also run on disposable PostgreSQL: course 111 assertions, transfer 70, student names 50, and authenticated Railway API 34. Tests used synthetic identities. The live import was verified independently by the idempotent production readback.
+
+## 2026-11-17 22:44 Asia/Damascus (UTC+03:00) - Make record actions readable
+
+The mobile Courses screenshot showed five unlabeled icons per row. Courses now has one three-dot trigger beside the course name and status. The menu names each action in English and Arabic. Current course is a text label. The same control opens grade overrides and history record actions. The view audit kept primary tasks such as Create course, Save grades, attendance entry, and form submissions visible. It also covered single record actions, account forms, table configuration, profile, public navigation, and the student portal.
+
+`bun run verify:release` passed all local gates and 116 browser cases. The browser coverage exercises keyboard focus and Escape, outside dismissal, course selection and status, grade override and focus return, history details and undo, and 320/390/430px layouts in English and Arabic. Browser checks use Chromium on desktop and emulated phones with synthetic API responses. Four optional database suites skipped. Railway's production trigger points to `main` with Wait for CI enabled. Exact-commit deployment and shipped-asset verification follow the PR merge.

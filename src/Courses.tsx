@@ -1,18 +1,9 @@
+import { RowActions } from './RowActions'
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
 import { TableControls, TableHeader, useDataTable } from './DataTable'
 import { useEffect, useRef, useState } from 'react'
-import {
-  ClipboardList,
-  Download,
-  History,
-  Lock,
-  LockOpen,
-  Pencil,
-  Scale,
-  Save,
-  UsersRound,
-} from 'lucide-react'
+import { Download, Save } from 'lucide-react'
 import {
   accountProfileLabel,
   neonAdminBoardSchema,
@@ -197,93 +188,71 @@ export function Courses({
                 <tbody role="rowgroup">
                   {courseTable.rows.map((item) => (
                     <tr key={item.id} role="row">
-                      <td dir="auto" role="cell">
-                        <span>{item.name}</span>
-                        <button
-                          className="secondary course-current"
-                          disabled={!item.open || item.id === defaultCourse}
-                          onClick={() => chooseDefault(item.id)}
-                        >
-                          {item.id === defaultCourse
-                            ? ar
-                              ? '\u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u062d\u0627\u0644\u064a\u0629'
-                              : 'Current course'
-                            : ar
-                              ? '\u062a\u0639\u064a\u064a\u0646 \u0643\u062f\u0648\u0631\u0629 \u062d\u0627\u0644\u064a\u0629'
-                              : 'Make current'}
-                        </button>
+                      <td role="cell">
+                        <bdi>{item.name}</bdi>
+                        {item.id === defaultCourse && (
+                          <span className="course-current">
+                            {ar ? 'الدورة الحالية' : 'Current course'}
+                          </span>
+                        )}
                       </td>
                       <td role="cell">
                         {item.open ? (ar ? 'مفتوحة' : 'Open') : ar ? 'مغلقة' : 'Closed'}
                       </td>
                       <td role="cell">
-                        <div className="flex gap-2">
-                          <button
-                            className="icon-button"
-                            aria-label={
-                              item.open ? (ar ? 'إغلاق' : 'Close') : ar ? 'إعادة فتح' : 'Reopen'
-                            }
-                            title={
-                              item.open ? (ar ? 'إغلاق' : 'Close') : ar ? 'إعادة فتح' : 'Reopen'
-                            }
-                            disabled={busy}
-                            onClick={() =>
-                              void submit('/api/admin/courses/status', {
-                                id: item.id,
-                                open: !item.open,
-                              })
-                            }
-                          >
-                            {item.open ? (
-                              <Lock aria-hidden="true" />
-                            ) : (
-                              <LockOpen aria-hidden="true" />
-                            )}
-                          </button>
-                          <button
-                            className="icon-button"
-                            aria-label={ar ? 'السجل' : 'History'}
-                            title={ar ? 'السجل' : 'History'}
-                            onClick={() =>
-                              setQuery(
-                                {
-                                  view: 'notebook',
-                                  tab: 'history',
-                                  course: item.id,
-                                  courseView: '',
-                                  q: '',
-                                },
-                                true,
-                              )
-                            }
-                          >
-                            <History aria-hidden="true" />
-                          </button>
-                          <button
-                            className="icon-button"
-                            aria-label={ar ? 'تعديل' : 'Edit'}
-                            title={ar ? 'تعديل' : 'Edit'}
-                            onClick={() => go('edit', item.id)}
-                          >
-                            <Pencil aria-hidden="true" />
-                          </button>
-                          <button
-                            className="icon-button"
-                            aria-label={ar ? 'إدارة الطلاب' : 'Manage students'}
-                            title={ar ? 'إدارة الطلاب' : 'Manage students'}
-                            onClick={() => go('students', item.id)}
-                          >
-                            <UsersRound aria-hidden="true" />
-                          </button>
-                          <button
-                            className="icon-button"
-                            aria-label={ar ? 'الدرجات' : 'Grades'}
-                            title={ar ? 'الدرجات' : 'Grades'}
-                            onClick={() => go('grades', item.id)}
-                          >
-                            <ClipboardList aria-hidden="true" />
-                          </button>
-                        </div>
+                        <RowActions
+                          name={item.name}
+                          ar={ar}
+                          actions={[
+                            ...(item.id === defaultCourse
+                              ? []
+                              : [
+                                  {
+                                    label: ar ? 'تعيين كدورة حالية' : 'Make current',
+                                    disabled: !item.open,
+                                    onClick: () => chooseDefault(item.id),
+                                  },
+                                ]),
+                            {
+                              label: ar ? 'إدارة الطلاب' : 'Manage students',
+                              onClick: () => go('students', item.id),
+                            },
+                            {
+                              label: ar ? 'الدرجات' : 'Grades',
+                              onClick: () => go('grades', item.id),
+                            },
+                            {
+                              label: ar ? 'السجل' : 'History',
+                              onClick: () =>
+                                setQuery(
+                                  {
+                                    view: 'notebook',
+                                    tab: 'history',
+                                    course: item.id,
+                                    courseView: '',
+                                    q: '',
+                                  },
+                                  true,
+                                ),
+                            },
+                            { label: ar ? 'تعديل' : 'Edit', onClick: () => go('edit', item.id) },
+                            {
+                              label: item.open
+                                ? ar
+                                  ? 'إغلاق الدورة'
+                                  : 'Close course'
+                                : ar
+                                  ? 'إعادة فتح الدورة'
+                                  : 'Reopen course',
+                              disabled: busy,
+                              onClick: () =>
+                                void submit('/api/admin/courses/status', {
+                                  id: item.id,
+                                  open: !item.open,
+                                }),
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -869,27 +838,29 @@ function GradePage({
                       }}
                     >
                       <button
-                        className="icon-button"
+                        className="icon-button gap-2"
                         disabled={busy}
                         aria-label={ar ? 'حفظ الدرجات' : 'Save grades'}
                         title={ar ? 'حفظ الدرجات' : 'Save grades'}
                       >
                         <Save size={20} aria-hidden="true" />
+                        <span>{ar ? 'حفظ الدرجات' : 'Save grades'}</span>
                       </button>
                     </form>
-                    <button
-                      type="button"
-                      className="icon-button"
-                      disabled={busy}
-                      aria-label={ar ? 'تعديل النتيجة' : 'Override result'}
-                      title={ar ? 'تعديل النتيجة' : 'Override result'}
-                      onClick={() => {
-                        setDecisionError(false)
-                        setDecisionEntry(entry.id)
-                      }}
-                    >
-                      <Scale size={20} aria-hidden="true" />
-                    </button>
+                    <RowActions
+                      name={`${student.firstName} ${student.lastName}`}
+                      ar={ar}
+                      actions={[
+                        {
+                          label: ar ? 'تعديل النتيجة' : 'Override result',
+                          disabled: busy,
+                          onClick: () => {
+                            setDecisionError(false)
+                            setDecisionEntry(entry.id)
+                          },
+                        },
+                      ]}
+                    />
                     {decisionEntry === entry.id && (
                       <dialog
                         ref={dialogRef}

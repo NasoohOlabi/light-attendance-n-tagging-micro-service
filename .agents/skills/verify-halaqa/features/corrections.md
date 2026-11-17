@@ -6,7 +6,7 @@ Inspect record details, undo note/attendance (and sample roster) with reason, re
 
 ## How to get to it (user POV)
 
-Open **History & corrections**. Choose **Undo** on a live ordinary record, enter **Reason**, then **Append correction**. **Record details** exposes event JSON without credentials.
+Open **History & corrections**, then the three-dot menu for the record. Choose **Undo** on a live ordinary record, enter **Reason**, then **Append correction**. Choose **Record details** to expand or collapse event JSON. Corrections and already-undone records offer details only.
 
 ## Driving it with Playwright
 
