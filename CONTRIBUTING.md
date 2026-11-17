@@ -13,6 +13,8 @@ bun run verify:release
 
 ## Atomic Git work
 
+The release audit is `bun run security:audit`; see [Security](SECURITY.md) for the pinned picomatch backport and its checked, advisory-specific exception. Use Bun 1.3.0 to match CI and Docker.
+
 1. Inspect `git status --short` and the existing diff. Identify unrelated/user work and preserve it. Obtain permission before making a worktree.
 2. Create a descriptive `feat/`, `fix/`, `docs/` or `chore/` branch from the intended base. Give each Terra worker disjoint file ownership; the orchestrator is the sole committer in a shared checkout.
 3. Make one coherent user outcome or setup change. Keep behavior documentation and meaningful tests with the implementation. Add dated Asia/Damascus notes to `docs/work-log.md` with request, changes, verification and limitations; label recovered work and unknown provenance.
