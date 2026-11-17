@@ -26,7 +26,7 @@ if (import.meta.main) {
   if (audit.exitCode !== (findings ? 1 : 0)) throw new Error('Unexpected dependency audit result')
   if (findings) {
     console.warn(
-      'Reviewed development-only picomatch advisory above; exception expires 2026-12-01. Production has no exception. See SECURITY.md.',
+      'Verified local picomatch backport; registry advisory above remains excepted until 2026-12-01. Production has no exception. See SECURITY.md.',
     )
     const production = Bun.spawnSync([process.execPath, 'audit', '--prod'], {
       stdout: 'inherit',

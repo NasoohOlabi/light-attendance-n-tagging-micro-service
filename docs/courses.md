@@ -52,6 +52,8 @@ Apply migration `neon/011-grade-decisions.sql` before deployment. Version 10 bac
 
 Grades uses a bounded scrolling table on desktop, with opaque sticky column headings. The title, Sort control and grading thresholds stay outside the table scroll area. Focus the Course grades region to scroll it with the keyboard. On phones and other stacked layouts, records continue to use normal page scrolling without a nested vertical scroller.
 
+Stacked grade records have consistent inset padding and separation. Theory and Practical inputs fill their paired columns; Notes, Result and Actions each span the record width. Labels and touch-sized controls remain inside the record in both languages and palettes.
+
 Administrators can export an Excel workbook from Grades. On phones, use the download icon labelled Export Excel. It includes saved course status and thresholds, every enrollment including withdrawn memberships and inactive roster students, saved scores and projected course attendance for all dates. Inactive roster students are exported even though they are not shown on Grades. Zero scores remain numeric and missing scores and attendance rates remain blank. Result follows the latest saved administrator decision, or the calculated result when no override applies. The export excludes notes and decision history and is disabled while grade or threshold edits are unsaved. Sort and other page filters do not change its rows.
 
 Light and dark appearance use matching readable red/green grade indicators and row tints. Color meanings are the same in both palettes.

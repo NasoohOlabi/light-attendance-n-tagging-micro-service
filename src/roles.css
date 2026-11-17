@@ -703,6 +703,26 @@
   display: inline;
 }
 
+@media (max-width: 64rem) {
+  .grade-table-scroll tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .grade-table-scroll tbody tr {
+    padding: 1rem;
+    row-gap: 0.5rem;
+    border: 1px solid #dce9e8;
+    border-radius: 0.75rem;
+  }
+  .grade-table-scroll .grade-notes,
+  .grade-table-scroll .grade-actions {
+    grid-column: 1 / -1;
+  }
+  .grade-table-scroll td > input {
+    width: 100%;
+  }
+}
+
 @media (min-width: 64.001rem) {
   .grade-table-scroll {
     max-height: max(16rem, 55vh);
