@@ -1,4 +1,4 @@
-import { LogOut, RefreshCw, Settings2, UserRound } from 'lucide-react'
+import { CircleCheck, CircleMinus, LogOut, RefreshCw, Settings2, UserRound } from 'lucide-react'
 import { LanguageProvider, LanguageSwitch, useLanguage, type TranslationKey } from './i18n'
 import { useEffect, useState } from 'react'
 import {
@@ -985,7 +985,21 @@ function RosterView({
                   <td>
                     <bdi>{studentLevel(student, courseSelected, enrollments) || '—'}</bdi>
                   </td>
-                  <td>{student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}</td>
+                  <td>
+                    <span
+                      role="img"
+                      aria-label={
+                        student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'
+                      }
+                      title={student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}
+                    >
+                      {student.active ? (
+                        <CircleCheck className="mx-auto" size={20} aria-hidden="true" />
+                      ) : (
+                        <CircleMinus className="mx-auto" size={20} aria-hidden="true" />
+                      )}
+                    </span>
+                  </td>
                   <td>
                     <button
                       className="icon-button"

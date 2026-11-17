@@ -27,3 +27,5 @@ The Administrator table retains all columns at phone widths through a bounded, n
 Verify optional WhatsApp, location and birth year fields on create and edit, including blank clearing, reload and distinct labelled roster columns at 320/390px in both languages. Birth year is a year only.
 
 Check notebook Students and grouped/searched attendance column geometry in both languages: Level stays compact, Student receives the remaining width, and level text is centered under its header even when the text direction differs. Check compact status/actions on Students, readable longer course levels, desktop 1715px and bounded phone scrolling. `expectCompactLevel` in `e2e/courses.spec.ts` measures actual rendered widths and text alignment.
+
+The notebook Students status cells use a circled check for active students and a circled minus for inactive students. Verify symbols replace visible status words while localized accessible image names and tooltips retain the meaning in English and Arabic. Keep the separate status column and centered icons at desktop and phone widths.

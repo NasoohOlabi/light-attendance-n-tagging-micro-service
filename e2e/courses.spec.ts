@@ -191,20 +191,20 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .getByRole('row')
     .filter({ has: page.getByRole('cell', { name: 'Synthetic Student', exact: true }) })
   await expect(list.getByRole('columnheader')).toHaveText(['Student', 'Level', 'Active', 'Actions'])
-  await expect(row.getByRole('cell')).toHaveText([
-    'Synthetic Student',
-    'Roster level',
+  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Roster level', '', ''])
+  await expect(row.getByRole('img', { name: 'Active', exact: true })).toBeVisible()
+  await expect(row.getByRole('img', { name: 'Active', exact: true })).toHaveAttribute(
+    'title',
     'Active',
-    '',
-  ])
+  )
   await expectCompactLevel(list)
   const courseFilter = page.getByRole('combobox', { name: 'Course', exact: true })
   await courseFilter.selectOption(courseA)
-  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', '—', 'Active', ''])
+  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', '—', '', ''])
   await courseFilter.selectOption(courseB)
-  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Advanced', 'Active', ''])
+  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Advanced', '', ''])
   await page.reload()
-  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Advanced', 'Active', ''])
+  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Advanced', '', ''])
   await mkdir('.artifacts/verification', { recursive: true })
   if (testInfo.project.name === 'chromium') await page.setViewportSize({ width: 1715, height: 993 })
   await expectCompactLevel(list)
@@ -248,6 +248,12 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await page.getByRole('button', { name: 'العربية', exact: true }).click()
   const arabicList = page.getByRole('region', { name: 'قائمة الطلاب' })
+  await expect(arabicList.getByRole('img', { name: 'نشط', exact: true })).toBeVisible()
+  await expect(arabicList.getByRole('img', { name: 'نشط', exact: true })).toHaveAttribute(
+    'title',
+    'نشط',
+  )
+  await expect(arabicList.getByRole('row').nth(1).getByRole('cell').nth(2)).toHaveText('')
   await expectCompactLevel(arabicList)
   await page.screenshot({
     path: `.artifacts/verification/roster-layout-${testInfo.project.name}-ar.png`,
