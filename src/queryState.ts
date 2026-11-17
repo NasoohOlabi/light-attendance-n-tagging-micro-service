@@ -43,6 +43,7 @@ export function useQueryState() {
     group: query.get('group') ?? '',
     tag: query.get('tag') ?? '',
     student: query.get('student') ?? '',
+    account: z.string().min(1).max(256).safeParse(query.get('account')).data ?? '',
     course: z.uuid().safeParse(query.get('course')).data ?? '',
     courseView:
       z.enum(['create', 'edit', 'students', 'grades']).safeParse(query.get('courseView')).data ??
@@ -61,6 +62,7 @@ const allowedKeys = new Set([
   'group',
   'tag',
   'student',
+  'account',
   'course',
   'courseView',
   'all',
