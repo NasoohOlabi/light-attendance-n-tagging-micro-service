@@ -554,6 +554,13 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   const originalViewport = page.viewportSize()
   await page.setViewportSize({ width: 1440, height: 900 })
   const compactGradeRow = page.getByRole('row').filter({ hasText: 'Synthetic' })
+  const checkGradeOrder = async (theory: string, practical: string) => {
+    const headers = page.locator('thead th')
+    await expect(headers.nth(5)).toContainText(theory)
+    await expect(headers.nth(6)).toContainText(practical)
+    await expect(compactGradeRow.locator('td').nth(5)).toHaveAttribute('data-label', theory)
+    await expect(compactGradeRow.locator('td').nth(6)).toHaveAttribute('data-label', practical)
+  }
   const checkGradeSave = async (label: string) => {
     const button = compactGradeRow.getByRole('button', { name: label })
     await expect(button).toHaveAttribute('title', label)
@@ -563,6 +570,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     expect(bounds?.height).toBeGreaterThanOrEqual(44)
   }
   await checkGradeSave('Save grades')
+  await checkGradeOrder('Theory', 'Practical')
   expect(
     (await page.getByLabel('Practical: Synthetic Student').boundingBox())?.height,
   ).toBeGreaterThanOrEqual(44)
@@ -572,14 +580,17 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   ).toBeGreaterThanOrEqual(192)
   await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
   await checkGradeSave('حفظ الدرجات')
+  await checkGradeOrder('نظري', 'عملي')
   await expect(
     page.getByLabel('\u0645\u0644\u0627\u062d\u0638\u0627\u062a: Synthetic Student'),
   ).toBeVisible()
   await page.setViewportSize({ width: 320, height: 844 })
   await checkGradeSave('حفظ الدرجات')
+  await checkGradeOrder('نظري', 'عملي')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await clickAccountAction(page, 'English')
   await checkGradeSave('Save grades')
+  await checkGradeOrder('Theory', 'Practical')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 844 })
