@@ -45,3 +45,5 @@ Grades opens directly on existing student records. Its Sort icon sits beside the
 Administrators can override a grade result to Pass or Fail, or restore the calculated result. Each decision requires a nonblank note and is saved with the authenticated administrator and server time in an append-only enrollment history. The Grades page shows calculated and effective results and the decision history. Teachers and students do not receive decision notes or history. Decisions do not change scores, attendance, or closure rules.
 
 Apply migration `neon/011-grade-decisions.sql` before deployment. Version 10 backups preserve decision history; older backups cannot compare against a target with decisions.
+
+Grades uses a bounded scrolling table on desktop, with opaque sticky column headings. The title, Sort control and grading thresholds stay outside the table scroll area. Focus the Course grades region to scroll it with the keyboard. On phones and other stacked layouts, records continue to use normal page scrolling without a nested vertical scroller.
