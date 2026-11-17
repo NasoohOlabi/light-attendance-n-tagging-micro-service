@@ -64,6 +64,9 @@ integration(
       const notesMigration = await readFile('neon/010-enrollment-notes.sql', 'utf8')
       await pool.query(notesMigration)
       await pool.query(notesMigration)
+      const decisionMigration = await readFile('neon/011-grade-decisions.sql', 'utf8')
+      await pool.query(decisionMigration)
+      await pool.query(decisionMigration)
       for (const [id, subject] of [
         [adminId, subjects.admin],
         [teacherId, subjects.teacher],
@@ -191,6 +194,79 @@ integration(
       expect(
         teacherSnapshot.enrollments.find((entry) => entry.id === enrollmentIds[0]),
       ).toMatchObject({ practical: 0, theory: 100 })
+      const decision = {
+        id: enrollmentIds[0],
+        requestId: crypto.randomUUID(),
+        result: 'pass',
+        note: '  Reviewed  ',
+      }
+      for (const subject of [subjects.teacher, subjects.student]) {
+        expect((await call('/api/admin/enrollments/decision', subject, decision)).status).toBe(403)
+      }
+      expect(
+        (
+          await call('/api/admin/enrollments/decision', subjects.admin, {
+            ...decision,
+            note: '   ',
+          })
+        ).status,
+      ).toBe(400)
+      expect((await call('/api/admin/enrollments/decision', subjects.admin, decision)).status).toBe(
+        200,
+      )
+      expect((await call('/api/admin/enrollments/decision', subjects.admin, decision)).status).toBe(
+        200,
+      )
+      expect(
+        (
+          await call('/api/admin/enrollments/decision', subjects.admin, {
+            ...decision,
+            result: 'fail',
+          })
+        ).status,
+      ).toBe(409)
+      const history = (
+        await pool.query('SELECT grade_decisions FROM course_enrollments WHERE id = $1', [
+          enrollmentIds[0],
+        ])
+      ).rows[0].grade_decisions
+      expect(history).toHaveLength(1)
+      expect(history[0]).toMatchObject({ result: 'pass', note: 'Reviewed', actor: subjects.admin })
+      expect(
+        (
+          await call('/api/admin/enrollments/decision', subjects.admin, {
+            ...decision,
+            requestId: crypto.randomUUID(),
+            result: 'calculated',
+          })
+        ).status,
+      ).toBe(200)
+      const concurrent = await Promise.all(
+        ['pass', 'fail'].map((result) =>
+          call('/api/admin/enrollments/decision', subjects.admin, {
+            ...decision,
+            requestId: crypto.randomUUID(),
+            result,
+            note: 'Concurrent',
+          }),
+        ),
+      )
+      expect(concurrent.map((response) => response.status)).toEqual([200, 200])
+      expect(
+        (
+          await pool.query(
+            'SELECT jsonb_array_length(grade_decisions) AS count FROM course_enrollments WHERE id = $1',
+            [enrollmentIds[0]],
+          )
+        ).rows[0].count,
+      ).toBe(4)
+      const teacherDecisionSnapshot = JSON.stringify(
+        await (await call('/api/notebook', subjects.teacher)).json(),
+      )
+      expect(teacherDecisionSnapshot).not.toContain('Reviewed')
+      expect(
+        JSON.stringify(await (await call('/api/student/attendance', subjects.student)).json()),
+      ).not.toContain('Reviewed')
       const updated = await call('/api/admin/enrollments', subjects.admin, {
         id: enrollmentIds[0],
         courseId: courseIds[0],

@@ -1,7 +1,7 @@
 import { clickAccountAction } from './profileActions'
 import { expect, test, type Locator } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
-import { courseSchema } from '../shared/neon'
+import { enrollmentSchema, courseSchema } from '../shared/neon'
 
 test.use({ trace: 'off' })
 const teacherId = '10000000-0000-4000-8000-000000000001'
@@ -178,6 +178,26 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       const body = route.request().postDataJSON()
       const entry = enrollments.find((item) => item.id === body.id)
       if (entry) entry.handbookReceived = body.handbookReceived
+      return route.fulfill({ json: { saved: true } })
+    }
+    if (path === '/api/admin/enrollments/decision') {
+      const body = route.request().postDataJSON()
+      const entry = enrollments.find((item) => item.id === body.id)
+      if (entry) {
+        const parsed = enrollmentSchema.parse(entry)
+        Object.assign(entry, {
+          gradeDecisions: [
+            ...parsed.gradeDecisions,
+            {
+              requestId: body.requestId,
+              result: body.result,
+              note: body.note.trim(),
+              actor: 'synthetic-admin',
+              at: new Date().toISOString(),
+            },
+          ],
+        })
+      }
       return route.fulfill({ json: { saved: true } })
     }
     if (path === '/api/admin/enrollments/grades') {
@@ -554,6 +574,33 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   const originalViewport = page.viewportSize()
   await page.setViewportSize({ width: 1440, height: 900 })
   const compactGradeRow = page.getByRole('row').filter({ hasText: 'Synthetic' })
+  await compactGradeRow.getByText('Override result').click()
+  await expect(compactGradeRow.getByRole('button', { name: 'Save decision' })).toBeDisabled()
+  await compactGradeRow.getByLabel('Decision note (required)').fill('Reviewed')
+  await compactGradeRow.getByRole('button', { name: 'Save decision' }).click()
+  await expect(compactGradeRow).toContainText('Effective: Pass')
+  await expect(compactGradeRow).toHaveCSS('background-color', 'rgb(234, 247, 237)')
+  await expect(compactGradeRow.locator('span.grade-pass').filter({ hasText: /^Pass$/ })).toHaveCSS(
+    'color',
+    'rgb(23, 101, 44)',
+  )
+  await page.reload()
+  await expect(compactGradeRow).toContainText('Effective: Pass')
+  await compactGradeRow.getByText('Override result').click()
+  await compactGradeRow.getByRole('combobox').selectOption('fail')
+  await compactGradeRow.getByLabel('Decision note (required)').fill('Reviewed failure')
+  await compactGradeRow.getByRole('button', { name: 'Save decision' }).click()
+  await expect(compactGradeRow).toContainText('Effective: Fail')
+  await expect(compactGradeRow).toHaveCSS('background-color', 'rgb(252, 238, 238)')
+  await expect(compactGradeRow.locator('span.grade-fail')).toHaveCSS('color', 'rgb(161, 27, 27)')
+  await compactGradeRow.getByRole('combobox').selectOption('calculated')
+  await compactGradeRow.getByLabel('Decision note (required)').fill('Restore')
+  await compactGradeRow.getByRole('button', { name: 'Save decision' }).click()
+  await compactGradeRow.getByText('Decision history').click()
+  await expect(compactGradeRow).toContainText('Reviewed')
+  await expect(compactGradeRow).toContainText('Restore')
+  await compactGradeRow.getByText('Decision history').click()
+  await compactGradeRow.getByText('Override result').click()
   const checkGradeOrder = async (theory: string, practical: string) => {
     const headers = page.locator('thead th')
     await expect(headers.nth(4)).toContainText(theory)
@@ -591,6 +638,16 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await clickAccountAction(page, 'English')
   await checkGradeSave('Save grades')
   await checkGradeOrder('Theory', 'Practical')
+  await compactGradeRow.getByText('Override result').click()
+  await compactGradeRow.getByLabel('Decision note (required)').fill('x'.repeat(300))
+  await compactGradeRow.getByRole('button', { name: 'Save decision' }).click()
+  await compactGradeRow.getByText('Decision history').click()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await clickAccountAction(page, 'English')
+  await compactGradeRow.getByText('Decision history').click()
+  await compactGradeRow.getByText('Override result').click()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 844 })
@@ -603,6 +660,11 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     await clickAccountAction(page, 'English')
   }
   if (originalViewport) await page.setViewportSize(originalViewport)
+  await compactGradeRow.getByText('Override result').click()
+  await compactGradeRow.getByRole('combobox').selectOption('calculated')
+  await compactGradeRow.getByLabel('Decision note (required)').fill('Resume calculated grading')
+  await compactGradeRow.getByRole('button', { name: 'Save decision' }).click()
+  await compactGradeRow.getByText('Override result').click()
   await expect(page.getByRole('button', { name: 'Close course' })).toBeDisabled()
   await expect(page.getByText('Unavailable')).toBeVisible()
   await page.getByLabel('Minimum attendance %').fill('60')
@@ -742,6 +804,20 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(gradeRow).toContainText('Insufficient attendance')
   await expect(gradeRow).not.toContainText('Practical grade below passing')
   await expect(gradeRow.getByText('50.0%')).toHaveCSS('color', 'rgb(161, 27, 27)')
+  await gradeRow.getByText('Override result').click()
+  await gradeRow.getByRole('combobox').selectOption('pass')
+  await gradeRow.getByLabel('Decision note (required)').fill('Attendance reviewed')
+  await gradeRow.getByRole('button', { name: 'Save decision' }).click()
+  await expect(gradeRow).toContainText('Calculated: Fail')
+  await expect(gradeRow).toContainText('Effective: Pass')
+  await expect(gradeRow).toHaveCSS('background-color', 'rgb(234, 247, 237)')
+  await expect(gradeRow.getByText('50.0%')).toHaveCSS('color', 'rgb(161, 27, 27)')
+  await expect(gradeRow).toContainText('Insufficient attendance')
+  await gradeRow.getByRole('combobox').selectOption('calculated')
+  await gradeRow.getByLabel('Decision note (required)').fill('Restore calculated attendance')
+  await gradeRow.getByRole('button', { name: 'Save decision' }).click()
+  await gradeRow.getByText('Override result').click()
+  await expect(gradeRow).toHaveCSS('background-color', 'rgb(252, 238, 238)')
   await page.getByLabel('Practical: Synthetic Student').fill('0')
   await page.getByLabel('Theory: Synthetic Student').fill('0')
   await gradeRow.getByRole('button', { name: 'Save grades' }).click()
@@ -777,7 +853,10 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('button', { name: 'Save thresholds' }).click()
   await expect(gradeRow).toContainText('Pass')
   await expect(gradeRow).toHaveCSS('background-color', 'rgb(234, 247, 237)')
-  await expect(gradeRow.getByText('Pass', { exact: true })).toHaveCSS('color', 'rgb(23, 101, 44)')
+  await expect(gradeRow.locator('span.grade-pass').filter({ hasText: /^Pass$/ })).toHaveCSS(
+    'color',
+    'rgb(23, 101, 44)',
+  )
   await expect(gradeRow.getByText('50.0%')).toHaveCSS('color', 'rgb(23, 101, 44)')
   await expect(page.getByLabel('Practical: Synthetic Student')).toHaveCSS(
     'color',

@@ -44,7 +44,7 @@ const courseTables = [
     columns: ['id', 'course_id', 'student_id', 'level', 'practical', 'theory'],
   },
 ] as const
-type Version = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+type Version = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
 function tablesFor(version: Version) {
   if (version < 3) return [...baseTables]
   return [...baseTables.slice(0, -1), ...courseTables, baseTables[baseTables.length - 1]]
@@ -72,6 +72,7 @@ function columnsFor(
       'active',
       ...(version >= 6 ? ['handbook_received'] : []),
       ...(version >= 9 ? ['notes'] : []),
+      ...(version >= 10 ? ['grade_decisions'] : []),
     ]
   if (table.name === 'public.events' && version >= 3) return [...table.columns, 'enrollment_id']
   return table.columns
@@ -88,6 +89,7 @@ const backupSchema = z.strictObject({
     z.literal(7),
     z.literal(8),
     z.literal(9),
+    z.literal(10),
   ]),
   createdAt: z.iso.datetime(),
   tables: z.array(z.strictObject({ name: z.string(), rows: z.array(rowSchema) })),
@@ -175,6 +177,8 @@ function validateBackup(backup: Backup) {
 }
 async function schemaVersion(db: PoolClient): Promise<Version> {
   const result = await db.query(`SELECT
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'grade_decisions' AND data_type = 'jsonb' AND is_nullable = 'NO' AND column_default = '''[]''::jsonb') AS decisions,
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'grade_decisions') AS decisions_column,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'notes' AND data_type = 'text' AND is_nullable = 'NO' AND column_default = '''''::text') AS notes,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'notes') AS notes_column,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name = 'teacher_id' AND is_nullable = 'YES') AS unassigned,
@@ -193,6 +197,8 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name IN ('attendance_minimum', 'practical_minimum', 'theory_minimum') AND data_type = 'double precision' AND is_nullable = 'NO') AS grading,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name IN ('attendance_minimum', 'practical_minimum', 'theory_minimum')) AS grading_columns`)
   const {
+    decisions,
+    decisions_column,
     notes,
     notes_column,
     unassigned,
@@ -212,6 +218,8 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     grading_columns,
   } = z
     .object({
+      decisions: z.number(),
+      decisions_column: z.number(),
       notes: z.number(),
       notes_column: z.number(),
       unassigned: z.number(),
@@ -251,6 +259,8 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     throw new Error('Incomplete application migration')
   if (membership !== membership_column) throw new Error('Incomplete application migration')
   if (membership && courses !== 2) throw new Error('Incomplete application migration')
+  if (decisions !== decisions_column || (decisions && !notes))
+    throw new Error('Incomplete application migration')
   if (notes !== notes_column || (notes && !unassigned))
     throw new Error('Incomplete application migration')
   if (unassigned && grading !== 3) throw new Error('Incomplete application migration')
@@ -263,7 +273,9 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
           ? grading === 3
             ? unassigned
               ? notes
-                ? 9
+                ? decisions
+                  ? 10
+                  : 9
                 : 8
               : 7
             : 6
@@ -331,7 +343,9 @@ async function main() {
             const columns = Object.keys(row)
             await db.query(
               `INSERT INTO ${sqlTable(table.name)} (${columns.map(quote).join(',')}) ${table.name === 'public.events' ? 'OVERRIDING SYSTEM VALUE ' : ''}VALUES (${columns.map((_, index) => '$' + (index + 1)).join(',')})`,
-              columns.map((column) => row[column]),
+              columns.map((column) =>
+                column === 'grade_decisions' ? JSON.stringify(row[column]) : row[column],
+              ),
             )
           }
         }
@@ -378,6 +392,12 @@ async function main() {
       if (backup.version < 9 && targetVersion >= 9) {
         const notes = await db.query("SELECT 1 FROM course_enrollments WHERE notes <> '' LIMIT 1")
         if (notes.rowCount) throw new Error('Legacy backup cannot represent enrollment notes')
+      }
+      if (backup.version < 10 && targetVersion >= 10) {
+        const decisions = await db.query(
+          "SELECT 1 FROM course_enrollments WHERE grade_decisions <> '[]'::jsonb LIMIT 1",
+        )
+        if (decisions.rowCount) throw new Error('Legacy backup cannot represent grade decisions')
       }
       const actual = await snapshot(db, backup.version)
       for (const [index, table] of backup.tables.entries()) {

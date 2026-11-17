@@ -460,6 +460,9 @@ function GradePage({
   const [drafts, setDrafts] = useState<
     Record<string, { practical: string; theory: string; notes: string }>
   >({})
+  const [decisions, setDecisions] = useState<
+    Record<string, { requestId: string; result: 'pass' | 'fail' | 'calculated'; note: string }>
+  >({})
   const [settings, setSettings] = useState({
     attendanceMinimum: String(course.attendanceMinimum),
     practicalMinimum: String(course.practicalMinimum),
@@ -562,7 +565,14 @@ function GradePage({
         id: 'result',
         choices: ar ? ['قيد الانتظار', 'ناجح', 'راسب'] : ['Pending', 'Pass', 'Fail'],
         label: ar ? 'النتيجة' : 'Result',
-        value: (entry) => resultLabel(gradeResult(entry, attendanceRatio(entry))),
+        value: (entry) => {
+          const last = entry.gradeDecisions.at(-1)
+          return resultLabel(
+            last && last.result !== 'calculated'
+              ? last.result
+              : gradeResult(entry, attendanceRatio(entry)),
+          )
+        },
       },
     ],
     false,
@@ -639,9 +649,17 @@ function GradePage({
               }
               const ratio = attendanceRatio(entry)
               const result = gradeResult(entry, ratio)
+              const lastDecision = entry.gradeDecisions.at(-1)
+              const effective =
+                lastDecision && lastDecision.result !== 'calculated' ? lastDecision.result : result
+              const decisionDraft = decisions[entry.id] ?? {
+                requestId: crypto.randomUUID(),
+                result: 'pass' as const,
+                note: '',
+              }
               const formId = `grades-${entry.id}`
               return (
-                <tr key={entry.id} className={`grade-row-${result}`}>
+                <tr key={entry.id} className={`grade-row-${effective}`}>
                   <td dir="auto" data-label={ar ? 'الاسم الأول' : 'First name'}>
                     {student.firstName}
                   </td>
@@ -716,6 +734,9 @@ function GradePage({
                   </td>
                   <td data-label={ar ? 'النتيجة' : 'Result'}>
                     <div>
+                      {lastDecision && lastDecision.result !== 'calculated' && (
+                        <>{ar ? 'المحسوبة' : 'Calculated'}: </>
+                      )}
                       <span className={result === 'pending' ? undefined : `grade-${result}`}>
                         {resultLabel(result)}
                       </span>
@@ -742,6 +763,90 @@ function GradePage({
                         </ul>
                       )}
                     </div>
+                    {lastDecision && lastDecision.result !== 'calculated' && (
+                      <div>
+                        {ar ? 'النهائية' : 'Effective'}:{' '}
+                        <span className={`grade-${effective}`}>{resultLabel(effective)}</span>
+                      </div>
+                    )}
+                    <details>
+                      <summary>{ar ? 'تعديل النتيجة' : 'Override result'}</summary>
+                      <form
+                        onSubmit={(event) => {
+                          event.preventDefault()
+                          setDecisions((current) => ({ ...current, [entry.id]: decisionDraft }))
+                          void save('/api/admin/enrollments/decision', {
+                            id: entry.id,
+                            ...decisionDraft,
+                          }).then((ok) => {
+                            if (ok)
+                              setDecisions((current) => {
+                                const next = { ...current }
+                                delete next[entry.id]
+                                return next
+                              })
+                          })
+                        }}
+                      >
+                        <label>
+                          {ar ? 'القرار' : 'Decision'}
+                          <select
+                            value={decisionDraft.result}
+                            disabled={busy}
+                            onChange={(event) => {
+                              const result = event.target.value
+                              if (result === 'pass' || result === 'fail' || result === 'calculated')
+                                setDecisions((current) => ({
+                                  ...current,
+                                  [entry.id]: { ...decisionDraft, result },
+                                }))
+                            }}
+                          >
+                            <option value="pass">{ar ? 'ناجح' : 'Pass'}</option>
+                            <option value="fail">{ar ? 'راسب' : 'Fail'}</option>
+                            <option value="calculated">
+                              {ar ? 'استعادة النتيجة المحسوبة' : 'Restore calculated result'}
+                            </option>
+                          </select>
+                        </label>
+                        <label>
+                          {ar ? 'سبب القرار (مطلوب)' : 'Decision note (required)'}
+                          <textarea
+                            required
+                            maxLength={2000}
+                            disabled={busy}
+                            value={decisionDraft.note}
+                            onChange={(event) =>
+                              setDecisions((current) => ({
+                                ...current,
+                                [entry.id]: { ...decisionDraft, note: event.target.value },
+                              }))
+                            }
+                          />
+                        </label>
+                        <button className="secondary" disabled={busy || !decisionDraft.note.trim()}>
+                          {ar ? 'حفظ القرار' : 'Save decision'}
+                        </button>
+                      </form>
+                    </details>
+                    {entry.gradeDecisions.length > 0 && (
+                      <details>
+                        <summary>{ar ? 'سجل القرارات' : 'Decision history'}</summary>
+                        <ul>
+                          {entry.gradeDecisions.map((item) => (
+                            <li key={item.requestId} dir="auto" className="break-all">
+                              {item.at} / {item.actor} /{' '}
+                              {item.result === 'calculated'
+                                ? ar
+                                  ? 'المحسوبة'
+                                  : 'Calculated'
+                                : resultLabel(item.result)}{' '}
+                              / {item.note}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
                   </td>
                   <td data-label={ar ? 'الإجراءات' : 'Actions'}>
                     <form
