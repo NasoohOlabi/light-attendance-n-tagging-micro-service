@@ -1,5 +1,6 @@
 ﻿import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
+import { compactHeader } from './headerLayout'
 
 const account = '10000000-0000-4000-8000-000000000001'
 const otherAccount = '10000000-0000-4000-8000-000000000002'
@@ -151,6 +152,22 @@ test('remembers a validated course per account and keeps the header compact', as
   await page.screenshot({
     path: `.artifacts/verification/default-course-desktop-${test.info().project.name}.png`,
   })
+  for (const language of ['en', 'ar']) {
+    await page.evaluate((value) => localStorage.setItem('halaqa-language', value), language)
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      for (const course of [third, second]) {
+        await page.goto(`/?page=app&tab=attendance&course=${course}`)
+        await expect(label).toHaveText(course === third ? '5' : longName)
+        await compactHeader(page, '.workspace-brand')
+        await page.locator('.profile-trigger').click()
+        const menu = await page.locator('.profile-panel').boundingBox()
+        expect(menu?.x).toBeGreaterThanOrEqual(0)
+        expect(menu ? menu.x + menu.width : Infinity).toBeLessThanOrEqual(width)
+        await page.keyboard.press('Escape')
+      }
+    }
+  }
   await page.evaluate(() => localStorage.setItem('halaqa-language', 'en'))
   userId = otherAccount
   await page.goto('/?page=app')

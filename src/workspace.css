@@ -834,14 +834,3 @@
   font-size: 20px;
   font-weight: 700;
 }
-@media (min-width: 701px) {
-  .workspace-brand:has(.workspace-course-name) {
-    flex-wrap: wrap;
-  }
-  .workspace-brand:has(.workspace-course-name) .workspace-brand-name {
-    flex-basis: 100%;
-  }
-  .workspace-brand:has(.workspace-course-name) .profile-menu {
-    margin-inline-start: auto;
-  }
-}
