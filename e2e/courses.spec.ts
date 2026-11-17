@@ -253,6 +253,17 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     if (path === '/api/events') events.push(...route.request().postDataJSON().events)
     return route.fulfill({ json: { teacher, students, courses, enrollments, events } })
   })
+  const coursePanel = page
+    .locator('section.panel')
+    .filter({ has: page.locator('.course-list-table') })
+  if (testInfo.project.name === 'chromium') {
+    await page.goto('/?page=app&view=courses')
+    await expect(coursePanel).toBeVisible()
+    const panel = await coursePanel.boundingBox()
+    const content = await page.getByRole('main').boundingBox()
+    if (!panel || !content) throw new Error('Missing course list or workspace content')
+    expect(panel.y - content.y).toBeGreaterThanOrEqual(32)
+  }
   await page.goto('/?page=app')
   await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseB)
   await page.getByRole('button', { name: 'Students', exact: true }).click()
@@ -395,6 +406,10 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       }
       for (const width of [320, 390, 430]) {
         await page.setViewportSize({ width, height: 844 })
+        const panel = await coursePanel.boundingBox()
+        const header = await page.locator('.workspace-rail').boundingBox()
+        if (!panel || !header) throw new Error('Missing course list or workspace header')
+        expect(panel.y - header.y - header.height).toBeGreaterThanOrEqual(16)
         const actions = page
           .getByRole('region', {
             name:
