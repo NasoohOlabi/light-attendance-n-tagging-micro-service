@@ -11,6 +11,7 @@ let api = ''
 const adminId = '10000000-0000-4000-8000-000000000001'
 const teacherId = '10000000-0000-4000-8000-000000000002'
 const studentUserId = '10000000-0000-4000-8000-000000000003'
+const courseId = '40000000-0000-4000-8000-000000000001'
 const studentId = '20000000-0000-4000-8000-000000000001'
 let server: ChildProcess
 let origin = ''
@@ -318,6 +319,18 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
             },
           ],
           events: [],
+          courses: [{ id: courseId, name: 'Synthetic course', open: true }],
+          enrollments: [
+            {
+              id: studentId,
+              courseId,
+              studentId,
+              level: 'Group A',
+              practical: null,
+              theory: null,
+              active: true,
+            },
+          ],
         },
       })
     }
@@ -392,6 +405,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await page.reload()
   await expect(page.getByRole('button', { name: 'Take attendance' })).toBeVisible()
   await page.goto(`${origin}/?page=app&view=invalid`)
+  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseId)
   await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
   await clickAccountAction(page, 'Settings')

@@ -78,3 +78,15 @@ Apply `neon/009-unassigned-students.sql` before deploying unassigned-student sup
 Apply `neon/010-enrollment-notes.sql` before deploying enrollment notes. Version 9 transfers preserve notes; older backups restore empty notes and comparison rejects targets with nonempty notes.
 
 Apply `neon/011-grade-decisions.sql` before deploying grade overrides. Version 10 backups retain the decision history; legacy backups cannot compare with a target containing decisions. Verify migration and backup/restore on a disposable database first.
+
+Apply `neon/012-enrollment-teacher.sql` before deploying course teacher assignments. Version 11 backups preserve the nullable enrollment teacher. Earlier backups restore without course teacher assignments and comparison rejects targets containing them.
+
+After migration 012, a validated private historical enrollment plan can populate course teacher assignments without changing the roster or other enrollment fields. The command requires each existing enrollment and roster assignment to match the plan and rejects a conflicting course teacher. It updates only blank assignments; reruns are idempotent. Set `DATABASE_URL_UNPOOLED` privately, run a dry run first, then apply the same validated plan. The dry run rolls back its transaction. Keep the plan, workbook and credentials outside Git; the importer does not create enrollments or infer teachers for blank workbook cells.
+
+For the historical workbook, prepare a new private plan by checking its student and teacher cells against the original import plan and its private pre-import roster snapshot. This requires Python with `openpyxl` installed. The output path must not already exist. The adapter rejects unmatched or duplicate students and ambiguous or unmatched teachers; blank teacher cells are skipped.
+
+```powershell
+python scripts/prepare-enrollment-teachers.py <workbook.xlsx> <historical-plan.json> <before-import.json> <validated-plan.json>
+bun scripts/import-enrollment-teachers.ts dry-run <validated-plan.json>
+bun scripts/import-enrollment-teachers.ts apply <validated-plan.json>
+```

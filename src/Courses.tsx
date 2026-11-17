@@ -28,7 +28,7 @@ import { rankStudents } from './studentSearch'
 
 type Board = ReturnType<typeof neonAdminBoardSchema.parse>
 
-type Draft = { id: string; level: string }
+type Draft = { id: string; level: string; teacherId: string }
 
 export function Courses({
   userId,
@@ -37,6 +37,8 @@ export function Courses({
   exportEnrollments,
   events,
   refresh,
+  defaultCourse,
+  chooseDefault,
 }: {
   userId: string
   courses: Course[]
@@ -44,6 +46,8 @@ export function Courses({
   exportEnrollments: Enrollment[]
   events: LedgerEvent[]
   refresh: () => Promise<void>
+  defaultCourse: string
+  chooseDefault: (course: string) => void
 }) {
   const { language } = useLanguage()
   const ar = language === 'ar'
@@ -128,6 +132,16 @@ export function Courses({
         ),
     },
     {
+      id: 'teacher',
+      label: ar ? '\u0627\u0644\u0645\u0639\u0644\u0645' : 'Teacher',
+      value: (s) => {
+        const teacherId =
+          drafts[`${course?.id}:${s.studentId}`]?.teacherId ??
+          courseEntries.find((entry) => entry.studentId === s.studentId)?.teacherId
+        return board?.teachers.find((teacher) => teacher.teacherId === teacherId)?.name ?? ''
+      },
+    },
+    {
       id: 'enrolled',
       choices: ar ? ['نعم', 'لا'] : ['Yes', 'No'],
       label: ar ? 'مسجل' : 'Enrolled',
@@ -184,7 +198,20 @@ export function Courses({
                   {courseTable.rows.map((item) => (
                     <tr key={item.id} role="row">
                       <td dir="auto" role="cell">
-                        {item.name}
+                        <span>{item.name}</span>
+                        <button
+                          className="secondary course-current"
+                          disabled={!item.open || item.id === defaultCourse}
+                          onClick={() => chooseDefault(item.id)}
+                        >
+                          {item.id === defaultCourse
+                            ? ar
+                              ? '\u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u062d\u0627\u0644\u064a\u0629'
+                              : 'Current course'
+                            : ar
+                              ? '\u062a\u0639\u064a\u064a\u0646 \u0643\u062f\u0648\u0631\u0629 \u062d\u0627\u0644\u064a\u0629'
+                              : 'Make current'}
+                        </button>
                       </td>
                       <td role="cell">
                         {item.open ? (ar ? 'مفتوحة' : 'Open') : ar ? 'مغلقة' : 'Closed'}
@@ -357,6 +384,7 @@ export function Courses({
                       const draft = drafts[draftKey] ?? {
                         id: entry?.id ?? '',
                         level: entry ? entry.level : student.group,
+                        teacherId: entry?.teacherId ?? '',
                       }
                       const saveMembership = (active: boolean) => {
                         const id = draft.id || crypto.randomUUID()
@@ -369,6 +397,7 @@ export function Courses({
                           courseId: course.id,
                           studentId: student.studentId,
                           level: draft.level,
+                          teacherId: draft.teacherId || null,
                           active,
                         })
                       }
@@ -396,6 +425,27 @@ export function Courses({
                                 }))
                               }
                             />
+                          </td>
+                          <td data-label={ar ? '\u0627\u0644\u0645\u0639\u0644\u0645' : 'Teacher'}>
+                            <select
+                              aria-label={`${ar ? '\u0627\u0644\u0645\u0639\u0644\u0645' : 'Teacher'}: ${student.firstName} ${student.lastName}`}
+                              value={draft.teacherId}
+                              onChange={(event) =>
+                                setDrafts((current) => ({
+                                  ...current,
+                                  [draftKey]: { ...draft, teacherId: event.target.value },
+                                }))
+                              }
+                            >
+                              <option value="">
+                                {ar ? '\u0628\u0644\u0627 \u0645\u0639\u0644\u0645' : 'No teacher'}
+                              </option>
+                              {board?.teachers.map((teacher) => (
+                                <option key={teacher.teacherId} value={teacher.teacherId}>
+                                  {teacher.name}
+                                </option>
+                              ))}
+                            </select>
                           </td>
                           <td data-label={ar ? 'مسجل' : 'Enrolled'}>
                             <input
@@ -429,7 +479,7 @@ export function Courses({
                               disabled={busy || !entry}
                               onClick={() => saveMembership(entry?.active ?? false)}
                             >
-                              {ar ? 'حفظ المستوى' : 'Save level'}
+                              {ar ? 'حفظ المستوى والمعلم' : 'Save level and teacher'}
                             </button>
                           </td>
                         </tr>

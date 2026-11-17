@@ -74,7 +74,22 @@ test('remembers a validated course per account and keeps the header compact', as
   const label = page.locator('.workspace-course-name')
   await expect(defaultPicker).toHaveValue('')
   await expect(defaultPicker.locator('option')).toHaveCount(5)
-  await defaultPicker.selectOption(first)
+  await page.getByRole('button', { name: 'Take attendance' }).click()
+  await expect(page.getByText('Choose an open course to take attendance.')).toBeVisible()
+  await page.getByRole('button', { name: 'Go to courses', exact: true }).click()
+  await page
+    .getByRole('row')
+    .filter({ hasText: branded })
+    .getByRole('button', { name: 'Make current' })
+    .click()
+  await expect(
+    page
+      .getByRole('row')
+      .filter({ hasText: branded })
+      .getByRole('button', { name: 'Current course' }),
+  ).toBeDisabled()
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
+  await expect(defaultPicker).toHaveValue(first)
   await expect(label).toHaveText('\u0665')
   await expect(label).toHaveAttribute('aria-label', branded)
   await page.locator('.profile-trigger').click()

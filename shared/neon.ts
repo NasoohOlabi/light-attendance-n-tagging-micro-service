@@ -49,6 +49,8 @@ export const enrollmentSchema = z.object({
   id: z.uuid(),
   courseId: z.uuid(),
   studentId: z.uuid(),
+  teacherId: z.uuid().nullable().default(null),
+  teacherName: z.string().nullable().default(null),
   level: z.string().trim().max(200),
   practical: z.number().min(0).max(100).nullable(),
   theory: z.number().min(0).max(100).nullable(),
@@ -62,6 +64,7 @@ export const enrollmentHandbookSchema = z.strictObject({
   handbookReceived: z.boolean(),
 })
 export const enrollmentMembershipSchema = z.strictObject({
+  teacherId: z.uuid().nullable().optional(),
   id: z.uuid(),
   courseId: z.uuid(),
   studentId: z.uuid(),
@@ -167,6 +170,7 @@ export const neonAdminStudentSchema = z.union([
 export const neonAdminStudentEnrollSchema = z.strictObject({
   student: neonAdminStudentSchema,
   enrollment: z.strictObject({
+    teacherId: z.uuid().nullable().optional(),
     id: z.uuid(),
     courseId: z.uuid(),
     level: z.string().trim().max(200),

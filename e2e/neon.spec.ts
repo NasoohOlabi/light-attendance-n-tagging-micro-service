@@ -5,6 +5,18 @@ import { mkdir } from 'node:fs/promises'
 
 test.use({ trace: 'off' })
 
+const courseId = '40000000-0000-4000-8000-000000000001'
+const enrollmentFor = (studentId: string) => ({
+  id: studentId,
+  courseId,
+  studentId,
+  level: '',
+  practical: null,
+  theory: null,
+  active: true,
+})
+const courses = [{ id: courseId, name: 'Synthetic course', open: true }]
+
 let auth = ''
 let api = ''
 const users = [
@@ -201,6 +213,8 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
           },
         ],
         events: events[selected.id] ?? [],
+        courses,
+        enrollments: [enrollmentFor(selected.studentId)],
       },
       headers,
     })
@@ -215,6 +229,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0)
   releaseApproval()
   await expect(page.getByRole('button', { name: 'Add student', exact: true })).toHaveCount(0)
+  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseId)
   await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByText('Alpha Student')).toBeVisible()
   await expect(page.getByText('Beta Student')).toHaveCount(0)
@@ -235,6 +250,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.getByLabel('Email').fill(users[1].email)
   await page.getByLabel('Password').fill('synthetic-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseId)
   await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByText('Beta Student')).toBeVisible()
   await expect(page.getByText('Alpha Student')).toHaveCount(0)
@@ -399,12 +415,14 @@ test('account retry ignores stale denial and notebook waits for its snapshot', a
             },
           ],
           events: [],
+          courses,
+          enrollments: [enrollmentFor(user.studentId)],
         },
       })
       .catch(() => {})
   })
   await page.setViewportSize({ width: 320, height: 568 })
-  await page.goto(`${origin}/?page=app&tab=attendance`)
+  await page.goto(`${origin}/?page=app&tab=attendance&course=${courseId}`)
   await expect(page.getByText('Loading your notebook\u2026')).toBeVisible()
   await expect(page.getByRole('button', { name: /Sign out|Explore|Grow/ })).toHaveCount(0)
   await expect(page.getByRole('alert')).toContainText('notebook request failed', { timeout: 20000 })
@@ -470,10 +488,13 @@ async function mockTeacher(page: Page, post: () => Promise<void>) {
           },
         ],
         events: [],
+        courses,
+        enrollments: [enrollmentFor(user.studentId)],
       },
     })
   })
   await page.goto(`${origin}/?page=app`)
+  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseId)
   await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByLabel('Attendance for Alpha Student')).toBeVisible()
 }
@@ -558,8 +579,16 @@ test('malformed notebook snapshots block saving', async ({ page }) => {
   await page.route(`${api}/notebook`, (route) =>
     route.fulfill({ json: { students: 'invalid', events: [] } }),
   )
+  await page
+    .getByRole('navigation', { name: 'Notebook' })
+    .getByRole('button', { name: 'Students' })
+    .click()
   await page.getByRole('button', { name: 'Refresh', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('The notebook request failed')
+  await page
+    .getByRole('navigation', { name: 'Notebook' })
+    .getByRole('button', { name: 'Attendance' })
+    .click()
   await saveAttendance(page)
   await expect(page.getByRole('alert')).toContainText('The notebook request failed')
   expect(posts).toBe(0)

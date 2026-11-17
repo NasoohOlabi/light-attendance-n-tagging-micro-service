@@ -1635,3 +1635,21 @@
 **Main integration at 22:06 Asia/Damascus** PR #96 checks passed on `e4a59f7`. GitHub rejected the squash merge after `main` advanced to `e4d5097` with the desktop workspace inset from PR #95. Merged `main` and resolved the work-log conflict by preserving both entries. The application changes combined cleanly.
 
 **Integrated gate at 22:10 Asia/Damascus** `bun run verify:release` passed on Bun 1.3.0 with 114 browser checks, 33 local tests and 137 assertions. Four optional database tests skipped. The suite used port 4273 because 4173 was busy. The focused alignment check also reproduced the offset against the previous Railway build with synthetic API responses. Fresh PR checks and exact-main deployment verification follow.
+
+## 2026-11-17 22:10 Asia/Damascus — Course attendance and enrollment teachers
+
+New attendance requires an active enrollment in an open course. Existing unscoped history, corrections and identical retries remain available. Each enrollment has a nullable reference to an existing teacher, independently of roster access or grading. Backup version 11 restores the reference and rejects lossy comparisons.
+
+The core verification gate passed. Disposable PostgreSQL 18.6 passed the course integration with 111 assertions and the backup transfer integration with 70. Production migration 012 committed and the foreign key was verified. Workbook import and UI verification are recorded separately.
+
+### 22:12 Asia/Damascus — Private workbook import
+
+Matched all 32 nonblank teacher cells in the supplied workbook to seven existing teachers and their course enrollments, using the original private roster import IDs. The other 39 named rows had blank teacher cells. Added a private workbook adapter and transactional import command. The adapter test passed. The production dry run matched 32, the transaction assigned 32, and a second dry run matched all 32 with zero changes. Removed temporary Railway SSH access. The workbook and identity mappings stay outside Git.
+
+### 22:17 Asia/Damascus — Select the current course and mark its roster
+
+Courses shows Make current beside the name. Attendance names the course and shows an alphabetical roster with enrollment teacher, level and status. Missing or closed courses direct staff to select an open course. Attendance ignores the search and numbered roster filters from other tabs. Administrators can save an enrollment teacher in Manage students. Desktop and mobile checks covered the course action, teacher edit and readback, sample saves, summary history, and table controls. No new production attendance was recorded.
+
+### 22:20 Asia/Damascus — Release verification
+
+The integrated release gate passed with 116 desktop/mobile browser cases, 33 local tests and all build, format, artifact and security checks. All four optional database suites were also run on disposable PostgreSQL: course 111 assertions, transfer 70, student names 50, and authenticated Railway API 34. Tests used synthetic identities. The live import was verified independently by the idempotent production readback.

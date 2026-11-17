@@ -40,6 +40,21 @@ describe('assigned roster', () => {
       ),
     ).toThrow()
     expect(() => validateAssignedPayloads([foreign.payload], students, [own, other])).toThrow()
-    expect(() => validateAssignedPayloads([own.payload], students, [own])).not.toThrow()
+    expect(() => validateAssignedPayloads([own.payload], students, [own])).toThrow()
+    expect(() =>
+      validateAssignedPayloads(
+        [
+          {
+            kind: 'attendance',
+            studentId: studentA,
+            enrollmentId: studentA,
+            date: '2026-11-13',
+            status: 'present',
+          },
+        ],
+        students,
+        [own],
+      ),
+    ).not.toThrow()
   })
 })

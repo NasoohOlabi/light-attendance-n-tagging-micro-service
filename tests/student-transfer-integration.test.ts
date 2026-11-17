@@ -14,7 +14,7 @@ integration(
     if (!url) throw new Error('Disposable database required')
     const admin = new Pool({ connectionString: url })
     const names = Array.from(
-      { length: 11 },
+      { length: 12 },
       () => `transfer_${crypto.randomUUID().replaceAll('-', '')}`,
     )
     const pools: Pool[] = []
@@ -27,7 +27,7 @@ integration(
       !localPath.startsWith('transfer-test-')
     )
       throw new Error('Refusing cleanup outside the disposable transfer directory')
-    const files = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((version) =>
+    const files = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((version) =>
       resolve(directory, `v${version}.json`),
     )
     const run = (command: string, file: string, dbUrl: string, succeeds = true) => {
@@ -186,6 +186,14 @@ integration(
       )
       run('export', files[9], urls[0])
       run('compare', files[8], urls[0], false)
+      await migrate(source, 'neon/012-enrollment-teacher.sql')
+      run('compare', files[9], urls[0])
+      await source.query('UPDATE course_enrollments SET teacher_id = $1 WHERE id = $2', [
+        teacher,
+        enrollmentA,
+      ])
+      run('compare', files[9], urls[0], false)
+      run('export', files[10], urls[0])
       for (let index = 0; index < targets.length; index++) {
         await migrate(targets[index], 'neon/003-courses.sql')
         await migrate(targets[index], 'neon/004-student-names.sql')
@@ -201,9 +209,13 @@ integration(
           run('import', files[index], urls[index + 1], false)
           await migrate(targets[index], 'neon/010-enrollment-notes.sql')
         }
-        if (index === 9) {
+        if (index >= 9) {
           run('import', files[index], urls[index + 1], false)
           await migrate(targets[index], 'neon/011-grade-decisions.sql')
+        }
+        if (index === 10) {
+          run('import', files[index], urls[index + 1], false)
+          await migrate(targets[index], 'neon/012-enrollment-teacher.sql')
         }
         run('import', files[index], urls[index + 1])
         run('compare', files[index], urls[index + 1])
@@ -216,7 +228,14 @@ integration(
                 .version,
           ),
         ),
-      ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+      ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+      expect(
+        (
+          await targets[10].query('SELECT teacher_id FROM course_enrollments WHERE id = $1', [
+            enrollmentA,
+          ])
+        ).rows[0].teacher_id,
+      ).toBe(teacher)
       expect(
         (
           await targets[9].query('SELECT grade_decisions FROM course_enrollments WHERE id = $1', [

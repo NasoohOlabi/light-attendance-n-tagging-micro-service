@@ -67,6 +67,9 @@ integration(
       const decisionMigration = await readFile('neon/011-grade-decisions.sql', 'utf8')
       await pool.query(decisionMigration)
       await pool.query(decisionMigration)
+      const teacherMigration = await readFile('neon/012-enrollment-teacher.sql', 'utf8')
+      await pool.query(teacherMigration)
+      await pool.query(teacherMigration)
       for (const [id, subject] of [
         [adminId, subjects.admin],
         [teacherId, subjects.teacher],
@@ -113,6 +116,53 @@ integration(
         })
         expect(enrolled.status, await enrolled.clone().text()).toBe(200)
       }
+      const teacherMembership = {
+        id: enrollmentIds[0],
+        courseId: courseIds[0],
+        studentId,
+        level: 'Level 1',
+        active: true,
+      }
+      expect(
+        (
+          await call('/api/admin/enrollments/membership', subjects.admin, {
+            ...teacherMembership,
+            teacherId,
+          })
+        ).status,
+      ).toBe(200)
+      expect(
+        (await call('/api/admin/enrollments/membership', subjects.admin, teacherMembership)).status,
+      ).toBe(200)
+      const assignedTeacher = neonSnapshotSchema.parse(
+        await (await call('/api/notebook', subjects.admin)).json(),
+      )
+      expect(
+        assignedTeacher.enrollments.find((entry) => entry.id === enrollmentIds[0]),
+      ).toMatchObject({ teacherId, teacherName: 'Synthetic course teacher' })
+      expect(
+        (
+          await call('/api/admin/enrollments/membership', subjects.admin, {
+            ...teacherMembership,
+            teacherId: crypto.randomUUID(),
+          })
+        ).status,
+      ).toBe(400)
+      expect(
+        (
+          await call('/api/admin/enrollments/membership', subjects.admin, {
+            ...teacherMembership,
+            teacherId: null,
+          })
+        ).status,
+      ).toBe(200)
+      expect(
+        (
+          await pool.query('SELECT teacher_id FROM course_enrollments WHERE id = $1', [
+            enrollmentIds[0],
+          ])
+        ).rows[0].teacher_id,
+      ).toBeNull()
       const settings = {
         id: courseIds[0],
         attendanceMinimum: 60,
@@ -570,6 +620,26 @@ integration(
         status: 'present',
       })
       expect((await call('/api/events', subjects.teacher, { events: [unscoped] })).status).toBe(403)
+      await pool.query(
+        'INSERT INTO events (id, teacher_id, student_id, actor, client_time, payload) VALUES ($1, $2, $3, $4, $5, $6::jsonb)',
+        [
+          unscoped.id,
+          teacherId,
+          studentId,
+          unscoped.actor,
+          unscoped.clientTime,
+          JSON.stringify(unscoped.payload),
+        ],
+      )
+      expect((await call('/api/events', subjects.teacher, { events: [unscoped] })).status).toBe(200)
+      expect(
+        (
+          await call('/api/events', subjects.teacher, {
+            events: [{ ...unscoped, payload: { ...unscoped.payload, status: 'absent' } }],
+          })
+        ).status,
+      ).toBe(409)
+      await pool.query('DELETE FROM events WHERE id = $1', [unscoped.id])
       const mismatched = makeEvent('Synthetic course teacher', {
         kind: 'attendance',
         studentId: otherStudentId,

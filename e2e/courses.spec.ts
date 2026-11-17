@@ -1,4 +1,4 @@
-﻿import { clickAccountAction } from './profileActions'
+import { clickAccountAction } from './profileActions'
 import { expect, test, type Locator } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import { enrollmentSchema, courseSchema } from '../shared/neon'
@@ -38,8 +38,6 @@ async function expectCompactLevel(list: Locator) {
   expect(geometry.widths[geometry.levelIndex]).toBeLessThanOrEqual(112)
   expect(geometry.widths[0]).toBeGreaterThan(geometry.widths[geometry.levelIndex] * 1.5)
   expect(geometry.levelAlignment).toBeLessThanOrEqual(2)
-  if (geometry.widths.length === 4)
-    expect(geometry.widths.slice(1).every((width) => width <= 128)).toBe(true)
 }
 
 test('course enrollment and same-day attendance stay separate', async ({ page }, testInfo) => {
@@ -71,6 +69,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   const enrollments = [
     {
       id: enrollA,
+      teacherId: null as string | null,
+      teacherName: null as string | null,
       courseId: courseA,
       studentId,
       level: '',
@@ -82,6 +82,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     },
     {
       id: enrollB,
+      teacherId: null as string | null,
+      teacherName: null as string | null,
       courseId: courseB,
       studentId,
       level: 'Advanced',
@@ -183,7 +185,12 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     if (path === '/api/admin/enrollments/membership') {
       const body = route.request().postDataJSON()
       const index = enrollments.findIndex((entry) => entry.id === body.id)
-      if (index >= 0) enrollments[index] = { ...enrollments[index], ...body }
+      if (index >= 0)
+        enrollments[index] = {
+          ...enrollments[index],
+          ...body,
+          teacherName: body.teacherId ? 'Admin' : null,
+        }
       else enrollments.push({ ...body, practical: null, theory: null, handbookReceived: false })
       return route.fulfill({ json: { saved: true } })
     }
@@ -343,15 +350,10 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(attendanceRow.getByRole('cell').nth(1)).toHaveText('Advanced')
   await expect(attendanceRow.getByRole('cell').first()).toHaveText('Synthetic Student')
   await expectCompactLevel(page.getByRole('region', { name: 'Attendance list' }))
-  await page.getByRole('button', { name: 'All my students' }).click()
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseA)
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(attendanceRow.getByRole('cell').nth(1)).toHaveText('—')
-  await page.getByLabel('Find a student').fill('Synthetic')
-  await expect(attendanceRow.getByRole('cell').nth(1)).toHaveText('—')
-  await expect(attendanceRow.getByRole('cell').first()).toHaveText('Synthetic Student')
-  await page.getByLabel('Find a student').fill('')
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await clickAccountAction(page, 'العربية')
   const arabicList = page.getByRole('region', { name: 'قائمة الطلاب' })
@@ -415,7 +417,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
                 ? 'Course list'
                 : '\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062f\u0648\u0631\u0627\u062a',
           })
-          .locator('tbody tr button')
+          .locator('tbody tr td:last-child button')
         await expect(actions).toHaveCount(10)
         const bounds = await actions.evaluateAll((buttons) =>
           buttons.map((button) => {
@@ -514,7 +516,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       const table = page.getByRole('region', {
         name: '\u0637\u0644\u0627\u0628 \u0627\u0644\u062f\u0648\u0631\u0629',
       })
-      await expect(table.getByRole('columnheader')).toHaveCount(7)
+      await expect(table.getByRole('columnheader')).toHaveCount(8)
       expect(await table.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
         true,
       )
@@ -580,6 +582,14 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .click()
   await expect(page.getByLabel('Handbook received: Synthetic Student')).not.toBeChecked()
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('Advanced')
+  await page.getByLabel('Teacher: Synthetic Student').selectOption(teacherId)
+  await page
+    .getByRole('row')
+    .filter({ hasText: 'Synthetic' })
+    .getByRole('button', { name: 'Save level' })
+    .click()
+  await expect.poll(() => enrollments[1].teacherId).toBe(teacherId)
+  expect(enrollments[1].level).toBe('Advanced')
   await page.getByLabel('Course level: Synthetic Student').fill('Updated B')
   await page
     .getByRole('row')
@@ -907,6 +917,14 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseB)
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
+  await expect(
+    page
+      .getByRole('region', { name: 'Attendance list' })
+      .getByRole('row')
+      .filter({ hasText: 'Synthetic Student' })
+      .getByRole('cell')
+      .nth(2),
+  ).toHaveText('Admin')
   await page.getByLabel('Attendance for Synthetic Student').selectOption('absent')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await expect.poll(() => events.length).toBe(2)

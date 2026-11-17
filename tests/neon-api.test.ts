@@ -5,13 +5,15 @@ import { eventSchema, type LedgerEvent } from '../shared/ledger'
 
 const teacherId = '11111111-1111-4111-8111-111111111111'
 const studentId = '22222222-2222-4222-8222-222222222222'
+const courseId = '44444444-4444-4444-8444-444444444444'
+const enrollmentId = '55555555-5555-4555-8555-555555555555'
 const eventId = '33333333-3333-4333-8333-333333333333'
 const event = {
   id: eventId,
   actor: 'Teacher',
   clientTime: '2026-11-13T12:00:00.000Z',
   receivedAt: '',
-  payload: { kind: 'attendance', studentId, date: '2026-11-13', status: 'present' },
+  payload: { kind: 'attendance', studentId, enrollmentId, date: '2026-11-13', status: 'present' },
 } satisfies LedgerEvent
 function setup(
   options: {
@@ -64,6 +66,25 @@ function setup(
               ? []
               : [{ id: studentId, name: 'Student', group_name: '', active: true }],
         }
+      if (
+        sql.includes('FROM course_enrollments ce JOIN students s') &&
+        sql.includes('FOR SHARE OF ce')
+      )
+        return {
+          rows: [
+            {
+              id: enrollmentId,
+              courseId,
+              studentId,
+              level: '',
+              practical: null,
+              theory: null,
+              active: true,
+            },
+          ],
+        }
+      if (sql.startsWith('SELECT c.id, c.name, c.open'))
+        return { rows: [{ id: courseId, name: 'Course', open: true }] }
       if (sql.startsWith('SELECT e.id')) return { rows }
       if (sql.startsWith('INSERT INTO events')) {
         if (rows.some((row) => row.id === values[0])) return { rows: [], rowCount: 0 }
@@ -162,7 +183,7 @@ describe('Neon API boundary', () => {
       actor: 'Private teacher',
       client_time: new Date(event.clientTime),
       received_at: new Date(),
-      payload: { ...event.payload, status: 'late' },
+      payload: { kind: 'attendance', studentId, date: '2026-11-13', status: 'late' },
     })
     const response = await call('/api/student/attendance')
     expect(response.status).toBe(200)
