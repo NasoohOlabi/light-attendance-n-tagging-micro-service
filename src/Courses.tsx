@@ -759,7 +759,7 @@ function GradePage({
                       />
                     </td>
                   ))}
-                  <td data-label={ar ? 'ملاحظات' : 'Notes'}>
+                  <td className="grade-notes" data-label={ar ? 'ملاحظات' : 'Notes'}>
                     <textarea
                       form={formId}
                       className="resize-y min-[1025px]:min-w-48"
