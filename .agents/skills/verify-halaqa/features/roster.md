@@ -39,3 +39,5 @@ The notebook Students status cells use a circled check for active students and a
 Verify an active and an inactive unassigned student appear in the full administrator list with localized Unassigned, edit and save without an assignment, then assign an approved active teacher. Existing inactive or provisional teacher assignments remain selectable for profile edits but cannot be newly assigned. Verify teachers cannot access unassigned students. Apply `neon/009-unassigned-students.sql` to disposable databases.
 
 Staff phone displays in Students, Student information and Administrator register use isolated LTR dial links: verify synthetic local leading-zero, bare international, explicit +/00, missing and invalid values in English and Arabic at phone widths. Editing retains raw values; filters and sorting use the stored values.
+
+Whole-number decimal levels display without the zero-only fraction in roster, filters, profile, history and student portal. Editing a different field preserves the original stored level. Fractional and named levels remain unchanged.

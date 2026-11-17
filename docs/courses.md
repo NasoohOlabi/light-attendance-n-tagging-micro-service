@@ -1,4 +1,4 @@
-﻿# Courses and enrollment
+# Courses and enrollment
 
 Administrators open **Courses** to see every saved course, including courses with no students. The default is the list; **Create course** opens a separate page and returns to the list after saving. Create/edit a course, **Manage students**, and **Grades** are separate destinations with individual page headings and the notebook navigation retained. Course pages omit the generic notebook introduction and unrelated student count. The localized account role appears once in the header. Choose a course from its row rather than combining course/student selectors and scores in one form.
 
@@ -19,6 +19,8 @@ The notebook **Students** list and both grouped/searched **Attendance** use the 
 For Administrators, **Students** defaults to **All students**, showing the complete register, including inactive historical and unassigned students. Switching back from a course restores that full list and its count. Its separate **Courses** column lists every active enrollment's course name as a badge, including closed courses; withdrawn memberships are omitted and no enrollment displays localized None. The names stay separate from roster and enrollment levels. This read view leaves active status unchanged; inactive students remain ineligible for new attendance and notes, and current course/attendance/Grades views retain their existing scope. Teachers continue to see only their active assigned students. Other notebook tabs retain **Previous / no course** for historical unscoped attendance.
 
 Inactive enrollments remain available for historical attendance, corrections and grades. Current attendance and current enrolled-roster/dashboard counts exclude them. Teacher assignment and Student privacy restrictions still apply.
+
+Grades omits the redundant Enrolled column; use Manage students to inspect or change current membership. Historical grades remain visible after withdrawal. Across the notebook, whole-number numeric levels display without a decimal suffix (`1.0` becomes `1`). Named levels and meaningful fractional values remain intact, blank course levels stay blank, and stored values are preserved.
 
 Migration `neon/005-active-enrollments.sql` adds an active membership flag, defaulting existing enrollments to active, without deleting data. Backup versions 4 and later preserve that flag; versions 1–3 remain supported without silently hiding inactive memberships. Test against a disposable database first; synthetic tests do not verify the live provider.
 
@@ -41,5 +43,7 @@ Table headings provide quick single-column sorting. Hold Shift while clicking an
 Grades includes optional multiline enrollment notes, saved with each row. Notes belong to that student and course, survive membership and grade changes, and are visible only to authorized staff; student attendance responses exclude them. Migration 010 adds the field with an empty default. Version 9 backups preserve it; older backups cannot compare against nonempty enrollment notes.
 
 Grades opens directly on existing student records. Its Sort icon sits beside the page title, with no separate configuration row or Filter icon. Use the existing Courses navigation to return to the saved course list; Grades has no duplicate Back button. Saved Grades URL filters are ignored; heading sorting and the sort popup remain available. Edit scores and notes on each student's row. Student creation and membership remain on their separate screens. Other tables keep their filters inside the Filter popup.
+
+Grades uses a bounded scrolling table on desktop, with opaque sticky column headings. The title, Sort control and grading thresholds stay outside the table scroll area. Focus the Course grades region to scroll it with the keyboard. On phones and other stacked layouts, records continue to use normal page scrolling without a nested vertical scroller.
 
 Administrators can export an Excel workbook from Grades. It includes saved course status and thresholds, every enrollment including withdrawn memberships and inactive roster students, saved scores and projected course attendance for all dates. Inactive roster students are exported even though they are not shown on Grades. Zero scores remain numeric and missing scores and attendance rates remain blank. The export excludes notes and is disabled while grade or threshold edits are unsaved. Sort and other page filters do not change its rows.

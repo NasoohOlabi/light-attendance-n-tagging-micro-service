@@ -1,3 +1,4 @@
+import { formatLevel } from './levelFormat'
 import { TableHeader, useDataTable } from './DataTable'
 import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -83,7 +84,7 @@ export function StudentAttendance({
               </div>
               <div>
                 <dt>{ar ? 'مستوى السجل' : 'Roster level'}</dt>
-                <dd dir="auto">{data.student.group || '—'}</dd>
+                <dd dir="auto">{formatLevel(data.student.group) || '—'}</dd>
               </div>
             </dl>
           )}

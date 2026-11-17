@@ -613,3 +613,16 @@
   background: white;
   box-shadow: 0 6px 24px #004d5726;
 }
+
+@media (min-width: 64.001rem) {
+  .grade-table-scroll {
+    max-height: max(16rem, 55vh);
+    overflow-y: auto;
+  }
+  .grade-table-scroll thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #fff;
+  }
+}
