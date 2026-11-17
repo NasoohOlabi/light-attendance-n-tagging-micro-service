@@ -415,6 +415,7 @@ function Notebook({
           <Courses
             userId={neon.userId}
             courses={ledger.courses}
+            exportEnrollments={ledger.enrollments}
             enrollments={ledger.enrollments.filter((entry) =>
               ledger.roster.some(
                 (student) => student.active && student.studentId === entry.studentId,
