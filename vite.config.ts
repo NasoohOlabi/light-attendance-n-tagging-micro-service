@@ -97,8 +97,8 @@ export default defineConfig(({ mode }) => ({
           {
             name: 'verification-api-boundary',
             configurePreviewServer(server) {
-              server.middlewares.use('/api', (_request, response) => {
-                response.statusCode = 401
+              server.middlewares.use('/api', (request, response) => {
+                response.statusCode = request.url?.split('?')[0] === '/auth/get-session' ? 200 : 401
                 response.setHeader('Content-Type', 'application/json')
                 response.end('null')
               })

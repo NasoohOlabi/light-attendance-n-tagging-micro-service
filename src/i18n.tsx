@@ -101,10 +101,7 @@ const arabic = {
   inactive: 'غير نشط',
   device: 'الجهاز',
   Undone: 'تم التراجع',
-  'Tap the bookmark to grow it': 'اضغط على العلامة لتنمو',
-  'Grow the bookmark': 'أنمِ العلامة',
-  'Could not check your session. Try again or explore a sample.':
-    'تعذّر التحقق من جلستك. حاول مجدداً أو استكشف نموذجاً.',
+  'Could not check your session. Please try again.': 'تعذّر التحقق من جلستك. حاول مجدداً.',
   'Try again': 'حاول مجدداً',
   'Loading your session…': 'جارٍ تحميل جلستك…',
   'Loading your notebook…': 'جارٍ تحميل دفترك…',

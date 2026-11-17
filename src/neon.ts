@@ -23,7 +23,12 @@ export class NeonRequestError extends Error {
   }
 }
 
-export async function request(path: string, userId: string, body?: unknown): Promise<unknown> {
+export async function request(
+  path: string,
+  userId: string,
+  body?: unknown,
+  reportDenial = true,
+): Promise<unknown> {
   if (!authClient || !apiUrl) throw new Error('Notebook configuration is unavailable.')
   const session = await authClient.getSession({
     fetchOptions: { signal: AbortSignal.timeout(15000) },
@@ -40,14 +45,16 @@ export async function request(path: string, userId: string, body?: unknown): Pro
     signal: AbortSignal.timeout(15000),
   })
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403)
+    if (reportDenial && (response.status === 401 || response.status === 403))
       window.dispatchEvent(new CustomEvent('neon-access-denied', { detail: response.status }))
     throw new NeonRequestError(response.status)
   }
   return response.json() as Promise<unknown>
 }
 export async function getAccount(userId: string) {
-  return z.object({ account: neonAccountSchema }).parse(await request('/api/me', userId)).account
+  return z
+    .object({ account: neonAccountSchema })
+    .parse(await request('/api/me', userId, undefined, false)).account
 }
 export async function getTeacher(userId: string) {
   try {

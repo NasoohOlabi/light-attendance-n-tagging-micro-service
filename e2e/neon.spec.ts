@@ -230,7 +230,8 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByText('Loading your notebook…')).toBeVisible()
   await expect(page.getByText('Alpha Student')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Explore with sample students' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Explore with sample students' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0)
   releaseApproval()
   await expect(page.getByRole('button', { name: 'Add student', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Take attendance' }).click()
@@ -238,6 +239,9 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await expect(page.getByText('Beta Student')).toHaveCount(0)
   await page.getByLabel('Attendance for Alpha Student').selectOption('present')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
+  await expect(page.getByRole('alert')).toContainText(
+    'The save may already have reached the server',
+  )
   await expect(page.getByRole('button', { name: 'Retry pending batch' })).toBeVisible()
   await page.getByRole('button', { name: 'Retry pending batch' }).click()
   await expect(page.getByText('1 record saved.')).toBeVisible()
@@ -255,64 +259,70 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await expect(page.getByText('Alpha Student')).toHaveCount(0)
 })
 
-test('session restoration keeps the public sign-in usable', async ({ page }) => {
+test('session restoration shows a neutral placeholder until signed out', async ({ page }) => {
   let release = () => {}
   const held = new Promise<void>((resolve) => {
     release = resolve
   })
   await page.route(`${auth}/**`, async (route) => {
-    if (route.request().method() !== 'OPTIONS') await held
-    await route.fulfill({
-      headers: {
-        'access-control-allow-origin': origin,
-        'access-control-allow-credentials': 'true',
-      },
-      json: null,
-    })
+    await held
+    await route.fulfill({ json: null }).catch(() => {})
   })
+  await page.setViewportSize(
+    test.info().project.name === 'mobile'
+      ? { width: 320, height: 568 }
+      : { width: 1280, height: 800 },
+  )
   await page.goto(`${origin}/?page=app`)
-  await expect(page.getByLabel('Email')).toBeVisible({ timeout: 3000 })
-  await page.getByLabel('Email').fill('synthetic@example.test')
-  await expect(page.getByRole('button', { name: 'Explore with sample students' })).toBeVisible()
-  const bookmark = page.getByRole('button', { name: 'Grow the bookmark' })
-  const before = await bookmark.innerHTML()
-  await bookmark.focus()
-  await page.keyboard.press('Enter')
-  expect(await bookmark.innerHTML()).not.toBe(before)
-  await page.getByRole('button', { name: 'العربية' }).click()
-  await mkdir('.artifacts/auth-loading', { recursive: true })
-  await page.screenshot({
-    path: `.artifacts/auth-loading/${test.info().project.name}-ar.png`,
-    fullPage: true,
-  })
-  await page.getByRole('button', { name: 'English' }).click()
-  await expect(page.getByLabel('Email')).toHaveValue('synthetic@example.test')
-  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeDisabled()
+  await expect(page.getByText('Loading your session…')).toBeVisible()
+  await expect(page.getByLabel('Email')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Explore|Grow|Sign out/ })).toHaveCount(0)
+  await mkdir('.artifacts/verification', { recursive: true })
+  await page.screenshot({ path: `.artifacts/verification/loading-${test.info().project.name}.png` })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  )
   release()
-  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeEnabled()
+  await expect(page.getByLabel('Email')).toBeVisible()
+})
+
+test('Arabic session placeholder fits a narrow screen', async ({ page }) => {
+  let release = () => {}
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.addInitScript(() => localStorage.setItem('halaqa-language', 'ar'))
+  await page.route(`${auth}/**`, async (route) => {
+    await held
+    await route.fulfill({ json: null }).catch(() => {})
+  })
+  await page.setViewportSize({ width: 320, height: 568 })
+  await page.goto(`${origin}/?page=app`)
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+  await mkdir('.artifacts/verification', { recursive: true })
+  await page.screenshot({
+    path: `.artifacts/verification/loading-ar-${test.info().project.name}.png`,
+  })
+  await expect(page.getByRole('status')).toBeVisible()
+  await expect(page.getByLabel('Email')).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  )
   release()
 })
 
-test('failed session check offers retry without losing input', async ({ page }) => {
+test('failed session check offers retry', async ({ page }) => {
   let fail = true
   await page.route(`${auth}/**`, async (route) => {
-    const headers = {
-      'access-control-allow-origin': origin,
-      'access-control-allow-credentials': 'true',
-    }
-    if (fail) return route.fulfill({ status: 503, headers, json: { message: 'Unavailable' } })
-    return route.fulfill({ headers, json: null })
+    if (fail) return route.fulfill({ status: 503, json: { message: 'Unavailable' } })
+    return route.fulfill({ json: null })
   })
   await page.goto(`${origin}/?page=app`)
-  await page.getByLabel('Email').fill('synthetic@example.test')
-  await expect(
-    page.getByText('Could not check your session. Try again or explore a sample.'),
-  ).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeDisabled()
+  await expect(page.getByRole('alert')).toContainText('Could not check your session')
+  await expect(page.getByLabel('Email')).toHaveCount(0)
   fail = false
   await page.getByRole('button', { name: 'Try again' }).click()
-  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeEnabled()
-  await expect(page.getByLabel('Email')).toHaveValue('synthetic@example.test')
+  await expect(page.getByLabel('Email')).toBeVisible()
 })
 
 test('stalled session check times out and can recover', async ({ page }) => {
@@ -334,13 +344,101 @@ test('stalled session check times out and can recover', async ({ page }) => {
       .catch(() => {})
   })
   await page.goto(`${origin}/?page=app`)
-  await expect(
-    page.getByText('Could not check your session. Try again or explore a sample.'),
-  ).toBeVisible({ timeout: 15000 })
+  await expect(page.getByText('Could not check your session. Please try again.')).toBeVisible({
+    timeout: 15000,
+  })
   stall = false
   await page.getByRole('button', { name: 'Try again' }).click()
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeEnabled()
   release()
+})
+
+test('account retry ignores stale denial and notebook waits for its snapshot', async ({ page }) => {
+  test.setTimeout(45000)
+  const user = users[0]
+  const now = new Date().toISOString()
+  const teacher = {
+    role: 'teacher',
+    id: user.id,
+    name: user.name,
+    canRead: true,
+    canWrite: true,
+    expiresAt: null,
+  }
+  const session = {
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      emailVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    session: {
+      id: 'synthetic-session',
+      userId: user.id,
+      token: 'synthetic-token',
+      expiresAt: new Date(Date.now() + 3600000).toISOString(),
+      createdAt: now,
+      updatedAt: now,
+    },
+  }
+  let releaseAccount = () => {}
+  let releaseNotebook = () => {}
+  const accountHeld = new Promise<void>((resolve) => {
+    releaseAccount = resolve
+  })
+  const notebookHeld = new Promise<void>((resolve) => {
+    releaseNotebook = resolve
+  })
+  let accounts = 0
+  await page.route(`${auth}/**`, (route) => route.fulfill({ json: session }))
+  await page.route(`${api}/**`, async (route) => {
+    if (new URL(route.request().url()).pathname.startsWith('/api/auth/')) return route.fallback()
+    if (route.request().url().endsWith('/api/me')) {
+      accounts++
+      if (accounts === 1) {
+        await accountHeld
+        return route.fulfill({ status: 403 }).catch(() => {})
+      }
+      return route.fulfill({ json: { account: teacher } })
+    }
+    await notebookHeld
+    return route
+      .fulfill({
+        json: {
+          teacher,
+          students: [
+            {
+              kind: 'student',
+              studentId: user.studentId,
+              name: user.student,
+              group: '',
+              active: true,
+            },
+          ],
+          events: [],
+        },
+      })
+      .catch(() => {})
+  })
+  await page.setViewportSize({ width: 320, height: 568 })
+  await page.goto(`${origin}/?page=app&tab=attendance`)
+  await expect(page.getByText('Loading your notebook\u2026')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Sign out|Explore|Grow/ })).toHaveCount(0)
+  await expect(page.getByRole('alert')).toContainText('notebook request failed', { timeout: 20000 })
+  await page.getByRole('button', { name: 'Try again' }).click()
+  await expect(page.getByText('Loading the shared notebook\u2026')).toBeVisible()
+  releaseAccount()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(page.getByText('Alpha Student')).toHaveCount(0)
+  await expect(page.getByText('No students')).toHaveCount(0)
+  releaseNotebook()
+  await expect(page.getByLabel('Attendance for Alpha Student')).toBeVisible()
+  expect(new URL(page.url()).searchParams.get('tab')).toBe('attendance')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  )
 })
 
 async function mockTeacher(page: Page, post: () => Promise<void>) {

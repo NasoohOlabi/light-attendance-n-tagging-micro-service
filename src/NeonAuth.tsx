@@ -1,5 +1,5 @@
 import { LanguageSwitch, useLanguage } from './i18n'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { NeonAccount } from '../shared/neon'
 import { z } from 'zod'
 import { authClient, getAccount, NeonRequestError } from './neon'
@@ -51,52 +51,70 @@ function ConfiguredAuth({
   const client = authClient!
   const session = client.useSession()
   const userId = session.data?.user.id
-  const [teacher, setTeacher] = useState<{ userId: string; value: NeonAccount } | null>(null)
-  const [approval, setApproval] = useState<{ userId: string; message: string } | null>(null)
+  const [account, setAccount] = useState<
+    | { kind: 'ready'; userId: string; value: NeonAccount }
+    | { kind: 'denied' | 'error'; userId: string; message: string }
+    | null
+  >(null)
+  const [accountAttempt, setAccountAttempt] = useState(0)
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [leaves, setLeaves] = useState(0)
   const [stalled, setStalled] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  const [retrying, setRetrying] = useState(false)
+  const retryGeneration = useRef(0)
   useEffect(() => {
-    if (!session.isPending) return
+    if (!session.isPending && !retrying) return
     const timer = window.setTimeout(() => setStalled(true), 10000)
     return () => window.clearTimeout(timer)
-  }, [session.isPending, attempt])
+  }, [session.isPending, retrying, attempt])
   useEffect(() => {
-    if (!session.isPending) setStalled(false)
-  }, [session.isPending])
+    if (!session.isPending && !retrying) setStalled(false)
+  }, [session.isPending, retrying])
   useEffect(() => {
     let cancelled = false
+    let timer = 0
     if (userId)
-      getAccount(userId)
+      Promise.race([
+        getAccount(userId),
+        new Promise<never>((_, reject) => {
+          timer = window.setTimeout(() => reject(new Error('timeout')), 15000)
+        }),
+      ])
         .then((value) => {
-          if (!cancelled) setTeacher({ userId, value })
+          window.clearTimeout(timer)
+          if (!cancelled) setAccount({ kind: 'ready', userId, value })
         })
         .catch((cause: unknown) => {
+          window.clearTimeout(timer)
           if (!cancelled)
-            setApproval({
+            setAccount({
               userId,
+              kind:
+                cause instanceof NeonRequestError && (cause.status === 401 || cause.status === 403)
+                  ? 'denied'
+                  : 'error',
               message:
                 cause instanceof NeonRequestError
                   ? cause.message
-                  : 'Could not load your account. Please try again.',
+                  : 'The notebook request failed. Please try again.',
             })
         })
     return () => {
       cancelled = true
+      window.clearTimeout(timer)
     }
-  }, [userId])
+  }, [userId, accountAttempt])
   useEffect(() => {
     const denied = (event: Event) => {
       if (userId && event instanceof CustomEvent) {
-        setTeacher(null)
-        setApproval({
+        setAccount({
           userId,
+          kind: 'denied',
           message: new NeonRequestError(event.detail === 401 ? 401 : 403).message,
         })
       }
@@ -105,38 +123,61 @@ function ConfiguredAuth({
     return () => window.removeEventListener('neon-access-denied', denied)
   }, [userId])
   const signOut = () => {
-    setTeacher(null)
-    setApproval(null)
+    setAccount(null)
     void client.signOut()
     onSignOut()
   }
+  if ((session.isPending || retrying) && !stalled)
+    return <WorkspaceLoading message={t('Loading your session…')} />
+  if (session.error || stalled)
+    return (
+      <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
+        <AuthHeader />
+        <p role="alert">{t('Could not check your session. Please try again.')}</p>
+        <button
+          className="secondary"
+          onClick={() => {
+            const generation = ++retryGeneration.current
+            setStalled(false)
+            setRetrying(true)
+            setAttempt((value) => value + 1)
+            void session
+              .refetch()
+              .catch(() => {})
+              .finally(() => {
+                if (retryGeneration.current === generation) setRetrying(false)
+              })
+          }}
+        >
+          {t('Try again')}
+        </button>
+      </main>
+    )
   if (userId) {
-    if (approval?.userId === userId)
+    if (account?.userId === userId && account.kind !== 'ready')
       return (
         <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
           <AuthHeader />
-          <p role="alert">{errorMessage(approval.message)}</p>
+          <p role="alert">{errorMessage(account.message)}</p>
+          {account.kind === 'error' && (
+            <button
+              className="secondary"
+              onClick={() => {
+                setAccount(null)
+                setAccountAttempt((value) => value + 1)
+              }}
+            >
+              {t('Try again')}
+            </button>
+          )}
           <button className="secondary" onClick={signOut}>
             {t('Sign out')}
           </button>
         </main>
       )
-    if (!teacher || teacher.userId !== userId)
-      return (
-        <main id="main-content" tabIndex={-1} className="workspace-auth">
-          <AuthHeader />
-          <WaitingBookmark
-            leaves={leaves}
-            setLeaves={setLeaves}
-            message={t('Loading your notebook…')}
-          />
-          <button className="secondary" onClick={signOut}>
-            {t('Sign out')}
-          </button>
-          {samples}
-        </main>
-      )
-    if (!teacher.value.canRead)
+    if (!account || account.userId !== userId || account.kind !== 'ready')
+      return <WorkspaceLoading message={t('Loading your notebook…')} />
+    if (!account.value.canRead)
       return (
         <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
           <AuthHeader />
@@ -150,7 +191,7 @@ function ConfiguredAuth({
           </button>
         </main>
       )
-    return children(userId, teacher.value, signOut)
+    return children(userId, account.value, signOut)
   }
   return (
     <main id="main-content" tabIndex={-1} className="workspace-auth">
@@ -161,26 +202,6 @@ function ConfiguredAuth({
       <p className="text-lg leading-relaxed text-slate-600">
         {t('Record attendance. Leave a note. Keep the next teacher in the loop.')}
       </p>
-      {(session.isPending || session.error) && (
-        <WaitingBookmark
-          leaves={leaves}
-          setLeaves={setLeaves}
-          message={
-            session.error || stalled
-              ? t('Could not check your session. Try again or explore a sample.')
-              : t('Loading your session…')
-          }
-          retry={
-            session.error || stalled
-              ? () => {
-                  setStalled(false)
-                  setAttempt((value) => value + 1)
-                  void session.refetch()
-                }
-              : undefined
-          }
-        />
-      )}
       <form
         aria-busy={busy}
         className="panel space-y-3"
@@ -287,47 +308,32 @@ function ConfiguredAuth({
   )
 }
 
-function WaitingBookmark({
-  leaves,
-  setLeaves,
-  message,
-  retry,
-}: {
-  leaves: number
-  setLeaves: React.Dispatch<React.SetStateAction<number>>
-  message: string
-  retry?: () => void
-}) {
-  const { t } = useLanguage()
+export function WorkspaceLoading({ message }: { message: string }) {
   return (
-    <div className="auth-restoring">
-      <button
-        type="button"
-        className="auth-bookmark"
-        aria-label={t('Grow the bookmark')}
-        onClick={() => setLeaves((count) => (count + 1) % 4)}
-      >
-        <svg aria-hidden="true" viewBox="0 0 48 58" fill="none">
-          <path d="M24 47V22" stroke="currentColor" strokeWidth="2" />
-          <path d="M24 29C13 29 12 22 13 19C20 19 24 23 24 29Z" fill="currentColor" />
-          {leaves > 0 && (
-            <path d="M24 37C35 37 36 30 35 27C28 27 24 31 24 37Z" fill="currentColor" />
-          )}
-          {leaves > 1 && (
-            <path d="M24 22C17 18 18 12 24 8C30 12 31 18 24 22Z" fill="currentColor" />
-          )}
-          {leaves > 2 && <circle cx="24" cy="6" r="2" fill="currentColor" />}
-        </svg>
-      </button>
-      <div>
-        <p role={retry ? 'alert' : 'status'}>{message}</p>
-        <small>{t('Tap the bookmark to grow it')}</small>
-        {retry && (
-          <button type="button" className="secondary" onClick={retry}>
-            {t('Try again')}
-          </button>
-        )}
-      </div>
+    <div className="workspace-loading" aria-busy="true">
+      <aside aria-hidden="true">
+        <div className="loading-brand">
+          <WartaqLogo />
+        </div>
+        <div />
+        <div />
+        <div />
+        <div />
+      </aside>
+      <main id="main-content" tabIndex={-1}>
+        <div className="loading-mobile-brand" aria-hidden="true">
+          <WartaqLogo />
+        </div>
+        <p role="status">{message}</p>
+        <div className="loading-line" aria-hidden="true" />
+        <div className="loading-cards" aria-hidden="true">
+          <div />
+          <div />
+          <div />
+        </div>
+        <div className="loading-panel" aria-hidden="true" />
+        <div className="loading-mobile-nav" aria-hidden="true" />
+      </main>
     </div>
   )
 }

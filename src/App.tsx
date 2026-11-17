@@ -19,7 +19,7 @@ import { AppUpdate } from './AppUpdate'
 import { WorkspaceNavigation, tabs } from './WorkspaceNavigation'
 import './workspace.css'
 import { useLedger } from './useLedger'
-import { NeonAuth } from './NeonAuth'
+import { NeonAuth, WorkspaceLoading } from './NeonAuth'
 import { AdminConsole } from './AdminConsole'
 import { StudentAttendance } from './StudentAttendance'
 import { Courses } from './Courses'
@@ -193,6 +193,17 @@ function Notebook({
     !!ledger.storageBlocked ||
     !ledger.loaded ||
     !!(neon && !neon.teacher.canWrite)
+  if (!ledger.loaded)
+    return ledger.error ? (
+      <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
+        <p role="alert">{errorMessage(ledger.error)}</p>
+        <button className="secondary" disabled={ledger.busy} onClick={() => void ledger.refresh()}>
+          {t('Try again')}
+        </button>
+      </main>
+    ) : (
+      <WorkspaceLoading message={t('Loading the shared notebook…')} />
+    )
   return (
     <div className="workspace">
       <WorkspaceNavigation
@@ -423,9 +434,6 @@ function Notebook({
               </button>
             </div>
           </div>
-        )}
-        {!ledger.loaded && !ledger.error && (
-          <p role="status">{t('Loading the shared notebook…')}</p>
         )}
         {query.view === 'courses' && neon?.teacher.role === 'administrator' && (
           <Courses
