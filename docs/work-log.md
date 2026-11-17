@@ -1615,3 +1615,9 @@
 **Main integration at 21:48 Asia/Damascus:** Main advanced to 224ae8a (#93) during PR creation. Merged main normally, resolving only the append-only work-log conflict by retaining both entries. Product source merged cleanly; re-run the release gate on the combined tree before pushing for fresh PR checks.
 
 **Integrated gate at 21:52 Asia/Damascus:** bun run verify:release passed again on the combined tree: 114 browser cases, 33 local tests and all release checks; four optional database suites skipped. Exact-main Railway deployment, health and live shipped-asset layout proof are recorded in the delivery receipt on [PR #94](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service/pull/94).
+
+## 2026-11-17 21:59 Asia/Damascus (UTC+03:00) - Align level columns with the page language
+
+**Request and change** The Arabic Grades table placed the numeric course level `1` at the left edge. Let the Grades course level and the corresponding read-only roster level cells in Manage students and Settings follow the table direction. Isolate each value with `<bdi>` so mixed-script labels retain their own reading order.
+
+**Verification and limits** The focused Grades regression measured the Arabic `1` about 96 px from its expected position on desktop and 123 px on mobile before the fix. It passed in both Playwright projects after the fix, with the number against the right edge in Arabic and the left edge in English. `bun run verify:release` passed 114 browser checks and the local release gates. Four optional database suites skipped. Railway's main deployment trigger returned `checkSuites: true` for Wait for CI. The delivery receipt on the linked PR will record the exact deployment and public build checks. Browser cases use synthetic responses and emulated phones.

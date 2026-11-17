@@ -8,6 +8,8 @@ Open the separate **Grades** destination and verify Theory (نظري) precedes P
 
 Open **Students** and verify the separate Level cell follows the selected course enrollment, including a blank enrollment that must not inherit the roster level. Switching between two courses must never combine their levels in one cell. With no course selected, show the roster level. Check column labels, exact cells, reload and the student action on desktop and 320/390/430px English/Arabic records without horizontal scrolling.
 
+In Grades, verify a numeric course level such as `1` sits at the right edge of its cell in Arabic and at the left edge in English, on desktop and in stacked phone records. The Grades scroll scenario measures the rendered value against the cell's inner edge.
+
 Close a course manually and reload: its status remains Closed, grades and membership remain available, and it is absent from notebook course selectors unless it remains the saved default or currently viewed course. Open a saved course history URL and verify history and corrections still work while new attendance is blocked. Reopen and verify attendance is available again. Check English and Arabic on desktop and mobile. The server must reject stale writes, accept exact retries, and deny status changes to teachers and students.
 
 Verify Handbook received starts unchecked, is disabled until an enrollment exists, and persists independently across two courses, withdrawal/rejoining, level and grade changes, and reload. Include the optional profile fields in course-context student creation. Migration 007 is repeatable and backup version 6 retains these values.

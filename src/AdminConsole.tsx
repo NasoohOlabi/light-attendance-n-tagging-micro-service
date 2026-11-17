@@ -300,8 +300,8 @@ export function AdminConsole({
                             <td dir="auto" data-label={ar ? 'اسم العائلة' : 'Last name'}>
                               {student.lastName || '—'}
                             </td>
-                            <td dir="auto" data-label={ar ? 'المستوى' : 'Level'}>
-                              {formatLevel(student.group)}
+                            <td data-label={ar ? 'المستوى' : 'Level'}>
+                              <bdi>{formatLevel(student.group)}</bdi>
                             </td>
                             <td dir="ltr" data-label={ar ? 'واتساب' : 'WhatsApp'}>
                               {student.whatsapp ? <PhoneNumber value={student.whatsapp} /> : '—'}
