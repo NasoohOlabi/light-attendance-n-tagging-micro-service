@@ -30,16 +30,15 @@ export function validateAssignedPayloads(
   for (const payload of payloads) {
     if (payload.kind === 'attendance' && ids.has(payload.studentId)) {
       if (
-        !enrollments ||
-        (payload.enrollmentId
-          ? enrollments.some(
-              (e) =>
-                e.id === payload.enrollmentId &&
-                e.studentId === payload.studentId &&
-                e.active &&
-                (!courses || courses.some((course) => course.id === e.courseId && course.open)),
-            )
-          : !enrollments.some((e) => e.studentId === payload.studentId))
+        payload.enrollmentId &&
+        (!enrollments ||
+          enrollments.some(
+            (e) =>
+              e.id === payload.enrollmentId &&
+              e.studentId === payload.studentId &&
+              e.active &&
+              (!courses || courses.some((course) => course.id === e.courseId && course.open)),
+          ))
       )
         continue
     }

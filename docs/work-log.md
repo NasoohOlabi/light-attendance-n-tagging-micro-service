@@ -1615,3 +1615,9 @@
 **Main integration at 21:48 Asia/Damascus:** Main advanced to 224ae8a (#93) during PR creation. Merged main normally, resolving only the append-only work-log conflict by retaining both entries. Product source merged cleanly; re-run the release gate on the combined tree before pushing for fresh PR checks.
 
 **Integrated gate at 21:52 Asia/Damascus:** bun run verify:release passed again on the combined tree: 114 browser cases, 33 local tests and all release checks; four optional database suites skipped. Exact-main Railway deployment, health and live shipped-asset layout proof are recorded in the delivery receipt on [PR #94](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service/pull/94).
+
+## 2026-11-17 22:10 Asia/Damascus — Course attendance and enrollment teachers
+
+New attendance requires an active enrollment in an open course. Existing unscoped history, corrections and identical retries remain available. Each enrollment has a nullable reference to an existing teacher, independently of roster access or grading. Backup version 11 restores the reference and rejects lossy comparisons.
+
+The core verification gate passed. Disposable PostgreSQL 18.6 passed the course integration with 111 assertions and the backup transfer integration with 70. Production migration 012 committed and the foreign key was verified. Workbook import and UI verification are recorded separately.

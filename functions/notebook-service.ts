@@ -68,6 +68,7 @@ async function courseBoard(
     await db.query(
       `SELECT ce.id, ce.course_id AS "courseId", ce.student_id AS "studentId", ce.level,
     ce.practical::float8 AS practical, ce.theory::float8 AS theory, ce.notes, ce.active, ce.handbook_received AS "handbookReceived",
+    ce.teacher_id AS "teacherId", (SELECT name FROM teachers WHERE id = ce.teacher_id) AS "teacherName",
     ${teacher.role === 'administrator' ? 'ce.grade_decisions' : "'[]'::jsonb"} AS "gradeDecisions"
     FROM course_enrollments ce JOIN students s ON s.id = ce.student_id WHERE ${scope} ORDER BY ce.id FOR SHARE OF ce`,
       values,
@@ -325,7 +326,9 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
   } else if (path === '/api/admin/enrollments' || path === '/api/admin/enrollments/membership') {
     const legacy = path === '/api/admin/enrollments'
     const enrollment = legacy
-      ? enrollmentSchema.extend({ active: z.boolean().optional() }).parse(body)
+      ? enrollmentSchema
+          .extend({ active: z.boolean().optional(), teacherId: z.uuid().nullable().optional() })
+          .parse(body)
       : enrollmentMembershipSchema.parse(body)
     const student = await db.query('SELECT id FROM students WHERE id = $1 FOR UPDATE', [
       enrollment.studentId,
@@ -348,11 +351,17 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
       )
     )
       throw new HttpError(409)
+    if (enrollment.teacherId) {
+      const teacher = await db.query('SELECT id FROM teachers WHERE id = $1 FOR SHARE', [
+        enrollment.teacherId,
+      ])
+      if (!teacher.rowCount) throw new HttpError(400)
+    }
     if (legacy && 'practical' in enrollment) {
       await db.query(
-        `INSERT INTO course_enrollments (id, course_id, student_id, level, practical, theory, active)
-        VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, true)) ON CONFLICT (course_id, student_id)
-        DO UPDATE SET level = EXCLUDED.level, practical = EXCLUDED.practical, theory = EXCLUDED.theory, active = COALESCE($7, course_enrollments.active)`,
+        `INSERT INTO course_enrollments (id, course_id, student_id, level, practical, theory, active, teacher_id)
+        VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, true), $8) ON CONFLICT (course_id, student_id)
+        DO UPDATE SET level = EXCLUDED.level, practical = EXCLUDED.practical, theory = EXCLUDED.theory, active = COALESCE($7, course_enrollments.active), teacher_id = CASE WHEN $9 THEN EXCLUDED.teacher_id ELSE course_enrollments.teacher_id END`,
         [
           enrollment.id,
           enrollment.courseId,
@@ -361,19 +370,23 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
           enrollment.practical,
           enrollment.theory,
           enrollment.active ?? null,
+          enrollment.teacherId ?? null,
+          enrollment.teacherId !== undefined,
         ],
       )
     } else {
       await db.query(
-        `INSERT INTO course_enrollments (id, course_id, student_id, level, active)
-        VALUES ($1, $2, $3, $4, $5) ON CONFLICT (course_id, student_id)
-        DO UPDATE SET level = EXCLUDED.level, active = EXCLUDED.active`,
+        `INSERT INTO course_enrollments (id, course_id, student_id, level, active, teacher_id)
+        VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (course_id, student_id)
+        DO UPDATE SET level = EXCLUDED.level, active = EXCLUDED.active, teacher_id = CASE WHEN $7 THEN EXCLUDED.teacher_id ELSE course_enrollments.teacher_id END`,
         [
           enrollment.id,
           enrollment.courseId,
           enrollment.studentId,
           enrollment.level,
           enrollment.active,
+          enrollment.teacherId ?? null,
+          enrollment.teacherId !== undefined,
         ],
       )
     }
