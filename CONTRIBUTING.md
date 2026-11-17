@@ -11,7 +11,7 @@ bun run verify:release
 
 `bun install` enables Husky hooks. The secret scanner bootstrap downloads pinned Gitleaks 8.30.1 and checks its release SHA-256. Pre-commit formats staged files, scans staged changes, typechecks, tests and lints. Pre-push verifies the build and scans all local Git history. Missing scanners fail closed. CI independently repeats checks; local hooks are convenience gates, not a security boundary. Keep the `source-map-js` override until its parents resolve a patched version without it.
 
-Use `bun run security:dependencies` for the guarded dependency audit. The temporary picomatch patch, rejected repeated-extglob syntax and single-advisory exception are documented in [SECURITY.md](SECURITY.md). Commit the generated Bun patch and keep it available to frozen installs and Docker builds.
+Use `bun run security:audit` for the guarded dependency audit. The temporary picomatch patch, rejected repeated-extglob syntax and dated single-advisory exception are documented in [SECURITY.md](SECURITY.md). Commit the generated Bun patch and keep it available to frozen installs and Docker builds.
 
 ## Atomic Git work
 
@@ -27,3 +27,5 @@ Use `bun run security:dependencies` for the guarded dependency audit. The tempor
 Use the PR template: concrete outcome, linked acceptance/task ID, proof, remaining risks and rollback. All feature and documentation PRs target `main` during the v0.1.0 development release. Nightly builds and deployments remain disabled until the owner explicitly requests them. Keep the diff focused and credentials absent. The `Verify` status must pass. Review confirmed risks against surrounding code, resolve conversations, then squash merge; a separate human approval is encouraged but not required for this single-maintainer repository. Draft/WIP PRs are not release candidates.
 
 Release policy lives in [docs/releases.md](docs/releases.md). Agents read the root instruction file instead of duplicating policy in model-specific files. Future UI work updates the local verification feature map; `maintain-verification-skill` audits it when requested.
+
+CI and `verify:release` use `bun run security:audit`. It prints every finding and applies only the dated development-only exception documented in [SECURITY.md](SECURITY.md); production findings and all other advisories fail. Raw `bun audit` still exposes the excepted finding.

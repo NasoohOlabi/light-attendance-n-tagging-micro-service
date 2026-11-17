@@ -442,6 +442,7 @@ export function Courses({
               entries={courseEntries}
               exportEntries={exportEnrollments.filter((item) => item.courseId === course.id)}
               students={board.students}
+              accounts={board.accounts}
               events={events}
               busy={busy}
               ar={ar}
@@ -459,6 +460,7 @@ function GradePage({
   entries,
   exportEntries,
   students,
+  accounts,
   events,
   busy,
   ar,
@@ -468,6 +470,7 @@ function GradePage({
   entries: Enrollment[]
   exportEntries: Enrollment[]
   students: Board['students']
+  accounts: Board['accounts']
   events: LedgerEvent[]
   busy: boolean
   ar: boolean
@@ -928,36 +931,52 @@ function GradePage({
                               {entry.gradeDecisions.length})
                             </summary>
                             <ul>
-                              {[...entry.gradeDecisions].reverse().map((item) => (
-                                <li key={item.requestId}>
-                                  <div className="decision-history-heading">
-                                    <strong
-                                      className={
-                                        item.result === 'calculated'
-                                          ? undefined
-                                          : `grade-${item.result}`
-                                      }
-                                    >
-                                      {item.result === 'calculated'
-                                        ? ar
-                                          ? 'المحسوبة'
-                                          : 'Calculated'
-                                        : resultLabel(item.result)}
-                                    </strong>
-                                    <time dateTime={item.at}>
-                                      {new Intl.DateTimeFormat(ar ? 'ar' : 'en', {
-                                        dateStyle: 'medium',
-                                        timeStyle: 'short',
-                                      }).format(new Date(item.at))}
-                                    </time>
-                                  </div>
-                                  <p dir="auto">{item.note}</p>
-                                  <details className="decision-history-actor">
-                                    <summary>{ar ? 'معرّف المسؤول' : 'Administrator ID'}</summary>
-                                    <span dir="ltr">{item.actor}</span>
-                                  </details>
-                                </li>
-                              ))}
+                              {[...entry.gradeDecisions].reverse().map((item) => {
+                                const actor = accounts.find(
+                                  (account) => account.authUserId === item.actor,
+                                )
+                                return (
+                                  <li key={item.requestId}>
+                                    <div className="decision-history-heading">
+                                      <strong
+                                        className={
+                                          item.result === 'calculated'
+                                            ? undefined
+                                            : `grade-${item.result}`
+                                        }
+                                      >
+                                        {item.result === 'calculated'
+                                          ? ar
+                                            ? 'المحسوبة'
+                                            : 'Calculated'
+                                          : resultLabel(item.result)}
+                                      </strong>
+                                      <time dateTime={item.at}>
+                                        {new Intl.DateTimeFormat(ar ? 'ar' : 'en', {
+                                          dateStyle: 'medium',
+                                          timeStyle: 'short',
+                                        }).format(new Date(item.at))}
+                                      </time>
+                                    </div>
+                                    <p dir="auto">{item.note}</p>
+                                    {actor ? (
+                                      <a
+                                        className="decision-history-actor"
+                                        dir="auto"
+                                        href={`?${new URLSearchParams({ page: 'app', view: 'settings', account: actor.authUserId })}`}
+                                      >
+                                        {actor.name.trim() || actor.email}
+                                      </a>
+                                    ) : (
+                                      <span>
+                                        {ar
+                                          ? 'اسم المسؤول غير متاح'
+                                          : 'Administrator name unavailable'}
+                                      </span>
+                                    )}
+                                  </li>
+                                )
+                              })}
                             </ul>
                           </details>
                         )}

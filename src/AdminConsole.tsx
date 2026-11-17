@@ -16,7 +16,7 @@ import { useLanguage } from './i18n'
 import type { Profile } from './ProfileMenu'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
 import { getNotebook, request } from './neon'
-import { setQuery } from './queryState'
+import { setQuery, useQueryState } from './queryState'
 import './roles.css'
 
 type Board = z.infer<typeof neonAdminBoardSchema>
@@ -40,6 +40,7 @@ export function AdminConsole({
 }) {
   const { language, t, errorMessage } = useLanguage()
   const ar = language === 'ar'
+  const query = useQueryState()
   const [board, setBoard] = useState<Board | null>(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -170,7 +171,10 @@ export function AdminConsole({
                 <button
                   className="secondary"
                   aria-pressed={section === 'students'}
-                  onClick={() => setSection('students')}
+                  onClick={() => {
+                    setQuery({ account: '' })
+                    setSection('students')
+                  }}
                 >
                   {ar ? 'الطلاب' : 'Students'}
                 </button>
@@ -179,21 +183,54 @@ export function AdminConsole({
             {section === 'accounts' && !initialCreateStudent && (
               <section className="panel role-section">
                 <h2 className="title">{ar ? 'الحسابات' : 'Accounts'}</h2>
-                {board.accounts.filter((account) => account.authUserId !== userId).length === 0 && (
-                  <p>{ar ? 'لا توجد حسابات أخرى.' : 'No other accounts.'}</p>
+                {query.account ? (
+                  <>
+                    <button className="secondary" onClick={() => setQuery({ account: '' }, true)}>
+                      {ar ? 'العودة إلى الحسابات' : 'Back to accounts'}
+                    </button>
+                    {(() => {
+                      const account = board.accounts.find(
+                        (item) => item.authUserId === query.account,
+                      )
+                      if (!account) return <p>{ar ? 'الحساب غير متاح' : 'Account unavailable'}</p>
+                      if (account.authUserId === userId)
+                        return (
+                          <div className="role-account">
+                            <strong dir="auto">{account.name.trim() || account.email}</strong>
+                            <p dir="ltr">{account.email}</p>
+                          </div>
+                        )
+                      return (
+                        <AccountForm
+                          key={account.authUserId}
+                          account={account}
+                          students={board.students}
+                          busy={busy}
+                          save={save}
+                          ar={ar}
+                          expanded
+                        />
+                      )
+                    })()}
+                  </>
+                ) : (
+                  <>
+                    {board.accounts.filter((account) => account.authUserId !== userId).length ===
+                      0 && <p>{ar ? 'لا توجد حسابات أخرى.' : 'No other accounts.'}</p>}
+                    {board.accounts
+                      .filter((account) => account.authUserId !== userId)
+                      .map((account) => (
+                        <AccountForm
+                          key={`${account.authUserId}:${account.role}:${account.active}`}
+                          account={account}
+                          students={board.students}
+                          busy={busy}
+                          save={save}
+                          ar={ar}
+                        />
+                      ))}
+                  </>
                 )}
-                {board.accounts
-                  .filter((account) => account.authUserId !== userId)
-                  .map((account) => (
-                    <AccountForm
-                      key={`${account.authUserId}:${account.role}:${account.active}`}
-                      account={account}
-                      students={board.students}
-                      busy={busy}
-                      save={save}
-                      ar={ar}
-                    />
-                  ))}
               </section>
             )}
             {section === 'students' && (
@@ -319,8 +356,10 @@ function AccountForm({
   busy,
   save,
   ar,
+  expanded = false,
 }: {
   account: Account
+  expanded?: boolean
   students: Student[]
   busy: boolean
   save: (path: string, body: unknown) => Promise<boolean>
@@ -341,7 +380,7 @@ function AccountForm({
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
   })
   return (
-    <details className="role-account">
+    <details className="role-account" open={expanded || undefined}>
       <summary>
         <span>
           <strong dir="auto">{account.name}</strong>
