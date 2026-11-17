@@ -58,6 +58,9 @@ integration(
       const profileMigration = await readFile('neon/007-student-profiles-handbooks.sql', 'utf8')
       await pool.query(profileMigration)
       await pool.query(profileMigration)
+      const gradingMigration = await readFile('neon/008-course-grading.sql', 'utf8')
+      await pool.query(gradingMigration)
+      await pool.query(gradingMigration)
       for (const [id, subject] of [
         [adminId, subjects.admin],
         [teacherId, subjects.teacher],
@@ -90,6 +93,9 @@ integration(
           id: courseIds[i],
           name: `Synthetic course ${i + 1}`,
           open: true,
+          attendanceMinimum: 70,
+          practicalMinimum: 80,
+          theoryMinimum: 80,
         })
         const enrolled = await call('/api/admin/enrollments', subjects.admin, {
           id: enrollmentIds[i],
@@ -101,6 +107,35 @@ integration(
         })
         expect(enrolled.status, await enrolled.clone().text()).toBe(200)
       }
+      const settings = {
+        id: courseIds[0],
+        attendanceMinimum: 60,
+        practicalMinimum: 75.5,
+        theoryMinimum: 90,
+      }
+      expect((await call('/api/admin/courses/settings', subjects.teacher, settings)).status).toBe(
+        403,
+      )
+      expect(
+        (
+          await call('/api/admin/courses/settings', subjects.admin, {
+            ...settings,
+            theoryMinimum: 101,
+          })
+        ).status,
+      ).toBe(400)
+      expect((await call('/api/admin/courses/settings', subjects.admin, settings)).status).toBe(200)
+      const settingsSnapshot = neonSnapshotSchema.parse(
+        await (await call('/api/notebook', subjects.admin)).json(),
+      )
+      expect(settingsSnapshot.courses.find((item) => item.id === courseIds[0])).toMatchObject(
+        settings,
+      )
+      expect(settingsSnapshot.courses.find((item) => item.id === courseIds[1])).toMatchObject({
+        attendanceMinimum: 70,
+        practicalMinimum: 80,
+        theoryMinimum: 80,
+      })
       expect(
         (
           await call('/api/admin/enrollments/handbook', subjects.teacher, {

@@ -14,7 +14,7 @@ integration(
     if (!url) throw new Error('Disposable database required')
     const admin = new Pool({ connectionString: url })
     const names = Array.from(
-      { length: 7 },
+      { length: 8 },
       () => `transfer_${crypto.randomUUID().replaceAll('-', '')}`,
     )
     const pools: Pool[] = []
@@ -27,7 +27,7 @@ integration(
       !localPath.startsWith('transfer-test-')
     )
       throw new Error('Refusing cleanup outside the disposable transfer directory')
-    const files = [1, 2, 3, 4, 5, 6].map((version) => resolve(directory, `v${version}.json`))
+    const files = [1, 2, 3, 4, 5, 6, 7].map((version) => resolve(directory, `v${version}.json`))
     const run = (command: string, file: string, dbUrl: string, succeeds = true) => {
       const result = Bun.spawnSync(
         [process.execPath, 'run', 'scripts/railway-transfer.ts', command, file],
@@ -143,12 +143,21 @@ integration(
       ])
       run('export', files[5], urls[0])
       run('compare', files[4], urls[0], false)
+      await migrate(source, 'neon/008-course-grading.sql')
+      await migrate(source, 'neon/008-course-grading.sql')
+      await source.query(
+        'UPDATE courses SET attendance_minimum = 60, practical_minimum = 75.5, theory_minimum = 90 WHERE id = $1',
+        [courseA],
+      )
+      run('export', files[6], urls[0])
+      run('compare', files[5], urls[0], false)
       for (let index = 0; index < targets.length; index++) {
         await migrate(targets[index], 'neon/003-courses.sql')
         await migrate(targets[index], 'neon/004-student-names.sql')
         await migrate(targets[index], 'neon/005-active-enrollments.sql')
         await migrate(targets[index], 'neon/006-closed-courses.sql')
         await migrate(targets[index], 'neon/007-student-profiles-handbooks.sql')
+        await migrate(targets[index], 'neon/008-course-grading.sql')
         run('import', files[index], urls[index + 1])
         run('compare', files[index], urls[index + 1])
       }
@@ -160,7 +169,7 @@ integration(
                 .version,
           ),
         ),
-      ).toEqual([1, 2, 3, 4, 5, 6])
+      ).toEqual([1, 2, 3, 4, 5, 6, 7])
       expect(
         (await targets[5].query('SELECT whatsapp, location, birth_year FROM students')).rows[0],
       ).toEqual({ whatsapp: '+123', location: 'Area', birth_year: 2000 })
@@ -171,6 +180,22 @@ integration(
           ])
         ).rows[0].handbook_received,
       ).toBe(true)
+      expect(
+        (
+          await targets[6].query(
+            'SELECT attendance_minimum, practical_minimum, theory_minimum FROM courses WHERE id = $1',
+            [courseA],
+          )
+        ).rows[0],
+      ).toEqual({ attendance_minimum: 60, practical_minimum: 75.5, theory_minimum: 90 })
+      expect(
+        (
+          await targets[5].query(
+            'SELECT attendance_minimum, practical_minimum, theory_minimum FROM courses WHERE id = $1',
+            [courseA],
+          )
+        ).rows[0],
+      ).toEqual({ attendance_minimum: 70, practical_minimum: 80, theory_minimum: 80 })
       const stored = await targets[2].query(
         'SELECT level, practical::text, theory::text FROM course_enrollments ORDER BY level',
       )
