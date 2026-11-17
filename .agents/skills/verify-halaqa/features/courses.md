@@ -32,7 +32,7 @@ Grades omits the Enrolled column while retaining withdrawn students and their gr
 
 For long Grades tables, check English and Arabic on desktop (including short windows): the named, keyboard-focusable table region scrolls independently, column headings stay opaque and pinned, and the final row and its Save grades action are reachable. The title and thresholds stay outside the region. On phones, records remain stacked with normal page scrolling and no horizontal overflow.
 
-At 320/390/430px in English and Arabic, verify at least 16px between the mobile workspace header and the Grades panel. Inspect grade records in light and dark appearance: consistent inset padding and separation, equally aligned full-column Theory/Practical inputs, full-width Notes/Result/Actions and visible touch-sized buttons. `e2e/grades-scroll.spec.ts` checks header spacing and record geometry and captures both palettes.
+At 320/390/430px in English and Arabic, verify at least 16px between the mobile workspace header and the Grades panel. Inspect grade records in light and dark appearance for consistent inset padding and separation, equally aligned Theory and Practical inputs, and full-width Notes. Result and Actions share the row below Notes, with Actions on the left in Arabic and right in English. Save grades and the menu fit with 44px touch targets. `e2e/grades-scroll.spec.ts` checks header spacing and record geometry and captures both palettes.
 
 On the saved Courses list, verify that the card starts 32px below the top of the desktop workspace and at least 16px below the phone header. `e2e/courses.spec.ts` measures the rendered gap and checks that course actions fit at 320/390/430px in English and Arabic.
 

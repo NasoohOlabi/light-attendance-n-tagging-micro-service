@@ -851,14 +851,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       )
     }
   }
-  const resultWidth = await resultCell.evaluate((cell) => cell.getBoundingClientRect().width)
-  const recordContentWidth = await compactGradeRow.evaluate((record) => {
-    const style = getComputedStyle(record)
-    return (
-      record.clientWidth - parseFloat(style.paddingInlineStart) - parseFloat(style.paddingInlineEnd)
-    )
-  })
-  expect(resultWidth).toBeGreaterThanOrEqual(recordContentWidth - 1)
+  expect(await resultCell.evaluate((cell) => cell.scrollWidth <= cell.clientWidth)).toBe(true)
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click()
   await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)

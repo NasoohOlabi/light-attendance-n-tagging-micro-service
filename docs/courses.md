@@ -38,7 +38,7 @@ On Grades, each course has independent minimum attendance (default 70%), practic
 
 Migration `neon/008-course-grading.sql` adds the course thresholds. Version 7 backups preserve them; older backups restore defaults and comparison rejects non-default target thresholds.
 
-Each Grades row has a labeled **Save grades** button. The three-dot menu beside it opens secondary actions. Both controls have touch-sized targets in compact desktop rows and stacked phone records.
+Each Grades row has a labeled **Save grades** button. The three-dot menu beside it opens secondary actions. Both controls sit beside the result on phones, on the left in Arabic and on the right in English. They have touch-sized targets on phones and desktop.
 
 Table headings provide quick single-column sorting. Hold Shift while clicking another heading to add a secondary sort. A small Sort icon opens configuration in a popup; the table itself shows no configuration rows. Inside Sort, use **Add column**, drag a column pill's grip to change priority, toggle its direction icon, or remove it. Priority 1 is applied first; later pills break ties. Keyboard users can grab a grip with Space, reorder with arrow keys, drop with Space or cancel with Escape. **Reset sort** preserves filters. On tables that support filtering, the separate Filter icon opens column selection and filter editing; text matches contained text, choice fields match exactly, and filters combine. Sort order and filters survive reload in the view URL. Popups close with their close control, Escape or an outside click.
 

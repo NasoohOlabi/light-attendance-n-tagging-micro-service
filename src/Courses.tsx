@@ -801,7 +801,7 @@ function GradePage({
                       }
                     />
                   </td>
-                  <td data-label={ar ? 'النتيجة' : 'Result'} className="col-span-full">
+                  <td data-label={ar ? 'النتيجة' : 'Result'}>
                     <div>
                       {lastDecision && lastDecision.result !== 'calculated' && (
                         <>{ar ? 'المحسوبة' : 'Calculated'}: </>
@@ -843,7 +843,7 @@ function GradePage({
                         aria-label={ar ? 'حفظ الدرجات' : 'Save grades'}
                         title={ar ? 'حفظ الدرجات' : 'Save grades'}
                       >
-                        <Save size={20} aria-hidden="true" />
+                        <Save size={20} className="shrink-0" aria-hidden="true" />
                         <span>{ar ? 'حفظ الدرجات' : 'Save grades'}</span>
                       </button>
                     </form>
