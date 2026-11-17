@@ -14,7 +14,7 @@ integration(
     if (!url) throw new Error('Disposable database required')
     const admin = new Pool({ connectionString: url })
     const names = Array.from(
-      { length: 9 },
+      { length: 10 },
       () => `transfer_${crypto.randomUUID().replaceAll('-', '')}`,
     )
     const pools: Pool[] = []
@@ -27,7 +27,9 @@ integration(
       !localPath.startsWith('transfer-test-')
     )
       throw new Error('Refusing cleanup outside the disposable transfer directory')
-    const files = [1, 2, 3, 4, 5, 6, 7, 8].map((version) => resolve(directory, `v${version}.json`))
+    const files = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((version) =>
+      resolve(directory, `v${version}.json`),
+    )
     const run = (command: string, file: string, dbUrl: string, succeeds = true) => {
       const result = Bun.spawnSync(
         [process.execPath, 'run', 'scripts/railway-transfer.ts', command, file],
@@ -160,6 +162,13 @@ integration(
       )
       run('export', files[7], urls[0])
       run('compare', files[6], urls[0], false)
+      await migrate(source, 'neon/010-enrollment-notes.sql')
+      await migrate(source, 'neon/010-enrollment-notes.sql')
+      await source.query("UPDATE course_enrollments SET notes = 'Synthetic note' WHERE id = $1", [
+        enrollmentA,
+      ])
+      run('export', files[8], urls[0])
+      run('compare', files[7], urls[0], false)
       for (let index = 0; index < targets.length; index++) {
         await migrate(targets[index], 'neon/003-courses.sql')
         await migrate(targets[index], 'neon/004-student-names.sql')
@@ -167,9 +176,13 @@ integration(
         await migrate(targets[index], 'neon/006-closed-courses.sql')
         await migrate(targets[index], 'neon/007-student-profiles-handbooks.sql')
         await migrate(targets[index], 'neon/008-course-grading.sql')
-        if (index === 7) {
+        if (index >= 7) {
           run('import', files[index], urls[index + 1], false)
           await migrate(targets[index], 'neon/009-unassigned-students.sql')
+        }
+        if (index === 8) {
+          run('import', files[index], urls[index + 1], false)
+          await migrate(targets[index], 'neon/010-enrollment-notes.sql')
         }
         run('import', files[index], urls[index + 1])
         run('compare', files[index], urls[index + 1])
@@ -182,7 +195,14 @@ integration(
                 .version,
           ),
         ),
-      ).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+      ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
+      expect(
+        (
+          await targets[8].query('SELECT notes FROM course_enrollments WHERE id = $1', [
+            enrollmentA,
+          ])
+        ).rows[0].notes,
+      ).toBe('Synthetic note')
       expect(
         (
           await targets[7].query('SELECT teacher_id, active FROM students WHERE id = $1', [

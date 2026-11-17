@@ -447,7 +447,9 @@ function GradePage({
   ar: boolean
   save: (path: string, body: unknown) => Promise<boolean>
 }) {
-  const [drafts, setDrafts] = useState<Record<string, { practical: string; theory: string }>>({})
+  const [drafts, setDrafts] = useState<
+    Record<string, { practical: string; theory: string; notes: string }>
+  >({})
   const [settings, setSettings] = useState({
     attendanceMinimum: String(course.attendanceMinimum),
     practicalMinimum: String(course.practicalMinimum),
@@ -463,7 +465,8 @@ function GradePage({
     return (
       draft &&
       (draft.practical !== (entry.practical?.toString() ?? '') ||
-        draft.theory !== (entry.theory?.toString() ?? ''))
+        draft.theory !== (entry.theory?.toString() ?? '') ||
+        draft.notes !== entry.notes)
     )
   })
   const attendance = projectEvents(events).attendance
@@ -473,7 +476,8 @@ function GradePage({
       settingsDirty ||
       (draft &&
         (draft.practical !== (entry.practical?.toString() ?? '') ||
-          draft.theory !== (entry.theory?.toString() ?? ''))) ||
+          draft.theory !== (entry.theory?.toString() ?? '') ||
+          draft.notes !== entry.notes)) ||
       entry.practical === null ||
       entry.theory === null ||
       ratio === null
@@ -538,6 +542,11 @@ function GradePage({
         return value == null || value === '' ? null : Number(value)
       },
     })),
+    {
+      id: 'notes',
+      label: ar ? 'ملاحظات' : 'Notes',
+      value: (entry) => drafts[entry.id]?.notes ?? entry.notes,
+    },
     {
       id: 'result',
       choices: ar ? ['قيد الانتظار', 'ناجح', 'راسب'] : ['Pending', 'Pass', 'Fail'],
@@ -607,6 +616,7 @@ function GradePage({
               const draft = drafts[entry.id] ?? {
                 practical: entry.practical?.toString() ?? '',
                 theory: entry.theory?.toString() ?? '',
+                notes: entry.notes,
               }
               const ratio = attendanceRatio(entry)
               const result = gradeResult(entry, ratio)
@@ -653,6 +663,21 @@ function GradePage({
                       />
                     </td>
                   ))}
+                  <td data-label={ar ? 'ملاحظات' : 'Notes'}>
+                    <textarea
+                      form={formId}
+                      className="resize-y min-[1025px]:min-w-48"
+                      aria-label={`${ar ? 'ملاحظات' : 'Notes'}: ${student.firstName} ${student.lastName}`}
+                      disabled={busy}
+                      value={draft.notes}
+                      onChange={(event) =>
+                        setDrafts((current) => ({
+                          ...current,
+                          [entry.id]: { ...draft, notes: event.target.value },
+                        }))
+                      }
+                    />
+                  </td>
                   <td data-label={ar ? 'النتيجة' : 'Result'}>{resultLabel(result)}</td>
                   <td data-label={ar ? 'الإجراءات' : 'Actions'}>
                     <form
@@ -663,6 +688,7 @@ function GradePage({
                           id: entry.id,
                           practical: draft.practical === '' ? null : Number(draft.practical),
                           theory: draft.theory === '' ? null : Number(draft.theory),
+                          notes: draft.notes,
                         }).then((ok) => {
                           if (ok)
                             setDrafts((current) => {

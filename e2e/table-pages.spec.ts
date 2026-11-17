@@ -199,7 +199,7 @@ test('every staff table column sorts and filters without writes', async ({ page 
   for (const [query, columns, actions] of [
     ['view=courses', 2, true],
     [`view=courses&course=${courseId}&courseView=students`, 6, true],
-    [`view=courses&course=${courseId}&courseView=grades`, 8, true],
+    [`view=courses&course=${courseId}&courseView=grades`, 9, true],
     ['tab=roster', 7, true],
     [`view=student&student=${studentIds[0]}`, 3, false],
     [`tab=attendance&course=${courseId}`, 3, false],

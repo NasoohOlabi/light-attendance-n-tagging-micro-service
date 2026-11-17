@@ -44,6 +44,7 @@ export const enrollmentSchema = z.object({
   theory: z.number().min(0).max(100).nullable(),
   active: z.boolean().default(true),
   handbookReceived: z.boolean().default(false),
+  notes: z.string().default(''),
 })
 export const enrollmentHandbookSchema = z.strictObject({
   id: z.uuid(),
@@ -58,6 +59,7 @@ export const enrollmentMembershipSchema = z.strictObject({
 })
 export const enrollmentGradesSchema = z.strictObject({
   id: z.uuid(),
+  notes: z.string().optional(),
   practical: z.number().min(0).max(100).nullable(),
   theory: z.number().min(0).max(100).nullable(),
 })
