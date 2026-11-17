@@ -184,7 +184,11 @@ test('cached public shell opens without waiting for a stalled navigation', async
   try {
     for (const path of ['', '?page=app', '?page=home', 'index.html']) {
       await page.goto(origin + prefix + path, { timeout: 2000 })
-      await expect(page.locator('main h1')).toBeVisible({ timeout: 2000 })
+      await expect(
+        path === '?page=app'
+          ? page.locator('.workspace-loading, .workspace-auth')
+          : page.locator('main h1'),
+      ).toBeVisible({ timeout: 2000 })
     }
     await mkdir('.artifacts/pwa', { recursive: true })
     await page.screenshot({ path: `.artifacts/pwa/cached-shell-${testInfo.project.name}.png` })

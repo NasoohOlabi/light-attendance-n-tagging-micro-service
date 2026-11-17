@@ -153,38 +153,90 @@
   gap: 1.5rem;
   padding: 5rem 1.5rem 2rem;
 }
-.auth-restoring {
+.workspace-loading {
+  display: flex;
+  min-height: 100svh;
+  background: #f5fafc;
+  color: #315e60;
+}
+.workspace-loading aside {
+  flex: 0 0 218px;
+  padding: 30px 18px;
+  background: #004d57;
+}
+.workspace-loading aside div,
+.loading-line,
+.loading-cards div,
+.loading-panel {
+  background: #d9e6e2;
+  border-radius: 0.5rem;
+}
+.workspace-loading aside div {
+  height: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.workspace-loading aside .loading-brand {
+  height: auto;
+  margin: 4px 12px 38px;
+  background: transparent;
+  color: white;
+}
+.wartaq-site .workspace-loading .loading-brand .wartaq-logo {
+  color: white;
+}
+.loading-mobile-brand,
+.loading-mobile-nav {
+  display: none;
+}
+.workspace-loading main {
+  flex: 1;
+  min-width: 0;
+  padding: 0 38px 40px;
+}
+.workspace-loading p {
+  min-height: 70px;
   display: flex;
   align-items: center;
+  margin-bottom: 32px;
+  border-bottom: 1px solid #dce9eb;
+}
+.loading-line {
+  height: 2rem;
+  width: min(18rem, 70%);
+  margin-bottom: 2rem;
+}
+.loading-cards {
+  display: flex;
   gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: #e5f3f2;
-  border-inline-start: 3px solid #007d8d;
-  color: #004d57;
 }
-.auth-bookmark {
-  flex: 0 0 48px;
-  width: 48px;
-  height: 58px;
-  background: #007d8d;
-  color: white;
-  border: 0;
-  border-radius: 4px 4px 14px 14px;
-  padding: 0;
-  cursor: pointer;
+.loading-cards div {
+  height: 6rem;
+  flex: 1;
 }
-.auth-bookmark svg {
-  width: 100%;
-  height: 100%;
+.loading-panel {
+  height: 14rem;
+  margin-top: 1rem;
 }
-.auth-restoring p {
-  margin: 0;
-}
-.auth-restoring small {
-  display: block;
-}
-.auth-restoring .secondary {
-  margin-top: 0.5rem;
+@media (max-width: 700px) {
+  .workspace-loading aside {
+    display: none;
+  }
+  .workspace-loading main {
+    padding: 0 20px 80px;
+  }
+  .loading-mobile-brand {
+    display: block;
+    color: #004d57;
+    padding-top: 20px;
+  }
+  .loading-mobile-nav {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    inset-inline: 0;
+    height: 64px;
+    background: #004d57;
+  }
 }
 .workspace-auth-header {
   direction: ltr;
