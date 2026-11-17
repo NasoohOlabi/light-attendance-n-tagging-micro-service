@@ -50,8 +50,17 @@ class HttpError extends Error {
   }
 }
 
-async function courseBoard(db: PoolClient, teacher: z.infer<typeof neonTeacherSchema>) {
-  const scope = teacher.role === 'administrator' ? 's.active' : 's.teacher_id = $1 AND s.active'
+async function courseBoard(
+  db: PoolClient,
+  teacher: z.infer<typeof neonTeacherSchema>,
+  includeInactiveStudents = false,
+) {
+  const scope =
+    teacher.role === 'administrator'
+      ? includeInactiveStudents
+        ? 'true'
+        : 's.active'
+      : 's.teacher_id = $1 AND s.active'
   const values = teacher.role === 'administrator' ? [] : [teacher.id]
   const enrollments = (
     await db.query(
@@ -126,7 +135,7 @@ async function snapshot(
     teacher,
     students,
     events,
-    ...(await courseBoard(db, teacher)),
+    ...(await courseBoard(db, teacher, includeInactiveStudents)),
   })
 }
 

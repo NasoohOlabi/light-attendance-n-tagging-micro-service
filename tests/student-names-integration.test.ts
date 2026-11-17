@@ -15,6 +15,7 @@ integration('student names survive migration, structured saves and legacy writes
   const admin = crypto.randomUUID()
   const teacher = crypto.randomUUID()
   const student = crypto.randomUUID()
+  const rosterCourseIds = Array.from({ length: 4 }, () => crypto.randomUUID())
   let migrated = false
   let addedBanColumn = false
   const exportPath = `.local/student-names-${student}.json`
@@ -259,7 +260,7 @@ integration('student names survive migration, structured saves and legacy writes
     const readNotebook = () =>
       handler(
         new Request('https://app.example/api/notebook', {
-          headers: { Authorization: 'Bearer synthetic' },
+          headers: { Authorization: 'Bearer synthetic', Origin: 'https://app.example' },
         }),
       )
     const post = (event: ReturnType<typeof makeEvent>) =>
@@ -283,12 +284,31 @@ integration('student names survive migration, structured saves and legacy writes
     })
     expect((await post(savedNote)).status).toBe(200)
     expect((await post(savedNote)).status).toBe(200)
+    for (const [index, courseId] of rosterCourseIds.entries()) {
+      await pool.query('INSERT INTO courses(id,name,open) VALUES($1,$2,$3)', [
+        courseId,
+        `Synthetic roster course ${index + 1}`,
+        index !== 0,
+      ])
+      await pool.query(
+        'INSERT INTO course_enrollments(id,course_id,student_id,level) VALUES($1,$2,$3,$4)',
+        [crypto.randomUUID(), courseId, student, `Independent course level ${index + 1}`],
+      )
+    }
     await pool.query('UPDATE students SET active = false WHERE id = $1', [student])
+    const completeRoster = neonSnapshotSchema.parse(await (await readNotebook()).json())
+    expect(completeRoster.students.find((s) => s.studentId === student)).toMatchObject({
+      active: false,
+    })
     expect(
-      neonSnapshotSchema
-        .parse(await (await readNotebook()).json())
-        .students.find((s) => s.studentId === student),
-    ).toMatchObject({ active: false })
+      completeRoster.enrollments
+        .filter((e) => e.studentId === student)
+        .map((e) => e.courseId)
+        .sort(),
+    ).toEqual([...rosterCourseIds].sort())
+    expect(completeRoster.courses.find((c) => c.id === rosterCourseIds[0])).toMatchObject({
+      open: false,
+    })
     for (const event of [
       makeEvent('Synthetic admin', {
         kind: 'attendance',
@@ -314,7 +334,7 @@ integration('student names survive migration, structured saves and legacy writes
     ).toBe(1)
     const teacherNotebook = await teacherHandler(
       new Request('https://app.example/api/notebook', {
-        headers: { Authorization: 'Bearer synthetic' },
+        headers: { Authorization: 'Bearer synthetic', Origin: 'https://app.example' },
       }),
     )
     expect(
@@ -334,6 +354,8 @@ integration('student names survive migration, structured saves and legacy writes
     )
     if (migrated) {
       await pool.query('DELETE FROM events WHERE student_id = $1', [student])
+      await pool.query('DELETE FROM course_enrollments WHERE student_id = $1', [student])
+      await pool.query('DELETE FROM courses WHERE id = ANY($1::uuid[])', [rosterCourseIds])
       await pool.query('DELETE FROM app_accounts WHERE auth_user_id = ANY($1::text[])', [
         [admin, teacher],
       ])

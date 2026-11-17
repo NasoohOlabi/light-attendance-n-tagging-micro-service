@@ -547,6 +547,37 @@
 .roster-actions-column {
   width: 6rem;
 }
+.roster-students-table {
+  min-width: 48rem;
+}
+.roster-courses-column {
+  width: 35%;
+}
+.roster-courses-mobile {
+  display: none;
+}
+.roster-course-badge {
+  display: inline-block;
+  margin: 0.15rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #e2eef0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .roster-courses-column {
+    width: 8rem;
+  }
+  .roster-courses-desktop {
+    display: none;
+  }
+  .roster-courses-mobile {
+    display: block;
+  }
+  .roster-courses-mobile summary {
+    cursor: pointer;
+  }
+}
 .roster-active-column {
   width: 7rem;
 }
