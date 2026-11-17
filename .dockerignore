@@ -1,6 +1,8 @@
 ﻿*
 !package.json
 !bun.lock
+!patches/
+!patches/**
 !index.html
 !vite.config.ts
 !tsconfig*.json

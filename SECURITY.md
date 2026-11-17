@@ -9,3 +9,11 @@ Events are append-only through the API. Pending batches can contain private stud
 [Railway setup](docs/railway-setup.md) covers deployment and recovery. Preserve the Neon source services and data and backup branch `backup/neon-current-2026-11-15` (`77cedae`). Local and synthetic tests do not prove live provider behavior.
 
 The frontend CSP permits three exact SHA-256 style hashes for dnd kit 0.5.3's feedback, grabbing cursor and selection rules. Arbitrary inline styles remain blocked. When upgrading dnd kit, regenerate hashes from its exact emitted style text and verify the actual dragged pill position under the production CSP; ordering alone does not prove the preview works. The synthetic table browser scenario asserts that visual geometry.
+
+## Temporary picomatch mitigation
+
+[GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) affects repeated extglobs in picomatch through 4.0.7, with no published fixed version as of 2026-11-17. Pin all build-tool consumers to 4.0.7 and apply the tracked Bun patch: the parser rejects `+(...)` and `*(...)` before constructing a regular expression. These unbounded extglobs are deliberately unavailable; ordinary wildcards, braces and non-repeating extglobs remain supported. The app does not accept user-supplied glob patterns, and picomatch is not a production runtime dependency.
+
+Run `bun run security:dependencies` for the release audit. It first exercises the actual picomatch loaded by Vite, lint-staged and tinyglobby, requiring the pinned version, rejecting the reported patterns through matcher/parser/regex APIs, and checking ordinary globs. Only then does it run Bun's audit with this one advisory excepted, because the registry cannot identify locally patched code. Every other advisory still fails the audit. A missing patch, stale nested copy or changed version fails the regression guard; plain `bun audit` continues to report the registry finding honestly. CI and the release gate use this guarded command. Docker copies the patch before frozen installs.
+
+Replace the override and patch with a verified upstream release when available, then remove the dedicated guard and advisory exception together. Do not remove the patch while retaining the exception.

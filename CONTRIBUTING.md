@@ -11,6 +11,8 @@ bun run verify:release
 
 `bun install` enables Husky hooks. The secret scanner bootstrap downloads pinned Gitleaks 8.30.1 and checks its release SHA-256. Pre-commit formats staged files, scans staged changes, typechecks, tests and lints. Pre-push verifies the build and scans all local Git history. Missing scanners fail closed. CI independently repeats checks; local hooks are convenience gates, not a security boundary. Keep the `source-map-js` override until its parents resolve a patched version without it.
 
+Use `bun run security:dependencies` for the guarded dependency audit. The temporary picomatch patch, rejected repeated-extglob syntax and single-advisory exception are documented in [SECURITY.md](SECURITY.md). Commit the generated Bun patch and keep it available to frozen installs and Docker builds.
+
 ## Atomic Git work
 
 1. Inspect `git status --short` and the existing diff. Identify unrelated/user work and preserve it. Obtain permission before making a worktree.
