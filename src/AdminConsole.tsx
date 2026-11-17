@@ -1,3 +1,4 @@
+import { PhoneNumber } from './PhoneNumber'
 import { TableHeader, useDataTable } from './DataTable'
 import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -263,7 +264,7 @@ export function AdminConsole({
                               {student.group}
                             </td>
                             <td dir="ltr" data-label={ar ? 'واتساب' : 'WhatsApp'}>
-                              {student.whatsapp || '—'}
+                              {student.whatsapp ? <PhoneNumber value={student.whatsapp} /> : '—'}
                             </td>
                             <td dir="auto" data-label={ar ? 'المنطقة' : 'Location'}>
                               {student.location || '—'}

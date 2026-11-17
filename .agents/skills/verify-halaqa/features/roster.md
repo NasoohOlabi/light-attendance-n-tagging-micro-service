@@ -37,3 +37,5 @@ Check notebook Students and grouped/searched attendance column geometry on deskt
 The notebook Students status cells use a circled check for active students and a circled minus for inactive students. Verify symbols replace visible status words while localized accessible image names and tooltips retain the meaning in English and Arabic. Keep the separate status column and centered icons at desktop and phone widths.
 
 Verify an active and an inactive unassigned student appear in the full administrator list with localized Unassigned, edit and save without an assignment, then assign an approved active teacher. Existing inactive or provisional teacher assignments remain selectable for profile edits but cannot be newly assigned. Verify teachers cannot access unassigned students. Apply `neon/009-unassigned-students.sql` to disposable databases.
+
+Staff phone displays in Students, Student information and Administrator register use isolated LTR dial links: verify synthetic local leading-zero, bare international, explicit +/00, missing and invalid values in English and Arabic at phone widths. Editing retains raw values; filters and sorting use the stored values.

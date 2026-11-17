@@ -104,6 +104,9 @@
   padding: 0.8rem;
   border-bottom: 1px solid #dce9e8;
 }
+.role-table tbody td {
+  padding-block: 0.5rem;
+}
 .role-table-scroll {
   max-width: 100%;
   overflow-x: auto;
@@ -299,20 +302,21 @@
     display: block;
     width: 100%;
   }
-  .mobile-record-table tr {
+  .mobile-record-table tbody tr {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 1rem;
-    padding-block: 0.75rem;
+    padding-block: 0.5rem;
     border-bottom: 1px solid #dce9e8;
   }
+  .role-table.mobile-record-table tbody td,
   .mobile-record-table td,
   .mobile-record-table th[scope='row'],
   .roster-table.mobile-record-table td:not(:first-child) {
     display: block;
     width: 100%;
     min-width: 0;
-    padding: 0.35rem 0;
+    padding: 0.2rem 0;
     border: 0;
     text-align: start;
     overflow-wrap: anywhere;

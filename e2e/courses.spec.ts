@@ -265,10 +265,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   })
   await expect(row.getByRole('cell').nth(0)).toBeVisible()
   await expect(row.getByRole('cell').nth(1)).toBeVisible()
-  await expect(row.getByRole('cell', { name: '012 345' }).locator('bdi')).toHaveAttribute(
-    'dir',
-    'ltr',
-  )
+  const phone = row.getByRole('link', { name: '012 345' })
+  await expect(phone).toHaveAttribute('dir', 'ltr')
+  await expect(phone).toHaveAttribute('href', 'tel:012345')
   await row.getByRole('button', { name: 'Open student' }).click()
   await expect(page.getByRole('heading', { name: 'Student information' })).toBeVisible()
   await expect(
@@ -550,6 +549,32 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .filter({ hasText: 'Course A' })
     .getByRole('button', { name: 'Grades' })
     .click()
+  const originalViewport = page.viewportSize()
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const compactGradeRow = page.getByRole('row').filter({ hasText: 'Synthetic' })
+  const checkGradeSave = async (label: string) => {
+    const button = compactGradeRow.getByRole('button', { name: label })
+    await expect(button).toHaveAttribute('title', label)
+    await expect(button.locator('svg')).toBeVisible()
+    const bounds = await button.boundingBox()
+    expect(bounds?.width).toBeGreaterThanOrEqual(44)
+    expect(bounds?.height).toBeGreaterThanOrEqual(44)
+  }
+  await checkGradeSave('Save grades')
+  expect(
+    (await page.getByLabel('Practical: Synthetic Student').boundingBox())?.height,
+  ).toBeGreaterThanOrEqual(44)
+  expect((await compactGradeRow.boundingBox())?.height).toBeLessThanOrEqual(65)
+  await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
+  await checkGradeSave('حفظ الدرجات')
+  expect((await compactGradeRow.boundingBox())?.height).toBeLessThanOrEqual(65)
+  await page.setViewportSize({ width: 320, height: 844 })
+  await checkGradeSave('حفظ الدرجات')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await clickAccountAction(page, 'English')
+  await checkGradeSave('Save grades')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  if (originalViewport) await page.setViewportSize(originalViewport)
   await expect(page.getByRole('button', { name: 'Close course' })).toBeDisabled()
   await expect(page.getByText('Unavailable')).toBeVisible()
   await page.getByLabel('Minimum attendance %').fill('60')
