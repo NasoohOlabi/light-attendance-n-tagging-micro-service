@@ -16,6 +16,7 @@
 :root[data-theme='dark'] .profile-panel,
 :root[data-theme='dark'] .table-control-popup,
 :root[data-theme='dark'] .sort-help-popover,
+:root[data-theme='dark'] .grade-table-scroll thead th,
 :root[data-theme='dark'] input:not([type='checkbox']),
 :root[data-theme='dark'] select,
 :root[data-theme='dark'] textarea,
