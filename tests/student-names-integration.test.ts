@@ -52,6 +52,7 @@ integration('student names survive migration, structured saves and legacy writes
       'neon/005-active-enrollments.sql',
       'neon/006-closed-courses.sql',
       'neon/007-student-profiles-handbooks.sql',
+      'neon/008-course-grading.sql',
     ])
       await pool.query(await readFile(file, 'utf8'))
     const handler = createHandler(pool, async () => admin, ['https://app.example'])

@@ -17,7 +17,19 @@ export const neonStudentSchema = z.object({
   active: z.boolean(),
 })
 export const courseInputSchema = z.object({ id: z.uuid(), name: z.string().trim().min(1).max(200) })
-export const courseSchema = courseInputSchema.extend({ open: z.boolean().default(true) })
+const percentage = z.number().min(0).max(100)
+export const courseSettingsSchema = z.strictObject({
+  id: z.uuid(),
+  attendanceMinimum: percentage,
+  practicalMinimum: percentage,
+  theoryMinimum: percentage,
+})
+export const courseSchema = courseInputSchema.extend({
+  open: z.boolean().default(true),
+  attendanceMinimum: percentage.default(70),
+  practicalMinimum: percentage.default(80),
+  theoryMinimum: percentage.default(80),
+})
 export const courseStatusSchema = z.strictObject({ id: z.uuid(), open: z.boolean() })
 export const enrollmentSchema = z.object({
   id: z.uuid(),

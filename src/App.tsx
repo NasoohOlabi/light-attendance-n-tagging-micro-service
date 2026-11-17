@@ -440,6 +440,7 @@ function Notebook({
             userId={neon.userId}
             courses={ledger.courses}
             enrollments={ledger.enrollments}
+            events={ledger.events}
             refresh={ledger.refresh}
           />
         )}

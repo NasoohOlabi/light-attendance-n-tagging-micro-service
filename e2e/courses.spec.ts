@@ -124,6 +124,12 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     const path = new URL(route.request().url()).pathname
     if (path.startsWith('/api/auth/')) return route.fallback()
     if (path === '/api/me') return route.fulfill({ json: { account: teacher } })
+    if (path === '/api/admin/courses/settings') {
+      const body = route.request().postDataJSON()
+      const index = courses.findIndex((item) => item.id === body.id)
+      if (index >= 0) courses[index] = { ...courses[index], ...body }
+      return route.fulfill({ json: { saved: true } })
+    }
     if (path === '/api/admin/courses/status') {
       const body = route.request().postDataJSON()
       const course = courses.find((item) => item.id === body.id)
@@ -495,6 +501,11 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .filter({ hasText: 'Course A' })
     .getByRole('button', { name: 'Grades' })
     .click()
+  await expect(page.getByRole('button', { name: 'Close course' })).toBeDisabled()
+  await expect(page.getByText('Unavailable')).toBeVisible()
+  await page.getByLabel('Minimum attendance %').fill('60')
+  await page.getByRole('button', { name: 'Save thresholds' }).click()
+  await expect(page.getByLabel('Minimum attendance %')).toHaveValue('60')
   await page.getByLabel('Practical: Synthetic Student').fill('0')
   await page.getByLabel('Theory: Synthetic Student').fill('100')
   await page
@@ -564,7 +575,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       .getByRole('combobox', { name: 'Course', exact: true })
       .locator(`option[value="${courseA}"]`),
   ).toHaveCount(0)
-  await expect(page.locator('li').filter({ hasText: 'Synthetic Student' })).toContainText('present')
+  await expect(
+    page.locator('li').filter({ hasText: 'Synthetic Student' }).filter({ hasText: 'present' }),
+  ).toBeVisible()
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveCount(0)
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
@@ -573,6 +586,64 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await courseRow.getByRole('button', { name: 'Grades' }).click()
   await expect(page.getByLabel('Practical: Synthetic Student')).toHaveValue('0')
   await expect(page.getByLabel('Theory: Synthetic Student')).toHaveValue('100')
+  const gradeRow = page.getByRole('row').filter({ hasText: 'Synthetic' })
+  await expect(gradeRow).toContainText('100.0%')
+  await expect(gradeRow).toContainText('Fail')
+  await page.getByLabel('Practical: Synthetic Student').fill('80')
+  await expect(gradeRow).toContainText('Pending')
+  await expect(page.getByRole('button', { name: 'Close course' })).toBeDisabled()
+  await gradeRow.getByRole('button', { name: 'Save grades' }).click()
+  await expect(gradeRow).toContainText('Pass')
+  events.push({
+    id: '50000000-0000-4000-8000-000000000002',
+    actor: 'Admin',
+    clientTime: new Date().toISOString(),
+    receivedAt: '',
+    payload: {
+      kind: 'attendance',
+      studentId,
+      enrollmentId: enrollA,
+      date: '2026-01-01',
+      status: 'absent',
+    },
+  })
+  await page.reload()
+  await expect(gradeRow).toContainText('50.0%')
+  await expect(gradeRow).toContainText('Fail')
+  await page.getByLabel('Minimum attendance %').fill('50')
+  await expect(gradeRow).toContainText('Pending')
+  await page.getByRole('button', { name: 'Save thresholds' }).click()
+  await expect(gradeRow).toContainText('Pass')
+  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await expect(page.getByLabel('الحد الأدنى للحضور %')).toHaveValue('50')
+  await expect(gradeRow).toContainText('ناجح')
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const grades = page.getByRole('region', { name: 'درجات الدورة' })
+    const bounds = await grades.evaluate((element) => ({
+      scroll: element.scrollWidth,
+      visible: element.clientWidth,
+      table: element.querySelector('table')?.getBoundingClientRect().width ?? 0,
+    }))
+    expect(bounds.table).toBeGreaterThanOrEqual(1088)
+    expect(bounds.scroll).toBeGreaterThan(bounds.visible)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+  await page.screenshot({
+    path: `.artifacts/verification/grades-${testInfo.project.name}-ar.png`,
+    fullPage: true,
+  })
+  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await page.getByRole('button', { name: 'Close course', exact: true }).click()
+  await expect(
+    page.getByRole('status', { exact: false }).filter({ hasText: 'Course closed' }),
+  ).toBeVisible()
+  await page.reload()
+  await expect(page.getByText('Course closed', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Back to courses', exact: true }).click()
+  await expect(courseRow).toContainText('Closed')
+  await courseRow.getByRole('button', { name: 'Reopen', exact: true }).click()
+  await expect(courseRow).toContainText('Open')
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseA)
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
@@ -581,7 +652,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('switch', { name: 'Enrolled: Synthetic Student' }).click()
   await expect.poll(() => enrollments[0].active).toBe(false)
   await page.getByRole('button', { name: 'History & corrections', exact: true }).click()
-  await expect(page.locator('li').filter({ hasText: 'Synthetic Student' })).toContainText('present')
+  await expect(
+    page.locator('li').filter({ hasText: 'Synthetic Student' }).filter({ hasText: 'present' }),
+  ).toBeVisible()
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveCount(0)
   if (testInfo.project.name === 'mobile') {

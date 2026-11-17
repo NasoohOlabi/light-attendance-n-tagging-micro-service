@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { ClipboardList, History, Lock, LockOpen, Pencil, UsersRound } from 'lucide-react'
 import { neonAdminBoardSchema, type Course, type Enrollment } from '../shared/neon'
+import { projectEvents, type LedgerEvent } from '../shared/ledger'
 import { request } from './neon'
 import { useLanguage } from './i18n'
 import { setQuery, useQueryState } from './queryState'
@@ -14,11 +15,13 @@ export function Courses({
   userId,
   courses,
   enrollments,
+  events,
   refresh,
 }: {
   userId: string
   courses: Course[]
   enrollments: Enrollment[]
+  events: LedgerEvent[]
   refresh: () => Promise<void>
 }) {
   const { language } = useLanguage()
@@ -376,44 +379,17 @@ export function Courses({
               </div>
             </>
           )}
-          {query.courseView === 'grades' && (
-            <div
-              className="role-table-scroll"
-              role="region"
-              aria-label={ar ? 'درجات الدورة' : 'Course grades'}
-              tabIndex={0}
-            >
-              <table className="role-table">
-                <thead>
-                  <tr>
-                    <th>{ar ? 'الاسم الأول' : 'First name'}</th>
-                    <th>{ar ? 'اسم العائلة' : 'Last name'}</th>
-                    <th>{ar ? 'عملي' : 'Practical'}</th>
-                    <th>{ar ? 'نظري' : 'Theory'}</th>
-                    <th>{ar ? 'الإجراءات' : 'Actions'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {courseEntries.map((entry) => {
-                    const student = board?.students.find(
-                      (item) => item.studentId === entry.studentId,
-                    )
-                    return (
-                      student && (
-                        <GradeRow
-                          key={`${entry.id}:${entry.practical}:${entry.theory}`}
-                          entry={entry}
-                          student={student}
-                          busy={busy}
-                          ar={ar}
-                          save={submit}
-                        />
-                      )
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+          {query.courseView === 'grades' && board && (
+            <GradePage
+              key={course.id}
+              course={course}
+              entries={courseEntries}
+              students={board.students}
+              events={events}
+              busy={busy}
+              ar={ar}
+              save={submit}
+            />
           )}
         </>
       )}
@@ -421,67 +397,227 @@ export function Courses({
   )
 }
 
-function GradeRow({
-  entry,
-  student,
+function GradePage({
+  course,
+  entries,
+  students,
+  events,
   busy,
   ar,
   save,
 }: {
-  entry: Enrollment
-  student: Board['students'][number]
+  course: Course
+  entries: Enrollment[]
+  students: Board['students']
+  events: LedgerEvent[]
   busy: boolean
   ar: boolean
   save: (path: string, body: unknown) => Promise<boolean>
 }) {
-  const [practical, setPractical] = useState(entry.practical?.toString() ?? '')
-  const [theory, setTheory] = useState(entry.theory?.toString() ?? '')
-  const formId = `grades-${entry.id}`
+  const [drafts, setDrafts] = useState<Record<string, { practical: string; theory: string }>>({})
+  const [settings, setSettings] = useState({
+    attendanceMinimum: String(course.attendanceMinimum),
+    practicalMinimum: String(course.practicalMinimum),
+    theoryMinimum: String(course.theoryMinimum),
+  })
+  const settingsDirty =
+    Number(settings.attendanceMinimum) !== course.attendanceMinimum ||
+    Number(settings.practicalMinimum) !== course.practicalMinimum ||
+    Number(settings.theoryMinimum) !== course.theoryMinimum ||
+    Object.values(settings).some((value) => value === '')
+  const gradeDirty = entries.some((entry) => {
+    const draft = drafts[entry.id]
+    return (
+      draft &&
+      (draft.practical !== (entry.practical?.toString() ?? '') ||
+        draft.theory !== (entry.theory?.toString() ?? ''))
+    )
+  })
+  const attendance = projectEvents(events).attendance
   return (
-    <tr>
-      <td dir="auto">{student.firstName}</td>
-      <td dir="auto">{student.lastName || '—'}</td>
-      <td>
-        <input
-          form={formId}
-          aria-label={`${ar ? 'عملي' : 'Practical'}: ${student.firstName} ${student.lastName}`}
-          type="number"
-          min="0"
-          max="100"
-          step="any"
-          value={practical}
-          onChange={(event) => setPractical(event.target.value)}
-        />
-      </td>
-      <td>
-        <input
-          form={formId}
-          aria-label={`${ar ? 'نظري' : 'Theory'}: ${student.firstName} ${student.lastName}`}
-          type="number"
-          min="0"
-          max="100"
-          step="any"
-          value={theory}
-          onChange={(event) => setTheory(event.target.value)}
-        />
-      </td>
-      <td>
-        <form
-          id={formId}
-          onSubmit={(event) => {
-            event.preventDefault()
-            void save('/api/admin/enrollments/grades', {
-              id: entry.id,
-              practical: practical === '' ? null : Number(practical),
-              theory: theory === '' ? null : Number(theory),
-            })
-          }}
+    <>
+      <form
+        className="flex flex-wrap items-end justify-end gap-3"
+        dir="ltr"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void save('/api/admin/courses/settings', {
+            id: course.id,
+            attendanceMinimum: Number(settings.attendanceMinimum),
+            practicalMinimum: Number(settings.practicalMinimum),
+            theoryMinimum: Number(settings.theoryMinimum),
+          })
+        }}
+      >
+        {(
+          [
+            ['attendanceMinimum', ar ? 'الحد الأدنى للحضور %' : 'Minimum attendance %'],
+            ['practicalMinimum', ar ? 'درجة النجاح العملي' : 'Practical passing grade'],
+            ['theoryMinimum', ar ? 'درجة النجاح النظري' : 'Theory passing grade'],
+          ] as const
+        ).map(([key, label]) => (
+          <label className="w-full max-w-48" key={key} dir={ar ? 'rtl' : 'ltr'}>
+            {label}
+            <input
+              type="number"
+              disabled={busy}
+              min="0"
+              max="100"
+              step="any"
+              required
+              value={settings[key]}
+              onChange={(event) =>
+                setSettings((current) => ({ ...current, [key]: event.target.value }))
+              }
+            />
+          </label>
+        ))}
+        <button className="secondary" disabled={busy || !settingsDirty}>
+          {ar ? 'حفظ الحدود' : 'Save thresholds'}
+        </button>
+      </form>
+      <p>
+        {ar
+          ? 'الحضور = الحاضر / (الحاضر + الغائب + المعذور). الأيام غير المسجلة مستبعدة.'
+          : 'Attendance = Present / (Present + Absent + Excused). Unmarked days are excluded.'}
+      </p>
+      <div
+        className="role-table-scroll"
+        role="region"
+        aria-label={ar ? 'درجات الدورة' : 'Course grades'}
+        tabIndex={0}
+      >
+        <table className="role-table min-w-[68rem] [&_th]:whitespace-nowrap [&_input]:w-24">
+          <thead>
+            <tr>
+              <th>{ar ? 'الاسم الأول' : 'First name'}</th>
+              <th>{ar ? 'اسم العائلة' : 'Last name'}</th>
+              <th>{ar ? 'مستوى الدورة' : 'Course level'}</th>
+              <th>{ar ? 'مسجل' : 'Enrolled'}</th>
+              <th>{ar ? 'الحضور' : 'Attendance'}</th>
+              <th>{ar ? 'عملي' : 'Practical'}</th>
+              <th>{ar ? 'نظري' : 'Theory'}</th>
+              <th>{ar ? 'النتيجة' : 'Result'}</th>
+              <th>{ar ? 'الإجراءات' : 'Actions'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((entry) => {
+              const student = students.find((item) => item.studentId === entry.studentId)
+              if (!student) return null
+              const draft = drafts[entry.id] ?? {
+                practical: entry.practical?.toString() ?? '',
+                theory: entry.theory?.toString() ?? '',
+              }
+              const records = attendance.filter(({ value }) => value.enrollmentId === entry.id)
+              const ratio = records.length
+                ? (records.filter(({ value }) => value.status === 'present').length /
+                    records.length) *
+                  100
+                : null
+              const result =
+                settingsDirty ||
+                draft.practical !== (entry.practical?.toString() ?? '') ||
+                draft.theory !== (entry.theory?.toString() ?? '') ||
+                entry.practical === null ||
+                entry.theory === null ||
+                ratio === null
+                  ? 'pending'
+                  : entry.practical >= course.practicalMinimum &&
+                      entry.theory >= course.theoryMinimum &&
+                      ratio >= course.attendanceMinimum
+                    ? 'pass'
+                    : 'fail'
+              const formId = `grades-${entry.id}`
+              return (
+                <tr key={entry.id}>
+                  <td dir="auto">{student.firstName}</td>
+                  <td dir="auto">{student.lastName || '—'}</td>
+                  <td dir="auto">{entry.level || '—'}</td>
+                  <td>{entry.active ? (ar ? 'نعم' : 'Yes') : ar ? 'لا' : 'No'}</td>
+                  <td>
+                    {ratio === null ? (ar ? 'غير متاح' : 'Unavailable') : `${ratio.toFixed(1)}%`}
+                  </td>
+                  {(['practical', 'theory'] as const).map((key) => (
+                    <td key={key}>
+                      <input
+                        form={formId}
+                        aria-label={`${key === 'practical' ? (ar ? 'عملي' : 'Practical') : ar ? 'نظري' : 'Theory'}: ${student.firstName} ${student.lastName}`}
+                        type="number"
+                        disabled={busy}
+                        min="0"
+                        max="100"
+                        step="any"
+                        value={draft[key]}
+                        onChange={(event) =>
+                          setDrafts((current) => ({
+                            ...current,
+                            [entry.id]: { ...draft, [key]: event.target.value },
+                          }))
+                        }
+                      />
+                    </td>
+                  ))}
+                  <td>
+                    {result === 'pending'
+                      ? ar
+                        ? 'قيد الانتظار'
+                        : 'Pending'
+                      : result === 'pass'
+                        ? ar
+                          ? 'ناجح'
+                          : 'Pass'
+                        : ar
+                          ? 'راسب'
+                          : 'Fail'}
+                  </td>
+                  <td>
+                    <form
+                      id={formId}
+                      onSubmit={(event) => {
+                        event.preventDefault()
+                        void save('/api/admin/enrollments/grades', {
+                          id: entry.id,
+                          practical: draft.practical === '' ? null : Number(draft.practical),
+                          theory: draft.theory === '' ? null : Number(draft.theory),
+                        }).then((ok) => {
+                          if (ok)
+                            setDrafts((current) => {
+                              const next = { ...current }
+                              delete next[entry.id]
+                              return next
+                            })
+                        })
+                      }}
+                    >
+                      <button className="secondary" disabled={busy}>
+                        {ar ? 'حفظ الدرجات' : 'Save grades'}
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {!course.open && <p role="status">{ar ? 'الدورة مغلقة' : 'Course closed'}</p>}
+      {course.open && (
+        <button
+          className="primary"
+          disabled={
+            busy ||
+            settingsDirty ||
+            !!gradeDirty ||
+            entries.some(
+              (entry) => entry.active && (entry.practical === null || entry.theory === null),
+            )
+          }
+          onClick={() => void save('/api/admin/courses/status', { id: course.id, open: false })}
         >
-          <button className="secondary" disabled={busy}>
-            {ar ? 'حفظ الدرجات' : 'Save grades'}
-          </button>
-        </form>
-      </td>
-    </tr>
+          {ar ? 'إغلاق الدورة' : 'Close course'}
+        </button>
+      )}
+    </>
   )
 }

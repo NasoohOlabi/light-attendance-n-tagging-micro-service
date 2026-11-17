@@ -44,7 +44,7 @@ const courseTables = [
     columns: ['id', 'course_id', 'student_id', 'level', 'practical', 'theory'],
   },
 ] as const
-type Version = 1 | 2 | 3 | 4 | 5 | 6
+type Version = 1 | 2 | 3 | 4 | 5 | 6 | 7
 function tablesFor(version: Version) {
   if (version < 3) return [...baseTables]
   return [...baseTables.slice(0, -1), ...courseTables, baseTables[baseTables.length - 1]]
@@ -60,7 +60,12 @@ function columnsFor(
       'last_name',
       ...(version >= 6 ? ['whatsapp', 'location', 'birth_year'] : []),
     ]
-  if (table.name === 'public.courses' && version >= 5) return [...table.columns, 'open']
+  if (table.name === 'public.courses' && version >= 5)
+    return [
+      ...table.columns,
+      'open',
+      ...(version >= 7 ? ['attendance_minimum', 'practical_minimum', 'theory_minimum'] : []),
+    ]
   if (table.name === 'public.course_enrollments' && version >= 4)
     return [...table.columns, 'active', ...(version >= 6 ? ['handbook_received'] : [])]
   if (table.name === 'public.events' && version >= 3) return [...table.columns, 'enrollment_id']
@@ -75,6 +80,7 @@ const backupSchema = z.strictObject({
     z.literal(4),
     z.literal(5),
     z.literal(6),
+    z.literal(7),
   ]),
   createdAt: z.iso.datetime(),
   tables: z.array(z.strictObject({ name: z.string(), rows: z.array(rowSchema) })),
@@ -166,7 +172,9 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND ((column_name IN ('whatsapp', 'location') AND data_type = 'text' AND is_nullable = 'YES') OR (column_name = 'birth_year' AND data_type = 'integer' AND is_nullable = 'YES'))) AS profile,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name IN ('whatsapp', 'location', 'birth_year')) AS profile_columns,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'handbook_received' AND data_type = 'boolean' AND is_nullable = 'NO' AND column_default = 'false') AS handbook,
-    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'handbook_received') AS handbook_column`)
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'handbook_received') AS handbook_column,
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name IN ('attendance_minimum', 'practical_minimum', 'theory_minimum') AND data_type = 'double precision' AND is_nullable = 'NO') AS grading,
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name IN ('attendance_minimum', 'practical_minimum', 'theory_minimum')) AS grading_columns`)
   const {
     names,
     courses,
@@ -180,6 +188,8 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     profile_columns,
     handbook,
     handbook_column,
+    grading,
+    grading_columns,
   } = z
     .object({
       names: z.number(),
@@ -194,6 +204,8 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
       profile_columns: z.number(),
       handbook: z.number(),
       handbook_column: z.number(),
+      grading: z.number(),
+      grading_columns: z.number(),
     })
     .parse(result.rows[0])
   if (
@@ -210,6 +222,8 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     !((profile === 0 && handbook === 0) || (profile === 3 && handbook === 1 && course_open === 1))
   )
     throw new Error('Incomplete application migration')
+  if (grading !== grading_columns || ![0, 3].includes(grading) || (grading && profile !== 3))
+    throw new Error('Incomplete application migration')
   if (course_open !== course_open_column || (course_open && !membership))
     throw new Error('Incomplete application migration')
   if (membership !== membership_column) throw new Error('Incomplete application migration')
@@ -220,7 +234,9 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     ? membership
       ? course_open
         ? profile === 3
-          ? 6
+          ? grading === 3
+            ? 7
+            : 6
           : 5
         : 4
       : 3
@@ -316,6 +332,13 @@ async function main() {
         )
         if (extras.rowCount)
           throw new Error('Legacy backup cannot represent student profiles or handbooks')
+      }
+      if (backup.version < 7 && targetVersion >= 7) {
+        const thresholds = await db.query(
+          'SELECT 1 FROM courses WHERE attendance_minimum <> 70 OR practical_minimum <> 80 OR theory_minimum <> 80 LIMIT 1',
+        )
+        if (thresholds.rowCount)
+          throw new Error('Legacy backup cannot represent course grading thresholds')
       }
       const actual = await snapshot(db, backup.version)
       for (const [index, table] of backup.tables.entries()) {

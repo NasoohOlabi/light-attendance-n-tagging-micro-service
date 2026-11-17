@@ -5,6 +5,7 @@ import {
   courseBoardSchema,
   courseInputSchema,
   courseStatusSchema,
+  courseSettingsSchema,
   enrollmentSchema,
   enrollmentMembershipSchema,
   enrollmentHandbookSchema,
@@ -62,10 +63,14 @@ async function courseBoard(db: PoolClient, teacher: z.infer<typeof neonTeacherSc
   ).rows
   const courses =
     teacher.role === 'administrator'
-      ? (await db.query('SELECT id, name, open FROM courses ORDER BY id FOR SHARE')).rows
+      ? (
+          await db.query(
+            'SELECT id, name, open, attendance_minimum AS "attendanceMinimum", practical_minimum AS "practicalMinimum", theory_minimum AS "theoryMinimum" FROM courses ORDER BY id FOR SHARE',
+          )
+        ).rows
       : (
           await db.query(
-            'SELECT c.id, c.name, c.open FROM courses c WHERE EXISTS (SELECT 1 FROM course_enrollments ce JOIN students s ON s.id = ce.student_id WHERE ce.course_id = c.id AND s.teacher_id = $1 AND s.active) ORDER BY c.id FOR SHARE OF c',
+            'SELECT c.id, c.name, c.open, c.attendance_minimum AS "attendanceMinimum", c.practical_minimum AS "practicalMinimum", c.theory_minimum AS "theoryMinimum" FROM courses c WHERE EXISTS (SELECT 1 FROM course_enrollments ce JOIN students s ON s.id = ce.student_id WHERE ce.course_id = c.id AND s.teacher_id = $1 AND s.active) ORDER BY c.id FOR SHARE OF c',
             [teacher.id],
           )
         ).rows
@@ -229,6 +234,14 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
       'INSERT INTO courses (id, name) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name',
       [course.id, course.name],
     )
+    return { saved: true }
+  } else if (path === '/api/admin/courses/settings') {
+    const settings = courseSettingsSchema.parse(body)
+    const result = await db.query(
+      'UPDATE courses SET attendance_minimum = $2, practical_minimum = $3, theory_minimum = $4 WHERE id = $1 RETURNING id',
+      [settings.id, settings.attendanceMinimum, settings.practicalMinimum, settings.theoryMinimum],
+    )
+    if (!result.rowCount) throw new HttpError(400)
     return { saved: true }
   } else if (path === '/api/admin/courses/status') {
     const status = courseStatusSchema.parse(body)
@@ -422,6 +435,7 @@ export function createHandler(
         '/api/admin/students',
         '/api/admin/courses',
         '/api/admin/courses/status',
+        '/api/admin/courses/settings',
         '/api/admin/enrollments',
         '/api/admin/enrollments/membership',
         '/api/admin/enrollments/grades',
@@ -439,6 +453,7 @@ export function createHandler(
         '/api/admin/students',
         '/api/admin/courses',
         '/api/admin/courses/status',
+        '/api/admin/courses/settings',
         '/api/admin/enrollments',
         '/api/admin/enrollments/membership',
         '/api/admin/enrollments/grades',
@@ -454,6 +469,7 @@ export function createHandler(
         '/api/admin/students',
         '/api/admin/courses',
         '/api/admin/courses/status',
+        '/api/admin/courses/settings',
         '/api/admin/enrollments',
         '/api/admin/enrollments/membership',
         '/api/admin/enrollments/grades',
