@@ -1,7 +1,6 @@
 import { clickAccountAction } from './profileActions'
 import { expect, test, type Page } from '@playwright/test'
 import { compactHeader } from './headerLayout'
-import { spawn, type ChildProcess } from 'node:child_process'
 import { mkdir } from 'node:fs/promises'
 
 test.use({ trace: 'off' })
@@ -24,35 +23,15 @@ const users = [
     studentId: '20000000-0000-4000-8000-000000000002',
   },
 ]
-let server: ChildProcess
 let origin = ''
 
-test.beforeAll(async ({ browserName }, testInfo) => {
+test.beforeAll(({ browserName }, testInfo) => {
   if (browserName !== 'chromium') throw new Error('Synthetic test requires Chromium')
-  const port = testInfo.project.name === 'mobile' ? '4183' : '4182'
-  origin = `http://127.0.0.1:${port}`
+  const baseURL = testInfo.project.use.baseURL
+  if (!baseURL) throw new Error('Synthetic test requires the suite preview baseURL')
+  origin = baseURL
   auth = `${origin}/api/auth`
   api = `${origin}/api`
-  server = spawn(
-    process.execPath,
-    ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', port, '--strictPort'],
-    {
-      env: { ...process.env, VITE_NEON_AUTH_URL: auth, VITE_NEON_API_URL: api },
-      stdio: 'ignore',
-    },
-  )
-  for (let i = 0; i < 100; i++) {
-    try {
-      if ((await fetch(origin)).ok) return
-    } catch {
-      /* server starting */
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100))
-  }
-  throw new Error('Synthetic Vite server did not start')
-})
-test.afterAll(() => {
-  server?.kill()
 })
 
 test('Arabic authentication keeps mobile input semantics and localized feedback', async ({
