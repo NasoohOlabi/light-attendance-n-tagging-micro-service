@@ -8,6 +8,7 @@
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react'
 import { useLanguage } from './i18n'
 import { SortPills } from './SortPills'
+import { TableFilters } from './TableFilters'
 import { setTableQuery, useTableQuery } from './queryState'
 
 type Value = string | number | null | undefined
@@ -125,10 +126,11 @@ export function TableHeader<T>({
           ar={ar}
           filtersEnabled={model.filtersEnabled}
         />
+        {model.filtersEnabled && <TableFilters model={model} ar={ar} />}
       </caption>
       <thead>
         <tr>
-          {model.columns.map(({ id, label, choices }) => {
+          {model.columns.map(({ id, label }) => {
             const column = model.table.getColumn(id)
             if (!column) return null
             const sort = column.getIsSorted()
@@ -183,35 +185,6 @@ export function TableHeader<T>({
                     focusable="false"
                   />
                 </button>
-                {model.filtersEnabled && (
-                  <div className="table-filter-row">
-                    {choices ? (
-                      <select
-                        className="table-filter"
-                        aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
-                        value={String(column.getFilterValue() ?? '')}
-                        onChange={(event) => column.setFilterValue(event.target.value)}
-                      >
-                        <option value="">{ar ? 'الكل' : 'All'}</option>
-                        {choices.map((choice, choiceIndex) => (
-                          <option key={choiceIndex} value={String(choiceIndex + 1)}>
-                            {choice}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        className="table-filter"
-                        type="search"
-                        maxLength={200}
-                        dir="auto"
-                        aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
-                        value={String(column.getFilterValue() ?? '')}
-                        onChange={(event) => column.setFilterValue(event.target.value)}
-                      />
-                    )}
-                  </div>
-                )}
               </th>
             )
           })}

@@ -178,7 +178,16 @@ async function everyColumn(table: Locator, count: number, actions = false, filte
   }
   const headers = table.locator('thead th[aria-sort]')
   await expect(headers).toHaveCount(count)
-  await expect(table.locator('.table-filter')).toHaveCount(filters ? count : 0)
+  await expect(table.locator('thead .table-filter')).toHaveCount(0)
+  await expect(table.getByRole('button', { name: 'Filter options' })).toHaveCount(filters ? 1 : 0)
+  const controls = table.locator('.table-controls')
+  const controlSize = await controls.boundingBox()
+  expect(controlSize?.height).toBeLessThanOrEqual(60)
+  for (const trigger of await controls.getByRole('button').all()) {
+    const size = await trigger.boundingBox()
+    expect(size?.width).toBeGreaterThanOrEqual(44)
+    expect(size?.height).toBeGreaterThanOrEqual(44)
+  }
   for (const header of await headers.all()) {
     const button = header.locator('.table-sort')
     const bounds = await button.boundingBox()
@@ -194,7 +203,7 @@ async function everyColumn(table: Locator, count: number, actions = false, filte
   if (actions) await expect(table.locator('thead th').last().getByRole('button')).toHaveCount(0)
 }
 
-test('every staff table column sorts and filters without writes', async ({ page }) => {
+test('every staff table column sorts and filters without writes', async ({ page }, testInfo) => {
   const { writes } = await syntheticTables(page)
   for (const [query, columns, actions] of [
     ['view=courses', 2, true],
@@ -234,11 +243,19 @@ test('every staff table column sorts and filters without writes', async ({ page 
     .click()
   const table = page.locator('table')
   await everyColumn(table, 8, true)
+  await table.getByRole('button', { name: 'Filter options' }).click()
+  await expect(table.getByRole('dialog', { name: 'Filter options' })).toBeVisible()
+  await table.getByLabel('Add filter').selectOption({ label: 'Active' })
   await page.getByLabel('Filter Active', { exact: true }).selectOption({ label: 'Active' })
   await expect(table.locator('tbody tr')).toHaveCount(5)
   await clickAccountAction(page, 'العربية')
   await expect(table.locator('tbody tr')).toHaveCount(5)
-  await expect(page.getByLabel('تصفية الحالة')).toHaveValue('1')
+  await table.getByRole('button', { name: 'خيارات التصفية' }).click()
+  await expect(page.getByLabel('تصفية الحالة', { exact: true })).toHaveValue('1')
+  await mkdir('.artifacts/verification', { recursive: true })
+  await page.screenshot({
+    path: `.artifacts/verification/filter-popup-ar-${testInfo.project.name}.png`,
+  })
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
@@ -260,9 +277,40 @@ test('grade sorting is numeric, keeps drafts, and ignores stale filters', async 
   await expect(table.locator('.table-filter')).toHaveCount(0)
   await expect(table.getByRole('button', { name: 'Clear sort and filters' })).toHaveCount(0)
   const names = table.locator('tbody tr td:first-child')
+  await expect(names).toHaveCount(5)
+  await mkdir('.artifacts/verification', { recursive: true })
+  await page.screenshot({
+    path: `.artifacts/verification/sort-popup-closed-${testInfo.project.name}.png`,
+  })
+  const sortTrigger = table.getByRole('button', { name: 'Sort options' })
+  await sortTrigger.click()
+  await page.screenshot({
+    path: `.artifacts/verification/sort-popup-open-${testInfo.project.name}.png`,
+  })
+  await page.keyboard.press('Escape')
+  await expect(sortTrigger).toBeFocused()
+  await sortTrigger.click()
+  await table
+    .getByRole('dialog', { name: 'Sort options' })
+    .getByRole('button', { name: 'Close' })
+    .click()
+  await expect(sortTrigger).toBeFocused()
+  await sortTrigger.click()
+  await page.mouse.click(2, 2)
+  await expect(table.getByRole('button', { name: 'Sort help' })).toBeHidden()
   const practical = page.getByRole('button', { name: 'Sort by Practical', exact: true })
   await practical.click()
   await expect(names).toHaveText(['Delta', 'Zulu', 'Alpha', 'Charlie', 'Echo'])
+  await page.screenshot({
+    path: `.artifacts/verification/sort-popup-active-closed-${testInfo.project.name}.png`,
+  })
+  await sortTrigger.click()
+  await expect(table.locator('.sort-pill').first()).toBeVisible()
+  await page.screenshot({
+    path: `.artifacts/verification/sort-popup-active-open-${testInfo.project.name}.png`,
+  })
+  await page.keyboard.press('Escape')
+  await expect(table.locator('.sort-pill').first()).toBeHidden()
   await practical.click()
   await expect(names).toHaveText(['Charlie', 'Alpha', 'Zulu', 'Delta', 'Echo'])
   await page.getByLabel('Practical: Zulu Family', { exact: true }).fill('90')
@@ -294,19 +342,27 @@ test('student portal dates sort chronologically and combine course/status filter
     '2026-11-13',
     '2026-11-14',
   ])
+  await table.getByRole('button', { name: 'Filter options' }).click()
+  await table.getByLabel('Add filter').selectOption({ label: 'Course' })
   await page.getByLabel('Filter Course', { exact: true }).fill('Alpha')
+  await table.getByLabel('Add filter').selectOption({ label: 'Status' })
+  await page.getByLabel('Filter Status', { exact: true }).selectOption({ label: 'present' })
+  await table.getByRole('button', { name: 'Remove filter Status' }).click()
+  await table.getByLabel('Add filter').selectOption({ label: 'Status' })
   await page.getByLabel('Filter Status', { exact: true }).selectOption({ label: 'present' })
   await expect(table.locator('tbody tr')).toHaveCount(1)
   await expect(table.locator('tbody')).toContainText('2026-11-12')
   await page.reload()
   await expect(table.locator('tbody tr')).toHaveCount(1)
+  await table.getByRole('button', { name: 'Sort options' }).click()
   await page.getByRole('button', { name: 'Reset sort', exact: true }).click()
+  await table.getByRole('button', { name: 'Filter options' }).click()
   await expect(page.getByLabel('Filter Course', { exact: true })).toHaveValue('Alpha')
   await expect(
     page.getByLabel('Filter Status', { exact: true }).locator('option:checked'),
   ).toHaveText('present')
   await expect(table.locator('tbody tr')).toHaveCount(1)
-  await page.getByRole('button', { name: 'Clear sort and filters' }).click()
+  await page.getByRole('button', { name: 'Clear filters' }).click()
   await expect(table.locator('tbody tr')).toHaveCount(3)
   expect(writes).toEqual([])
 })
@@ -324,6 +380,8 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await page.keyboard.press('Shift+Tab')
   await expect(enrolled).not.toHaveCSS('outline-style', 'none')
   await first.click({ modifiers: ['Shift'] })
+  await expect(table.locator('.sort-pill').first()).toBeHidden()
+  await table.getByRole('button', { name: 'Sort options' }).click()
   await expect(
     table.getByRole('button', { name: 'Reorder First name' }),
   ).toHaveAccessibleDescription(/Press Space/)
@@ -337,6 +395,7 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await expect(first.locator('..')).not.toHaveAttribute('aria-sort')
   await page.reload()
   await expect(names).toHaveText(['Echo', 'Alpha', 'Charlie', 'Delta', 'Zulu'])
+  await table.getByRole('button', { name: 'Sort options' }).click()
   await table
     .locator('.sort-toolbar')
     .evaluate((element) => element.scrollIntoView({ block: 'center' }))
@@ -358,10 +417,13 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await expect(table.locator('.sort-pill').first()).toContainText('First name')
   await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta', 'Echo', 'Zulu'])
   await page.reload()
+  await table.getByRole('button', { name: 'Sort options' }).click()
   await expect(table.locator('.sort-pill').first()).toContainText('First name')
   await table.getByRole('button', { name: 'Reset sort' }).click()
+  await table.getByRole('button', { name: 'Close' }).click()
   await enrolled.click()
   await first.click({ modifiers: ['Shift'] })
+  await table.getByRole('button', { name: 'Sort options' }).click()
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({
     path: `.artifacts/verification/multi-sort-${testInfo.project.name}.png`,
@@ -389,7 +451,9 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await expect(names).toHaveText(['Zulu', 'Echo', 'Delta', 'Charlie', 'Alpha'])
   await table.getByRole('button', { name: 'Remove sort 2' }).click()
   await table.getByLabel('Add column').selectOption('enrolled')
+  await table.getByRole('button', { name: 'Close' }).click()
   await first.click()
+  await table.getByRole('button', { name: 'Sort options' }).click()
   await expect(table.locator('.sort-pill')).toHaveCount(0)
   await table.getByRole('button', { name: 'Reset sort', exact: true }).click()
   await expect(table.locator('.table-filter')).toHaveCount(0)
@@ -410,19 +474,28 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   url.searchParams.set('tables', JSON.stringify(state))
   await page.goto(url.toString())
   await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta', 'Echo', 'Zulu'])
+  await table.getByRole('button', { name: 'Sort options' }).click()
   await expect(table.locator('.sort-pill')).toHaveCount(1)
   await expect(table.locator('.sort-pill').first()).toContainText('First name')
   await table.getByLabel('Add column').selectOption('enrolled')
+  await table.getByRole('button', { name: 'Close' }).click()
   await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
+  await table.getByRole('button', { name: 'خيارات الفرز' }).click()
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true,
     )
     await page.screenshot({
-      path: `.artifacts/verification/multi-sort-ar-${testInfo.project.name}-${width}.png`,
+      path: `.artifacts/verification/sort-popup-open-ar-${testInfo.project.name}-${width}.png`,
       fullPage: true,
     })
+    await page.keyboard.press('Escape')
+    await page.screenshot({
+      path: `.artifacts/verification/sort-popup-closed-ar-${testInfo.project.name}-${width}.png`,
+      fullPage: true,
+    })
+    await table.getByRole('button', { name: 'خيارات الفرز' }).click()
   }
   const rtlGrip = table.getByRole('button', { name: 'ترتيب مسجل' })
   await expect(rtlGrip).toHaveAccessibleDescription(/اضغط مسافة/)
@@ -441,6 +514,7 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await page.keyboard.press('Space')
   await expect(rtlGrip).toBeFocused()
   await page.reload()
+  await table.getByRole('button', { name: 'خيارات الفرز' }).click()
   await expect(table.locator('.sort-pill').first()).not.toContainText('الاسم الأول')
   await table
     .locator('.sort-toolbar')
@@ -468,6 +542,7 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await expect(table.locator('.sort-pill').first()).toContainText('الاسم الأول')
   await page.reload()
+  await table.getByRole('button', { name: 'خيارات الفرز' }).click()
   await expect(table.locator('.sort-pill').first()).toContainText('الاسم الأول')
   await cdp.detach()
   expect(writes).toEqual([])
