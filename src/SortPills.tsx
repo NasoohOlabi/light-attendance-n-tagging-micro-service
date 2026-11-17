@@ -87,6 +87,7 @@ export function SortPills({
   reset,
   resetSort,
   ar,
+  filtersEnabled,
 }: {
   columns: Column[]
   sorting: SortingState
@@ -94,6 +95,7 @@ export function SortPills({
   reset: () => void
   resetSort: () => void
   ar: boolean
+  filtersEnabled: boolean
 }) {
   const helpId = useId()
   const available = columns.filter((column) => !sorting.some((item) => item.id === column.id))
@@ -188,15 +190,17 @@ export function SortPills({
       >
         <RotateCcw size={16} aria-hidden="true" />
       </button>
-      <button
-        className="sort-tool"
-        type="button"
-        aria-label={ar ? 'مسح الفرز والتصفية' : 'Clear sort and filters'}
-        title={ar ? 'مسح الفرز والتصفية' : 'Clear sort and filters'}
-        onClick={reset}
-      >
-        <FilterX size={16} aria-hidden="true" />
-      </button>
+      {filtersEnabled && (
+        <button
+          className="sort-tool"
+          type="button"
+          aria-label={ar ? 'مسح الفرز والتصفية' : 'Clear sort and filters'}
+          title={ar ? 'مسح الفرز والتصفية' : 'Clear sort and filters'}
+          onClick={reset}
+        >
+          <FilterX size={16} aria-hidden="true" />
+        </button>
+      )}
       <button
         className="sort-help"
         type="button"
@@ -208,8 +212,12 @@ export function SortPills({
       </button>
       <div id={helpId} popover="auto" className="sort-help-popover">
         {ar
-          ? 'اسحب لتغيير الأولوية. انقر عنوان العمود للفرز واستخدم Shift لإضافة عمود. لوحة المفاتيح: مسافة للإمساك والإفلات، والأسهم للتحريك، وEscape للإلغاء. تتقاطع فلاتر الأعمدة معاً؛ النص يطابق جزءاً من القيمة والخيارات تطابقها تماماً.'
-          : 'Drag to change priority. Click a heading to sort; Shift-click to add a column. Keyboard: Space to grab and drop, arrows to move, Escape to cancel. Filters combine (AND). Text matches part of a value; choices match exactly.'}
+          ? 'اسحب لتغيير الأولوية. انقر عنوان العمود للفرز واستخدم Shift لإضافة عمود. لوحة المفاتيح: مسافة للإمساك والإفلات، والأسهم للتحريك، وEscape للإلغاء.'
+          : 'Drag to change priority. Click a heading to sort; Shift-click to add a column. Keyboard: Space to grab and drop, arrows to move, Escape to cancel.'}
+        {filtersEnabled &&
+          (ar
+            ? ' تتقاطع فلاتر الأعمدة معاً؛ النص يطابق جزءاً من القيمة والخيارات تطابقها تماماً.'
+            : ' Filters combine (AND). Text matches part of a value; choices match exactly.')}
       </div>
     </div>
   )

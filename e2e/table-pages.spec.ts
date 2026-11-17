@@ -142,7 +142,7 @@ async function syntheticTables(page: Page, role: 'administrator' | 'student' = '
   return { writes }
 }
 
-async function everyColumn(table: Locator, count: number, actions = false) {
+async function everyColumn(table: Locator, count: number, actions = false, filters = true) {
   await expect(table).toBeVisible()
   const page = table.page()
   if ((page.viewportSize()?.width ?? 0) <= 1024) {
@@ -178,7 +178,7 @@ async function everyColumn(table: Locator, count: number, actions = false) {
   }
   const headers = table.locator('thead th[aria-sort]')
   await expect(headers).toHaveCount(count)
-  await expect(table.locator('.table-filter')).toHaveCount(count)
+  await expect(table.locator('.table-filter')).toHaveCount(filters ? count : 0)
   for (const header of await headers.all()) {
     const button = header.locator('.table-sort')
     const bounds = await button.boundingBox()
@@ -207,7 +207,12 @@ test('every staff table column sorts and filters without writes', async ({ page 
     [`tab=summary&course=${courseId}`, 5, false],
   ] satisfies [string, number, boolean][]) {
     await page.goto(`/?page=app&${query}`)
-    await everyColumn(page.locator('table').first(), columns, actions)
+    await everyColumn(
+      page.locator('table').first(),
+      columns,
+      actions,
+      !query.includes('courseView=grades'),
+    )
   }
   for (const raw of [
     '{broken',
@@ -243,12 +248,17 @@ test('every staff table column sorts and filters without writes', async ({ page 
   expect(writes).toEqual([])
 })
 
-test('grade sorting is numeric with blanks last and draft/filter state survives', async ({
+test('grade sorting is numeric, keeps drafts, and ignores stale filters', async ({
   page,
 }, testInfo) => {
   const { writes } = await syntheticTables(page)
-  await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
+  const stale = encodeURIComponent(
+    JSON.stringify({ grades: { sorting: [], filters: [{ id: 'first', value: 'missing' }] } }),
+  )
+  await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades&tables=${stale}`)
   const table = page.locator('table')
+  await expect(table.locator('.table-filter')).toHaveCount(0)
+  await expect(table.getByRole('button', { name: 'Clear sort and filters' })).toHaveCount(0)
   const names = table.locator('tbody tr td:first-child')
   const practical = page.getByRole('button', { name: 'Sort by Practical', exact: true })
   await practical.click()
@@ -257,23 +267,12 @@ test('grade sorting is numeric with blanks last and draft/filter state survives'
   await expect(names).toHaveText(['Charlie', 'Alpha', 'Zulu', 'Delta', 'Echo'])
   await page.getByLabel('Practical: Zulu Family', { exact: true }).fill('90')
   await expect(names).toHaveText(['Charlie', 'Zulu', 'Alpha', 'Delta', 'Echo'])
-  await page.getByLabel('Filter First name', { exact: true }).fill('Zulu')
-  await page.getByLabel('Filter Practical', { exact: true }).fill('90')
-  await expect(names).toHaveText(['Zulu'])
-  await page.getByLabel('Filter First name', { exact: true }).fill('no match')
-  await expect(names).toHaveCount(0)
-  await page.getByRole('button', { name: 'Clear sort and filters' }).click()
-  await expect(names).toHaveCount(5)
   await expect(page.getByLabel('Practical: Zulu Family', { exact: true })).toHaveValue('90')
-  await page.getByLabel('Filter Attendance', { exact: true }).fill('66.7')
-  await expect(names).toHaveCount(5)
-  await page.getByRole('button', { name: 'Clear sort and filters' }).click()
-  await page.getByLabel('Filter First name', { exact: true }).fill('Alpha')
   await page.reload()
-  await expect(names).toHaveText(['Alpha'])
+  await expect(names).toHaveText(['Charlie', 'Alpha', 'Zulu', 'Delta', 'Echo'])
   await page.goto('/?page=app&view=courses')
   await page.goBack()
-  await expect(names).toHaveText(['Alpha'])
+  await expect(names).toHaveCount(5)
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({
     path: `.artifacts/verification/table-grades-${testInfo.project.name}.png`,
@@ -301,12 +300,18 @@ test('student portal dates sort chronologically and combine course/status filter
   await expect(table.locator('tbody')).toContainText('2026-11-12')
   await page.reload()
   await expect(table.locator('tbody tr')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Reset sort', exact: true }).click()
+  await expect(page.getByLabel('Filter Course', { exact: true })).toHaveValue('Alpha')
+  await expect(
+    page.getByLabel('Filter Status', { exact: true }).locator('option:checked'),
+  ).toHaveText('present')
+  await expect(table.locator('tbody tr')).toHaveCount(1)
   await page.getByRole('button', { name: 'Clear sort and filters' }).click()
   await expect(table.locator('tbody tr')).toHaveCount(3)
   expect(writes).toEqual([])
 })
 
-test('multi-sort priority, URL state, and filter-preserving reset', async ({ page }, testInfo) => {
+test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => {
   const { writes } = await syntheticTables(page)
   await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
   const table = page.locator('table')
@@ -323,9 +328,9 @@ test('multi-sort priority, URL state, and filter-preserving reset', async ({ pag
     table.getByRole('button', { name: 'Reorder First name' }),
   ).toHaveAccessibleDescription(/Press Space/)
   await table.getByRole('button', { name: 'Sort help' }).click()
-  await expect(page.getByText('Filters combine (AND).', { exact: false })).toBeVisible()
+  await expect(page.getByText('Keyboard: Space to grab and drop', { exact: false })).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page.getByText('Filters combine (AND).', { exact: false })).toBeHidden()
+  await expect(page.getByText('Keyboard: Space to grab and drop', { exact: false })).toBeHidden()
   await expect(names).toHaveText(['Echo', 'Alpha', 'Charlie', 'Delta', 'Zulu'])
   await expect(enrolled.locator('.table-sort-priority')).toHaveText('1')
   await expect(first.locator('.table-sort-priority')).toHaveText('2')
@@ -386,25 +391,25 @@ test('multi-sort priority, URL state, and filter-preserving reset', async ({ pag
   await table.getByLabel('Add column').selectOption('enrolled')
   await first.click()
   await expect(table.locator('.sort-pill')).toHaveCount(0)
-  await table.getByLabel('Filter First name').fill('a')
-  await table.getByLabel('Filter Enrolled').selectOption({ label: 'Yes' })
   await table.getByRole('button', { name: 'Reset sort', exact: true }).click()
-  await expect(table.getByLabel('Filter First name')).toHaveValue('a')
-  await expect(table.getByLabel('Filter Enrolled')).toHaveValue('1')
-  await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta'])
+  await expect(table.locator('.table-filter')).toHaveCount(0)
+  await expect(names).toHaveText(['Zulu', 'Alpha', 'Charlie', 'Delta', 'Echo'])
   await page.reload()
-  await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta'])
-  const state = JSON.parse(new URL(page.url()).searchParams.get('tables') ?? '{}')
-  const tableId = Object.keys(state)[0]
-  state[tableId].sorting = [
-    { id: 'first', desc: false },
-    { id: 'first', desc: true },
-    { id: 'unknown', desc: false },
-  ]
+  await expect(names).toHaveText(['Zulu', 'Alpha', 'Charlie', 'Delta', 'Echo'])
+  const state = {
+    grades: {
+      filters: [{ id: 'first', value: 'missing' }],
+      sorting: [
+        { id: 'first', desc: false },
+        { id: 'first', desc: true },
+        { id: 'unknown', desc: false },
+      ],
+    },
+  }
   const url = new URL(page.url())
   url.searchParams.set('tables', JSON.stringify(state))
   await page.goto(url.toString())
-  await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta'])
+  await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta', 'Echo', 'Zulu'])
   await expect(table.locator('.sort-pill')).toHaveCount(1)
   await expect(table.locator('.sort-pill').first()).toContainText('First name')
   await table.getByLabel('Add column').selectOption('enrolled')

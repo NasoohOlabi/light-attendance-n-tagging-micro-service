@@ -19,7 +19,12 @@ export type TableColumn<T> = {
   filterText?: (row: T) => string
 }
 
-export function useDataTable<T>(id: string, data: T[], columns: TableColumn<T>[]) {
+export function useDataTable<T>(
+  id: string,
+  data: T[],
+  columns: TableColumn<T>[],
+  filtersEnabled = true,
+) {
   const { language } = useLanguage()
   const query = useTableQuery(id)
   const ids = new Set(columns.map((column) => column.id))
@@ -28,7 +33,7 @@ export function useDataTable<T>(id: string, data: T[], columns: TableColumn<T>[]
       (item, index, items) =>
         ids.has(item.id) && items.findIndex((entry) => entry.id === item.id) === index,
     ),
-    filters: query.filters.filter((item) => {
+    filters: (filtersEnabled ? query.filters : []).filter((item) => {
       const column = columns.find((entry) => entry.id === item.id)
       return (
         column &&
@@ -91,6 +96,7 @@ export function useDataTable<T>(id: string, data: T[], columns: TableColumn<T>[]
     table,
     rows: table.getRowModel().rows.map((row) => row.original),
     columns,
+    filtersEnabled,
     reset: () => setTableQuery(id, { sorting: [], filters: [] }),
     resetSort: () => setTableQuery(id, { ...state, sorting: [] }),
   }
@@ -117,6 +123,7 @@ export function TableHeader<T>({
           reset={model.reset}
           resetSort={model.resetSort}
           ar={ar}
+          filtersEnabled={model.filtersEnabled}
         />
       </caption>
       <thead>
@@ -176,33 +183,35 @@ export function TableHeader<T>({
                     focusable="false"
                   />
                 </button>
-                <div className="table-filter-row">
-                  {choices ? (
-                    <select
-                      className="table-filter"
-                      aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
-                      value={String(column.getFilterValue() ?? '')}
-                      onChange={(event) => column.setFilterValue(event.target.value)}
-                    >
-                      <option value="">{ar ? 'الكل' : 'All'}</option>
-                      {choices.map((choice, choiceIndex) => (
-                        <option key={choiceIndex} value={String(choiceIndex + 1)}>
-                          {choice}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      className="table-filter"
-                      type="search"
-                      maxLength={200}
-                      dir="auto"
-                      aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
-                      value={String(column.getFilterValue() ?? '')}
-                      onChange={(event) => column.setFilterValue(event.target.value)}
-                    />
-                  )}
-                </div>
+                {model.filtersEnabled && (
+                  <div className="table-filter-row">
+                    {choices ? (
+                      <select
+                        className="table-filter"
+                        aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
+                        value={String(column.getFilterValue() ?? '')}
+                        onChange={(event) => column.setFilterValue(event.target.value)}
+                      >
+                        <option value="">{ar ? 'الكل' : 'All'}</option>
+                        {choices.map((choice, choiceIndex) => (
+                          <option key={choiceIndex} value={String(choiceIndex + 1)}>
+                            {choice}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        className="table-filter"
+                        type="search"
+                        maxLength={200}
+                        dir="auto"
+                        aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
+                        value={String(column.getFilterValue() ?? '')}
+                        onChange={(event) => column.setFilterValue(event.target.value)}
+                      />
+                    )}
+                  </div>
+                )}
               </th>
             )
           })}
