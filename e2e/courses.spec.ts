@@ -15,8 +15,9 @@ const enrollB = '40000000-0000-4000-8000-000000000002'
 async function expectCompactLevel(list: Locator) {
   const geometry = await list.locator('table').evaluate((table) => {
     const headers = [...table.querySelectorAll('thead th')]
-    const level = table.querySelector('tbody tr td:nth-child(2)')
-    if (!headers[1] || !level) throw new Error('Student and level columns must be present')
+    const levelIndex = table.classList.contains('roster-students-table') ? 4 : 1
+    const level = table.querySelector(`tbody tr td:nth-child(${levelIndex + 1})`)
+    if (!headers[levelIndex] || !level) throw new Error('Student and level columns must be present')
     const textCenter = (element: Element) => {
       const range = document.createRange()
       range.selectNodeContents(element)
@@ -25,11 +26,12 @@ async function expectCompactLevel(list: Locator) {
     }
     return {
       widths: headers.map((header) => header.getBoundingClientRect().width),
-      levelAlignment: Math.abs(textCenter(headers[1]) - textCenter(level)),
+      levelIndex,
+      levelAlignment: Math.abs(textCenter(headers[levelIndex]) - textCenter(level)),
     }
   })
-  expect(geometry.widths[1]).toBeLessThanOrEqual(112)
-  expect(geometry.widths[0]).toBeGreaterThan(geometry.widths[1] * 2)
+  expect(geometry.widths[geometry.levelIndex]).toBeLessThanOrEqual(112)
+  expect(geometry.widths[0]).toBeGreaterThan(geometry.widths[geometry.levelIndex] * 1.5)
   expect(geometry.levelAlignment).toBeLessThanOrEqual(2)
   if (geometry.widths.length === 4)
     expect(geometry.widths.slice(1).every((width) => width <= 128)).toBe(true)
@@ -45,7 +47,16 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     expiresAt: null,
   }
   const students = [
-    { kind: 'student', studentId, name: 'Synthetic Student', group: 'Roster level', active: true },
+    {
+      kind: 'student',
+      studentId,
+      name: 'Synthetic Student',
+      firstName: 'Synthetic',
+      lastName: 'Student',
+      whatsapp: '012 345',
+      group: 'Roster level',
+      active: true,
+    },
     { kind: 'student', studentId: secondStudentId, name: 'New Student', group: 'A', active: true },
   ]
   const courses = [
@@ -194,17 +205,18 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.goto('/?page=app')
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   const list = page.getByRole('region', { name: 'Student list' })
-  const row = list
-    .getByRole('row')
-    .filter({ has: page.getByRole('cell', { name: 'Synthetic Student', exact: true }) })
+  const row = list.locator(`[data-student-id="${studentId}"]`)
   await expect(list.getByRole('columnheader')).toHaveText([
-    'Student',
+    'First name',
+    'Last name',
+    'Phone',
+    'Attendance',
     'Level',
     'Courses',
     'Active',
     'Actions',
   ])
-  await expect(row.getByRole('cell').nth(1)).toHaveText('Roster level')
+  await expect(row.getByRole('cell').nth(4)).toHaveText('Roster level')
   await expect(row.getByRole('img', { name: 'Active', exact: true })).toBeVisible()
   await expect(row.getByRole('img', { name: 'Active', exact: true })).toHaveAttribute(
     'title',
@@ -213,11 +225,11 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expectCompactLevel(list)
   const courseFilter = page.getByRole('combobox', { name: 'Course', exact: true })
   await courseFilter.selectOption(courseA)
-  await expect(row.getByRole('cell').nth(1)).toHaveText('—')
+  await expect(row.getByRole('cell').nth(4)).toHaveText('—')
   await courseFilter.selectOption(courseB)
-  await expect(row.getByRole('cell').nth(1)).toHaveText('Advanced')
+  await expect(row.getByRole('cell').nth(4)).toHaveText('Advanced')
   await page.reload()
-  await expect(row.getByRole('cell').nth(1)).toHaveText('Advanced')
+  await expect(row.getByRole('cell').nth(4)).toHaveText('Advanced')
   await mkdir('.artifacts/verification', { recursive: true })
   if (testInfo.project.name === 'chromium') await page.setViewportSize({ width: 1715, height: 993 })
   await expectCompactLevel(list)
@@ -242,7 +254,26 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     path: `.artifacts/verification/student-levels-${testInfo.project.name}-en.png`,
     fullPage: true,
   })
+  await expect(row.getByRole('cell', { name: 'Synthetic', exact: true })).toBeVisible()
+  await expect(row.getByRole('cell', { name: 'Student', exact: true })).toBeVisible()
+  await expect(row.getByRole('cell', { name: '012 345' }).locator('bdi')).toHaveAttribute(
+    'dir',
+    'ltr',
+  )
   await row.getByRole('button', { name: 'Open student' }).click()
+  await expect(page.getByRole('heading', { name: 'Student information' })).toBeVisible()
+  await expect(
+    page.locator('.student-details').getByText('Synthetic', { exact: true }),
+  ).toBeVisible()
+  await expect(page.locator('.student-details').getByText('Student', { exact: true })).toBeVisible()
+  await expect(
+    page.locator('.student-details').getByText('012 345', { exact: true }),
+  ).toHaveAttribute('dir', 'ltr')
+  await page.reload()
+  await expect(
+    page.locator('.student-details').getByText('012 345', { exact: true }),
+  ).toHaveAttribute('dir', 'ltr')
+  await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
   const attendanceRow = page
     .getByRole('region', { name: 'Attendance list' })
@@ -266,14 +297,17 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     'title',
     'نشط',
   )
-  await expect(arabicList.getByRole('row').nth(1).getByRole('cell').nth(3)).toHaveText('')
+  await expect(arabicList.getByRole('row').nth(1).getByRole('cell').nth(6)).toHaveText('')
   await expectCompactLevel(arabicList)
   await page.screenshot({
     path: `.artifacts/verification/roster-layout-${testInfo.project.name}-ar.png`,
     fullPage: true,
   })
   await expect(arabicList.getByRole('columnheader')).toHaveText([
-    'الطالب',
+    'الاسم الأول',
+    'اسم العائلة',
+    'رقم الهاتف',
+    'الحضور',
     'المستوى',
     'الدورات',
     'الحالة',
@@ -741,6 +775,57 @@ test('administrator no-course Students includes the complete inactive register',
       theory: null,
     })
   }
+  const historyEvents = [
+    {
+      id: '50000000-0000-4000-8000-000000000011',
+      actor: 'Admin',
+      clientTime: '2026-01-01T00:00:00.000Z',
+      receivedAt: '',
+      payload: {
+        kind: 'attendance',
+        studentId: secondStudentId,
+        enrollmentId: '40000000-0000-4000-8000-000000000010',
+        date: '2026-01-01',
+        status: 'late',
+      },
+    },
+    {
+      id: '50000000-0000-4000-8000-000000000012',
+      actor: 'Admin',
+      clientTime: '2026-01-02T00:00:00.000Z',
+      receivedAt: '',
+      payload: {
+        kind: 'attendance',
+        studentId: secondStudentId,
+        enrollmentId: '40000000-0000-4000-8000-000000000011',
+        date: '2026-01-02',
+        status: 'absent',
+      },
+    },
+    {
+      id: '50000000-0000-4000-8000-000000000013',
+      actor: 'Admin',
+      clientTime: '2026-01-03T00:00:00.000Z',
+      receivedAt: '',
+      payload: {
+        kind: 'attendance',
+        studentId: secondStudentId,
+        date: '2026-01-03',
+        status: 'excused',
+      },
+    },
+    {
+      id: '50000000-0000-4000-8000-000000000014',
+      actor: 'Admin',
+      clientTime: '2026-01-04T00:00:00.000Z',
+      receivedAt: '',
+      payload: {
+        kind: 'reversal',
+        targetId: '50000000-0000-4000-8000-000000000012',
+        reason: 'Correction',
+      },
+    },
+  ]
   await page.route('**/api/auth/**', (route) =>
     route.fulfill({
       json: {
@@ -760,7 +845,7 @@ test('administrator no-course Students includes the complete inactive register',
           json:
             new URL(route.request().url()).pathname === '/api/me'
               ? { account: teacher }
-              : { teacher, students, courses, enrollments, events: [] },
+              : { teacher, students, courses, enrollments, events: historyEvents },
         }),
   )
   await page.goto('/?page=app&tab=roster')
@@ -771,7 +856,40 @@ test('administrator no-course Students includes the complete inactive register',
   await expect(page.getByRole('option', { name: 'All students' })).toHaveCount(1)
   const historical = rows.filter({ hasText: 'Historical Student' })
   const unassigned = rows.filter({ hasText: 'Unassigned Historical' })
-  await expect(unassigned.getByRole('cell').nth(2)).toHaveText('None')
+  await expect(unassigned.getByRole('cell').nth(5)).toHaveText('None')
+  await expect(unassigned.getByRole('cell').nth(3)).toHaveText('Not recorded')
+  await expect(historical.getByRole('cell').nth(3)).toContainText('50.0%')
+  await expect(historical.getByRole('cell').nth(3)).toContainText('Recorded sessions: 2')
+  await historical.getByRole('button', { name: 'Open student' }).click()
+  const detail = page.locator('.student-details')
+  await expect(detail.getByText('Not provided')).toBeVisible()
+  await expect(
+    detail.getByText('Recorded sessions', { exact: true }).locator('..').locator('dd'),
+  ).toHaveText('2')
+  await expect(detail.getByText('50.0%', { exact: true })).toBeVisible()
+  await expect(detail.getByRole('button', { name: 'Take attendance' })).toHaveCount(0)
+  await expect(
+    detail.getByRole('region', { name: 'Attendance history' }).getByRole('row'),
+  ).toHaveCount(3)
+  await page.reload()
+  await expect(detail.getByText('50.0%', { exact: true })).toBeVisible()
+  await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseA)
+  await expect(
+    detail.getByText('Recorded sessions', { exact: true }).locator('..').locator('dd'),
+  ).toHaveText('1')
+  await expect(detail.getByText('100.0%', { exact: true })).toBeVisible()
+  await page.goBack()
+  await expect(detail.getByText('50.0%', { exact: true })).toBeVisible()
+  await page.goBack()
+  await expect(historical).toBeVisible()
+  await page.goto('/?page=app&view=student&tab=roster&student=20000000-0000-4000-8000-000000000099')
+  await expect(page.getByText('Student unavailable')).toBeVisible()
+  await expect(page.locator('.student-details')).toHaveCount(0)
+  await page.goBack()
+  await unassigned.getByRole('button', { name: 'Open student' }).click()
+  await expect(page.locator('.student-details').getByText('No attendance records')).toBeVisible()
+  await page.goBack()
+
   if (testInfo.project.name === 'chromium') {
     await page.setViewportSize({ width: 1200, height: 800 })
     for (const name of ['Synthetic Course', 'Closed Course', 'Third Course', 'Fourth Course'])
@@ -814,12 +932,23 @@ test('administrator no-course Students includes the complete inactive register',
   await expect(rows).toHaveCount(3)
   await clickAccountAction(page, 'العربية')
   await expect(page.getByRole('columnheader')).toHaveText([
-    'الطالب',
+    'الاسم الأول',
+    'اسم العائلة',
+    'رقم الهاتف',
+    'الحضور',
     'المستوى',
     'الدورات',
     'الحالة',
     'الإجراءات',
   ])
+  await historical.getByRole('button', { name: 'فتح الطالب' }).click()
+  await expect(page.getByRole('heading', { name: 'معلومات الطالب' })).toBeVisible()
+  await expect(page.locator('.student-details').getByText('غير متوفر')).toBeVisible()
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+  await page.goBack()
   await expect(page.getByRole('img', { name: 'غير نشط', exact: true })).toHaveCount(2)
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 })

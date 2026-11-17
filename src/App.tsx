@@ -146,7 +146,7 @@ function Notebook({
   const assigned = !!neon || demo === 'assigned'
   const fullRegister =
     neon?.teacher.role === 'administrator' &&
-    query.view === 'notebook' &&
+    (query.view === 'notebook' || query.view === 'student') &&
     query.tab === 'roster' &&
     !query.course
   const baseProjection = projectEvents(ledger.events)
@@ -224,7 +224,7 @@ function Notebook({
         disabled={ledger.busy}
       />
       <main id="main-content" tabIndex={-1} className="workspace-main">
-        {query.view !== 'courses' && (
+        {query.view !== 'courses' && query.view !== 'student' && (
           <header className="workspace-welcome">
             <div>
               <h1>{t('Halaqa notebook')}</h1>
@@ -249,7 +249,15 @@ function Notebook({
             {language === 'ar' ? 'الدورة' : 'Course'}
             <select
               value={closedCourse ? '__closed__' : query.course}
-              onChange={(event) => setQuery({ course: event.target.value, student: '' }, true)}
+              onChange={(event) =>
+                setQuery(
+                  {
+                    course: event.target.value,
+                    ...(query.view === 'student' ? {} : { student: '' }),
+                  },
+                  true,
+                )
+              }
             >
               {closedCourse && (
                 <option value="__closed__" disabled>
@@ -285,7 +293,12 @@ function Notebook({
         )}
         <div
           className="mb-6 flex flex-wrap items-end gap-3"
-          hidden={query.tab === 'dashboard' || query.tab === 'summary' || query.view === 'courses'}
+          hidden={
+            query.tab === 'dashboard' ||
+            query.tab === 'summary' ||
+            query.view === 'courses' ||
+            query.view === 'student'
+          }
         >
           <label className="grow">
             {t('Find a student')}
@@ -409,8 +422,22 @@ function Notebook({
             refresh={ledger.refresh}
           />
         )}
+        {query.view === 'student' && (
+          <StudentDetails
+            student={(assigned ? ledger.roster : baseProjection.students).find(
+              (student) => student.studentId === query.student,
+            )}
+            projected={query.course ? scopedProjection : baseProjection}
+            courses={ledger.courses}
+            enrollments={ledger.enrollments}
+            courseId={query.course}
+            refresh={neon ? ledger.refresh : undefined}
+            busy={ledger.busy}
+            canWrite={!disabled}
+          />
+        )}
         <div
-          hidden={query.view === 'courses'}
+          hidden={query.view === 'courses' || query.view === 'student'}
           className={query.tab === 'attendance' ? 'workspace-content' : ''}
         >
           <fieldset disabled={disabled && query.tab !== 'dashboard'} className="min-w-0">
@@ -471,6 +498,7 @@ function Notebook({
                 enrollments={selectedEnrollments}
                 courses={ledger.courses}
                 allEnrollments={ledger.enrollments}
+                attendance={(query.course ? scopedProjection : baseProjection).attendance}
               />
             )}
             {query.tab === 'summary' && (
@@ -519,6 +547,179 @@ function Notebook({
         </footer>
       </main>
     </div>
+  )
+}
+
+function StudentDetails({
+  student,
+  projected,
+  courses,
+  enrollments,
+  courseId,
+  refresh,
+  busy,
+  canWrite,
+}: {
+  student: import('../shared/neon').NeonRosterStudent | undefined
+  projected: Projection
+  courses: import('../shared/neon').Course[]
+  enrollments: import('../shared/neon').Enrollment[]
+  courseId: string
+  refresh?: () => Promise<void>
+  busy: boolean
+  canWrite: boolean
+}) {
+  const { t, language } = useLanguage()
+  const ar = language === 'ar'
+  if (!student)
+    return (
+      <section className="panel">
+        <p>{ar ? 'الطالب غير متاح' : 'Student unavailable'}</p>
+        <button
+          className="secondary"
+          onClick={() => setQuery({ view: 'notebook', tab: 'roster', student: '' }, true)}
+        >
+          {t('Students')}
+        </button>
+      </section>
+    )
+  const records = projected.attendance.filter(({ value }) => value.studentId === student.studentId)
+  const counts = { present: 0, absent: 0, excused: 0 }
+  for (const { value } of records) counts[value.status]++
+  const memberships = enrollments.filter((entry) => entry.studentId === student.studentId)
+  const eligible =
+    student.active &&
+    (!courseId
+      ? !memberships.length
+      : memberships.some((entry) => entry.courseId === courseId && entry.active) &&
+        courses.some((course) => course.id === courseId && course.open))
+  return (
+    <section className="panel student-details">
+      <div className="student-details-actions">
+        <button
+          className="secondary"
+          onClick={() => setQuery({ view: 'notebook', tab: 'roster', student: '' }, true)}
+        >
+          {t('Students')}
+        </button>
+        {refresh && (
+          <button
+            className="icon-button"
+            aria-label={t('Refresh')}
+            title={t('Refresh')}
+            disabled={busy}
+            onClick={() => void refresh()}
+          >
+            <RefreshCw size={20} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+      <h1 className="title">{ar ? 'معلومات الطالب' : 'Student information'}</h1>
+      <dl className="student-detail-fields">
+        <div>
+          <dt>{ar ? 'الاسم الأول' : 'First name'}</dt>
+          <dd dir="auto">{student.firstName ?? student.name}</dd>
+        </div>
+        <div>
+          <dt>{ar ? 'اسم العائلة' : 'Last name'}</dt>
+          <dd dir="auto">{student.lastName || '—'}</dd>
+        </div>
+        <div>
+          <dt>{ar ? 'رقم الهاتف' : 'Phone'}</dt>
+          <dd dir="auto">
+            {student.whatsapp ? (
+              <bdi dir="ltr">{student.whatsapp}</bdi>
+            ) : ar ? (
+              'غير متوفر'
+            ) : (
+              'Not provided'
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>{ar ? 'المستوى' : 'Level'}</dt>
+          <dd dir="auto">{studentLevel(student, !!courseId, memberships) || '—'}</dd>
+        </div>
+      </dl>
+      <h3>{ar ? 'معلومات الحضور' : 'Attendance information'}</h3>
+      <dl className="student-detail-fields">
+        <div>
+          <dt>{t('present')}</dt>
+          <dd>{counts.present}</dd>
+        </div>
+        <div>
+          <dt>{t('absent')}</dt>
+          <dd>{counts.absent}</dd>
+        </div>
+        <div>
+          <dt>{t('excused')}</dt>
+          <dd>{counts.excused}</dd>
+        </div>
+        <div>
+          <dt>{ar ? 'الجلسات المسجلة' : 'Recorded sessions'}</dt>
+          <dd>{records.length}</dd>
+        </div>
+        <div>
+          <dt>{ar ? 'نسبة الحضور' : 'Attendance percentage'}</dt>
+          <dd>
+            {records.length ? `${((counts.present / records.length) * 100).toFixed(1)}%` : '—'}
+          </dd>
+        </div>
+      </dl>
+      {eligible && canWrite && (
+        <button
+          className="primary"
+          onClick={() => setQuery({ view: 'notebook', tab: 'attendance', q: '', group: '' }, true)}
+        >
+          {ar ? 'تسجيل الحضور' : 'Take attendance'}
+        </button>
+      )}
+      <h3>{ar ? 'الدورات' : 'Courses'}</h3>
+      <p>
+        {courses
+          .filter((course) =>
+            memberships.some((entry) => entry.courseId === course.id && entry.active),
+          )
+          .map((course) => course.name)
+          .join(', ') || (ar ? 'لا يوجد' : 'None')}
+      </p>
+      <h3>{ar ? 'سجل الحضور' : 'Attendance history'}</h3>
+      {records.length ? (
+        <div
+          className="role-table-scroll"
+          tabIndex={0}
+          role="region"
+          aria-label={ar ? 'سجل الحضور' : 'Attendance history'}
+        >
+          <table className="role-table">
+            <thead>
+              <tr>
+                <th>{ar ? 'التاريخ' : 'Date'}</th>
+                <th>{ar ? 'الدورة' : 'Course'}</th>
+                <th>{ar ? 'الحالة' : 'Status'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map(({ event, value }) => (
+                <tr key={event.id}>
+                  <td>{value.date}</td>
+                  <td>
+                    {courses.find((course) =>
+                      memberships.some(
+                        (entry) => entry.id === value.enrollmentId && entry.courseId === course.id,
+                      ),
+                    )?.name || (ar ? 'بلا دورة' : 'No course')}
+                  </td>
+                  <td>{t(value.status)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p>{ar ? 'لا توجد سجلات حضور' : 'No attendance records'}</p>
+      )}
+    </section>
   )
 }
 
@@ -883,14 +1084,16 @@ function RosterView({
   enrollments,
   courses,
   allEnrollments,
+  attendance,
 }: {
-  students: Student[]
+  students: import('../shared/neon').NeonRosterStudent[]
   save: Save
   assigned: boolean
   courseSelected: boolean
   enrollments: import('../shared/neon').Enrollment[]
   courses: import('../shared/neon').Course[]
   allEnrollments: import('../shared/neon').Enrollment[]
+  attendance: Projection['attendance']
 }) {
   const { t, language } = useLanguage()
   const ar = language === 'ar'
@@ -943,7 +1146,10 @@ function RosterView({
         >
           <table className="role-table roster-table roster-students-table">
             <colgroup>
-              <col />
+              <col className="roster-name-column" />
+              <col className="roster-name-column" />
+              <col className="roster-phone-column" />
+              <col className="roster-summary-column" />
               <col className="roster-level-column" />
               <col className="roster-courses-column" />
               <col className="roster-active-column" />
@@ -951,7 +1157,10 @@ function RosterView({
             </colgroup>
             <thead>
               <tr>
-                <th scope="col">{t('Student')}</th>
+                <th scope="col">{ar ? 'الاسم الأول' : 'First name'}</th>
+                <th scope="col">{ar ? 'اسم العائلة' : 'Last name'}</th>
+                <th scope="col">{ar ? 'رقم الهاتف' : 'Phone'}</th>
+                <th scope="col">{ar ? 'الحضور' : 'Attendance'}</th>
                 <th scope="col">{ar ? 'المستوى' : 'Level'}</th>
                 <th scope="col">{ar ? 'الدورات' : 'Courses'}</th>
                 <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
@@ -960,9 +1169,41 @@ function RosterView({
             </thead>
             <tbody>
               {students.map((student) => (
-                <tr key={student.studentId}>
+                <tr key={student.studentId} data-student-id={student.studentId}>
                   <td>
-                    <bdi>{student.name}</bdi>
+                    <bdi>{student.firstName ?? student.name}</bdi>
+                  </td>
+                  <td>
+                    <bdi>{student.lastName || '—'}</bdi>
+                  </td>
+                  <td>
+                    {student.whatsapp ? (
+                      <bdi dir="ltr">{student.whatsapp}</bdi>
+                    ) : ar ? (
+                      'غير متوفر'
+                    ) : (
+                      'Not provided'
+                    )}
+                  </td>
+                  <td>
+                    {(() => {
+                      const records = attendance.filter(
+                        ({ value }) => value.studentId === student.studentId,
+                      )
+                      if (!records.length) return ar ? 'غير مسجل' : 'Not recorded'
+                      const present = records.filter(
+                        ({ value }) => value.status === 'present',
+                      ).length
+                      return (
+                        <>
+                          <strong>{((present / records.length) * 100).toFixed(1)}%</strong>
+                          <br />
+                          <small>
+                            {ar ? 'الجلسات المسجلة' : 'Recorded sessions'}: {records.length}
+                          </small>
+                        </>
+                      )
+                    })()}
                   </td>
                   <td>
                     <bdi>{studentLevel(student, courseSelected, enrollments) || '—'}</bdi>
@@ -1027,7 +1268,7 @@ function RosterView({
                       aria-label={t('Open student')}
                       title={t('Open student')}
                       onClick={() =>
-                        setQuery({ student: student.studentId, tab: 'attendance' }, true)
+                        setQuery({ view: 'student', student: student.studentId }, true)
                       }
                     >
                       <UserRound size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />

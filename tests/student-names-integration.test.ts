@@ -234,6 +234,45 @@ integration('student names survive migration, structured saves and legacy writes
     const profile = { whatsapp: '+٩٦٣ 123', location: 'Synthetic area', birthYear: 2000 }
     await importRoster(profile)
     await importRoster({})
+    const staffHeaders = { Authorization: 'Bearer synthetic', Origin: 'https://app.example' }
+    const assignedContact = neonSnapshotSchema.parse(
+      await (
+        await teacherHandler(
+          new Request('https://app.example/api/notebook', { headers: staffHeaders }),
+        )
+      ).json(),
+    )
+    expect(assignedContact.students.find((s) => s.studentId === student)).toMatchObject({
+      firstName: 'Replacement Legacy Name',
+      lastName: '',
+      whatsapp: profile.whatsapp,
+    })
+    await pool.query(
+      "UPDATE app_accounts SET role = 'student', teacher_id = NULL, student_id = $2 WHERE auth_user_id = $1",
+      [teacher, student],
+    )
+    const ownResponse = await teacherHandler(
+      new Request('https://app.example/api/student/attendance', { headers: staffHeaders }),
+    )
+    expect(ownResponse.status).toBe(200)
+    const ownAttendance = z
+      .object({ student: z.record(z.string(), z.unknown()) })
+      .passthrough()
+      .parse(await ownResponse.json())
+    expect(ownAttendance.student).not.toHaveProperty('whatsapp')
+    expect(ownAttendance.student).not.toHaveProperty('firstName')
+    expect(JSON.stringify(ownAttendance)).not.toContain(profile.whatsapp)
+    expect(
+      (
+        await teacherHandler(
+          new Request('https://app.example/api/notebook', { headers: staffHeaders }),
+        )
+      ).status,
+    ).toBe(403)
+    await pool.query(
+      "UPDATE app_accounts SET role = 'teacher', teacher_id = $1::uuid, student_id = NULL WHERE auth_user_id = $1::text",
+      [teacher],
+    )
     expect(
       (
         await pool.query('SELECT whatsapp, location, birth_year FROM students WHERE id = $1', [
@@ -295,8 +334,28 @@ integration('student names survive migration, structured saves and legacy writes
         [crypto.randomUUID(), courseId, student, `Independent course level ${index + 1}`],
       )
     }
+    const attendanceEnrollment = z
+      .object({ id: z.uuid() })
+      .parse(
+        (
+          await pool.query(
+            'SELECT id FROM course_enrollments WHERE course_id = $1 AND student_id = $2',
+            [rosterCourseIds[1], student],
+          )
+        ).rows[0],
+      )
+    const savedMark = makeEvent('Synthetic admin', {
+      kind: 'attendance',
+      studentId: student,
+      enrollmentId: attendanceEnrollment.id,
+      date: '2026-11-17',
+      status: 'present',
+    })
+    expect((await post(savedMark)).status).toBe(200)
+    expect((await post(savedMark)).status).toBe(200)
     await pool.query('UPDATE students SET active = false WHERE id = $1', [student])
     const completeRoster = neonSnapshotSchema.parse(await (await readNotebook()).json())
+    expect(completeRoster.events.some((e) => e.id === savedMark.id)).toBe(true)
     expect(completeRoster.students.find((s) => s.studentId === student)).toMatchObject({
       active: false,
     })
@@ -331,7 +390,7 @@ integration('student names survive migration, structured saves and legacy writes
           student,
         ])
       ).rows[0].count,
-    ).toBe(1)
+    ).toBe(2)
     const teacherNotebook = await teacherHandler(
       new Request('https://app.example/api/notebook', {
         headers: { Authorization: 'Bearer synthetic', Origin: 'https://app.example' },

@@ -732,6 +732,8 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await openStudent.focus()
   await page.keyboard.press('Enter')
   await expect(page).toHaveURL(new RegExp(`student=${studentId}`))
+  await expect(page.getByRole('heading', { name: 'Student information' })).toBeVisible()
+  await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
   await clickAccountAction(page, 'Settings')
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()

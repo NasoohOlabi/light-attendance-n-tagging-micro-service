@@ -25,7 +25,7 @@ export function useQueryState() {
     page: z.enum(['home', 'app']).safeParse(query.get('page')).data ?? 'home',
     view:
       z
-        .enum(['settings', 'administration', 'add-student', 'notebook', 'courses'])
+        .enum(['settings', 'administration', 'add-student', 'notebook', 'courses', 'student'])
         .safeParse(query.get('view')).data ?? 'notebook',
     tab: tabSchema.safeParse(query.get('tab')).data ?? 'dashboard',
     date: z.iso.date().safeParse(query.get('date')).data ?? today(),
