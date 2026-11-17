@@ -1,6 +1,6 @@
 import { TableHeader, useDataTable } from './DataTable'
 import { useEffect, useState } from 'react'
-import { ClipboardList, History, Lock, LockOpen, Pencil, UsersRound } from 'lucide-react'
+import { ClipboardList, History, Lock, LockOpen, Pencil, Save, UsersRound } from 'lucide-react'
 import { neonAdminBoardSchema, type Course, type Enrollment } from '../shared/neon'
 import { projectEvents, type LedgerEvent } from '../shared/ledger'
 import { request } from './neon'
@@ -673,8 +673,13 @@ function GradePage({
                         })
                       }}
                     >
-                      <button className="secondary" disabled={busy}>
-                        {ar ? 'حفظ الدرجات' : 'Save grades'}
+                      <button
+                        className="icon-button"
+                        disabled={busy}
+                        aria-label={ar ? 'حفظ الدرجات' : 'Save grades'}
+                        title={ar ? 'حفظ الدرجات' : 'Save grades'}
+                      >
+                        <Save size={20} aria-hidden="true" />
                       </button>
                     </form>
                   </td>
