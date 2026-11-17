@@ -102,50 +102,56 @@ export function useCoursePreference(
   courses: { id: string }[],
 ) {
   const [ready, setReady] = useState(!accountId)
-  const search = useSyncExternalStore(subscribe, () => window.location.search)
+  const [defaultCourse, setDefaultCourse] = useState('')
   useEffect(() => {
     if (!accountId || !loaded || ready) return
-    const query = new URLSearchParams(window.location.search)
-    let selection: string | undefined
-    const notebook = !query.has('view') || query.get('view') === 'notebook'
-    if (query.has('course')) {
-      selection = coursePreferenceSchema.safeParse(query.get('course')).data
-    } else if (notebook && query.get('tab') !== 'roster') {
-      try {
-        const stored = localStorage.getItem(coursePreferenceKey(accountId))
-        if (stored !== null) selection = coursePreferenceSchema.safeParse(JSON.parse(stored)).data
-      } catch {
-        // Ignore an unavailable or malformed preference.
-      }
+    let selection = ''
+    try {
+      const stored = localStorage.getItem(coursePreferenceKey(accountId))
+      if (stored !== null)
+        selection = coursePreferenceSchema.safeParse(JSON.parse(stored)).data ?? ''
+    } catch {
+      // Ignore an unavailable or malformed preference.
     }
     if (selection && !courses.some((course) => course.id === selection)) selection = ''
-    if (selection !== undefined) {
-      if (query.get('course') !== selection) setQuery({ course: selection })
-      if (notebook) saveCoursePreference(accountId, selection)
-    } else if (query.has('course')) {
-      setQuery({ course: '' })
+    const query = new URLSearchParams(window.location.search)
+    const notebook = !query.has('view') || query.get('view') === 'notebook'
+    const explicit = query.get('course')
+    if (notebook && explicit === null && selection) setQuery({ course: selection })
+    else if (
+      explicit &&
+      explicit !== 'all' &&
+      explicit !== 'none' &&
+      (!z.uuid().safeParse(explicit).success || !courses.some((course) => course.id === explicit))
+    ) {
+      setQuery({ course: 'none' })
     }
     // oxlint-disable-next-line react/set-state-in-effect
+    setDefaultCourse(selection)
     setReady(true)
   }, [accountId, loaded, courses, ready])
-  useEffect(() => {
-    if (!accountId || !ready) return
-    const query = new URLSearchParams(search)
-    const course = coursePreferenceSchema.safeParse(query.get('course')).data
-    if (
-      (!query.has('view') || query.get('view') === 'notebook') &&
-      course &&
-      courses.some((item) => item.id === course)
-    ) {
-      saveCoursePreference(accountId, course)
-    }
-  }, [accountId, ready, courses, search])
-  return ready
+  function chooseDefault(course: string) {
+    if (accountId) saveCoursePreference(accountId, course)
+    setDefaultCourse(course)
+    setQuery({ course: course || 'none', student: '' }, true)
+  }
+  return { ready, defaultCourse, chooseDefault }
 }
 
-export function selectCourse(accountId: string, course: string, values: Record<string, string>) {
-  saveCoursePreference(accountId, course)
-  setQuery({ ...values, course }, true)
+export function navigateNotebook(
+  tab: Tab,
+  defaultCourse: string | undefined,
+  values: Record<string, string> = {},
+) {
+  setQuery(
+    {
+      ...values,
+      view: 'notebook',
+      tab,
+      course: defaultCourse === undefined ? '' : defaultCourse || 'none',
+    },
+    true,
+  )
 }
 
 const tableStateSchema = z.object({

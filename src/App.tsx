@@ -16,7 +16,7 @@ import {
 } from '../shared/ledger'
 import {
   navigatePage,
-  selectCourse,
+  navigateNotebook,
   setQuery,
   useCoursePreference,
   useQueryState,
@@ -121,7 +121,7 @@ function AppContent() {
                     ? query.course
                     : ''
                 }
-                openNotebook={() => setQuery({ view: 'notebook' }, true)}
+                openNotebook={() => setQuery({ view: 'notebook', course: '' }, true)}
               />
             ) : (
               <Notebook
@@ -153,7 +153,7 @@ function Notebook({
   const { t, language, errorMessage } = useLanguage()
   const query = useQueryState()
   const ledger = useLedger(demo !== null, demo === 'assigned', neon)
-  const courseReady = useCoursePreference(neon?.userId, ledger.loaded, ledger.courses)
+  const preference = useCoursePreference(neon?.userId, ledger.loaded, ledger.courses)
   const assigned = !!neon || demo === 'assigned'
   const fullRegister =
     neon?.teacher.role === 'administrator' &&
@@ -213,7 +213,7 @@ function Notebook({
     !!ledger.storageBlocked ||
     !ledger.loaded ||
     !!(neon && !neon.teacher.canWrite)
-  if (!ledger.loaded || !courseReady)
+  if (!ledger.loaded || !preference.ready)
     return ledger.error ? (
       <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
         <p role="alert">{errorMessage(ledger.error)}</p>
@@ -227,6 +227,7 @@ function Notebook({
   return (
     <div className="workspace">
       <WorkspaceNavigation
+        defaultCourse={preference.defaultCourse}
         courseName={ledger.courses.find((course) => course.id === query.course)?.name}
         administrator={neon?.teacher.role === 'administrator'}
         assigned={assigned}
@@ -256,43 +257,55 @@ function Notebook({
             {t('Changes stay in memory and disappear when you leave. No server requests are made.')}
           </p>
         )}
-        {neon && query.view !== 'courses' && (
-          <label className="mb-4">
-            {language === 'ar' ? 'الدورة' : 'Course'}
-            <select
-              value={closedCourse ? '__closed__' : query.course}
-              onChange={(event) =>
-                selectCourse(
-                  neon.userId,
-                  event.target.value,
-                  query.view === 'student' ? {} : { student: '' },
-                )
-              }
-            >
-              {closedCourse && (
-                <option value="__closed__" disabled>
-                  {language === 'ar' ? 'اختر دورة' : 'Select a course'}
+        {neon &&
+          ((query.view === 'notebook' && (query.tab === 'dashboard' || query.tab === 'roster')) ||
+            (query.view === 'student' && query.tab === 'roster')) && (
+            <label className="mb-4">
+              {query.tab === 'dashboard'
+                ? language === 'ar'
+                  ? '\u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a\u0629'
+                  : 'Default course'
+                : language === 'ar'
+                  ? '\u0627\u0644\u062f\u0648\u0631\u0629'
+                  : 'Course'}
+              <select
+                value={query.tab === 'dashboard' ? preference.defaultCourse : query.course}
+                onChange={(event) => {
+                  if (query.tab === 'dashboard') preference.chooseDefault(event.target.value)
+                  else
+                    setQuery(
+                      {
+                        course: event.target.value || 'all',
+                        ...(query.view === 'student' ? {} : { student: '' }),
+                      },
+                      true,
+                    )
+                }}
+              >
+                <option value="">
+                  {query.tab === 'roster'
+                    ? language === 'ar'
+                      ? '\u062c\u0645\u064a\u0639 \u0627\u0644\u0637\u0644\u0627\u0628'
+                      : 'All students'
+                    : language === 'ar'
+                      ? '\u0627\u0644\u0633\u062c\u0644 \u0627\u0644\u0633\u0627\u0628\u0642 / \u0628\u0644\u0627 \u062f\u0648\u0631\u0629'
+                      : 'Previous / no course'}
                 </option>
-              )}
-              <option value="">
-                {query.tab === 'roster'
-                  ? language === 'ar'
-                    ? 'جميع الطلاب'
-                    : 'All students'
-                  : language === 'ar'
-                    ? 'السجل السابق / بلا دورة'
-                    : 'Previous / no course'}
-              </option>
-              {ledger.courses
-                .filter((course) => course.open)
-                .map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-        )}
+                {ledger.courses
+                  .filter(
+                    (course) =>
+                      course.open ||
+                      course.id === preference.defaultCourse ||
+                      course.id === query.course,
+                  )
+                  .map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
         {neon && query.view !== 'courses' && query.course && closedCourse && (
           <p role="status">
             <strong dir="auto">{closedCourse.name}</strong>{' '}
@@ -444,6 +457,7 @@ function Notebook({
             courses={ledger.courses}
             enrollments={ledger.enrollments}
             courseId={query.course}
+            defaultCourse={preference.defaultCourse}
             refresh={neon ? ledger.refresh : undefined}
             busy={ledger.busy}
             canWrite={!disabled}
@@ -459,7 +473,9 @@ function Notebook({
                 projected={projected}
                 date={query.date}
                 canAdd={neon?.teacher.role === 'administrator' || demo === 'editable'}
-                onAttendance={() => setQuery({ tab: 'attendance', q: '', group: '' }, true)}
+                onAttendance={() =>
+                  navigateNotebook('attendance', preference.defaultCourse, { q: '', group: '' })
+                }
                 onAdd={() =>
                   neon
                     ? setQuery({ view: 'add-student', courseView: '' }, true)
@@ -569,6 +585,7 @@ function StudentDetails({
   courses,
   enrollments,
   courseId,
+  defaultCourse,
   refresh,
   busy,
   canWrite,
@@ -578,6 +595,7 @@ function StudentDetails({
   courses: import('../shared/neon').Course[]
   enrollments: import('../shared/neon').Enrollment[]
   courseId: string
+  defaultCourse: string
   refresh?: () => Promise<void>
   busy: boolean
   canWrite: boolean
@@ -704,7 +722,7 @@ function StudentDetails({
       {eligible && canWrite && (
         <button
           className="primary"
-          onClick={() => setQuery({ view: 'notebook', tab: 'attendance', q: '', group: '' }, true)}
+          onClick={() => navigateNotebook('attendance', defaultCourse, { q: '', group: '' })}
         >
           {ar ? 'تسجيل الحضور' : 'Take attendance'}
         </button>
