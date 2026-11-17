@@ -1,0 +1,218 @@
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+:root[data-theme='dark'] body,
+:root[data-theme='dark'] .wartaq-home,
+:root[data-theme='dark'] .workspace,
+:root[data-theme='dark'] .workspace-loading {
+  background: #102b31;
+  color: #e3f1f1;
+}
+:root[data-theme='dark'] .wartaq-site {
+  --wartaq-deep: #e3f1f1;
+}
+:root[data-theme='dark'] .panel,
+:root[data-theme='dark'] .workspace-count,
+:root[data-theme='dark'] .profile-panel,
+:root[data-theme='dark'] .table-control-popup,
+:root[data-theme='dark'] .sort-help-popover,
+:root[data-theme='dark'] .grade-table-scroll thead th,
+:root[data-theme='dark'] input:not([type='checkbox']),
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] textarea,
+:root[data-theme='dark'] .secondary {
+  background: #193b42;
+  color: #e3f1f1;
+  border-color: #41666a;
+}
+:root[data-theme='dark'] label,
+:root[data-theme='dark'] .mobile-record-table td::before,
+:root[data-theme='dark'] .student-detail-fields dt {
+  color: #c4dada;
+}
+:root[data-theme='dark'] .muted,
+:root[data-theme='dark'] .workspace-welcome span,
+:root[data-theme='dark'] .workspace-metrics span,
+:root[data-theme='dark'] .workspace-recent small,
+:root[data-theme='dark'] .dashboard-actions p,
+:root[data-theme='dark'] .home-lede,
+:root[data-theme='dark'] .home-section p,
+:root[data-theme='dark'] .home-curriculum p,
+:root[data-theme='dark'] .home-faq p,
+:root[data-theme='dark'] .home-tools p {
+  color: #b5cdce;
+}
+:root[data-theme='dark'] .wartaq-home h1,
+:root[data-theme='dark'] .wartaq-home h2,
+:root[data-theme='dark'] .wartaq-home h3,
+:root[data-theme='dark'] .workspace-welcome h1,
+:root[data-theme='dark'] .workspace-count strong,
+:root[data-theme='dark'] .workspace-context h2,
+:root[data-theme='dark'] .workspace-metrics strong,
+:root[data-theme='dark'] .dashboard-actions h2,
+:root[data-theme='dark'] .dashboard-chart h2,
+:root[data-theme='dark'] .attendance-group summary,
+:root[data-theme='dark'] .sort-toolbar-label {
+  color: #e3f1f1;
+}
+:root[data-theme='dark'] .home-kicker,
+:root[data-theme='dark'] .workspace-welcome p,
+:root[data-theme='dark'] .role-heading span,
+:root[data-theme='dark'] .role-manage,
+:root[data-theme='dark'] .sort-pill-number,
+:root[data-theme='dark'] .table-sort-priority {
+  color: #70d6d5;
+}
+:root[data-theme='dark'] .home-notice,
+:root[data-theme='dark'] .home-curriculum,
+:root[data-theme='dark'] .home-tools,
+:root[data-theme='dark'] .dashboard-actions,
+:root[data-theme='dark'] .role-editor,
+:root[data-theme='dark'] .sort-pill,
+:root[data-theme='dark'] .roster-course-badge {
+  background: #21484e;
+  color: #e3f1f1;
+}
+:root[data-theme='dark'] .home-illustration {
+  background: #21484e;
+}
+:root[data-theme='dark'] .home-illustration img {
+  filter: brightness(1.8) saturate(0.65);
+}
+:root[data-theme='dark'] .home-curriculum li::marker {
+  color: #70d6d5;
+}
+:root[data-theme='dark'] .home-tool-actions button,
+:root[data-theme='dark'] .icon-button,
+:root[data-theme='dark'] .profile-panel button,
+:root[data-theme='dark'] .table-control-popup button,
+:root[data-theme='dark'] .sort-toolbar button,
+:root[data-theme='dark'] .sort-add,
+:root[data-theme='dark'] .sort-help {
+  color: #b9eeee;
+}
+:root[data-theme='dark'] .icon-button:hover:not(:disabled),
+:root[data-theme='dark'] .secondary:hover,
+:root[data-theme='dark'] .profile-panel button:hover,
+:root[data-theme='dark'] .profile-panel button:focus-visible,
+:root[data-theme='dark'] .table-control-popup button:hover,
+:root[data-theme='dark'] .sort-toolbar button:hover {
+  background: #315b60;
+}
+:root[data-theme='dark'] .workspace .panel,
+:root[data-theme='dark'] .workspace-topline,
+:root[data-theme='dark'] .attendance-group,
+:root[data-theme='dark'] .role-account,
+:root[data-theme='dark'] .role-row,
+:root[data-theme='dark'] .role-table th,
+:root[data-theme='dark'] .role-table td,
+:root[data-theme='dark'] .mobile-record-table tbody tr,
+:root[data-theme='dark'] .home-details article,
+:root[data-theme='dark'] .home-faq details {
+  border-color: #41666a;
+}
+:root[data-theme='dark'] .bg-slate-50 {
+  background: #21484e;
+}
+:root[data-theme='dark'] .text-slate-500,
+:root[data-theme='dark'] .text-slate-600 {
+  color: #b5cdce;
+}
+:root[data-theme='dark'] .border-slate-100,
+:root[data-theme='dark'] .border-slate-200 {
+  border-color: #41666a;
+}
+:root[data-theme='dark'] .bg-amber-50,
+:root[data-theme='dark'] .bg-amber-100 {
+  background: #554521;
+}
+:root[data-theme='dark'] .text-amber-800,
+:root[data-theme='dark'] .text-amber-900 {
+  color: #ffe5a3;
+}
+:root[data-theme='dark'] .border-amber-300 {
+  border-color: #ba984c;
+}
+:root[data-theme='dark'] .bg-red-50 {
+  background: #582f35;
+}
+:root[data-theme='dark'] .text-red-800,
+:root[data-theme='dark'] .home-error {
+  color: #ffc1c5;
+}
+:root[data-theme='dark'] .bg-emerald-50 {
+  background: #204d40;
+}
+:root[data-theme='dark'] .text-emerald-800 {
+  color: #b5efd2;
+}
+:root[data-theme='dark'] .bg-teal-100 {
+  background: #28545a;
+}
+:root[data-theme='dark'] .loading-line,
+:root[data-theme='dark'] .loading-cards div,
+:root[data-theme='dark'] .loading-panel {
+  background: #31565a;
+}
+:root[data-theme='dark'] :focus-visible {
+  outline-color: #70d6d5;
+}
+
+.theme-select select {
+  min-height: 44px;
+  padding: 0.4rem 1.6rem 0.4rem 0.5rem;
+}
+.profile-panel .theme-select {
+  display: block;
+  padding: 4px 8px;
+}
+.profile-panel .theme-select select {
+  width: 100%;
+}
+.home-header .theme-select select {
+  background: #004d57;
+  border-color: #b9dcdf;
+  color: white;
+}
+@media (max-width: 400px) {
+  .home-header-inner {
+    justify-content: center;
+  }
+  .home-header-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+:root[data-theme='dark'] .install-strip {
+  background: #21484e;
+  border-color: #41666a;
+  color: #e3f1f1;
+}
+:root[data-theme='dark'] .update-notice {
+  background: #554521;
+  color: #ffe5a3;
+}
+:root[data-theme='dark'] .dashboard-statuses meter::-webkit-meter-bar,
+:root[data-theme='dark'] .dashboard-trend meter::-webkit-meter-bar {
+  background: #31565a;
+}
+:root[data-theme='dark'] .dashboard-statuses meter::-webkit-meter-optimum-value,
+:root[data-theme='dark'] .dashboard-trend meter::-webkit-meter-optimum-value {
+  background: #70d6d5;
+}
+:root[data-theme='dark'] .dashboard-statuses meter::-moz-meter-bar,
+:root[data-theme='dark'] .dashboard-trend meter::-moz-meter-bar {
+  background: #70d6d5;
+}
+:root[data-theme='dark'] input:not([type='checkbox']),
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] textarea,
+:root[data-theme='dark'] .secondary {
+  border-color: #628d91;
+}
+:root[data-theme='dark'] .role-tabs [aria-pressed='true'] {
+  background: #70d6d5;
+  color: #102b31;
+  border-color: #70d6d5;
+}
