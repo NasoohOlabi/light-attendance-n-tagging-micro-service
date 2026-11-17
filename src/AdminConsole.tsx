@@ -226,7 +226,7 @@ export function AdminConsole({
                     aria-label={ar ? 'قائمة الطلاب' : 'Student list'}
                     tabIndex={0}
                   >
-                    <table className="role-table role-students-table">
+                    <table className="mobile-record-table role-table role-students-table">
                       <thead>
                         <tr>
                           <th scope="col">{ar ? 'الاسم الأول' : 'First name'}</th>
@@ -243,18 +243,30 @@ export function AdminConsole({
                       <tbody>
                         {board.students.map((student) => (
                           <tr key={student.studentId}>
-                            <td dir="auto">{student.firstName}</td>
-                            <td dir="auto">{student.lastName || '—'}</td>
-                            <td dir="auto">{student.group}</td>
-                            <td dir="ltr">{student.whatsapp || '—'}</td>
-                            <td dir="auto">{student.location || '—'}</td>
-                            <td>{student.birthYear ?? '—'}</td>
-                            <td dir="auto">
+                            <td dir="auto" data-label={ar ? 'الاسم الأول' : 'First name'}>
+                              {student.firstName}
+                            </td>
+                            <td dir="auto" data-label={ar ? 'اسم العائلة' : 'Last name'}>
+                              {student.lastName || '—'}
+                            </td>
+                            <td dir="auto" data-label={ar ? 'المستوى' : 'Level'}>
+                              {student.group}
+                            </td>
+                            <td dir="ltr" data-label={ar ? 'واتساب' : 'WhatsApp'}>
+                              {student.whatsapp || '—'}
+                            </td>
+                            <td dir="auto" data-label={ar ? 'المنطقة' : 'Location'}>
+                              {student.location || '—'}
+                            </td>
+                            <td data-label={ar ? 'سنة الميلاد' : 'Birth year'}>
+                              {student.birthYear ?? '—'}
+                            </td>
+                            <td dir="auto" data-label={ar ? 'المعلم' : 'Teacher'}>
                               {board.teachers.find(
                                 (teacher) => teacher.teacherId === student.teacherId,
                               )?.name ?? (ar ? 'غير معين' : 'Unassigned')}
                             </td>
-                            <td>
+                            <td data-label={ar ? 'الحالة' : 'Active'}>
                               {student.active
                                 ? ar
                                   ? 'نشط'
@@ -263,7 +275,7 @@ export function AdminConsole({
                                   ? 'غير نشط'
                                   : 'Inactive'}
                             </td>
-                            <td>
+                            <td data-label={ar ? 'الإجراءات' : 'Actions'}>
                               <button
                                 className="secondary"
                                 onClick={() => {

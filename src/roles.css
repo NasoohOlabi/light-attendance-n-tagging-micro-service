@@ -216,3 +216,78 @@
   cursor: wait;
   opacity: 0.6;
 }
+
+.roster-open-label {
+  display: none;
+}
+
+@media (max-width: 64rem) {
+  table.mobile-record-table {
+    display: block;
+    min-width: 0;
+    width: 100%;
+    table-layout: auto;
+  }
+  .mobile-record-table colgroup {
+    display: none;
+  }
+  .mobile-record-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .mobile-record-table tbody,
+  .mobile-record-table tr {
+    display: block;
+    width: 100%;
+  }
+  .mobile-record-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1rem;
+    padding-block: 0.75rem;
+    border-bottom: 1px solid #dce9e8;
+  }
+  .mobile-record-table td,
+  .mobile-record-table th[scope='row'],
+  .roster-table.mobile-record-table td:not(:first-child) {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 0.35rem 0;
+    border: 0;
+    text-align: start;
+    overflow-wrap: anywhere;
+  }
+  .mobile-record-table td::before {
+    content: attr(data-label);
+    display: block;
+    color: #52676a;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-align: start;
+  }
+  .roster-table.mobile-record-table:not(.roster-students-table) td:last-child,
+  .roster-students-table.mobile-record-table td:last-child,
+  .mobile-record-table th[scope='row'] {
+    grid-column: 1 / -1;
+  }
+  .roster-open-label {
+    display: inline;
+    margin-inline-start: 0.5rem;
+  }
+  [dir='rtl'] .mobile-record-table td::before {
+    direction: rtl;
+  }
+  [dir='ltr'] .mobile-record-table td::before {
+    direction: ltr;
+  }
+  .mobile-record-table input:not([type='checkbox']),
+  .mobile-record-table select {
+    max-width: 100%;
+  }
+}

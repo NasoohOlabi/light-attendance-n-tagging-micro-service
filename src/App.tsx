@@ -691,7 +691,7 @@ function StudentDetails({
           role="region"
           aria-label={ar ? 'سجل الحضور' : 'Attendance history'}
         >
-          <table className="role-table">
+          <table className="mobile-record-table role-table">
             <thead>
               <tr>
                 <th>{ar ? 'التاريخ' : 'Date'}</th>
@@ -702,15 +702,15 @@ function StudentDetails({
             <tbody>
               {records.map(({ event, value }) => (
                 <tr key={event.id}>
-                  <td>{value.date}</td>
-                  <td>
+                  <td data-label={ar ? 'التاريخ' : 'Date'}>{value.date}</td>
+                  <td data-label={ar ? 'الدورة' : 'Course'}>
                     {courses.find((course) =>
                       memberships.some(
                         (entry) => entry.id === value.enrollmentId && entry.courseId === course.id,
                       ),
                     )?.name || (ar ? 'بلا دورة' : 'No course')}
                   </td>
-                  <td>{t(value.status)}</td>
+                  <td data-label={ar ? 'الحالة' : 'Status'}>{t(value.status)}</td>
                 </tr>
               ))}
             </tbody>
@@ -768,7 +768,7 @@ function AttendanceView({
       aria-label={language === 'ar' ? 'قائمة الحضور' : 'Attendance list'}
       tabIndex={0}
     >
-      <table className="role-table roster-table">
+      <table className="mobile-record-table role-table roster-table">
         <colgroup>
           <col />
           <col className="roster-level-column" />
@@ -784,13 +784,13 @@ function AttendanceView({
         <tbody>
           {items.map((student) => (
             <tr key={student.studentId}>
-              <td>
+              <td data-label={t('Student')}>
                 <bdi>{student.name}</bdi>
               </td>
-              <td>
+              <td data-label={language === 'ar' ? 'المستوى' : 'Level'}>
                 <bdi>{level(student) || '—'}</bdi>
               </td>
-              <td>
+              <td data-label={language === 'ar' ? 'الحضور' : 'Attendance'}>
                 <select
                   aria-label={`${t('Attendance for')} ${student.name}`}
                   value={draft[student.studentId] ?? current.get(student.studentId) ?? ''}
@@ -1144,7 +1144,7 @@ function RosterView({
           aria-label={ar ? 'قائمة الطلاب' : 'Student list'}
           tabIndex={0}
         >
-          <table className="role-table roster-table roster-students-table">
+          <table className="mobile-record-table role-table roster-table roster-students-table">
             <colgroup>
               <col className="roster-name-column" />
               <col className="roster-name-column" />
@@ -1170,13 +1170,13 @@ function RosterView({
             <tbody>
               {students.map((student) => (
                 <tr key={student.studentId} data-student-id={student.studentId}>
-                  <td>
+                  <td data-label={ar ? 'الاسم الأول' : 'First name'}>
                     <bdi>{student.firstName ?? student.name}</bdi>
                   </td>
-                  <td>
+                  <td data-label={ar ? 'اسم العائلة' : 'Last name'}>
                     <bdi>{student.lastName || '—'}</bdi>
                   </td>
-                  <td>
+                  <td data-label={ar ? 'رقم الهاتف' : 'Phone'}>
                     {student.whatsapp ? (
                       <bdi dir="ltr">{student.whatsapp}</bdi>
                     ) : ar ? (
@@ -1185,7 +1185,7 @@ function RosterView({
                       'Not provided'
                     )}
                   </td>
-                  <td>
+                  <td data-label={ar ? 'الحضور' : 'Attendance'}>
                     {(() => {
                       const records = attendance.filter(
                         ({ value }) => value.studentId === student.studentId,
@@ -1205,10 +1205,10 @@ function RosterView({
                       )
                     })()}
                   </td>
-                  <td>
+                  <td data-label={ar ? 'المستوى' : 'Level'}>
                     <bdi>{studentLevel(student, courseSelected, enrollments) || '—'}</bdi>
                   </td>
-                  <td>
+                  <td data-label={ar ? 'الدورات' : 'Courses'}>
                     {(() => {
                       const names = courses.filter((course) =>
                         allEnrollments.some(
@@ -1247,7 +1247,7 @@ function RosterView({
                       )
                     })()}
                   </td>
-                  <td>
+                  <td data-label={ar ? 'الحالة' : 'Active'}>
                     <span
                       role="img"
                       aria-label={
@@ -1262,7 +1262,7 @@ function RosterView({
                       )}
                     </span>
                   </td>
-                  <td>
+                  <td data-label={ar ? 'الإجراءات' : 'Actions'}>
                     <button
                       className="icon-button"
                       aria-label={t('Open student')}
@@ -1272,6 +1272,7 @@ function RosterView({
                       }
                     >
                       <UserRound size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
+                      <span className="roster-open-label">{t('Open student')}</span>
                     </button>
                   </td>
                 </tr>
@@ -1403,14 +1404,14 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
           })}
         </div>
       )}
-      <p className="muted mb-2 sm:hidden">{t('Scroll sideways to see all columns.')}</p>
+
       <div
         className="overflow-x-auto"
         role="region"
         aria-label={t('Attendance overview')}
         tabIndex={0}
       >
-        <table className="w-full min-w-[42rem] table-fixed text-start text-sm">
+        <table className="mobile-record-table w-full min-w-[42rem] table-fixed text-start text-sm">
           <thead>
             <tr>
               <th scope="col" className="w-40 p-3 text-start">
@@ -1433,7 +1434,7 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
                   {student.name}
                 </th>
                 {statuses.map((status) => (
-                  <td key={status} className="p-3 text-center">
+                  <td data-label={t(status)} key={status} className="p-3 text-center">
                     {
                       records.filter(
                         ({ value }) =>
@@ -1442,7 +1443,7 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
                     }
                   </td>
                 ))}
-                <td className="p-3 text-center">
+                <td data-label={t('Notes')} className="p-3 text-center">
                   {
                     projected.notes.filter(({ value }) => value.studentId === student.studentId)
                       .length

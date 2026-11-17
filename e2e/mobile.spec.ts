@@ -106,14 +106,13 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await expect(savedNote).toContainText('تم التراجع')
   await page.setViewportSize({ width: 320, height: 568 })
   await page.getByRole('button', { name: 'الملخص', exact: true }).click()
-  await expect(page.locator('th[scope=col]').first()).toBeVisible()
+  await expect(page.getByRole('columnheader')).toHaveCount(5)
+  await expect(page.locator('td[data-label]').first()).toBeVisible()
   await expect(page.locator('[tabindex="0"]').filter({ has: page.locator('table') })).toHaveCount(1)
   expect(
     await page
       .locator('table')
-      .evaluate(
-        (table) => table.getBoundingClientRect().width > (table.parentElement?.clientWidth ?? 0),
-      ),
+      .evaluate((table) => table.scrollWidth <= (table.parentElement?.clientWidth ?? 0)),
   ).toBe(true)
   await usableLayout(page)
   await page.evaluate(() => {
