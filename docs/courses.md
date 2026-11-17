@@ -1,4 +1,4 @@
-﻿# Courses and enrollment
+# Courses and enrollment
 
 Administrators open **Courses** to see every saved course, including courses with no students. The default is the list; **Create course** opens a separate page and returns to the list after saving. Create/edit a course, **Manage students**, and **Grades** are separate destinations with individual page headings and the notebook navigation retained. Course pages omit the generic notebook introduction and unrelated student count. The localized account role appears once in the header. Choose a course from its row rather than combining course/student selectors and scores in one form.
 
@@ -43,3 +43,5 @@ Grades includes optional multiline enrollment notes, saved with each row. Notes 
 Grades opens directly on existing student records. Its Sort icon sits beside the page title, with no separate configuration row or Filter icon. Use the existing Courses navigation to return to the saved course list; Grades has no duplicate Back button. Saved Grades URL filters are ignored; heading sorting and the sort popup remain available. Edit scores and notes on each student's row. Student creation and membership remain on their separate screens. Other tables keep their filters inside the Filter popup.
 
 Saved attendance and scores show green when they meet their saved thresholds and red when below them. Pass and Fail rows are shaded and failures list each cause. Pending rows stay neutral; a changed score stays neutral until saved, and all individual indicators stay neutral while threshold drafts differ from saved values. Other unchanged saved values can still be colored while a row is pending.
+
+Grades uses a bounded scrolling table on desktop, with opaque sticky column headings. The title, Sort control and grading thresholds stay outside the table scroll area. Focus the Course grades region to scroll it with the keyboard. On phones and other stacked layouts, records continue to use normal page scrolling without a nested vertical scroller.

@@ -615,7 +615,7 @@ function GradePage({
           : 'Attendance = Present / (Present + Absent + Excused). Unmarked days are excluded.'}
       </p>
       <div
-        className="role-table-scroll"
+        className="role-table-scroll grade-table-scroll"
         role="region"
         aria-label={ar ? 'درجات الدورة' : 'Course grades'}
         tabIndex={0}

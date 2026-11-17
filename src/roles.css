@@ -633,3 +633,16 @@
   margin: 0.25rem 0 0;
   padding-inline-start: 1.25rem;
 }
+
+@media (min-width: 64.001rem) {
+  .grade-table-scroll {
+    max-height: max(16rem, 55vh);
+    overflow-y: auto;
+  }
+  .grade-table-scroll thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #fff;
+  }
+}
