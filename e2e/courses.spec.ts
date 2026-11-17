@@ -77,6 +77,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       theory: null,
       active: true,
       handbookReceived: false,
+      notes: '',
     },
     {
       id: enrollB,
@@ -87,6 +88,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       theory: null,
       active: true,
       handbookReceived: false,
+      notes: '',
     },
   ]
   const board = {
@@ -564,16 +566,31 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   expect(
     (await page.getByLabel('Practical: Synthetic Student').boundingBox())?.height,
   ).toBeGreaterThanOrEqual(44)
-  expect((await compactGradeRow.boundingBox())?.height).toBeLessThanOrEqual(65)
+  await expect(page.getByLabel('Notes: Synthetic Student')).toBeVisible()
+  expect(
+    (await page.getByLabel('Notes: Synthetic Student').boundingBox())?.width,
+  ).toBeGreaterThanOrEqual(192)
   await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
   await checkGradeSave('حفظ الدرجات')
-  expect((await compactGradeRow.boundingBox())?.height).toBeLessThanOrEqual(65)
+  await expect(
+    page.getByLabel('\u0645\u0644\u0627\u062d\u0638\u0627\u062a: Synthetic Student'),
+  ).toBeVisible()
   await page.setViewportSize({ width: 320, height: 844 })
   await checkGradeSave('حفظ الدرجات')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await clickAccountAction(page, 'English')
   await checkGradeSave('Save grades')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
+    await expect(
+      page.getByLabel('\u0645\u0644\u0627\u062d\u0638\u0627\u062a: Synthetic Student'),
+    ).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await clickAccountAction(page, 'English')
+  }
   if (originalViewport) await page.setViewportSize(originalViewport)
   await expect(page.getByRole('button', { name: 'Close course' })).toBeDisabled()
   await expect(page.getByText('Unavailable')).toBeVisible()
@@ -582,6 +599,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(page.getByLabel('Minimum attendance %')).toHaveValue('60')
   await page.getByLabel('Practical: Synthetic Student').fill('0')
   await page.getByLabel('Theory: Synthetic Student').fill('100')
+  await page.getByLabel('Notes: Synthetic Student').fill('First line\nSecond line')
   await page
     .getByRole('row')
     .filter({ hasText: 'Synthetic' })
@@ -595,6 +613,12 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     theory: 100,
   })
   await page.reload()
+  await expect(page.getByLabel('Notes: Synthetic Student')).toHaveValue('First line\nSecond line')
+  await page.getByLabel('Notes: Synthetic Student').fill('')
+  await compactGradeRow.getByRole('button', { name: 'Save grades' }).click()
+  await expect.poll(() => enrollments[0].notes).toBe('')
+  await page.reload()
+  await expect(page.getByLabel('Notes: Synthetic Student')).toHaveValue('')
   await expect(page.getByLabel('Practical: Synthetic Student')).toHaveValue('0')
   await page.goBack()
   await page.goForward()

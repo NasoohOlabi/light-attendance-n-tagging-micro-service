@@ -57,6 +57,8 @@ integration('student names survive migration, structured saves and legacy writes
       'neon/008-course-grading.sql',
       'neon/009-unassigned-students.sql',
       'neon/009-unassigned-students.sql',
+      'neon/010-enrollment-notes.sql',
+      'neon/010-enrollment-notes.sql',
     ])
       await pool.query(await readFile(file, 'utf8'))
     const handler = createHandler(pool, async () => admin, ['https://app.example'])
@@ -161,6 +163,7 @@ integration('student names survive migration, structured saves and legacy writes
           z.literal(6),
           z.literal(7),
           z.literal(8),
+          z.literal(9),
         ]),
         tables: z.array(
           z.object({
@@ -170,7 +173,7 @@ integration('student names survive migration, structured saves and legacy writes
         ),
       })
       .parse(JSON.parse(await readFile(exportPath, 'utf8')))
-    expect(backup.version).toBe(8)
+    expect(backup.version).toBe(9)
     expect(
       backup.tables
         .find((table) => table.name === 'public.students')

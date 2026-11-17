@@ -74,3 +74,5 @@ Apply `neon/007-student-profiles-handbooks.sql` before deploying this version. V
 Migration 008 adds per-course grading thresholds (attendance 70%, practical 80, theory 80 by default). Version 7 transfers preserve them; older backups restore defaults and cannot compare against non-default target thresholds.
 
 Apply `neon/009-unassigned-students.sql` before deploying unassigned-student support. It permits `students.teacher_id` to be null while retaining its foreign key. The full administrator register retains historical students without assignments; Teacher access still requires an active assigned student. Private roster inputs accept `teacherId: null`. Version 8 backups preserve unassigned students, require a compatible target and retain versions 1–7 for legacy recovery; legacy comparisons reject a target containing unassigned students. Profile edits can retain an existing provisional or inactive assignment, while a new assignment requires an approved active Teacher.
+
+Apply `neon/010-enrollment-notes.sql` before deploying enrollment notes. Version 9 transfers preserve notes; older backups restore empty notes and comparison rejects targets with nonempty notes.

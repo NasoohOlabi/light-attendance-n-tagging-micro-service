@@ -44,7 +44,7 @@ const courseTables = [
     columns: ['id', 'course_id', 'student_id', 'level', 'practical', 'theory'],
   },
 ] as const
-type Version = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
+type Version = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 function tablesFor(version: Version) {
   if (version < 3) return [...baseTables]
   return [...baseTables.slice(0, -1), ...courseTables, baseTables[baseTables.length - 1]]
@@ -67,7 +67,12 @@ function columnsFor(
       ...(version >= 7 ? ['attendance_minimum', 'practical_minimum', 'theory_minimum'] : []),
     ]
   if (table.name === 'public.course_enrollments' && version >= 4)
-    return [...table.columns, 'active', ...(version >= 6 ? ['handbook_received'] : [])]
+    return [
+      ...table.columns,
+      'active',
+      ...(version >= 6 ? ['handbook_received'] : []),
+      ...(version >= 9 ? ['notes'] : []),
+    ]
   if (table.name === 'public.events' && version >= 3) return [...table.columns, 'enrollment_id']
   return table.columns
 }
@@ -82,6 +87,7 @@ const backupSchema = z.strictObject({
     z.literal(6),
     z.literal(7),
     z.literal(8),
+    z.literal(9),
   ]),
   createdAt: z.iso.datetime(),
   tables: z.array(z.strictObject({ name: z.string(), rows: z.array(rowSchema) })),
@@ -169,6 +175,8 @@ function validateBackup(backup: Backup) {
 }
 async function schemaVersion(db: PoolClient): Promise<Version> {
   const result = await db.query(`SELECT
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'notes' AND data_type = 'text' AND is_nullable = 'NO' AND column_default = '''''::text') AS notes,
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'notes') AS notes_column,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name = 'teacher_id' AND is_nullable = 'YES') AS unassigned,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name IN ('first_name', 'last_name')) AS names,
     (SELECT count(*)::int FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('courses', 'course_enrollments')) AS courses,
@@ -185,6 +193,8 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name IN ('attendance_minimum', 'practical_minimum', 'theory_minimum') AND data_type = 'double precision' AND is_nullable = 'NO') AS grading,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name IN ('attendance_minimum', 'practical_minimum', 'theory_minimum')) AS grading_columns`)
   const {
+    notes,
+    notes_column,
     unassigned,
     names,
     courses,
@@ -202,6 +212,8 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     grading_columns,
   } = z
     .object({
+      notes: z.number(),
+      notes_column: z.number(),
       unassigned: z.number(),
       names: z.number(),
       courses: z.number(),
@@ -239,6 +251,8 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     throw new Error('Incomplete application migration')
   if (membership !== membership_column) throw new Error('Incomplete application migration')
   if (membership && courses !== 2) throw new Error('Incomplete application migration')
+  if (notes !== notes_column || (notes && !unassigned))
+    throw new Error('Incomplete application migration')
   if (unassigned && grading !== 3) throw new Error('Incomplete application migration')
   if (courses === 2 && names !== 2)
     throw new Error('Student name migration required for course backup')
@@ -248,7 +262,9 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
         ? profile === 3
           ? grading === 3
             ? unassigned
-              ? 8
+              ? notes
+                ? 9
+                : 8
               : 7
             : 6
           : 5
@@ -358,6 +374,10 @@ async function main() {
         const unassigned = await db.query('SELECT 1 FROM students WHERE teacher_id IS NULL LIMIT 1')
         if (unassigned.rowCount)
           throw new Error('Legacy backup cannot represent unassigned students')
+      }
+      if (backup.version < 9 && targetVersion >= 9) {
+        const notes = await db.query("SELECT 1 FROM course_enrollments WHERE notes <> '' LIMIT 1")
+        if (notes.rowCount) throw new Error('Legacy backup cannot represent enrollment notes')
       }
       const actual = await snapshot(db, backup.version)
       for (const [index, table] of backup.tables.entries()) {

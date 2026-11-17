@@ -61,6 +61,9 @@ integration(
       const gradingMigration = await readFile('neon/008-course-grading.sql', 'utf8')
       await pool.query(gradingMigration)
       await pool.query(gradingMigration)
+      const notesMigration = await readFile('neon/010-enrollment-notes.sql', 'utf8')
+      await pool.query(notesMigration)
+      await pool.query(notesMigration)
       for (const [id, subject] of [
         [adminId, subjects.admin],
         [teacherId, subjects.teacher],
@@ -253,6 +256,26 @@ integration(
       expect(
         (await call('/api/events', subjects.teacher, { events: [first, second] })).status,
       ).toBe(200)
+      expect(
+        (
+          await call('/api/admin/enrollments/grades', subjects.admin, {
+            id: enrollmentIds[0],
+            practical: 75.5,
+            theory: 100,
+            notes: 'First\nSecond',
+          })
+        ).status,
+      ).toBe(200)
+      const withNotes = courseBoardSchema.parse(
+        await (await call('/api/notebook', subjects.admin)).json(),
+      )
+      expect(withNotes.enrollments.find((entry) => entry.id === enrollmentIds[0])?.notes).toBe(
+        'First\nSecond',
+      )
+      expect(withNotes.enrollments.find((entry) => entry.id === enrollmentIds[1])?.notes).toBe('')
+      expect(
+        JSON.stringify(await (await call('/api/student/attendance', subjects.student)).json()),
+      ).not.toContain('First')
       const membership = {
         id: enrollmentIds[0],
         courseId: courseIds[0],
@@ -274,11 +297,11 @@ integration(
       expect(
         (
           await pool.query(
-            'SELECT level, practical::float8, theory::float8 FROM course_enrollments WHERE id = $1',
+            'SELECT level, practical::float8, theory::float8, notes FROM course_enrollments WHERE id = $1',
             [enrollmentIds[0]],
           )
         ).rows[0],
-      ).toEqual({ level: 'Changed', practical: 75.5, theory: 100 })
+      ).toEqual({ level: 'Changed', practical: 75.5, theory: 100, notes: 'First\nSecond' })
       const inactiveCorrection = makeEvent('Synthetic course teacher', {
         kind: 'reversal',
         targetId: first.id,
@@ -304,6 +327,18 @@ integration(
             id: enrollmentIds[0],
             practical: 0,
             theory: null,
+          })
+        ).status,
+      ).toBe(200)
+      expect(
+        (await pool.query('SELECT notes FROM course_enrollments WHERE id = $1', [enrollmentIds[0]]))
+          .rows[0].notes,
+      ).toBe('First\nSecond')
+      expect(
+        (
+          await call('/api/admin/enrollments/handbook', subjects.admin, {
+            id: enrollmentIds[0],
+            handbookReceived: true,
           })
         ).status,
       ).toBe(200)
@@ -547,7 +582,22 @@ integration(
       expect(closedBoard.enrollments.find((entry) => entry.id === enrollmentIds[0])).toMatchObject({
         practical: 0,
         theory: null,
+        notes: 'First\nSecond',
       })
+      expect(
+        (
+          await call('/api/admin/enrollments/grades', subjects.admin, {
+            id: enrollmentIds[0],
+            practical: 0,
+            theory: null,
+            notes: '',
+          })
+        ).status,
+      ).toBe(200)
+      expect(
+        (await pool.query('SELECT notes FROM course_enrollments WHERE id = $1', [enrollmentIds[0]]))
+          .rows[0].notes,
+      ).toBe('')
       expect((await call('/api/events', subjects.teacher, { events: [first] })).status).toBe(200)
       const stale = makeEvent('Synthetic course teacher', {
         kind: 'attendance',
