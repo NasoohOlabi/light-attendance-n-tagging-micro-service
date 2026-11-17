@@ -2,6 +2,7 @@ import { clickAccountAction } from './profileActions'
 import { expect, test, type Page } from '@playwright/test'
 import { compactHeader } from './headerLayout'
 import { spawn, type ChildProcess } from 'node:child_process'
+import { createServer } from 'node:net'
 import { mkdir } from 'node:fs/promises'
 
 test.use({ trace: 'off' })
@@ -29,19 +30,33 @@ let origin = ''
 
 test.beforeAll(async ({ browserName }, testInfo) => {
   if (browserName !== 'chromium') throw new Error('Synthetic test requires Chromium')
-  const port = testInfo.project.name === 'mobile' ? '4183' : '4182'
+  const port =
+    Number(process.env.PLAYWRIGHT_PORT ?? 4173) + (testInfo.project.name === 'mobile' ? 10 : 9)
+  await new Promise<void>((resolve, reject) => {
+    const probe = createServer()
+    probe.once('error', reject)
+    probe.listen(port, '127.0.0.1', () => probe.close(() => resolve()))
+  })
   origin = `http://127.0.0.1:${port}`
   auth = `${origin}/api/auth`
   api = `${origin}/api`
   server = spawn(
     process.execPath,
-    ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', port, '--strictPort'],
+    [
+      'node_modules/vite/bin/vite.js',
+      '--host',
+      '127.0.0.1',
+      '--port',
+      String(port),
+      '--strictPort',
+    ],
     {
       env: { ...process.env, VITE_NEON_AUTH_URL: auth, VITE_NEON_API_URL: api },
       stdio: 'ignore',
     },
   )
   for (let i = 0; i < 100; i++) {
+    if (server.exitCode !== null) throw new Error('Synthetic Vite server exited')
     try {
       if ((await fetch(origin)).ok) return
     } catch {

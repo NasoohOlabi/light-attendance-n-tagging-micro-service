@@ -1,3 +1,5 @@
+import { LevelInput } from './level'
+import { formatLevel } from './levelFormat'
 import { PhoneNumber } from './PhoneNumber'
 import { TableHeader, useDataTable } from './DataTable'
 import { RefreshCw } from 'lucide-react'
@@ -91,7 +93,7 @@ export function AdminConsole({
   const studentTable = useDataTable('admin-students', board?.students ?? [], [
     { id: 'first', label: ar ? 'الاسم الأول' : 'First name', value: (s) => s.firstName },
     { id: 'last', label: ar ? 'اسم العائلة' : 'Last name', value: (s) => s.lastName },
-    { id: 'level', label: ar ? 'المستوى' : 'Level', value: (s) => s.group },
+    { id: 'level', label: ar ? 'المستوى' : 'Level', value: (s) => formatLevel(s.group) },
     { id: 'phone', label: ar ? 'واتساب' : 'WhatsApp', value: (s) => s.whatsapp },
     { id: 'location', label: ar ? 'المنطقة' : 'Location', value: (s) => s.location },
     { id: 'year', label: ar ? 'سنة الميلاد' : 'Birth year', value: (s) => s.birthYear },
@@ -261,7 +263,7 @@ export function AdminConsole({
                               {student.lastName || '—'}
                             </td>
                             <td dir="auto" data-label={ar ? 'المستوى' : 'Level'}>
-                              {student.group}
+                              {formatLevel(student.group)}
                             </td>
                             <td dir="ltr" data-label={ar ? 'واتساب' : 'WhatsApp'}>
                               {student.whatsapp ? <PhoneNumber value={student.whatsapp} /> : '—'}
@@ -588,7 +590,7 @@ function StudentForm({
         {courseName && (
           <label>
             {ar ? 'مستوى الدورة' : 'Course level'}
-            <input
+            <LevelInput
               maxLength={200}
               dir="auto"
               value={courseLevel ?? group}
@@ -617,7 +619,7 @@ function StudentForm({
         </label>
         <label>
           {ar ? 'المستوى' : 'Level'}
-          <input
+          <LevelInput
             maxLength={100}
             dir="auto"
             value={group}
