@@ -1616,8 +1616,22 @@
 
 **Integrated gate at 21:52 Asia/Damascus:** bun run verify:release passed again on the combined tree: 114 browser cases, 33 local tests and all release checks; four optional database suites skipped. Exact-main Railway deployment, health and live shipped-asset layout proof are recorded in the delivery receipt on [PR #94](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service/pull/94).
 
+## 2026-11-17 21:50 Asia/Damascus (UTC+03:00) - Add space around desktop workspace content
+
+**Request and change** The Courses card touched the top of the desktop workspace. Add 32px of top padding to the shared content area and move the existing desktop welcome heading's inset into that shared padding. The desktop side inset is 38px. On mobile, keep the 16px gap below the header and the 16px side insets.
+
+**Verification and limits** The browser regression reproduced a 0px desktop gap before the fix. Synthetic Chromium checks measured 32px above the card at 1920px and 16px below the header at 320, 390 and 430px in English and Arabic. All measured layouts fit without horizontal overflow. Railway's production trigger targets main with Wait for CI enabled. The shipped-asset check uses synthetic API fixtures. Physical devices and real authenticated sessions are outside this layout verification.
+
+**Release gate** `bun run verify:release` passed 114 browser cases, 33 local tests with 137 assertions, build, lint, artifact and formatting checks, secret scans and dependency checks. Four optional database tests were skipped. The exact-main Railway deployment and shipped layout check follow the PR checks.
+
+**Main integration at 22:01 Asia/Damascus** Required checks passed on bc51d18 before main advanced to 23c7333. The merge preserved both work-log entries and combined the desktop padding with main's profile icon alignment. The full release gate passed again with 114 browser cases, 33 local tests and 137 assertions. Four optional database tests skipped. Fresh CI and exact-main Railway verification follow.
+
 ## 2026-11-17 21:59 Asia/Damascus (UTC+03:00) - Align level columns with the page language
 
 **Request and change** The Arabic Grades table placed the numeric course level `1` at the left edge. Let the Grades course level and the corresponding read-only roster level cells in Manage students and Settings follow the table direction. Isolate each value with `<bdi>` so mixed-script labels retain their own reading order.
 
-**Verification and limits** The focused Grades regression measured the Arabic `1` about 96 px from its expected position on desktop and 123 px on mobile before the fix. It passed in both Playwright projects after the fix, with the number against the right edge in Arabic and the left edge in English. `bun run verify:release` passed 114 browser checks and the local release gates. Four optional database suites skipped. Railway's main deployment trigger returned `checkSuites: true` for Wait for CI. The delivery receipt on the linked PR will record the exact deployment and public build checks. Browser cases use synthetic responses and emulated phones.
+**Verification and limits** The focused Grades regression measured the Arabic `1` about 96 px from its expected position on desktop and 123 px on mobile before the fix. It passed in both Playwright projects after the fix, with the number against the right edge in Arabic and the left edge in English. `bun run verify:release` passed 114 browser checks and the local release gates. Four optional database suites skipped. Railway's main deployment trigger returned `checkSuites: true` for Wait for CI. The delivery receipt on [PR #96](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service/pull/96) will record the exact deployment and public build checks. Browser cases use synthetic responses and emulated phones.
+
+**Main integration at 22:06 Asia/Damascus** PR #96 checks passed on `e4a59f7`. GitHub rejected the squash merge after `main` advanced to `e4d5097` with the desktop workspace inset from PR #95. Merged `main` and resolved the work-log conflict by preserving both entries. The application changes combined cleanly.
+
+**Integrated gate at 22:10 Asia/Damascus** `bun run verify:release` passed on Bun 1.3.0 with 114 browser checks, 33 local tests and 137 assertions. Four optional database tests skipped. The suite used port 4273 because 4173 was busy. The focused alignment check also reproduced the offset against the previous Railway build with synthetic API responses. Fresh PR checks and exact-main deployment verification follow.
