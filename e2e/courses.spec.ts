@@ -402,6 +402,27 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   const firstCourseRow = page.getByRole('row').filter({ hasText: 'Course A' })
   const firstCourseActions = recordActions(firstCourseRow)
   const firstCourseMenu = firstCourseRow.getByRole('group', { name: 'Actions for Course A' })
+  const expectActionDivider = async (language: string) => {
+    const header = coursePanel.getByRole('columnheader', {
+      name: language === 'en' ? 'Actions' : 'الإجراءات',
+      exact: true,
+    })
+    const statusHeader = coursePanel.getByRole('columnheader', {
+      name: language === 'en' ? 'Status' : 'الحالة',
+    })
+    const headerBox = await header.boundingBox()
+    const statusBox = await statusHeader.boundingBox()
+    const actionBox = await firstCourseRow.getByRole('cell').last().boundingBox()
+    if (!headerBox || !statusBox || !actionBox) throw new Error('Missing course table cells')
+    expect(headerBox.x).toBeCloseTo(actionBox.x)
+    expect(headerBox.width).toBeCloseTo(actionBox.width)
+    expect(headerBox.y + headerBox.height).toBeCloseTo(statusBox.y + statusBox.height)
+    await expect(header).toHaveCSS(
+      'border-bottom',
+      await statusHeader.evaluate((cell) => getComputedStyle(cell).borderBottom),
+    )
+  }
+  await expectActionDivider('en')
   await expect(firstCourseActions).toBeVisible()
   await expect(firstCourseMenu).toBeHidden()
   const coursesBeforeOpening = structuredClone(courses)
@@ -430,6 +451,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       }
       for (const width of [320, 390, 430]) {
         await page.setViewportSize({ width, height: 844 })
+        await expectActionDivider(language)
         const panel = await coursePanel.boundingBox()
         const header = await page.locator('.workspace-rail').boundingBox()
         if (!panel || !header) throw new Error('Missing course list or workspace header')

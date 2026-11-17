@@ -206,7 +206,7 @@ export function TableHeader<T>({
           })}
           {actions && (
             <th scope="col" className="table-actions-header">
-              {ar ? 'الإجراءات' : 'Actions'}
+              <span>{ar ? 'الإجراءات' : 'Actions'}</span>
             </th>
           )}
         </tr>
