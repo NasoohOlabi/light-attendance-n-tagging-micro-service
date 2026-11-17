@@ -252,10 +252,16 @@ test('normal refresh upgrades a legacy worker without disturbing another tab', a
       await (await navigator.serviceWorker.getRegistration())?.update()
     })
     await expect(page.locator('.update-notice')).toContainText('refresh this page')
+    await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'العربية', exact: true }).click()
     await expect(page.locator('.update-notice')).toContainText('حدّث الصفحة')
+    await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toHaveCount(0)
     htmlVersion = 'three'
-    await page.reload()
+    await expect(page.locator('meta[name=test-version]')).toHaveAttribute('content', 'two')
+    await Promise.all([
+      page.waitForEvent('load'),
+      page.getByRole('button', { name: 'تحديث', exact: true }).click(),
+    ])
     await expect(page.locator('meta[name=test-version]')).toHaveAttribute('content', 'three')
     await context.setOffline(true)
     await page.reload()

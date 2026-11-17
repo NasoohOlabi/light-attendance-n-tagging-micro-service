@@ -9,10 +9,15 @@ export function AppUpdate() {
   if (!waiting) return null
 
   return (
-    <p className="update-notice" role="status">
-      {language === 'ar'
-        ? 'يتوفر إصدار أحدث. احفظ عملك ثم حدّث الصفحة للتحديث.'
-        : 'A newer version is available. Save your work, then refresh this page to update.'}
-    </p>
+    <div className="update-notice" role="status">
+      <span>
+        {language === 'ar'
+          ? 'يتوفر إصدار أحدث. احفظ عملك ثم حدّث الصفحة للتحديث.'
+          : 'A newer version is available. Save your work, then refresh this page to update.'}
+      </span>
+      <button type="button" onClick={() => window.location.reload()}>
+        {language === 'ar' ? 'تحديث' : 'Refresh'}
+      </button>
+    </div>
   )
 }
