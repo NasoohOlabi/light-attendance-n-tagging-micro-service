@@ -188,20 +188,28 @@ test('summary counts all dates for the selected course and ignores saved filters
     fullPage: true,
   })
   await clickAccountAction(page, 'English')
-  await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseB)
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseB)
+  await page.getByRole('button', { name: 'Summary', exact: true }).click()
   await expect(row.locator('td')).toHaveText(['0', '1', '0', '2'])
   await expect(page.getByRole('row', { name: /Former Student/ })).toHaveCount(0)
   await expect(page.getByRole('meter', { name: 'absent' })).toHaveAttribute(
     'aria-valuetext',
     '100.0%',
   )
-  await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseEmpty)
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
+  await page
+    .getByRole('combobox', { name: 'Default course', exact: true })
+    .selectOption(courseEmpty)
+  await page.getByRole('button', { name: 'Summary', exact: true }).click()
   await expect(page.getByText('No attendance records yet.')).toBeVisible()
   await expect(page.getByRole('meter')).toHaveCount(0)
   await clickAccountAction(page, 'العربية')
   await expect(page.getByText('لا توجد سجلات حضور بعد.')).toBeVisible()
   await clickAccountAction(page, 'English')
-  await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption('')
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption('')
+  await page.getByRole('button', { name: 'Summary', exact: true }).click()
   await expect(row.locator('td')).toHaveText(['1', '0', '0', '2'])
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(page.getByLabel('Find a student')).toBeVisible()
