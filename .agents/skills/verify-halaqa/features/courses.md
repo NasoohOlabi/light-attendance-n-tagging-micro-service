@@ -33,3 +33,7 @@ For long Grades tables, check English and Arabic on desktop (including short win
 With an override, verify row shading follows the effective result while the calculated result and below-threshold attendance/scores retain their own colors and causes. Test manual Pass/Fail, restore calculated, and a passing override of an attendance failure.
 
 Verify passing and failing row backgrounds, attendance, scores and calculated/effective results remain readable and correctly colored in light and dark appearance, including Arabic phones and a passing override of an attendance failure.
+
+Sort Grades by Result in both directions in English and Arabic on desktop and mobile: status comes first, then the mean of both saved grades, including attendance failures, pending incomplete scores and unsaved drafts. Reload retains the sort and sorting sends no writes. Saved manual decisions determine the status group; an overridden Pass with missing grades must remain above a Fail averaging 100 when descending.
+
+Wait for the displayed calculated result after saving, not row-wide text that also contains override choices/history. Hold a grade-save response, assert Pending until released, then confirm the persisted score before reload.

@@ -53,3 +53,5 @@ Apply migration `neon/011-grade-decisions.sql` before deployment. Version 10 bac
 Grades uses a bounded scrolling table on desktop, with opaque sticky column headings. The title, Sort control and grading thresholds stay outside the table scroll area. Focus the Course grades region to scroll it with the keyboard. On phones and other stacked layouts, records continue to use normal page scrolling without a nested vertical scroller.
 
 Light and dark appearance use matching readable red/green grade indicators and row tints. Color meanings and failure reasons are the same in both palettes.
+
+Result sorting uses the effective result, including saved administrator decisions, and ranks pending, fail, then pass in ascending order, and reverses that order descending. Within each status, it sorts by the arithmetic mean of the saved theory and practical scores; pending rows missing either score precede completed-score pending rows in ascending order. Unsaved drafts retain their calculated pending status; an explicit administrator decision remains effective. Sorting does not save changes.
