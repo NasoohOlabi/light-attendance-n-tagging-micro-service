@@ -1,3 +1,5 @@
+import { LevelInput } from './level'
+import { formatLevel } from './levelFormat'
 import { TableControls, TableHeader, useDataTable } from './DataTable'
 import { useEffect, useState } from 'react'
 import { ClipboardList, History, Lock, LockOpen, Pencil, Save, UsersRound } from 'lucide-react'
@@ -92,14 +94,20 @@ export function Courses({
   const membershipTable = useDataTable('course-students', matching, [
     { id: 'first', label: ar ? 'الاسم الأول' : 'First name', value: (s) => s.firstName },
     { id: 'last', label: ar ? 'اسم العائلة' : 'Last name', value: (s) => s.lastName },
-    { id: 'roster-level', label: ar ? 'مستوى القائمة' : 'Roster level', value: (s) => s.group },
+    {
+      id: 'roster-level',
+      label: ar ? 'مستوى القائمة' : 'Roster level',
+      value: (s) => formatLevel(s.group),
+    },
     {
       id: 'course-level',
       label: ar ? 'مستوى الدورة' : 'Course level',
       value: (s) =>
-        drafts[`${course?.id}:${s.studentId}`]?.level ??
-        courseEntries.find((entry) => entry.studentId === s.studentId)?.level ??
-        s.group,
+        formatLevel(
+          drafts[`${course?.id}:${s.studentId}`]?.level ??
+            courseEntries.find((entry) => entry.studentId === s.studentId)?.level ??
+            s.group,
+        ),
     },
     {
       id: 'enrolled',
@@ -355,10 +363,10 @@ export function Courses({
                             {student.lastName || '—'}
                           </td>
                           <td dir="auto" data-label={ar ? 'مستوى القائمة' : 'Roster level'}>
-                            {student.group || '—'}
+                            {formatLevel(student.group) || '—'}
                           </td>
                           <td data-label={ar ? 'مستوى الدورة' : 'Course level'}>
-                            <input
+                            <LevelInput
                               aria-label={`${ar ? 'مستوى الدورة' : 'Course level'}: ${student.firstName} ${student.lastName}`}
                               maxLength={200}
                               dir="auto"
@@ -523,12 +531,10 @@ function GradePage({
         label: ar ? 'اسم العائلة' : 'Last name',
         value: (entry) => students.find((s) => s.studentId === entry.studentId)?.lastName,
       },
-      { id: 'level', label: ar ? 'مستوى الدورة' : 'Course level', value: (entry) => entry.level },
       {
-        id: 'enrolled',
-        choices: ar ? ['نعم', 'لا'] : ['Yes', 'No'],
-        label: ar ? 'مسجل' : 'Enrolled',
-        value: (entry) => (entry.active ? (ar ? 'نعم' : 'Yes') : ar ? 'لا' : 'No'),
+        id: 'level',
+        label: ar ? 'مستوى الدورة' : 'Course level',
+        value: (entry) => formatLevel(entry.level),
       },
       {
         id: 'attendance',
@@ -651,10 +657,7 @@ function GradePage({
                     {student.lastName || '—'}
                   </td>
                   <td dir="auto" data-label={ar ? 'مستوى الدورة' : 'Course level'}>
-                    {entry.level || '—'}
-                  </td>
-                  <td data-label={ar ? 'مسجل' : 'Enrolled'}>
-                    {entry.active ? (ar ? 'نعم' : 'Yes') : ar ? 'لا' : 'No'}
+                    {formatLevel(entry.level) || '—'}
                   </td>
                   <td data-label={ar ? 'الحضور' : 'Attendance'}>
                     {ratio === null ? (ar ? 'غير متاح' : 'Unavailable') : `${ratio.toFixed(1)}%`}
