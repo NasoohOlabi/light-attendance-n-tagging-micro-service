@@ -1117,3 +1117,13 @@
 **Verification/limits:** Final release and deployment results follow. Browser fixtures contain synthetic identities and intercept the API; these checks establish UI behavior without claiming real authenticated persistence or physical-device verification. Railway source readback confirms main with Wait for CI (`checkSuites: true`).
 
 **Final local gate at 15:22 Asia/Damascus:** `bun run verify:release` passed all 80 desktop/mobile browser cases, 22 unit tests/99 assertions, lint, strict build/artifact checks, formatting, file/history secret scans and dependency audit. Four optional disposable database suites were skipped. Reviewed synthetic desktop and Arabic 320px screenshots. Focused table checks separately passed 8/8. Exact-main Railway deployment, health and shipped-asset UI results will be recorded in the PR delivery receipt after merge.
+
+## 2026-11-17 17:09 Asia/Damascus (UTC+03:00) - Show Theory before Practical
+
+**Request/reason:** Owner requested Theory (نظري) before Practical (عملي) in the course Grades table. Started clean at main `54b6195` and created `fix/theory-before-practical` in the existing checkout.
+
+**Changes:** Reordered both score headings and their matching input cells, including stacked phone fields and sort-column choices. Added order assertions to the existing English/Arabic desktop/phone course scenario and updated the verification feature map. This small presentation fix was completed by the orchestrator; no score mapping, threshold, API or schema changes.
+
+**Verification/limits:** Full release gate pending. Existing course coverage saves distinct 0/100 scores and reloads them to check identity. Synthetic browser checks do not establish real authenticated provider writes or physical-device behavior. Exact-main Railway deployment, health and shipped-asset checks will be recorded in the PR delivery receipt after merge.
+
+**Final local gate at 2026-11-17 17:12 Asia/Damascus:** `bun run verify:release` passed all 82 desktop/mobile browser cases, 22 local unit tests/99 assertions, lint, build/artifact, formatting, file/history secret scans and dependency audit. Four optional database suites skipped. Reviewed the synthetic Arabic rendered fields. Railway production source readback via CLI confirms main with Wait for CI enabled (`checkSuites: true`). No production records were changed; live delivery verification follows merge.
