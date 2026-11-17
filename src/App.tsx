@@ -1,5 +1,5 @@
-import { CircleCheck, CircleMinus, LogOut, RefreshCw, Settings2, UserRound } from 'lucide-react'
-import { LanguageProvider, LanguageSwitch, useLanguage, type TranslationKey } from './i18n'
+import { CircleCheck, CircleMinus, RefreshCw, UserRound } from 'lucide-react'
+import { LanguageProvider, useLanguage, type TranslationKey } from './i18n'
 import { useEffect, useState } from 'react'
 import {
   projectEvents,
@@ -16,13 +16,14 @@ import { NotebookDashboard } from './NotebookDashboard'
 import { rankStudents } from './studentSearch'
 import { InstallApp } from './InstallApp'
 import { AppUpdate } from './AppUpdate'
-import { WorkspaceNavigation, tabs } from './WorkspaceNavigation'
+import { WorkspaceNavigation } from './WorkspaceNavigation'
 import './workspace.css'
 import { useLedger } from './useLedger'
 import { NeonAuth, WorkspaceLoading } from './NeonAuth'
 import { AdminConsole } from './AdminConsole'
 import { StudentAttendance } from './StudentAttendance'
 import { Courses } from './Courses'
+import type { Profile } from './ProfileMenu'
 import type { NeonTeacher } from '../shared/neon'
 
 type Projection = ReturnType<typeof projectEvents>
@@ -92,9 +93,9 @@ function AppContent() {
             </>
           }
         >
-          {(userId, account, signOut) =>
+          {(userId, account, signOut, profile) =>
             account.role === 'student' ? (
-              <StudentAttendance key={userId} userId={userId} signOut={signOut} />
+              <StudentAttendance key={userId} userId={userId} signOut={signOut} profile={profile} />
             ) : account.role === 'administrator' &&
               (query.view === 'settings' ||
                 query.view === 'administration' ||
@@ -103,6 +104,7 @@ function AppContent() {
                 key={`${userId}:${query.view === 'add-student'}`}
                 userId={userId}
                 signOut={signOut}
+                profile={profile}
                 initialCreateStudent={query.view === 'add-student'}
                 courseId={
                   query.view === 'add-student' && query.courseView === 'students'
@@ -117,6 +119,7 @@ function AppContent() {
                 demo={null}
                 neon={{ userId, teacher: account }}
                 leave={signOut}
+                profile={profile}
               />
             )
           }
@@ -130,10 +133,12 @@ function Notebook({
   demo,
   leave,
   neon,
+  profile,
 }: {
   neon?: { userId: string; teacher: NeonTeacher }
   demo: 'editable' | 'assigned' | null
   leave: () => void
+  profile?: Profile
 }) {
   const { t, language, errorMessage } = useLanguage()
   const query = useQueryState()
@@ -209,66 +214,12 @@ function Notebook({
       <WorkspaceNavigation
         administrator={neon?.teacher.role === 'administrator'}
         assigned={assigned}
+        profile={profile}
+        leave={leave}
+        sample={!neon}
+        disabled={ledger.busy}
       />
       <main id="main-content" tabIndex={-1} className="workspace-main">
-        <div className="workspace-topline">
-          <div className="workspace-context" dir="auto">
-            <span>
-              {t('Halaqa notebook')} /{' '}
-              {query.view === 'courses'
-                ? language === 'ar'
-                  ? 'الدورات'
-                  : 'Courses'
-                : query.tab === 'dashboard'
-                  ? language === 'ar'
-                    ? 'الرئيسية'
-                    : 'Dashboard'
-                  : t(tabs.find((tab) => tab.id === query.tab)?.label ?? 'Attendance')}
-            </span>
-            {neon && (
-              <span>
-                {neon.teacher.role === 'administrator'
-                  ? language === 'ar'
-                    ? 'مسؤول'
-                    : 'Administrator'
-                  : language === 'ar'
-                    ? 'معلم'
-                    : 'Teacher'}
-              </span>
-            )}
-          </div>
-          <div className="header-actions">
-            <LanguageSwitch />
-            {neon?.teacher.role === 'administrator' && (
-              <button
-                className="icon-button settings-action"
-                aria-label={language === 'ar' ? 'الإعدادات' : 'Settings'}
-                title={language === 'ar' ? 'الإعدادات' : 'Settings'}
-                onClick={() => setQuery({ view: 'settings' }, true)}
-              >
-                <Settings2 size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
-                <span className="settings-label">
-                  {language === 'ar' ? 'الإعدادات' : 'Settings'}
-                </span>
-              </button>
-            )}
-            <button
-              disabled={ledger.busy}
-              className="icon-button"
-              aria-label={neon ? t('Sign out') : t('Close session')}
-              title={neon ? t('Sign out') : t('Close session')}
-              onClick={leave}
-            >
-              <LogOut
-                className="icon-directional"
-                size={20}
-                strokeWidth={1.6}
-                aria-hidden="true"
-                focusable="false"
-              />
-            </button>
-          </div>
-        </div>
         {query.view !== 'courses' && (
           <header className="workspace-welcome">
             <div>

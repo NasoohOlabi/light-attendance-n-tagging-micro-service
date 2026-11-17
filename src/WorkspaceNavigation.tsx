@@ -1,3 +1,4 @@
+import { ProfileMenu, type Profile } from './ProfileMenu'
 import { BookOpen, House } from 'lucide-react'
 import { useLanguage, type TranslationKey } from './i18n'
 import { setQuery, useQueryState, type Tab } from './queryState'
@@ -14,9 +15,17 @@ export const tabs: { id: Exclude<Tab, 'dashboard'>; label: TranslationKey }[] = 
 export function WorkspaceNavigation({
   administrator,
   assigned,
+  profile,
+  leave,
+  sample,
+  disabled,
 }: {
   administrator: boolean
   assigned: boolean
+  profile?: Profile
+  leave: () => void
+  sample?: boolean
+  disabled?: boolean
 }) {
   const { t, language } = useLanguage()
   const query = useQueryState()
@@ -24,7 +33,13 @@ export function WorkspaceNavigation({
     <aside className="workspace-rail">
       <div className="workspace-brand">
         <WartaqLogo />
-        <span>{t('Halaqa notebook')}</span>
+        <ProfileMenu
+          profile={profile}
+          administrator={administrator}
+          leave={leave}
+          sample={sample}
+          disabled={disabled}
+        />
       </div>
       <nav aria-label={t('Notebook')} data-courses={administrator}>
         <button

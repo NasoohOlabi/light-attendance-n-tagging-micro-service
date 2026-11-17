@@ -1,3 +1,4 @@
+import { clickAccountAction } from './profileActions'
 import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 
@@ -9,12 +10,12 @@ test('dashboard charts and grouped fuzzy attendance preserve drafts', async ({
   await expect(page.getByRole('button', { name: 'Take attendance' })).toBeVisible()
   await expect(page.getByLabel('present: 1')).toBeVisible()
   await expect(page.getByText('1 marked, 1 unmarked')).toBeVisible()
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await expect(page.getByRole('button', { name: 'تسجيل الحضور' })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
     true,
   )
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.locator('details.attendance-group summary')).toHaveCount(1)
   await expect(
@@ -29,8 +30,7 @@ test('dashboard charts and grouped fuzzy attendance preserve drafts', async ({
   if (testInfo.project.name === 'mobile') {
     await mkdir('.artifacts/verification', { recursive: true })
     for (const language of ['en', 'ar']) {
-      if (language === 'ar')
-        await page.getByRole('button', { name: 'العربية', exact: true }).click()
+      if (language === 'ar') await clickAccountAction(page, 'العربية')
       for (const width of [320, 390]) {
         await page.setViewportSize({ width, height: 844 })
         const table = page.getByRole('region', {
@@ -54,7 +54,7 @@ test('dashboard charts and grouped fuzzy attendance preserve drafts', async ({
         })
       }
     }
-    await page.getByRole('button', { name: 'English', exact: true }).click()
+    await clickAccountAction(page, 'English')
   }
   await page.getByLabel('Attendance for Omar').selectOption('absent')
   await page.locator('details.attendance-group summary').click()
@@ -82,7 +82,7 @@ test('dashboard charts and grouped fuzzy attendance preserve drafts', async ({
   await expect(snapshot.locator('dt')).toHaveText(['Student', 'Level', 'Status'])
   await expect(snapshot.locator('dd').first()).toHaveText('Omar')
   for (const language of ['en', 'ar']) {
-    if (language === 'ar') await page.getByRole('button', { name: 'العربية', exact: true }).click()
+    if (language === 'ar') await clickAccountAction(page, 'العربية')
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 844 })
       const fields = await snapshot
@@ -91,7 +91,7 @@ test('dashboard charts and grouped fuzzy attendance preserve drafts', async ({
       expect(new Set(fields).size).toBe(1)
     }
   }
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   const record = page.locator('li').filter({ hasText: 'Omar' }).filter({ hasText: 'absent' })
   await record.getByRole('button', { name: 'Undo' }).click()
   await page.getByLabel('Reason').fill('Correction')
@@ -129,7 +129,7 @@ test('recent sessions count present students, including zero-present dates', asy
   await expect(page.getByLabel(`${secondDate}: 0`)).toHaveCount(0)
   await expect(page.getByLabel('absent: 1')).toBeVisible()
   await page.getByLabel('Session date').fill(secondDate)
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await expect(page.getByText('عدد الحاضرين في كل يوم')).toBeVisible()
   await expect(page.getByLabel(`${firstDate}: 1`)).toBeVisible()
   await expect(page.getByLabel(`${secondDate}: 0`)).toBeVisible()

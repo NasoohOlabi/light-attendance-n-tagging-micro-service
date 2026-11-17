@@ -1,4 +1,5 @@
-﻿import { expect, test } from '@playwright/test'
+import { clickAccountAction } from './profileActions'
+import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 
 test.use({ trace: 'off' })
@@ -163,7 +164,7 @@ test('summary counts all dates for the selected course and ignores saved filters
     path: `.artifacts/verification/summary-percentages-${testInfo.project.name}-en.png`,
     fullPage: true,
   })
-  await page.getByRole('button', { name: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629' }).click()
+  await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
   await expect(row.locator('td')).toHaveText(['2', '0', '0', '2'])
   const arabicMeter = page.getByRole('meter', { name: 'حاضر' })
   await expect(arabicMeter).toHaveAttribute('aria-valuenow', '66.7')
@@ -186,7 +187,7 @@ test('summary counts all dates for the selected course and ignores saved filters
     path: `.artifacts/verification/summary-percentages-${testInfo.project.name}-ar.png`,
     fullPage: true,
   })
-  await page.getByRole('button', { name: 'English' }).click()
+  await clickAccountAction(page, 'English')
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseB)
   await expect(row.locator('td')).toHaveText(['0', '1', '0', '2'])
   await expect(page.getByRole('row', { name: /Former Student/ })).toHaveCount(0)
@@ -197,9 +198,9 @@ test('summary counts all dates for the selected course and ignores saved filters
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseEmpty)
   await expect(page.getByText('No attendance records yet.')).toBeVisible()
   await expect(page.getByRole('meter')).toHaveCount(0)
-  await page.getByRole('button', { name: 'العربية' }).click()
+  await clickAccountAction(page, 'العربية')
   await expect(page.getByText('لا توجد سجلات حضور بعد.')).toBeVisible()
-  await page.getByRole('button', { name: 'English' }).click()
+  await clickAccountAction(page, 'English')
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption('')
   await expect(row.locator('td')).toHaveText(['1', '0', '0', '2'])
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()

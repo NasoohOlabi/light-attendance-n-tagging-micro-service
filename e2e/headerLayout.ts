@@ -1,6 +1,26 @@
 import { expect, type Page } from '@playwright/test'
 
 export async function compactHeader(page: Page, selector: string) {
+  const profile = page.locator('.profile-trigger')
+  if (await profile.count()) {
+    if ((await profile.getAttribute('aria-expanded')) === 'true')
+      await page.keyboard.press('Escape')
+    const container = page.locator('.workspace-brand, .role-header').filter({ has: profile })
+    await expect(container).toBeVisible()
+    const bounds = await container.boundingBox()
+    const avatar = await profile.boundingBox()
+    const brand = await container.locator('.wartaq-logo').boundingBox()
+    if (!bounds || !avatar || !brand) throw new Error('Missing profile header geometry')
+    expect(avatar.width).toBeGreaterThanOrEqual(44)
+    expect(avatar.height).toBeGreaterThanOrEqual(44)
+    expect(avatar.x).toBeGreaterThanOrEqual(bounds.x - 1)
+    expect(avatar.x + avatar.width).toBeLessThanOrEqual(bounds.x + bounds.width + 1)
+    expect(avatar.x + avatar.width <= brand.x || brand.x + brand.width <= avatar.x).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    )
+    return
+  }
   const header = page.locator(selector)
   await expect(header).toBeVisible()
   const bounds = await header.boundingBox()

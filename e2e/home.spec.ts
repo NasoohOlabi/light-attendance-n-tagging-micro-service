@@ -1,4 +1,5 @@
-﻿import { expect, test, type Page } from '@playwright/test'
+import { clickAccountAction } from './profileActions'
+import { expect, test, type Page } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 
 async function mobileLayout(page: Page) {
@@ -93,7 +94,7 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   await expect(page.locator('.workspace')).toBeVisible()
   await expect(page.getByText('v0.1.0 · In development')).toHaveCount(0)
   await expect(page).toHaveTitle('Wartaq · Halaqa notebook')
-  await expect(page.getByRole('group', { name: 'Language / اللغة' })).toHaveCount(1)
+  await expect(page.locator('.profile-trigger')).toHaveCount(1)
   await page.goBack()
   await expect(page.locator('.wartaq-home')).toBeVisible()
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -103,10 +104,10 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   await mobileLayout(page)
   await page.goBack()
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
-  await page.getByRole('button', { name: 'Close session', exact: true }).click()
+  await clickAccountAction(page, 'Close session')
   await expect(page.locator('.wartaq-home')).toBeVisible()
   await expect(page).not.toHaveURL(/page=app/)
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await mkdir('.artifacts/wartaq-final', { recursive: true })
   await page.setViewportSize({ width: 1440, height: 1040 })
   await page.screenshot({

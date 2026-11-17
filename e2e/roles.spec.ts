@@ -1,3 +1,4 @@
+import { clickAccountAction, openProfile } from './profileActions'
 import { expect, test, type Page } from '@playwright/test'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { createServer } from 'node:net'
@@ -52,7 +53,7 @@ test.beforeAll(async ({ browserName }, testInfo) => {
 })
 test.afterAll(() => server?.kill())
 
-async function mockAuth(page: Page, id: string) {
+async function mockAuth(page: Page, id: string, image: string | null = null) {
   await page.route(`${auth}/**`, async (route) => {
     const request = route.request()
     const headers = {
@@ -70,6 +71,7 @@ async function mockAuth(page: Page, id: string) {
         user: {
           id,
           name: 'Synthetic User',
+          image,
           email: 'synthetic@example.test',
           emailVerified: true,
           createdAt: now,
@@ -97,6 +99,19 @@ function cors(requestedHeaders: string | undefined) {
 }
 
 async function utilityIcon(page: Page, name: string) {
+  const profileAction = [
+    'Sign out',
+    'English',
+    '\u0627\u0644\u0639\u0631\u0628\u064a\u0629',
+    '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062e\u0631\u0648\u062c',
+  ].includes(name)
+  if (profileAction) {
+    await openProfile(page)
+    const action = page.getByRole('button', { name, exact: true })
+    await expect(action).toBeVisible()
+    await page.keyboard.press('Escape')
+    return action
+  }
   const button = page.getByRole('button', { name, exact: true })
   await expect(button).toBeVisible()
   await expect(button).toHaveText('')
@@ -110,7 +125,11 @@ async function utilityIcon(page: Page, name: string) {
 
 test('student sees only their attendance and loses it after access is denied', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 })
-  await mockAuth(page, studentUserId)
+  await mockAuth(
+    page,
+    studentUserId,
+    'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2244%22 height=%2244%22%3E%3Crect width=%2244%22 height=%2244%22 fill=%22teal%22/%3E%3C/svg%3E',
+  )
   const paths: string[] = []
   let denied = false
   await page.route(`${api}/**`, async (route) => {
@@ -158,9 +177,22 @@ test('student sees only their attendance and loses it after access is denied', a
   }
   await expect(page.getByText('2026-11-12')).toBeVisible()
   await expect(page.getByText('present', { exact: true })).toBeVisible()
+  await expect(page.locator('.profile-trigger img')).toBeVisible()
+  await expect
+    .poll(() =>
+      page
+        .locator('.profile-trigger img')
+        .evaluate((image) => image instanceof HTMLImageElement && image.naturalWidth),
+    )
+    .toBe(44)
+  await openProfile(page)
+  const menuBounds = await page.locator('.profile-panel').boundingBox()
+  expect(menuBounds?.x).toBeGreaterThanOrEqual(0)
+  expect(menuBounds ? menuBounds.x + menuBounds.width : 999).toBeLessThanOrEqual(320)
+  await page.keyboard.press('Escape')
   await compactHeader(page, '.role-header')
   await expect(page.getByRole('button', { name: /Notes|Students|History|Settings/ })).toHaveCount(0)
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await expect(page.getByRole('heading', { name: 'حضوري' })).toBeVisible()
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 })
@@ -356,7 +388,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await page.goto(`${origin}/?page=app&view=invalid`)
   await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
-  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  await clickAccountAction(page, 'Settings')
   await expect(page).toHaveURL(/view=settings/)
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
   const navigation = page.getByRole('navigation', { name: 'Notebook' })
@@ -411,7 +443,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
       expect(box.top).toBe(boxes[0].top)
     }
   }
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await expect(
     account.getByRole('button', { name: 'إعادة تعيين كلمة المرور', exact: true }),
   ).toBeVisible()
@@ -439,7 +471,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     path: `.artifacts/verification/settings-editor-ar-${testInfo.project.name}.png`,
     fullPage: true,
   })
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   await account.getByLabel('Role').selectOption('student')
   await expect(account.locator('select').nth(1).locator(`option[value="${studentId}"]`)).toHaveText(
     'Synthetic Student',
@@ -586,13 +618,13 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await page.locator('form.role-editor').screenshot({
     path: `.artifacts/verification/student-profile-${testInfo.project.name}-en.png`,
   })
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await expect(page.getByLabel('سنة الميلاد')).toHaveValue('2000')
   await expect(page.getByLabel('سنة الميلاد')).toHaveAttribute('type', 'number')
   await page.locator('form.role-editor').screenshot({
     path: `.artifacts/verification/student-profile-${testInfo.project.name}-ar.png`,
   })
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await page.setViewportSize({ width: 320, height: 844 })
   await list.focus()
@@ -601,7 +633,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await expect
     .poll(() => list.evaluate((element) => element.scrollLeft))
     .toBeGreaterThan(beforeScroll)
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await expect(page.getByRole('columnheader')).toHaveText([
     'الاسم الأول',
     'اسم العائلة',
@@ -620,7 +652,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     path: `.artifacts/verification/student-table-ar-${testInfo.project.name}.png`,
     fullPage: true,
   })
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Add student' }).click()
   await page.getByLabel('First name').fill('Synthetic New')
   await page.getByLabel('Last name').fill('Student')
@@ -655,7 +687,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     await page.setViewportSize({ width, height: 844 })
     await compactHeader(page, '.role-header')
   }
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   for (const width of [320, 390, 844]) {
     await page.setViewportSize({ width, height: 844 })
     await compactHeader(page, '.role-header')
@@ -664,11 +696,13 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     path: '.artifacts/verification/compact-role-header-ar.png',
     fullPage: true,
   })
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Open notebook', exact: true }).click()
   await expect(page.locator('.workspace')).toBeVisible()
   await page.getByRole('button', { name: 'Students', exact: true }).click()
+  await openProfile(page)
   await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
   await utilityIcon(page, 'Sign out')
   await utilityIcon(page, 'العربية')
   for (const width of [320, 390, 844]) {
@@ -681,8 +715,10 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await refresh.click()
   await expect.poll(() => notebookReads).toBeGreaterThan(readsBeforeRefresh)
   await utilityIcon(page, 'Open student')
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
-  await expect(page.locator('.settings-action')).toBeVisible()
+  await clickAccountAction(page, 'العربية')
+  await openProfile(page)
+  await expect(page.locator('.profile-panel button').nth(1)).toBeVisible()
+  await page.keyboard.press('Escape')
   await utilityIcon(page, 'تسجيل الخروج')
   await utilityIcon(page, 'تحديث')
   await utilityIcon(page, 'فتح الطالب')
@@ -691,18 +727,18 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     await compactHeader(page, '.workspace-topline')
   }
   await page.screenshot({ path: '.artifacts/verification/utility-icons-ar.png', fullPage: true })
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   const openStudent = await utilityIcon(page, 'Open student')
   await openStudent.focus()
   await page.keyboard.press('Enter')
   await expect(page).toHaveURL(new RegExp(`student=${studentId}`))
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
-  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  await clickAccountAction(page, 'Settings')
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
   board.accounts.splice(1)
   await page.getByRole('button', { name: 'Refresh', exact: true }).click()
   await expect(page.getByText('No other accounts.')).toBeVisible()
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await expect(page.getByText('لا توجد حسابات أخرى.')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
     true,

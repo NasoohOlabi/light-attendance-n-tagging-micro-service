@@ -1,0 +1,31 @@
+import { clickAccountAction } from './profileActions'
+import { expect, test } from '@playwright/test'
+
+test('profile menu preserves attendance draft and dismisses', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Explore with sample students' }).click()
+  await page.getByRole('button', { name: 'Take attendance' }).click()
+  const attendance = page.locator('select[aria-label$=" Omar"]')
+  await attendance.selectOption('absent')
+  const trigger = page.locator('.profile-trigger')
+  await expect(trigger.locator('svg')).toBeVisible()
+  await trigger.click()
+  await page
+    .getByRole('button', { name: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', exact: true })
+    .click()
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+  const menu = await page.locator('.profile-panel').boundingBox()
+  expect(menu?.x).toBeGreaterThanOrEqual(0)
+  expect(menu ? menu.x + menu.width : Infinity).toBeLessThanOrEqual(page.viewportSize()?.width ?? 0)
+  await expect(attendance).toHaveValue('absent')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.profile-panel')).toHaveCount(0)
+  await expect(trigger).toBeFocused()
+  await trigger.click()
+  await page.locator('main').click({ position: { x: 5, y: 5 } })
+  await expect(page.locator('.profile-panel')).toHaveCount(0)
+  await trigger.click()
+  await clickAccountAction(page, 'English')
+  await clickAccountAction(page, 'Close session')
+  await expect(page.getByRole('button', { name: 'Explore with sample students' })).toBeVisible()
+})
