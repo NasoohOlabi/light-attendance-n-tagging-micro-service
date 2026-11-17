@@ -507,53 +507,58 @@ function GradePage({
         : ar
           ? 'راسب'
           : 'Fail'
-  const gradeTable = useDataTable('grades', entries, [
-    {
-      id: 'first',
-      label: ar ? 'الاسم الأول' : 'First name',
-      value: (entry) => students.find((s) => s.studentId === entry.studentId)?.firstName,
-    },
-    {
-      id: 'last',
-      label: ar ? 'اسم العائلة' : 'Last name',
-      value: (entry) => students.find((s) => s.studentId === entry.studentId)?.lastName,
-    },
-    { id: 'level', label: ar ? 'مستوى الدورة' : 'Course level', value: (entry) => entry.level },
-    {
-      id: 'enrolled',
-      choices: ar ? ['نعم', 'لا'] : ['Yes', 'No'],
-      label: ar ? 'مسجل' : 'Enrolled',
-      value: (entry) => (entry.active ? (ar ? 'نعم' : 'Yes') : ar ? 'لا' : 'No'),
-    },
-    {
-      id: 'attendance',
-      label: ar ? 'الحضور' : 'Attendance',
-      value: attendanceRatio,
-      filterText: (entry) => {
-        const ratio = attendanceRatio(entry)
-        return ratio === null ? (ar ? 'غير متاح' : 'Unavailable') : `${ratio.toFixed(1)}%`
+  const gradeTable = useDataTable(
+    'grades',
+    entries,
+    [
+      {
+        id: 'first',
+        label: ar ? 'الاسم الأول' : 'First name',
+        value: (entry) => students.find((s) => s.studentId === entry.studentId)?.firstName,
       },
-    },
-    ...(['practical', 'theory'] as const).map((key) => ({
-      id: key,
-      label: key === 'practical' ? (ar ? 'عملي' : 'Practical') : ar ? 'نظري' : 'Theory',
-      value: (entry: Enrollment) => {
-        const value = drafts[entry.id]?.[key] ?? entry[key]
-        return value == null || value === '' ? null : Number(value)
+      {
+        id: 'last',
+        label: ar ? 'اسم العائلة' : 'Last name',
+        value: (entry) => students.find((s) => s.studentId === entry.studentId)?.lastName,
       },
-    })),
-    {
-      id: 'notes',
-      label: ar ? 'ملاحظات' : 'Notes',
-      value: (entry) => drafts[entry.id]?.notes ?? entry.notes,
-    },
-    {
-      id: 'result',
-      choices: ar ? ['قيد الانتظار', 'ناجح', 'راسب'] : ['Pending', 'Pass', 'Fail'],
-      label: ar ? 'النتيجة' : 'Result',
-      value: (entry) => resultLabel(gradeResult(entry, attendanceRatio(entry))),
-    },
-  ])
+      { id: 'level', label: ar ? 'مستوى الدورة' : 'Course level', value: (entry) => entry.level },
+      {
+        id: 'enrolled',
+        choices: ar ? ['نعم', 'لا'] : ['Yes', 'No'],
+        label: ar ? 'مسجل' : 'Enrolled',
+        value: (entry) => (entry.active ? (ar ? 'نعم' : 'Yes') : ar ? 'لا' : 'No'),
+      },
+      {
+        id: 'attendance',
+        label: ar ? 'الحضور' : 'Attendance',
+        value: attendanceRatio,
+        filterText: (entry) => {
+          const ratio = attendanceRatio(entry)
+          return ratio === null ? (ar ? 'غير متاح' : 'Unavailable') : `${ratio.toFixed(1)}%`
+        },
+      },
+      ...(['practical', 'theory'] as const).map((key) => ({
+        id: key,
+        label: key === 'practical' ? (ar ? 'عملي' : 'Practical') : ar ? 'نظري' : 'Theory',
+        value: (entry: Enrollment) => {
+          const value = drafts[entry.id]?.[key] ?? entry[key]
+          return value == null || value === '' ? null : Number(value)
+        },
+      })),
+      {
+        id: 'notes',
+        label: ar ? 'ملاحظات' : 'Notes',
+        value: (entry) => drafts[entry.id]?.notes ?? entry.notes,
+      },
+      {
+        id: 'result',
+        choices: ar ? ['قيد الانتظار', 'ناجح', 'راسب'] : ['Pending', 'Pass', 'Fail'],
+        label: ar ? 'النتيجة' : 'Result',
+        value: (entry) => resultLabel(gradeResult(entry, attendanceRatio(entry))),
+      },
+    ],
+    false,
+  )
   return (
     <>
       <form

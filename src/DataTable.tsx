@@ -18,7 +18,12 @@ export type TableColumn<T> = {
   filterText?: (row: T) => string
 }
 
-export function useDataTable<T>(id: string, data: T[], columns: TableColumn<T>[]) {
+export function useDataTable<T>(
+  id: string,
+  data: T[],
+  columns: TableColumn<T>[],
+  filtersEnabled = true,
+) {
   const { language } = useLanguage()
   const query = useTableQuery(id)
   const ids = new Set(columns.map((column) => column.id))
@@ -27,7 +32,7 @@ export function useDataTable<T>(id: string, data: T[], columns: TableColumn<T>[]
       (item, index, items) =>
         ids.has(item.id) && items.findIndex((entry) => entry.id === item.id) === index,
     ),
-    filters: query.filters.filter((item) => {
+    filters: (filtersEnabled ? query.filters : []).filter((item) => {
       const column = columns.find((entry) => entry.id === item.id)
       return (
         column &&
@@ -90,6 +95,7 @@ export function useDataTable<T>(id: string, data: T[], columns: TableColumn<T>[]
     table,
     rows: table.getRowModel().rows.map((row) => row.original),
     columns,
+    filtersEnabled,
     reset: () => setTableQuery(id, { sorting: [], filters: [] }),
     resetSort: () => setTableQuery(id, { ...state, sorting: [] }),
   }
@@ -114,8 +120,12 @@ export function TableHeader<T>({
           <summary>{ar ? 'فرز مخصص' : 'Custom sort'}</summary>
           <p>
             {ar
-              ? 'انقر عنوان العمود للفرز، واستخدم Shift مع النقر لإضافة ترتيب. تجتمع الفلاتر معاً: النص يحتوي القيمة والخيارات تطابقها.'
-              : 'Click a column heading to sort; Shift-click to add a sort. All filters combine (AND): text contains the value and choices match exactly.'}
+              ? 'انقر عنوان العمود للفرز، واستخدم Shift مع النقر لإضافة ترتيب.'
+              : 'Click a column heading to sort; Shift-click to add a sort.'}
+            {model.filtersEnabled &&
+              (ar
+                ? ' تجتمع الفلاتر معاً: النص يحتوي القيمة والخيارات تطابقها.'
+                : ' All filters combine (AND): text contains the value and choices match exactly.')}
           </p>
           {sorting.map((item, index) => (
             <div className="table-sort-criterion" key={item.id}>
@@ -209,9 +219,11 @@ export function TableHeader<T>({
         <button type="button" onClick={model.resetSort}>
           {ar ? 'إعادة ضبط الفرز' : 'Reset sort'}
         </button>
-        <button type="button" onClick={model.reset}>
-          {ar ? 'مسح الفرز والتصفية' : 'Clear sort and filters'}
-        </button>
+        {model.filtersEnabled && (
+          <button type="button" onClick={model.reset}>
+            {ar ? 'مسح الفرز والتصفية' : 'Clear sort and filters'}
+          </button>
+        )}
       </caption>
       <thead>
         <tr>
@@ -270,33 +282,35 @@ export function TableHeader<T>({
                     focusable="false"
                   />
                 </button>
-                <div className="table-filter-row">
-                  {choices ? (
-                    <select
-                      className="table-filter"
-                      aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
-                      value={String(column.getFilterValue() ?? '')}
-                      onChange={(event) => column.setFilterValue(event.target.value)}
-                    >
-                      <option value="">{ar ? 'الكل' : 'All'}</option>
-                      {choices.map((choice, choiceIndex) => (
-                        <option key={choiceIndex} value={String(choiceIndex + 1)}>
-                          {choice}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      className="table-filter"
-                      type="search"
-                      maxLength={200}
-                      dir="auto"
-                      aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
-                      value={String(column.getFilterValue() ?? '')}
-                      onChange={(event) => column.setFilterValue(event.target.value)}
-                    />
-                  )}
-                </div>
+                {model.filtersEnabled && (
+                  <div className="table-filter-row">
+                    {choices ? (
+                      <select
+                        className="table-filter"
+                        aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
+                        value={String(column.getFilterValue() ?? '')}
+                        onChange={(event) => column.setFilterValue(event.target.value)}
+                      >
+                        <option value="">{ar ? 'الكل' : 'All'}</option>
+                        {choices.map((choice, choiceIndex) => (
+                          <option key={choiceIndex} value={String(choiceIndex + 1)}>
+                            {choice}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        className="table-filter"
+                        type="search"
+                        maxLength={200}
+                        dir="auto"
+                        aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
+                        value={String(column.getFilterValue() ?? '')}
+                        onChange={(event) => column.setFilterValue(event.target.value)}
+                      />
+                    )}
+                  </div>
+                )}
               </th>
             )
           })}

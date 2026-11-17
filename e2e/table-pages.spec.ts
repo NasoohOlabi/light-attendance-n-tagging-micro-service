@@ -142,7 +142,7 @@ async function syntheticTables(page: Page, role: 'administrator' | 'student' = '
   return { writes }
 }
 
-async function everyColumn(table: Locator, count: number, actions = false) {
+async function everyColumn(table: Locator, count: number, actions = false, filters = true) {
   await expect(table).toBeVisible()
   const page = table.page()
   if ((page.viewportSize()?.width ?? 0) <= 1024) {
@@ -178,7 +178,7 @@ async function everyColumn(table: Locator, count: number, actions = false) {
   }
   const headers = table.locator('thead th[aria-sort]')
   await expect(headers).toHaveCount(count)
-  await expect(table.locator('.table-filter')).toHaveCount(count)
+  await expect(table.locator('.table-filter')).toHaveCount(filters ? count : 0)
   for (const header of await headers.all()) {
     const button = header.locator('.table-sort')
     const bounds = await button.boundingBox()
@@ -207,7 +207,12 @@ test('every staff table column sorts and filters without writes', async ({ page 
     [`tab=summary&course=${courseId}`, 5, false],
   ] satisfies [string, number, boolean][]) {
     await page.goto(`/?page=app&${query}`)
-    await everyColumn(page.locator('table').first(), columns, actions)
+    await everyColumn(
+      page.locator('table').first(),
+      columns,
+      actions,
+      !query.includes('courseView=grades'),
+    )
   }
   for (const raw of [
     '{broken',
@@ -243,12 +248,16 @@ test('every staff table column sorts and filters without writes', async ({ page 
   expect(writes).toEqual([])
 })
 
-test('grade sorting is numeric with blanks last and draft/filter state survives', async ({
+test('grade sorting is numeric, keeps drafts, and ignores stale filters', async ({
   page,
 }, testInfo) => {
   const { writes } = await syntheticTables(page)
-  await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
+  const stale = encodeURIComponent(
+    JSON.stringify({ grades: { sorting: [], filters: [{ id: 'first', value: 'missing' }] } }),
+  )
+  await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades&tables=${stale}`)
   const table = page.locator('table')
+  await expect(table.locator('.table-filter')).toHaveCount(0)
   const names = table.locator('tbody tr td:first-child')
   const practical = page.getByRole('button', { name: 'Sort by Practical', exact: true })
   await practical.click()
@@ -257,23 +266,12 @@ test('grade sorting is numeric with blanks last and draft/filter state survives'
   await expect(names).toHaveText(['Charlie', 'Alpha', 'Zulu', 'Delta', 'Echo'])
   await page.getByLabel('Practical: Zulu Family', { exact: true }).fill('90')
   await expect(names).toHaveText(['Charlie', 'Zulu', 'Alpha', 'Delta', 'Echo'])
-  await page.getByLabel('Filter First name', { exact: true }).fill('Zulu')
-  await page.getByLabel('Filter Practical', { exact: true }).fill('90')
-  await expect(names).toHaveText(['Zulu'])
-  await page.getByLabel('Filter First name', { exact: true }).fill('no match')
-  await expect(names).toHaveCount(0)
-  await page.getByRole('button', { name: 'Clear sort and filters' }).click()
-  await expect(names).toHaveCount(5)
   await expect(page.getByLabel('Practical: Zulu Family', { exact: true })).toHaveValue('90')
-  await page.getByLabel('Filter Attendance', { exact: true }).fill('66.7')
-  await expect(names).toHaveCount(5)
-  await page.getByRole('button', { name: 'Clear sort and filters' }).click()
-  await page.getByLabel('Filter First name', { exact: true }).fill('Alpha')
   await page.reload()
-  await expect(names).toHaveText(['Alpha'])
+  await expect(names).toHaveText(['Charlie', 'Alpha', 'Zulu', 'Delta', 'Echo'])
   await page.goto('/?page=app&view=courses')
   await page.goBack()
-  await expect(names).toHaveText(['Alpha'])
+  await expect(names).toHaveCount(5)
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({
     path: `.artifacts/verification/table-grades-${testInfo.project.name}.png`,
@@ -306,7 +304,7 @@ test('student portal dates sort chronologically and combine course/status filter
   expect(writes).toEqual([])
 })
 
-test('multi-sort priority, URL state, and filter-preserving reset', async ({ page }, testInfo) => {
+test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => {
   await syntheticTables(page)
   await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
   const table = page.locator('table')
@@ -341,25 +339,19 @@ test('multi-sort priority, URL state, and filter-preserving reset', async ({ pag
   await table.getByRole('button', { name: 'Add sort', exact: true }).click()
   await first.click()
   await expect(table.getByLabel('Sort column 2')).toHaveCount(0)
-  await table.getByLabel('Filter First name').fill('a')
-  await table.getByLabel('Filter Enrolled').selectOption({ label: 'Yes' })
   await table.getByRole('button', { name: 'Reset sort', exact: true }).click()
-  await expect(table.getByLabel('Filter First name')).toHaveValue('a')
-  await expect(table.getByLabel('Filter Enrolled')).toHaveValue('1')
-  await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta'])
+  await expect(names).toHaveCount(5)
   await page.reload()
-  await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta'])
-  const state = JSON.parse(new URL(page.url()).searchParams.get('tables') ?? '{}')
-  const tableId = Object.keys(state)[0]
-  state[tableId].sorting = [
+  await expect(names).toHaveCount(5)
+  const sorting = [
     { id: 'first', desc: false },
     { id: 'first', desc: true },
     { id: 'unknown', desc: false },
   ]
   const url = new URL(page.url())
-  url.searchParams.set('tables', JSON.stringify(state))
+  url.searchParams.set('tables', JSON.stringify({ grades: { sorting, filters: [] } }))
   await page.goto(url.toString())
-  await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta'])
+  await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta', 'Echo', 'Zulu'])
   await table.getByText('Custom sort', { exact: true }).click()
   await expect(table.getByLabel('Sort column 1')).toHaveValue('first')
   await expect(table.getByLabel('Sort column 2')).toHaveCount(0)

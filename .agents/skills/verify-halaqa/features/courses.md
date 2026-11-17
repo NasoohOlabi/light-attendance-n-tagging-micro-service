@@ -19,3 +19,5 @@ On Grades verify independent attendance, practical and theory thresholds save pe
 On Grades, verify the icon-only Save grades action has a localized accessible name and title, remains at least 44px square, and saves the scores. Check compact desktop rows in both languages and labelled, non-overflowing mobile records.
 
 On Grades, save multiline enrollment notes, reload and clear them. Check independent courses, membership changes, student privacy, and labelled layouts at 320/390/430px in English and Arabic. Migration 010 is repeatable; version 9 backups retain notes and legacy comparisons reject nonempty target notes.
+
+Grades has no column-filter inputs beneath its headings. Verify old saved Grades URL filters do not hide students, including after reload; sorting and Custom sort remain functional. Existing student score/note fields and save actions remain available. Check desktop and phone layouts in English and Arabic, and confirm other tables retain working column filters.
