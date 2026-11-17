@@ -259,12 +259,12 @@ test('every staff table column sorts and filters without writes', async ({ page 
   const { writes } = await syntheticTables(page)
   for (const [query, columns, actions] of [
     ['view=courses', 2, true],
-    [`view=courses&course=${courseId}&courseView=students`, 6, true],
+    [`view=courses&course=${courseId}&courseView=students`, 7, true],
     [`view=courses&course=${courseId}&courseView=grades`, 8, true],
     ['tab=roster', 7, true],
     [`view=student&student=${studentIds[0]}`, 3, false],
-    [`tab=attendance&course=${courseId}`, 3, false],
-    [`tab=attendance&course=${courseId}&q=Alpha`, 3, false],
+    [`tab=attendance&course=${courseId}`, 4, false],
+    [`tab=attendance&course=${courseId}&q=Alpha`, 4, false],
     [`tab=summary&course=${courseId}`, 5, false],
   ] satisfies [string, number, boolean][]) {
     await page.goto(`/?page=app&${query}`)

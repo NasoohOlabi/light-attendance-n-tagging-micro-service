@@ -1625,3 +1625,7 @@ The core verification gate passed. Disposable PostgreSQL 18.6 passed the course 
 ### 22:12 Asia/Damascus — Private workbook import
 
 Matched all 32 nonblank teacher cells in the supplied workbook to seven existing teachers and their course enrollments, using the original private roster import IDs. The other 39 named rows had blank teacher cells. Added a private workbook adapter and transactional import command. The adapter test passed. The production dry run matched 32, the transaction assigned 32, and a second dry run matched all 32 with zero changes. Removed temporary Railway SSH access. The workbook and identity mappings stay outside Git.
+
+### 22:17 Asia/Damascus — Select the current course and mark its roster
+
+Courses shows Make current beside the name. Attendance names the course and shows an alphabetical roster with enrollment teacher, level and status. Missing or closed courses direct staff to select an open course. Attendance ignores the search and numbered roster filters from other tabs. Administrators can save an enrollment teacher in Manage students. Desktop and mobile checks covered the course action, teacher edit and readback, sample saves, summary history, and table controls. No new production attendance was recorded.

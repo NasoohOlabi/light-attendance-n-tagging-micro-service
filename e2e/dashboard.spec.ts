@@ -2,7 +2,7 @@ import { clickAccountAction } from './profileActions'
 import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 
-test('dashboard charts and grouped fuzzy attendance preserve drafts', async ({
+test('dashboard charts and alphabetic fuzzy attendance preserve drafts', async ({
   page,
 }, testInfo) => {
   await page.goto('/')
@@ -17,12 +17,17 @@ test('dashboard charts and grouped fuzzy attendance preserve drafts', async ({
   )
   await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Take attendance' }).click()
-  await expect(page.locator('details.attendance-group > summary')).toHaveCount(1)
+  await expect(page.locator('details.attendance-group')).toHaveCount(0)
+  const names = await page
+    .getByRole('region', { name: 'Attendance list' })
+    .locator('tbody tr td:first-child')
+    .allTextContents()
+  expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'en')))
   await expect(
     page
       .getByRole('region', { name: 'Attendance list' })
       .locator('thead th > button.table-sort, thead th:not(:has(button.table-sort))'),
-  ).toHaveText(['Student', 'Level', 'Attendance'])
+  ).toHaveText(['Student', 'Level', 'Teacher', 'Attendance'])
   expect(
     await page
       .getByLabel('Attendance for Omar')
@@ -54,19 +59,7 @@ test('dashboard charts and grouped fuzzy attendance preserve drafts', async ({
     await clickAccountAction(page, 'English')
   }
   await page.getByLabel('Attendance for Omar').selectOption('absent')
-  await page.locator('details.attendance-group > summary').click()
-  await page.locator('details.attendance-group > summary').click()
   await expect(page.getByLabel('Attendance for Omar')).toHaveValue('absent')
-  await page.getByLabel('Find a student').fill('omr')
-  await expect(page.getByLabel('Attendance for Omar')).toHaveValue('absent')
-  await expect(page.locator('details.attendance-group')).toHaveCount(0)
-  await expect(
-    page
-      .getByRole('region', { name: 'Attendance list' })
-      .locator('thead th > button.table-sort, thead th:not(:has(button.table-sort))'),
-  ).toHaveText(['Student', 'Level', 'Attendance'])
-  await page.getByLabel('Find a student').fill('missing')
-  await page.getByLabel('Find a student').fill('')
   await expect(page.getByLabel('Attendance for Omar')).toHaveValue('absent')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
@@ -140,4 +133,16 @@ test('recent sessions count present students, including zero-present dates', asy
     path: `.artifacts/verification/dashboard-present-${testInfo.project.name}-ar.png`,
     fullPage: true,
   })
+})
+
+test('assigned sample saves attendance in its sample course', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Explore assigned teacher sample' }).click()
+  await page.getByRole('button', { name: 'Take attendance' }).click()
+  await expect(page.getByRole('heading', { name: 'Attendance · Sample course' })).toBeVisible()
+  const mark = page.getByRole('region', { name: 'Attendance list' }).getByRole('combobox').first()
+  await mark.selectOption('absent')
+  await page.getByRole('button', { name: 'Save attendance (1)' }).click()
+  await expect(mark).toHaveValue('absent')
+  await expect(page.getByRole('status').filter({ hasText: 'saved in this demo' })).toBeVisible()
 })

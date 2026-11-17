@@ -23,7 +23,6 @@ import {
 } from './queryState'
 import { HomePage } from './HomePage'
 import { NotebookDashboard } from './NotebookDashboard'
-import { rankStudents } from './studentSearch'
 import { InstallApp } from './InstallApp'
 import { AppUpdate } from './AppUpdate'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
@@ -35,7 +34,7 @@ import { StudentAttendance } from './StudentAttendance'
 import { Courses } from './Courses'
 import type { Profile } from './ProfileMenu'
 import { ProfileSettings } from './ProfileSettings'
-import type { NeonTeacher } from '../shared/neon'
+import { enrollmentSchema, type NeonTeacher } from '../shared/neon'
 
 type Projection = ReturnType<typeof projectEvents>
 type Save = (payloads: Payload[]) => Promise<boolean>
@@ -170,7 +169,19 @@ function Notebook({
     !query.course
   const baseProjection = projectEvents(ledger.events)
   const closedCourse = ledger.courses.find((course) => course.id === query.course && !course.open)
-  const selectedEnrollments = ledger.enrollments.filter((entry) => entry.courseId === query.course)
+  const selectedEnrollments =
+    demo === 'assigned'
+      ? ledger.roster.map((student) =>
+          enrollmentSchema.parse({
+            id: student.studentId,
+            courseId: student.studentId,
+            studentId: student.studentId,
+            level: student.group,
+            practical: null,
+            theory: null,
+          }),
+        )
+      : ledger.enrollments.filter((entry) => entry.courseId === query.course)
   const activeEnrollments = selectedEnrollments.filter((entry) => entry.active)
   const selectedIds = new Set(selectedEnrollments.map((entry) => entry.id))
   const scopedEvents = baseProjection.events.filter((event) => {
@@ -182,6 +193,7 @@ function Notebook({
     return (
       !target ||
       target.payload.kind !== 'attendance' ||
+      demo === 'assigned' ||
       (query.course
         ? !!target.payload.enrollmentId && selectedIds.has(target.payload.enrollmentId)
         : !target.payload.enrollmentId)
@@ -202,8 +214,11 @@ function Notebook({
   const students = projected.students.filter(
     (student) =>
       (fullRegister || query.all || student.active) &&
-      (!assigned || !query.student || student.studentId === query.student) &&
-      (!query.group || student.group === query.group) &&
+      (query.tab === 'attendance' ||
+        !assigned ||
+        !query.student ||
+        student.studentId === query.student) &&
+      (query.tab === 'attendance' || !query.group || student.group === query.group) &&
       (query.tab === 'attendance' ||
         student.name.toLocaleLowerCase().includes(query.q.toLocaleLowerCase())),
   )
@@ -326,6 +341,7 @@ function Notebook({
           className="mb-6 flex flex-wrap items-end gap-3"
           hidden={
             query.tab === 'dashboard' ||
+            query.tab === 'attendance' ||
             query.tab === 'summary' ||
             query.view === 'courses' ||
             query.view === 'student'
@@ -454,6 +470,8 @@ function Notebook({
             )}
             events={ledger.events}
             refresh={ledger.refresh}
+            defaultCourse={preference.defaultCourse}
+            chooseDefault={preference.chooseDefault}
           />
         )}
         {query.view === 'student' && (
@@ -491,11 +509,43 @@ function Notebook({
                 }
               />
             )}
-            {query.tab === 'attendance' && (
+            {query.tab === 'attendance' && neon && (!query.course || closedCourse) && (
+              <section className="panel">
+                <p>
+                  {language === 'ar'
+                    ? '\u0627\u062e\u062a\u0631 \u062f\u0648\u0631\u0629 \u0645\u0641\u062a\u0648\u062d\u0629 \u0644\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062d\u0636\u0648\u0631.'
+                    : 'Choose an open course to take attendance.'}
+                </p>
+                <button
+                  className="primary mt-4"
+                  onClick={() =>
+                    neon.teacher.role === 'administrator'
+                      ? setQuery({ view: 'courses', courseView: '', q: '' }, true)
+                      : navigateNotebook('dashboard', preference.defaultCourse)
+                  }
+                >
+                  {neon.teacher.role === 'administrator'
+                    ? language === 'ar'
+                      ? '\u0627\u0644\u062f\u0648\u0631\u0627\u062a'
+                      : 'Go to courses'
+                    : language === 'ar'
+                      ? '\u0644\u0648\u062d\u0629 \u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629'
+                      : 'Dashboard'}
+                </button>
+              </section>
+            )}
+            {query.tab === 'attendance' && (!neon || (query.course && !closedCourse)) && (
               <AttendanceView
                 key={`${query.date}:${query.course}`}
                 enrollments={activeEnrollments}
                 courseSelected={!!query.course}
+                courseName={
+                  demo
+                    ? language === 'ar'
+                      ? '\u062f\u0648\u0631\u0629 \u062a\u062c\u0631\u064a\u0628\u064a\u0629'
+                      : 'Sample course'
+                    : ledger.courses.find((course) => course.id === query.course)?.name
+                }
                 students={students.filter(
                   (student) =>
                     student.active &&
@@ -512,7 +562,6 @@ function Notebook({
                     (query.course ||
                       !ledger.enrollments.some((entry) => entry.studentId === student.studentId)),
                 )}
-                search={query.q}
                 projected={projected}
                 date={query.date}
                 save={ledger.save}
@@ -550,7 +599,7 @@ function Notebook({
               />
             )}
           </fieldset>
-          {query.tab === 'attendance' && (
+          {query.tab === 'attendance' && (!neon || (query.course && !closedCourse)) && (
             <aside className="workspace-context" aria-label={t('Summary')}>
               <section className="panel">
                 <h2>{t('Summary')}</h2>
@@ -791,18 +840,18 @@ function studentLevel(
 function AttendanceView({
   students,
   allStudents,
-  search,
   projected,
   date,
   save,
   enrollments,
   courseSelected,
+  courseName,
 }: {
   courseSelected: boolean
+  courseName?: string
   enrollments: import('../shared/neon').Enrollment[]
   students: Student[]
   allStudents: Student[]
-  search: string
   projected: Projection
   date: string
   save: Save
@@ -814,11 +863,17 @@ function AttendanceView({
       .filter(({ value }) => value.date === date)
       .map(({ value }) => [value.studentId, value.status]),
   )
-  const candidates = search.trim() ? rankStudents(students, search) : students
+  const candidates = [...students].sort((a, b) => a.name.localeCompare(b.name, language))
   const level = (student: Student) => studentLevel(student, courseSelected, enrollments)
   const attendanceTable = useDataTable('attendance', candidates, [
     { id: 'student', label: t('Student'), value: (student) => student.name },
     { id: 'level', label: language === 'ar' ? 'المستوى' : 'Level', value: level },
+    {
+      id: 'teacher',
+      label: language === 'ar' ? '\u0627\u0644\u0645\u0639\u0644\u0645' : 'Teacher',
+      value: (student) =>
+        enrollments.find((entry) => entry.studentId === student.studentId)?.teacherName ?? '',
+    },
     {
       id: 'attendance',
       choices: [t('Not marked'), t('present'), t('absent'), t('excused')],
@@ -843,6 +898,7 @@ function AttendanceView({
         <colgroup>
           <col />
           <col className="roster-level-column" />
+          <col />
           <col className="roster-attendance-column" />
         </colgroup>
         <TableHeader model={attendanceTable} />
@@ -854,6 +910,14 @@ function AttendanceView({
               </td>
               <td data-label={language === 'ar' ? 'المستوى' : 'Level'}>
                 <bdi>{level(student) || '—'}</bdi>
+              </td>
+              <td
+                data-label={language === 'ar' ? '\u0627\u0644\u0645\u0639\u0644\u0645' : 'Teacher'}
+              >
+                <bdi>
+                  {enrollments.find((entry) => entry.studentId === student.studentId)
+                    ?.teacherName || '?'}
+                </bdi>
               </td>
               <td data-label={language === 'ar' ? 'الحضور' : 'Attendance'}>
                 <select
@@ -887,7 +951,9 @@ function AttendanceView({
     <section className="panel">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="title">{t('Who is here today?')}</h2>
+          <h2 className="title">
+            {courseName ? `${t('Attendance')} · ${courseName}` : t('Who is here today?')}
+          </h2>
           <p className="muted mt-2">
             {t(
               'Only marked students are saved. To remove an existing mark, use History & corrections; undoing the latest mark may reveal an earlier one.',
@@ -909,11 +975,9 @@ function AttendanceView({
       {!candidates.length ? (
         <Empty
           text={
-            search.trim()
-              ? language === 'ar'
-                ? 'لا يوجد طلاب مطابقون.'
-                : 'No students match your search.'
-              : t('Add your students in Students, or adjust the group filter.')
+            language === 'ar'
+              ? '\u0644\u0627 \u064a\u0648\u062c\u062f \u0637\u0644\u0627\u0628 \u0645\u0633\u062c\u0644\u0648\u0646.'
+              : 'No enrolled students.'
           }
         />
       ) : (
@@ -929,14 +993,7 @@ function AttendanceView({
           >
             {t('Mark displayed students present')}
           </button>
-          {search.trim()
-            ? rows(visible)
-            : [...new Set(candidates.map(level))].sort().map((group) => (
-                <details key={group} open className="attendance-group">
-                  <summary>{group || (language === 'ar' ? 'بلا مستوى' : 'No level')}</summary>
-                  {rows(visible.filter((student) => level(student) === group))}
-                </details>
-              ))}
+          {rows(visible)}
           <button
             className="primary mt-5"
             disabled={!changed.length}

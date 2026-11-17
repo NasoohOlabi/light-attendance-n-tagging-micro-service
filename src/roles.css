@@ -735,3 +735,8 @@
     background: #fff;
   }
 }
+
+.course-current {
+  display: block;
+  margin-top: 0.35rem;
+}
