@@ -5,6 +5,7 @@
   useReactTable,
   type ColumnDef,
 } from '@tanstack/react-table'
+import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react'
 import { useLanguage } from './i18n'
 import { setTableQuery, useTableQuery } from './queryState'
 
@@ -106,6 +107,8 @@ export function TableHeader<T>({
           const column = model.table.getColumn(id)
           if (!column) return null
           const sort = column.getIsSorted()
+          const Chevron =
+            sort === 'asc' ? ChevronUp : sort === 'desc' ? ChevronDown : ChevronsUpDown
           return (
             <th
               scope="col"
@@ -115,11 +118,18 @@ export function TableHeader<T>({
             >
               <button
                 type="button"
-                className={`table-sort sort-${sort || 'none'}`}
+                className="table-sort"
                 aria-label={`${ar ? 'ترتيب حسب' : 'Sort by'} ${label}`}
                 onClick={column.getToggleSortingHandler()}
               >
-                {label}
+                <span className="table-sort-label">{label}</span>
+                <Chevron
+                  className="table-sort-chevron"
+                  size={14}
+                  strokeWidth={1.6}
+                  aria-hidden="true"
+                  focusable="false"
+                />
               </button>
               <div className="table-filter-row">
                 {choices ? (

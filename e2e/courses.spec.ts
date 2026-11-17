@@ -24,7 +24,7 @@ async function expectCompactLevel(list: Locator) {
     if (!headers[levelIndex] || !level) throw new Error('Student and level columns must be present')
     const textCenter = (element: Element) => {
       const range = document.createRange()
-      range.selectNodeContents(element.querySelector('.table-sort') ?? element)
+      range.selectNodeContents(element.querySelector('.table-sort-label') ?? element)
       const bounds = range.getBoundingClientRect()
       return (bounds.left + bounds.right) / 2
     }
