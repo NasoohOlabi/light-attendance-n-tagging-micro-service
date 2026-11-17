@@ -1,14 +1,23 @@
-import { LogOut, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { neonStudentAttendanceSchema } from '../shared/neon'
-import { LanguageSwitch, useLanguage } from './i18n'
+import { useLanguage } from './i18n'
+import { ProfileMenu, type Profile } from './ProfileMenu'
 import { WartaqLogo } from './brand/components'
 import { request } from './neon'
 import './roles.css'
 
 type Attendance = z.infer<typeof neonStudentAttendanceSchema>
-export function StudentAttendance({ userId, signOut }: { userId: string; signOut: () => void }) {
+export function StudentAttendance({
+  userId,
+  signOut,
+  profile,
+}: {
+  userId: string
+  signOut: () => void
+  profile: Profile
+}) {
   const { language, t, errorMessage } = useLanguage()
   const ar = language === 'ar'
   const [data, setData] = useState<Attendance | null>(null)
@@ -45,23 +54,7 @@ export function StudentAttendance({ userId, signOut }: { userId: string; signOut
     <main id="main-content" className="role-page" tabIndex={-1}>
       <header className="role-header">
         <WartaqLogo />
-        <div className="header-actions">
-          <LanguageSwitch />
-          <button
-            className="icon-button"
-            aria-label={t('Sign out')}
-            title={t('Sign out')}
-            onClick={signOut}
-          >
-            <LogOut
-              className="icon-directional"
-              size={20}
-              strokeWidth={1.6}
-              aria-hidden="true"
-              focusable="false"
-            />
-          </button>
-        </div>
+        <ProfileMenu profile={profile} leave={signOut} />
       </header>
       <div className="role-heading">
         <div>

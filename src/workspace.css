@@ -558,3 +558,74 @@
   text-align: center;
   padding-inline: 0.5rem;
 }
+.profile-menu {
+  position: relative;
+}
+.profile-trigger {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #7bb1b6;
+  border-radius: 50%;
+  background: #176571;
+  color: white;
+  overflow: hidden;
+}
+.profile-trigger img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-panel {
+  position: absolute;
+  z-index: 50;
+  inset-block-start: calc(100% + 8px);
+  inset-inline-end: 0;
+  width: 180px;
+  padding: 8px;
+  border: 1px solid #cde1df;
+  border-radius: 8px;
+  background: white;
+  color: #133f46;
+  box-shadow: 0 8px 24px #00383f33;
+}
+.profile-panel strong {
+  display: block;
+  padding: 8px;
+  overflow-wrap: anywhere;
+}
+.profile-panel button {
+  display: block;
+  width: 100%;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #133f46;
+  text-align: start;
+}
+.profile-panel button:hover,
+.profile-panel button:focus-visible {
+  background: #e4f3f3;
+}
+.profile-trigger:focus-visible {
+  outline: 3px solid #55d4d7;
+  outline-offset: 2px;
+}
+.workspace-brand {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.profile-trigger {
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+
+.role-header .profile-panel {
+  left: 0;
+  right: auto;
+}

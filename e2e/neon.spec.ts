@@ -1,3 +1,4 @@
+import { clickAccountAction } from './profileActions'
 import { expect, test, type Page } from '@playwright/test'
 import { compactHeader } from './headerLayout'
 import { spawn, type ChildProcess } from 'node:child_process'
@@ -78,7 +79,7 @@ test('Arabic authentication keeps mobile input semantics and localized feedback'
   await page.goto(origin)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await compactHeader(page, '.workspace-auth-header')
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await compactHeader(page, '.workspace-auth-header')
   const email = page.getByLabel('البريد الإلكتروني', { exact: true })
   const password = page.getByLabel('كلمة المرور', { exact: true })
@@ -90,7 +91,7 @@ test('Arabic authentication keeps mobile input semantics and localized feedback'
   await page.getByRole('button', { name: 'تسجيل الدخول', exact: true }).click()
   await expect(page.getByRole('alert')).not.toContainText('Invalid')
   await expect(page.getByRole('alert')).toBeVisible()
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   await expect(email).toHaveCount(0)
   await expect(page.getByLabel('Email', { exact: true })).toHaveValue('synthetic@example.test')
   await expect(page.getByRole('alert')).toContainText('Invalid email or password')
@@ -248,7 +249,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   expect(writes).toBe(1)
   await page.reload()
   await expect(page.getByText('Alpha Student')).toBeVisible()
-  await page.getByRole('button', { name: 'Sign out' }).click()
+  await clickAccountAction(page, 'Sign out')
   await expect(page.locator('.wartaq-home h1')).toBeVisible()
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByLabel('Email').fill(users[1].email)

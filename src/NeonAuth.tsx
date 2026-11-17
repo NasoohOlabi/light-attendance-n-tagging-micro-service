@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { NeonAccount } from '../shared/neon'
 import { z } from 'zod'
 import { authClient, getAccount, NeonRequestError } from './neon'
+import type { Profile } from './ProfileMenu'
 import { WartaqLogo } from './brand/components'
 
 function AuthHeader() {
@@ -27,7 +28,12 @@ export function NeonAuth({
 }: {
   onSignOut: () => void
   samples: React.ReactNode
-  children: (userId: string, teacher: NeonAccount, signOut: () => void) => React.ReactNode
+  children: (
+    userId: string,
+    teacher: NeonAccount,
+    signOut: () => void,
+    profile: Profile,
+  ) => React.ReactNode
 }) {
   if (!authClient) return null
   return (
@@ -44,7 +50,12 @@ function ConfiguredAuth({
 }: {
   onSignOut: () => void
   samples: React.ReactNode
-  children: (userId: string, teacher: NeonAccount, signOut: () => void) => React.ReactNode
+  children: (
+    userId: string,
+    teacher: NeonAccount,
+    signOut: () => void,
+    profile: Profile,
+  ) => React.ReactNode
 }) {
   const { t, errorMessage, language } = useLanguage()
   // The parent only renders this component when the client exists.
@@ -191,7 +202,10 @@ function ConfiguredAuth({
           </button>
         </main>
       )
-    return children(userId, account.value, signOut)
+    return children(userId, account.value, signOut, {
+      name: session.data?.user.name ?? '',
+      image: session.data?.user.image ?? null,
+    })
   }
   return (
     <main id="main-content" tabIndex={-1} className="workspace-auth">

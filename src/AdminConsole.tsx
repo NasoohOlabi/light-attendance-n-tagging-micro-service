@@ -1,4 +1,4 @@
-import { LogOut, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import {
@@ -8,7 +8,8 @@ import {
   neonAdminPasswordResetSchema,
   neonAdminStudentSchema,
 } from '../shared/neon'
-import { LanguageSwitch, useLanguage } from './i18n'
+import { useLanguage } from './i18n'
+import type { Profile } from './ProfileMenu'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
 import { getNotebook, request } from './neon'
 import { setQuery } from './queryState'
@@ -21,12 +22,14 @@ const maximumBirthYear = new Date().getFullYear()
 export function AdminConsole({
   userId,
   signOut,
+  profile,
   openNotebook,
   initialCreateStudent = false,
   courseId = '',
 }: {
   userId: string
   signOut: () => void
+  profile: Profile
   openNotebook: () => void
   initialCreateStudent?: boolean
   courseId?: string
@@ -102,28 +105,8 @@ export function AdminConsole({
   }
   return (
     <div className="workspace">
-      <WorkspaceNavigation administrator assigned />
+      <WorkspaceNavigation administrator assigned profile={profile} leave={signOut} />
       <main id="main-content" className="workspace-main role-page" tabIndex={-1}>
-        <header className="role-header">
-          <span>{ar ? 'مسؤول' : 'Administrator'}</span>
-          <div className="header-actions">
-            <LanguageSwitch />
-            <button
-              className="icon-button"
-              aria-label={t('Sign out')}
-              title={t('Sign out')}
-              onClick={signOut}
-            >
-              <LogOut
-                className="icon-directional"
-                size={20}
-                strokeWidth={1.6}
-                aria-hidden="true"
-                focusable="false"
-              />
-            </button>
-          </div>
-        </header>
         <div className="role-heading">
           <div>
             <span>{ar ? 'مسؤول' : 'Administrator'}</span>
