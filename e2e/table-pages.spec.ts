@@ -158,7 +158,7 @@ async function syntheticTables(
       })
     return route.fulfill({ status: 501, json: { error: 'Unexpected synthetic request' } })
   })
-  return { writes }
+  return { writes, snapshot }
 }
 
 async function everyColumn(table: Locator, count: number, actions = false, filters = true) {
@@ -395,7 +395,7 @@ test('grade sorting is numeric, keeps drafts, and ignores stale filters', async 
 })
 
 test('result sorting ranks status then average without writes', async ({ page }) => {
-  const { writes } = await syntheticTables(page, 'administrator', 'Alpha course', true)
+  const { writes, snapshot } = await syntheticTables(page, 'administrator', 'Alpha course', true)
   await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
   const names = page.locator('table tbody tr td:first-child')
   for (const language of ['en', 'ar']) {
@@ -427,6 +427,18 @@ test('result sorting ranks status then average without writes', async ({ page })
     await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta', 'Zulu', 'Foxtrot', 'Echo'])
     await page.reload()
   }
+  for (const entry of snapshot.enrollments) {
+    if (entry.studentId !== studentIds[1] && entry.studentId !== studentIds[4]) continue
+    entry.gradeDecisions.push({
+      requestId: crypto.randomUUID(),
+      result: entry.studentId === studentIds[1] ? 'fail' : 'pass',
+      note: 'Synthetic override sorting check',
+      actor: 'Synthetic administrator',
+      at: '2026-11-17T14:00:00.000Z',
+    })
+  }
+  await page.reload()
+  await expect(names).toHaveText(['Zulu', 'Echo', 'Charlie', 'Alpha', 'Delta', 'Foxtrot'])
   expect(writes).toEqual([])
 })
 

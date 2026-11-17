@@ -1128,6 +1128,18 @@
 
 **Final local gate at 2026-11-17 17:12 Asia/Damascus:** `bun run verify:release` passed all 82 desktop/mobile browser cases, 22 local unit tests/99 assertions, lint, build/artifact, formatting, file/history secret scans and dependency audit. Four optional database suites skipped. Reviewed the synthetic Arabic rendered fields. Railway production source readback via CLI confirms main with Wait for CI enabled (`checkSuites: true`). No production records were changed; live delivery verification follows merge.
 
+## 2026-11-17 17:31 Asia/Damascus (UTC+03:00) - Add administrator pass/fail overrides
+
+**Request/reason:** Owner requested a way to override a student's course result when attendance is unreliable or recovered through a special session, and clarified that any administrator can apply it directly with a required note. Started clean at `1df8bf5` on `t3/admin-pass-override`; merged the equivalent published main `388470b` normally before edits. No new worktree or unrelated changes.
+
+**Changes/provenance:** Native `gpt-6.1-terra` implemented the bounded feature; the orchestrator reviewed the diff and owns integration, commits and delivery. Grades adds a collapsed Override result editor for Pass, Fail or restoring calculation, requiring a trimmed nonblank note. Preserve original attendance, scores and closure rules; show calculated and effective results for overrides and retain decision history. The API restricts changes to administrators, records authenticated identity and database time, appends under an enrollment lock and handles exact request retries without duplication; conflicting retries fail. Teacher and Student responses exclude decision notes/history. Migration 011 adds an empty-default JSONB history to existing enrollments; version 10 backups preserve it, and legacy comparisons reject hidden decisions. Updated behavior and verification documentation without dependencies or new tables.
+
+**Verification:** Terra's `bun run verify` and four targeted course browser cases passed. The orchestrator's first disposable Railway database run passed the feature but found an older student-name backup-version assertion capped at 9; applied migration 011 in that test and updated its assertion to 10. A fresh complete disposable Railway run passed all 26 tests / 343 assertions, including real SQL persistence, administrator-only access, required notes, exact/conflicting retries, concurrent append and backup versions 1-10. All synthetic databases and remote test files were removed. Initial release attempts stopped at browser startup on occupied ports; preserved existing processes and used a different port with the real Bun runtime first in PATH. Final release results follow below.
+
+**Delivery/limits:** Railway CLI readback confirms deployment from `main` with Wait for CI enabled (`checkSuites: true`). Apply the additive migration before deployment, then merge the PR only after checks and verify exact-main health, synthetic authenticated browser/API writes, database readback, privacy and cleanup. Retain recovery data/services. Local/synthetic checks alone do not prove live behavior; physical devices and screen readers remain unverified. The PR delivery receipt will record provider results after merge.
+
+**Final gates at 2026-11-17 17:31 Asia/Damascus:** `bun run verify:release` passed all 82 desktop/mobile browser scenarios, 22 local tests/99 assertions, lint, build/artifact, formatting, secret scans and dependency audit. Four optional database cases skipped locally; the separate disposable Railway run passed all 26 tests/343 assertions without skips. Reviewed synthetic Arabic phone captures and expanded-editor/history overflow assertions. Production migration 011 then applied transactionally; readback confirms non-null JSONB with the empty-array default. Exact-main deployment and actual-origin synthetic verification remain for post-merge delivery.
+
 ## 2026-11-17 17:15 Asia/Damascus (UTC+03:00) - Simplify Grades and whole-number level displays
 
 **Request/reason:** Owner requested removing the Enrolled column from Grades and displaying levels such as 1.0 as 1 throughout the site. Started clean on `fix/theory-before-practical` at `1df8bf5` (prior PR #76 pending CI), then created `fix/course-level-display` without a worktree. Preserve that preceding Theory/Practical ordering change.
@@ -1162,6 +1174,10 @@
 
 **Final local gate at 2026-11-17 17:40 Asia/Damascus:** `bun run verify:release` passed all 86 desktop/mobile browser cases, 22 local tests/99 assertions, lint, build/artifact, formatting, file/history secret scans and dependency audit. Four optional disposable-database suites skipped. The first release attempt correctly stopped because this checkout lacked Gitleaks; `bun run setup:security` installed checksum-verified 8.30.1, then the complete gate passed. The orchestrator reviewed the actual implementation/test diff and required the worker to restore preexisting Arabic test strings after detecting an intermediate encoding error; the final full suite proves those paths. Railway source readback confirms `main` and Wait for CI (`checkSuites: true`). Exact-main deployment, health and shipped-asset results follow in the PR delivery receipt after merge; no production records changed.
 
+**Main integration at 2026-11-17 17:32 Asia/Damascus:** Main advanced to `f5d0f87` (#77) during the gate, adding sticky Grades headings. Committed the verified override unit as `0b0515c`, then merged main normally, preserving its table scrolling and all three appended documentation sections. Only documentation append conflicts required resolution. Recheck the integrated release before publication.
+
+**Integrated final gate at 2026-11-17 17:35 Asia/Damascus:** `bun run verify:release` passed on the merge with main `f5d0f87`: all 84 desktop/mobile browser scenarios and all unit/lint/build/artifact/format/security/audit gates. Sticky headings and overrides coexist; no backend changes occurred after the passing disposable database run. The complete verified integration is ready for PR checks and delivery.
+
 ## 2026-11-17 17:32 Asia/Damascus (UTC+03:00) - Integrate main into PR #78
 
 **Request/reason:** T3 reported all required checks passing on `12b4ec9` but a new conflict with main. Started clean on `fix/course-level-display`. Main advanced to `f5d0f87` with the independent Grades sticky-heading change (#77).
@@ -1175,3 +1191,23 @@
 **Integration at 2026-11-17 17:42 Asia/Damascus:** Main advanced to `42f5405` (#78) during PR creation. Merge it normally, preserving its removed enrollment column and whole-number level display. Resolve only the overlapping synthetic enrollment fixture (keep main's `2.00` level and this task's scenario scores) and retain both work-log histories. Source merged cleanly. Rerun the full release gate on the combined tree before pushing; no unrelated main changes are discarded.
 
 **Combined gate at 2026-11-17 17:45 Asia/Damascus:** `bun run verify:release` passed all 88 browser cases, 23 local tests/100 assertions, lint/build/artifact, formatting, file/history secret scans and dependency audit after integrating `42f5405`. Four optional disposable-database suites skipped. Both independent feature regressions pass. Commit the merge and push for refreshed CI before publication.
+
+## 2026-11-17 17:44 Asia/Damascus (UTC+03:00) - Integrate main into PR #79
+
+**Request/reason:** Required PR checks passed on `5486a56`, but main advanced to `42f5405` (#78) before the merge, and GitHub rejected the merge with conflicts. Continue the authorized delivery without replacing history.
+
+**Changes:** Merge main normally, preserving its removed Grades enrollment column, shared level presentation, isolated browser-test ports, sticky headings and all documentation histories. Product code and course column-index tests merged automatically; resolved only appended work-log and verification-map conflicts. No override API, audit history, backup or migration behavior changed.
+
+**Verification/limits:** The combined `bun run verify:release` passed all 86 desktop/mobile browser scenarios, 23 local tests/100 assertions and all lint/build/artifact/format/security/audit gates. Four optional database suites skipped locally; the preceding real disposable Railway run passed all 26 tests/343 assertions, and no backend files changed in this integration. Production migration 011 remains applied and verified. Push this merge and require fresh CI before publication; exact-main live health, synthetic override persistence/privacy and cleanup remain pending.
+
+## 2026-11-17 17:50 Asia/Damascus (UTC+03:00) - Integrate result sorting with manual decisions
+
+**Request/reason:** Required checks passed on PR #81 head `1dfa38b`, but the attempted squash merge was rejected because main advanced to `94384b1` with administrator result decisions. Started clean and merged main normally, preserving history.
+
+**Changes:** Resolve the Result accessor conflict by retaining the latest effective manual/calculated decision as the status, followed by this task's saved-grade average. Preserve the complete manual-decision API/history/migration implementation from main. Retain both documentation histories and extend the synthetic Result test to exercise manual Pass and Fail decisions alongside numeric average ordering. No new override behavior or database changes are introduced by this integration.
+
+**Verification/limits:** Rerun the complete release gate before pushing; fresh CI and exact-main Railway health/shipped-asset verification remain required. Production migration and live override persistence belong to the independent main change; this task uses synthetic browser fixtures and changes no production records.
+
+**Integration edge case:** Manual decisions can now mark an enrollment with missing grades as Pass or Fail. Include the missing-score sentinel in each numeric status band so an overridden Pass with no average still precedes a Fail scoring 100 when descending. Added that exact boundary to the synthetic scenario. Stopped the initial in-progress integration gate to apply this correction, then restarted the complete gate on the final revision.
+
+**Combined final gate at 2026-11-17 17:53 Asia/Damascus:** `bun run verify:release` passed all 88 desktop/mobile browser cases, 23 local tests/100 assertions, lint/build/artifact, formatting, file/history secret scans and dependency audit with main `94384b1` and the missing-grade override boundary. Four optional disposable-database suites skipped. Fresh PR CI must pass on the integration head before merge; exact-main delivery verification follows.
