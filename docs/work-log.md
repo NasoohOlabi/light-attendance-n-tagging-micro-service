@@ -1668,6 +1668,18 @@ The course browser regression reproduced the gap before the fix. It checks colum
 
 `bun run verify:release` passed all gates, including 116 browser cases and 33 local tests. Four optional database suites skipped. Phones were emulated in Chromium.
 
+## 2026-11-17 23:34 Asia/Damascus (UTC+03:00) - Move Courses table controls beside the title
+
+The mobile Courses screenshot requested more room for the course list. Sort and Filter now share the heading row, at the top-left in Arabic and top-right in English. The saved list starts with its column headings, and Create course retains its own row.
+
+The focused Chromium test reproduced the lower placement and passed after the change on desktop and 320/390/430px phones in both languages. It checks the 44px buttons, both popovers, and filtering through reload and clearing with synthetic data and zero writes. The full suite exposed that the first course action popover can cover the next row's trigger in the tighter layout. The test now opens the next menu by keyboard and still checks outside-tap dismissal. The focused enrollment scenario passed on desktop and mobile.
+
+`bun run verify:release` passed at 23:36 with 118 browser cases, 33 local tests, 138 assertions, and the build, lint, artifact, formatting and security gates. Four optional database tests skipped.
+
+Railway's production trigger reports `main` with `checkSuites: true` (Wait for CI). Exact-main deployment, health, and the synthetic layout check against the shipped build follow PR checks. Physical phones and live authenticated sessions are outside this layout check.
+
+At 23:40, `bun run verify:release` passed again after integrating the mobile divider fix from main `42fe9bc`. The combined run passed 118 browser cases and 33 local tests. Four optional database tests skipped.
+
 ## 2026-11-17 23:36 Asia/Damascus (UTC+03:00) - Compact mobile grade actions
 
 The marked-up phone screenshot asked to move the grade actions into the space beside the result. Save grades and its neighboring three-dot menu now share the row below Notes with the result. The actions sit to the left in Arabic and to the right in English. The desktop table retains separate Result and Actions columns.
@@ -1677,3 +1689,7 @@ The marked-up phone screenshot asked to move the grade actions into the space be
 **Main integration at 23:38 Asia/Damascus** Merged `42fe9bc` and retained both work-log entries. The mobile Courses divider and grade layout combined without source conflicts.
 
 **Integrated verification at 23:41 Asia/Damascus** The full release gate passed again with 116 browser cases and 33 local tests. Four optional database tests skipped. The production browser regression reproduced the separate actions row against the pre-change deployment using synthetic API responses and tracing disabled.
+
+**Main integration at 23:47 Asia/Damascus** The required check passed on `c719edc` before main advanced to `7ec2978`. The source merged cleanly and both work-log entries were preserved.
+
+**Integrated verification at 23:49 Asia/Damascus** `bun run verify:release` passed on the combined tree with 118 browser cases and 33 local tests. Four optional database tests skipped.
