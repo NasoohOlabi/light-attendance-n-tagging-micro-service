@@ -1,7 +1,7 @@
 import { clickAccountAction, openProfile } from './profileActions'
 import { expect, test, type Page } from '@playwright/test'
 import { spawn, type ChildProcess } from 'node:child_process'
-import { createServer } from 'node:net'
+import { availablePort } from './availablePort'
 import { mkdir } from 'node:fs/promises'
 import { compactHeader } from './headerLayout'
 
@@ -14,14 +14,9 @@ const studentUserId = '10000000-0000-4000-8000-000000000003'
 const studentId = '20000000-0000-4000-8000-000000000001'
 let server: ChildProcess
 let origin = ''
-test.beforeAll(async ({ browserName }, testInfo) => {
+test.beforeAll(async ({ browserName }) => {
   if (browserName !== 'chromium') throw new Error('Chromium required')
-  const port = testInfo.project.name === 'mobile' ? 4383 : 4382
-  await new Promise<void>((resolve, reject) => {
-    const probe = createServer()
-    probe.once('error', reject)
-    probe.listen(port, '127.0.0.1', () => probe.close(() => resolve()))
-  })
+  const port = await availablePort()
   origin = `http://127.0.0.1:${port}`
   auth = `${origin}/api/auth`
   api = `${origin}/api`
@@ -419,6 +414,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
   await page.goto(`${origin}/?page=app&view=administration`)
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
+  await expect(page.locator('.role-tabs button')).toHaveCount(2)
   const tabColors = await page
     .locator('.role-tabs button')
     .evaluateAll((tabs) => tabs.map((tab) => getComputedStyle(tab).backgroundColor))
