@@ -34,6 +34,7 @@ import { AdminConsole } from './AdminConsole'
 import { StudentAttendance } from './StudentAttendance'
 import { Courses } from './Courses'
 import type { Profile } from './ProfileMenu'
+import { ProfileSettings } from './ProfileSettings'
 import type { NeonTeacher } from '../shared/neon'
 
 type Projection = ReturnType<typeof projectEvents>
@@ -104,7 +105,14 @@ function AppContent() {
           }
         >
           {(userId, account, signOut, profile) =>
-            account.role === 'student' ? (
+            query.view === 'profile' ? (
+              <ProfileSettings
+                key={userId}
+                profile={profile}
+                signOut={signOut}
+                role={account.role}
+              />
+            ) : account.role === 'student' ? (
               <StudentAttendance key={userId} userId={userId} signOut={signOut} profile={profile} />
             ) : account.role === 'administrator' &&
               (query.view === 'settings' ||

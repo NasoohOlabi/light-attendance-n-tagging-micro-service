@@ -54,9 +54,10 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   await expect(page.getByRole('group', { name: 'Language / اللغة' })).toHaveCount(1)
   const languageSwitch = page.getByRole('group', { name: 'Language / اللغة' })
   await expect(languageSwitch.getByRole('button')).toHaveCount(1)
-  await expect(languageSwitch.locator('svg[aria-hidden="true"]')).toHaveCount(1)
+  await expect(languageSwitch.getByRole('button').locator('svg[aria-hidden="true"]')).toHaveCount(1)
+  await expect(languageSwitch.locator('.theme-select-icon svg')).toBeVisible()
   await expect(languageSwitch.getByRole('button')).toHaveText('')
-  await expect(languageSwitch.locator('svg')).toHaveClass(/lucide/)
+  await expect(languageSwitch.getByRole('button').locator('svg')).toHaveClass(/lucide/)
   for (const language of ['العربية', 'English']) {
     const button = languageSwitch.getByRole('button', { name: language, exact: true })
     await button.focus()

@@ -159,9 +159,23 @@
   outline-color: #70d6d5;
 }
 
+.theme-select {
+  position: relative;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+}
+.theme-select-icon {
+  position: absolute;
+  inset-inline-start: 8px;
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none;
+}
 .theme-select select {
   min-height: 44px;
   padding: 0.4rem 1.6rem 0.4rem 0.5rem;
+  padding-inline-start: 2rem;
 }
 .profile-panel .theme-select {
   display: block;
