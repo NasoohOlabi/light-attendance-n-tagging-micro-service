@@ -140,6 +140,45 @@ test('long grades remain navigable in both languages', async ({ page }, testInfo
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
       ).toBe(true)
+      for (const width of [320, 390, 430]) {
+        await page.setViewportSize({ width, height: 844 })
+        const row = region.locator('tbody tr').first()
+        const layout = await row.evaluate((element) => {
+          const cells = [...element.querySelectorAll('td')]
+          const bounds = element.getBoundingClientRect()
+          const notes = cells[6]?.getBoundingClientRect()
+          const theory = cells[4]?.querySelector('input')?.getBoundingClientRect()
+          const practical = cells[5]?.querySelector('input')?.getBoundingClientRect()
+          if (!notes || !theory || !practical) throw new Error('Missing grade fields')
+          return {
+            padding: parseFloat(getComputedStyle(element).paddingInlineStart),
+            notesWidth: notes.width,
+            rowWidth: bounds.width,
+            theoryWidth: theory.width,
+            theoryCellWidth: cells[4].getBoundingClientRect().width,
+            scoreOffset: Math.abs(theory.top - practical.top),
+            overflow: document.documentElement.scrollWidth > innerWidth + 1,
+          }
+        })
+        expect(layout.padding).toBeGreaterThanOrEqual(12)
+        expect(layout.notesWidth).toBeGreaterThan(layout.rowWidth * 0.8)
+        expect(layout.theoryWidth).toBeGreaterThanOrEqual(layout.theoryCellWidth - 1)
+        expect(layout.scoreOffset).toBeLessThan(1)
+        expect(layout.overflow).toBe(false)
+      }
+      await page.setViewportSize({ width: 390, height: 844 })
+      const firstRow = region.locator('tbody tr').first()
+      for (const colorScheme of ['light', 'dark'] as const) {
+        await page.emulateMedia({ colorScheme })
+        await expect(page.locator('html')).toHaveAttribute('data-theme', colorScheme)
+        await firstRow.evaluate((element) => {
+          element.scrollIntoView({ block: 'start', behavior: 'instant' })
+        })
+        await firstRow.screenshot({
+          path: `.artifacts/verification/grade-record-${ar ? 'ar' : 'en'}-${colorScheme}.png`,
+        })
+      }
+      await page.emulateMedia({ colorScheme: 'light' })
     }
     await mkdir('.artifacts/verification', { recursive: true })
     await page.screenshot({
