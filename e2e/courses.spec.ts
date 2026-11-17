@@ -265,10 +265,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   })
   await expect(row.getByRole('cell').nth(0)).toBeVisible()
   await expect(row.getByRole('cell').nth(1)).toBeVisible()
-  await expect(row.getByRole('cell', { name: '012 345' }).locator('bdi')).toHaveAttribute(
-    'dir',
-    'ltr',
-  )
+  const phone = row.getByRole('link', { name: '012 345' })
+  await expect(phone).toHaveAttribute('dir', 'ltr')
+  await expect(phone).toHaveAttribute('href', 'tel:012345')
   await row.getByRole('button', { name: 'Open student' }).click()
   await expect(page.getByRole('heading', { name: 'Student information' })).toBeVisible()
   await expect(

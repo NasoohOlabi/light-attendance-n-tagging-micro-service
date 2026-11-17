@@ -1,3 +1,4 @@
+import { PhoneNumber } from './PhoneNumber'
 import { TableHeader, useDataTable } from './DataTable'
 import { CircleCheck, CircleMinus, RefreshCw, UserRound } from 'lucide-react'
 import { LanguageProvider, useLanguage, type TranslationKey } from './i18n'
@@ -651,7 +652,7 @@ function StudentDetails({
           <dt>{ar ? 'رقم الهاتف' : 'Phone'}</dt>
           <dd dir="auto">
             {student.whatsapp ? (
-              <bdi dir="ltr">{student.whatsapp}</bdi>
+              <PhoneNumber value={student.whatsapp} />
             ) : ar ? (
               'غير متوفر'
             ) : (
@@ -1242,7 +1243,7 @@ function RosterView({
                   </td>
                   <td data-label={ar ? 'رقم الهاتف' : 'Phone'}>
                     {student.whatsapp ? (
-                      <bdi dir="ltr">{student.whatsapp}</bdi>
+                      <PhoneNumber value={student.whatsapp} />
                     ) : ar ? (
                       'غير متوفر'
                     ) : (
