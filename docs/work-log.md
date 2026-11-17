@@ -1693,3 +1693,15 @@ The marked-up phone screenshot asked to move the grade actions into the space be
 **Main integration at 23:47 Asia/Damascus** The required check passed on `c719edc` before main advanced to `7ec2978`. The source merged cleanly and both work-log entries were preserved.
 
 **Integrated verification at 23:49 Asia/Damascus** `bun run verify:release` passed on the combined tree with 118 browser cases and 33 local tests. Four optional database tests skipped.
+
+**Main integration at 23:55 Asia/Damascus** The required check passed on `63236b0` before main advanced to `d643c56`. Kept both work-log entries in chronological order. The course closure changes and mobile Grades layout merged cleanly.
+
+**Integrated verification at 23:57 Asia/Damascus** The full release gate passed again with 118 browser cases and 33 local tests. Four optional database tests skipped.
+
+## 2026-11-17 23:41 Asia/Damascus — Promote students on course closure
+
+Closing from Courses or Grades now advances an active passing enrollment's whole-number course level by one on the student's roster record. The server uses saved thresholds, scores, corrected attendance and any effective override. Closure and the roster updates commit together. Higher roster levels, custom labels and historical enrollment levels remain intact. This change applies on closure going forward and needs no database migration.
+
+The disposable PostgreSQL regression passed with 122 assertions covering closure, corrected and legacy attendance, overrides, fractional and Arabic numeric values, inactive records, preserved enrollment levels, and retry/reopen behavior. Real Better Auth sessions in Chromium at 390px and 1280px exercised both Close course buttons, saw level 2 then 3 in Manage students, and confirmed the roster after reload and the original course levels in Postgres. Fixtures were synthetic. Railway's main deployment trigger reports Wait for CI enabled. Physical-device checks are outside this verification.
+
+The local release gate passed with 116 browser cases and 35 tests, including the disposable course and same-origin Auth database cases. Two optional name and backup suites were skipped. After integrating the newer Courses header changes from `7ec2978`, `bun run verify` passed again with 294 assertions, and all 20 focused Courses and table browser cases passed. The integration retained both existing work-log entries. GitHub CI verifies the combined revision before merge.

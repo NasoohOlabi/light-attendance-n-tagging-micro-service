@@ -11,7 +11,8 @@ import {
   type Enrollment,
 } from '../shared/neon'
 import { projectEvents, type LedgerEvent } from '../shared/ledger'
-import { courseAttendance, downloadCourseWorkbook, savedGradeResult } from './courseExport'
+import { courseAttendance, savedGradeResult } from '../shared/courseGrading'
+import { downloadCourseWorkbook } from './courseExport'
 import { request } from './neon'
 import { useLanguage } from './i18n'
 import { setQuery, useQueryState } from './queryState'
@@ -73,6 +74,9 @@ export function Courses({
     setSaved(false)
     try {
       await request(path, userId, body)
+      if (path === '/api/admin/courses/status') {
+        setBoard(neonAdminBoardSchema.parse(await request('/api/admin', userId)))
+      }
       await refresh()
       setSaved(true)
       return true
