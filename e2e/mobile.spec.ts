@@ -1,3 +1,4 @@
+import { clickAccountAction } from './profileActions'
 import { expect, test, type Page } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 
@@ -66,12 +67,12 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.getByRole('button', { name: 'Notes', exact: true }).click()
   const note = page.getByLabel('Note', { exact: true })
   await note.fill('مسودة مشتركة English draft')
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   await expect(page.locator('textarea')).toHaveValue('مسودة مشتركة English draft')
   await usableLayout(page)
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   await expect(note).toHaveValue('مسودة مشتركة English draft')
   await page.getByLabel('Tags, separated by commas').fill('مراجعة، قراءة')
   await page.getByRole('button', { name: 'Save note', exact: true }).click()
@@ -80,7 +81,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await expect(
     page.getByRole('article').filter({ hasText: 'مسودة مشتركة English draft' }),
   ).toBeVisible()
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   for (const name of ['الحضور', 'الملاحظات', 'الطلاب', 'الملخص', 'السجل والتصحيحات']) {
     await page.getByRole('button', { name, exact: true }).click()
     await usableLayout(page)
@@ -130,7 +131,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
   expect(errors).toEqual([])
 })
@@ -142,8 +143,8 @@ test('language switching works when preference storage is unavailable', async ({
     }
   })
   await page.goto('/')
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
 })

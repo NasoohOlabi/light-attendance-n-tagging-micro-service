@@ -1,3 +1,4 @@
+import { clickAccountAction } from './profileActions'
 import { expect, test, type Locator } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import { courseSchema } from '../shared/neon'
@@ -252,7 +253,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(attendanceRow.getByRole('cell').first()).toHaveText('Synthetic Student')
   await page.getByLabel('Find a student').fill('')
   await page.getByRole('button', { name: 'Students', exact: true }).click()
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   const arabicList = page.getByRole('region', { name: 'قائمة الطلاب' })
   await expect(arabicList.getByRole('img', { name: 'نشط', exact: true })).toBeVisible()
   await expect(arabicList.getByRole('img', { name: 'نشط', exact: true })).toHaveAttribute(
@@ -287,15 +288,13 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       })
     }
   }
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await expect(page.getByRole('row').filter({ hasText: 'Course A' })).toBeVisible()
   if (testInfo.project.name === 'mobile') {
     for (const language of ['en', 'ar']) {
       if (language === 'ar') {
-        await page
-          .getByRole('button', { name: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', exact: true })
-          .click()
+        await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
       }
       for (const width of [320, 390]) {
         await page.setViewportSize({ width, height: 844 })
@@ -338,7 +337,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
         })
       }
     }
-    await page.getByRole('button', { name: 'English', exact: true }).click()
+    await clickAccountAction(page, 'English')
   }
   await page.getByRole('button', { name: 'Create course' }).click()
   await expect(page.getByRole('region', { name: 'Course list' })).toHaveCount(0)
@@ -399,9 +398,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
         fullPage: true,
       })
     }
-    await page
-      .getByRole('button', { name: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', exact: true })
-      .click()
+    await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 844 })
       const table = page.getByRole('region', {
@@ -419,7 +416,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
         fullPage: true,
       })
     }
-    await page.getByRole('button', { name: 'English', exact: true }).click()
+    await clickAccountAction(page, 'English')
   }
   await page.getByRole('button', { name: 'Add new student to this course' }).click()
   await page.reload()
@@ -558,14 +555,14 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   const courseRow = page.getByRole('row').filter({ hasText: 'Course A' })
   await courseRow.getByRole('button', { name: 'Close', exact: true }).click()
   await expect(courseRow).toContainText('Closed')
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await expect(courseRow).toContainText('مغلقة')
   await expect(courseRow.getByRole('button', { name: 'إعادة فتح' })).toBeVisible()
   await page.screenshot({
     path: `.artifacts/verification/closed-course-${testInfo.project.name}-ar.png`,
     fullPage: true,
   })
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   await page.reload()
   await expect(courseRow).toContainText('Closed')
   await courseRow.getByRole('button', { name: 'History', exact: true }).click()
@@ -614,7 +611,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(gradeRow).toContainText('Pending')
   await page.getByRole('button', { name: 'Save thresholds' }).click()
   await expect(gradeRow).toContainText('Pass')
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
   await expect(page.getByLabel('الحد الأدنى للحضور %')).toHaveValue('50')
   await expect(gradeRow).toContainText('ناجح')
   for (const width of [320, 390]) {
@@ -633,7 +630,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     path: `.artifacts/verification/grades-${testInfo.project.name}-ar.png`,
     fullPage: true,
   })
-  await page.getByRole('button', { name: 'English', exact: true }).click()
+  await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Close course', exact: true }).click()
   await expect(
     page.getByRole('status', { exact: false }).filter({ hasText: 'Course closed' }),
