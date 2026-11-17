@@ -6,6 +6,7 @@ import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import {
+  accountProfileLabel,
   neonAdminBoardSchema,
   neonAdminDisableSchema,
   neonAdminGrantSchema,
@@ -196,7 +197,7 @@ export function AdminConsole({
                       if (account.authUserId === userId)
                         return (
                           <div className="role-account">
-                            <strong dir="auto">{account.name.trim() || account.email}</strong>
+                            <strong dir="auto">{accountProfileLabel(account)}</strong>
                             <p dir="ltr">{account.email}</p>
                           </div>
                         )

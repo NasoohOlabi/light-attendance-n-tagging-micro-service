@@ -1593,3 +1593,11 @@
 **Main integration at 2026-11-17 21:18 Asia/Damascus** PR #92 conflicted with `ef70342` in this work log. Preserved both sets of entries. The full release gate passed on the combined tree with 108 browser cases and 30 local tests. Four optional database suites skipped. Fresh PR checks and exact-main Railway verification remain pending.
 
 **Profile settings integration at 2026-11-17 21:26 Asia/Damascus** Required checks passed on `eaced22`. Main advanced to `67df862`, and the work log conflicted again. Preserved both sets of entries and the new profile layout rules. `bun run verify:release` passed 114 browser cases and 33 local tests with 137 assertions, including mobile Grades spacing and the profile controls. Four optional database suites skipped. The new head needs CI before merge and Railway verification.
+
+## 2026-11-17 21:39 Asia/Damascus (UTC+03:00) - Use the saved profile name for decision authors
+
+**Request and cause** After saving a new profile name, decision history and its linked self-account view still showed the legacy staff name “Administrator”. Both read the same administrator directory, which returned staff/roster names ahead of the Auth profile name.
+
+**Change** Return the Auth profile name alongside the directory's existing name. Use the profile name for historical decision authors and the linked read-only self-account view. Blank profile names fall back to email. Stored decision IDs and notes, staff names, account roles and grants require no migration or data changes.
+
+**Verification and limits** The targeted browser regression failed on desktop and mobile before the fix and passed in both projects after it, including the Arabic 320 px decision modal, account reload and email fallback. `bun run verify:release` passed 114 browser cases and 33 tests with 137 assertions, plus build, artifact, format and security checks. That run skipped four optional database tests. The affected same-origin integration also passed separately with 34 assertions on disposable Postgres, including a Better Auth name update and the resulting directory profile, staff name and role. Exact-main Railway and live synthetic verification follow PR checks. Physical-device behavior is unverified.
