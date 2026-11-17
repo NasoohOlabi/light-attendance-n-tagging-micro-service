@@ -588,6 +588,11 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await compactGradeRow.getByText('Decision history').click()
   await expect(compactGradeRow).toContainText('Reviewed')
   await expect(compactGradeRow).toContainText('Restore')
+  const resultCell = compactGradeRow.locator('td[data-label="Result"]')
+  expect(
+    await resultCell.evaluate((cell) => cell.getBoundingClientRect().width),
+  ).toBeGreaterThanOrEqual(288)
+  await expect(compactGradeRow.locator('td').first()).toHaveCSS('vertical-align', 'top')
   await compactGradeRow.getByText('Decision history').click()
   await compactGradeRow.getByText('Override result').click()
   const checkGradeOrder = async (theory: string, practical: string) => {
@@ -632,6 +637,11 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await compactGradeRow.getByRole('button', { name: 'Save decision' }).click()
   await compactGradeRow.getByText('Decision history').click()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  const resultWidth = await resultCell.evaluate((cell) => cell.getBoundingClientRect().width)
+  const recordWidth = await compactGradeRow.evaluate(
+    (record) => record.getBoundingClientRect().width,
+  )
+  expect(resultWidth).toBeGreaterThanOrEqual(recordWidth - 32)
   await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await clickAccountAction(page, 'English')
