@@ -1,10 +1,11 @@
-import { clickAccountAction } from './profileActions'
+﻿import { clickAccountAction } from './profileActions'
 import { expect, test, type Locator } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import { enrollmentSchema, courseSchema } from '../shared/neon'
 
 test.use({ trace: 'off' })
 const teacherId = '10000000-0000-4000-8000-000000000001'
+const otherAdminId = '10000000-0000-4000-8000-000000000003'
 const studentId = '20000000-0000-4000-8000-000000000001'
 const secondStudentId = '20000000-0000-4000-8000-000000000002'
 const courseA = '30000000-0000-4000-8000-000000000001'
@@ -93,6 +94,16 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   ]
   const board = {
     accounts: [
+      {
+        authUserId: otherAdminId,
+        email: 'other-admin@example.test',
+        name: 'Other Admin',
+        role: 'administrator',
+        active: true,
+        expiresAt: null,
+        teacherId,
+        studentId: null,
+      },
       {
         authUserId: teacherId,
         email: 'admin@example.test',
@@ -192,7 +203,12 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
               requestId: body.requestId,
               result: body.result,
               note: body.note.trim(),
-              actor: teacherId,
+              actor:
+                parsed.gradeDecisions.length === 0
+                  ? 'deleted-actor'
+                  : parsed.gradeDecisions.length === 1
+                    ? otherAdminId
+                    : teacherId,
               at: new Date().toISOString(),
             },
           ],
@@ -638,6 +654,12 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(decisions.nth(1)).toContainText('Fail')
   await expect(decisions.nth(1).locator('p')).toHaveText('Reviewed failure\nSecond line')
   await expect(decisions.nth(2)).toContainText('Pass')
+  await expect(decisions.nth(2)).toContainText('Administrator name unavailable')
+  await expect(decisions.nth(2)).not.toContainText('deleted-actor')
+  await expect(decisions.nth(1).getByRole('link', { name: 'Other Admin' })).toHaveAttribute(
+    'href',
+    `?page=app&view=settings&account=${otherAdminId}`,
+  )
   const time = decisions.first().locator('time')
   const timestamp = await time.getAttribute('datetime')
   expect(timestamp).toBeTruthy()
@@ -647,9 +669,36 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     ),
   )
   await expect(time).toHaveText(formatted)
-  await expect(decisions.first().getByText(teacherId)).toBeHidden()
-  await decisions.first().getByText('Administrator ID').click()
-  await expect(decisions.first().getByText(teacherId)).toBeVisible()
+  const actorLink = decisions.first().getByRole('link', { name: 'Admin' })
+  await expect(actorLink).toHaveAttribute('href', `?page=app&view=settings&account=${teacherId}`)
+  await expect(decisions.first()).not.toContainText(teacherId)
+  expect((await actorLink.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+  await page.screenshot({
+    path: `.artifacts/verification/admin-name-link-${testInfo.project.name}.png`,
+  })
+  board.accounts[0].name = '   '
+  await actorLink.click()
+  await expect(page.getByText('admin@example.test')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save role' })).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByText('admin@example.test')).toBeVisible()
+  await page.goBack()
+  await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
+  await page.getByRole('dialog').getByText('Decision history').click()
+  const emailFallback = page.getByRole('dialog').getByRole('link', {
+    name: 'other-admin@example.test',
+  })
+  await expect(emailFallback).toHaveAttribute(
+    'href',
+    `?page=app&view=settings&account=${otherAdminId}`,
+  )
+  await emailFallback.click()
+  await expect(page.getByText('other-admin@example.test')).toBeVisible()
+  await expect(page.getByLabel('Role')).toBeVisible()
+  board.accounts[0].name = 'Other Admin'
+  await page.goBack()
+  await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
+  await page.getByRole('dialog').getByText('Decision history').click()
   expect(enrollmentSchema.parse(enrollments[0]).gradeDecisions).toEqual(storedDecisions)
   expect(decisionRequests).toHaveLength(requestCount)
   await page.screenshot({
@@ -712,7 +761,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(arabicTime).toHaveText(arabicFormatted)
   expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   await page.screenshot({
-    path: `.artifacts/verification/decision-history-320-ar-dark-${testInfo.project.name}.png`,
+    path: `.artifacts/verification/admin-name-link-320-ar-dark-${testInfo.project.name}.png`,
   })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.getByRole('dialog').getByRole('button', { name: 'إلغاء' }).click()
@@ -773,7 +822,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .fill('Resume calculated grading')
   await page.getByRole('dialog').getByRole('button', { name: 'Save decision' }).click()
   await expect(page.getByRole('button', { name: 'Close course' })).toBeDisabled()
-  await expect(page.getByText('Unavailable')).toBeVisible()
+  await expect(page.getByText('Unavailable', { exact: true })).toBeVisible()
   await page.getByLabel('Minimum attendance %').fill('60')
   await page.getByRole('button', { name: 'Save thresholds' }).click()
   await expect(page.getByLabel('Minimum attendance %')).toHaveValue('60')
