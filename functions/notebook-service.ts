@@ -65,7 +65,7 @@ async function courseBoard(
   const enrollments = (
     await db.query(
       `SELECT ce.id, ce.course_id AS "courseId", ce.student_id AS "studentId", ce.level,
-    ce.practical::float8 AS practical, ce.theory::float8 AS theory, ce.active, ce.handbook_received AS "handbookReceived"
+    ce.practical::float8 AS practical, ce.theory::float8 AS theory, ce.notes, ce.active, ce.handbook_received AS "handbookReceived"
     FROM course_enrollments ce JOIN students s ON s.id = ce.student_id WHERE ${scope} ORDER BY ce.id FOR SHARE OF ce`,
       values,
     )
@@ -289,8 +289,8 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
   } else if (path === '/api/admin/enrollments/grades') {
     const grades = enrollmentGradesSchema.parse(body)
     const result = await db.query(
-      'UPDATE course_enrollments SET practical = $2, theory = $3 WHERE id = $1 RETURNING id',
-      [grades.id, grades.practical, grades.theory],
+      'UPDATE course_enrollments SET practical = $2, theory = $3, notes = COALESCE($4, notes) WHERE id = $1 RETURNING id',
+      [grades.id, grades.practical, grades.theory, grades.notes ?? null],
     )
     if (!result.rowCount) throw new HttpError(400)
     return { saved: true }
