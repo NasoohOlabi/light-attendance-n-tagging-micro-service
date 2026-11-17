@@ -161,7 +161,16 @@ export function Courses({
   ])
   return (
     <section className="panel space-y-5">
-      {!query.courseView && <h1 className="title">{ar ? 'الدورات' : 'Courses'}</h1>}
+      {!query.courseView && (
+        <header className="flex items-center justify-between gap-2">
+          <h1 className="title">{ar ? 'الدورات' : 'Courses'}</h1>
+          {courses.length > 0 && (
+            <div className="flex shrink-0 items-center gap-2">
+              <TableControls model={courseTable} />
+            </div>
+          )}
+        </header>
+      )}
       {error && <p role="alert">{error}</p>}
       {saved && <p role="status">{ar ? 'تم الحفظ' : 'Saved'}</p>}
       {!query.courseView && (
@@ -184,7 +193,7 @@ export function Courses({
               tabIndex={0}
             >
               <table className="role-table course-list-table w-full table-fixed" role="table">
-                <TableHeader model={courseTable} actions />
+                <TableHeader model={courseTable} actions showControls={false} />
                 <tbody role="rowgroup">
                   {courseTable.rows.map((item) => (
                     <tr key={item.id} role="row">
