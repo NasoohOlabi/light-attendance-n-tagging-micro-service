@@ -1,3 +1,4 @@
+import { clickRecordAction, recordActions } from './recordActions'
 import { clickAccountAction } from './profileActions'
 import { expect, test, type Locator } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
@@ -398,11 +399,34 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   }
   await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
-  await expect(page.getByRole('row').filter({ hasText: 'Course A' })).toBeVisible()
+  const firstCourseRow = page.getByRole('row').filter({ hasText: 'Course A' })
+  const firstCourseActions = recordActions(firstCourseRow)
+  const firstCourseMenu = firstCourseRow.getByRole('group', { name: 'Actions for Course A' })
+  await expect(firstCourseActions).toBeVisible()
+  await expect(firstCourseMenu).toBeHidden()
+  const coursesBeforeOpening = structuredClone(courses)
+  await firstCourseActions.press('Enter')
+  await expect(firstCourseMenu).toBeVisible()
+  await page.keyboard.press('Tab')
+  await expect(firstCourseMenu.locator('button:focus')).toHaveCount(1)
+  await page.keyboard.press('Escape')
+  await expect(firstCourseMenu).toBeHidden()
+  await expect(firstCourseActions).toBeFocused()
+  await firstCourseActions.click()
+  await recordActions(page.getByRole('row').filter({ hasText: 'Course B' })).click()
+  await expect(firstCourseMenu).toBeHidden()
+  await page.mouse.click(2, 2)
+  await expect(page.getByRole('group', { name: 'Actions for Course B' })).toBeHidden()
+  expect(courses).toEqual(coursesBeforeOpening)
+  await clickRecordAction(firstCourseRow, 'Edit')
+  await expect(page.getByRole('heading', { name: 'Edit course' })).toBeVisible()
+  await expect(page.getByLabel('Course name')).toHaveValue('Course A')
+  await page.getByRole('button', { name: 'Back to courses' }).click()
   if (testInfo.project.name === 'mobile') {
     for (const language of ['en', 'ar']) {
       if (language === 'ar') {
         await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
+        await clickAccountAction(page, 'داكن')
       }
       for (const width of [320, 390, 430]) {
         await page.setViewportSize({ width, height: 844 })
@@ -410,16 +434,15 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
         const header = await page.locator('.workspace-rail').boundingBox()
         if (!panel || !header) throw new Error('Missing course list or workspace header')
         expect(panel.y - header.y - header.height).toBeGreaterThanOrEqual(16)
-        const actions = page
-          .getByRole('region', {
-            name:
-              language === 'en'
-                ? 'Course list'
-                : '\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062f\u0648\u0631\u0627\u062a',
-          })
-          .locator('tbody tr td:last-child button')
-        await expect(actions).toHaveCount(10)
-        const bounds = await actions.evaluateAll((buttons) =>
+        const actions = page.getByRole('region', {
+          name:
+            language === 'en'
+              ? 'Course list'
+              : '\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062f\u0648\u0631\u0627\u062a',
+        })
+        const triggers = recordActions(actions)
+        await expect(triggers).toHaveCount(2)
+        const bounds = await triggers.evaluateAll((buttons) =>
           buttons.map((button) => {
             const rect = button.getBoundingClientRect()
             return {
@@ -433,13 +456,6 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
         )
         expect(bounds.every((rect) => rect.left >= 0 && rect.right <= width)).toBe(true)
         expect(bounds.every((rect) => rect.width >= 44 && rect.height >= 44)).toBe(true)
-        for (const row of [bounds.slice(0, 5), bounds.slice(5)]) {
-          expect(new Set(row.map((rect) => rect.top)).size).toBe(1)
-          const ordered = row.toSorted((a, b) => a.left - b.left)
-          expect(ordered.slice(1).every((rect, index) => rect.left >= ordered[index].right)).toBe(
-            true,
-          )
-        }
         expect(
           await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
         ).toBe(true)
@@ -447,9 +463,34 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
           path: `.artifacts/verification/course-list-${width}-${language}.png`,
           fullPage: true,
         })
+        await firstCourseActions.click()
+        const popup = firstCourseRow.getByRole('group', {
+          name: language === 'en' ? 'Actions for Course A' : 'إجراءات Course A',
+        })
+        const menuBounds = await popup.boundingBox()
+        if (!menuBounds) throw new Error('Missing course action menu')
+        expect(menuBounds.x).toBeGreaterThanOrEqual(0)
+        expect(menuBounds.y).toBeGreaterThanOrEqual(0)
+        expect(menuBounds.x + menuBounds.width).toBeLessThanOrEqual(width)
+        expect(menuBounds.y + menuBounds.height).toBeLessThanOrEqual(844)
+        expect(
+          await popup
+            .getByRole('button')
+            .evaluateAll((buttons) =>
+              buttons.every((button) => button.getBoundingClientRect().height >= 44),
+            ),
+        ).toBe(true)
+        await expect(
+          popup.getByRole('button', { name: language === 'en' ? 'Edit' : 'تعديل' }),
+        ).toBeVisible()
+        await page.screenshot({
+          path: `.artifacts/verification/course-menu-${width}-${language}.png`,
+        })
+        await page.keyboard.press('Escape')
       }
     }
     await clickAccountAction(page, 'English')
+    await clickAccountAction(page, 'Device')
   }
   await page.getByRole('button', { name: 'Create course' }).click()
   await expect(page.getByRole('region', { name: 'Course list' })).toHaveCount(0)
@@ -473,11 +514,10 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect.poll(() => courses.length).toBe(4)
   expect(courses[2].id).not.toBe(courses[3].id)
   await expect(page.getByRole('row').filter({ hasText: 'Created course' })).toBeVisible()
-  await page
-    .getByRole('row')
-    .filter({ hasText: 'Created course' })
-    .getByRole('button', { name: 'Manage students' })
-    .click()
+  await clickRecordAction(
+    page.getByRole('row').filter({ hasText: 'Created course' }),
+    'Manage students',
+  )
   await page.getByRole('searchbox', { name: 'Find a student' }).fill('New')
   const newRow = page.getByRole('row').filter({ hasText: 'New' })
   await newRow.getByLabel('Course level: New Student').fill('Beginner')
@@ -554,11 +594,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     birthYear: 2000,
   })
   await page.getByRole('button', { name: 'Back to courses' }).click()
-  await page
-    .getByRole('row')
-    .filter({ hasText: 'Course A' })
-    .getByRole('button', { name: 'Manage students' })
-    .click()
+  await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course A' }), 'Manage students')
   await expect(page.getByLabel('Handbook received: Synthetic Student')).not.toBeChecked()
   await page.getByLabel('Handbook received: Synthetic Student').click()
   await expect(page.getByLabel('Handbook received: Synthetic Student')).toBeChecked()
@@ -575,11 +611,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('')
   await page.getByLabel('Course level: Synthetic Student').fill('Draft A')
   await page.getByRole('button', { name: 'Back to courses' }).click()
-  await page
-    .getByRole('row')
-    .filter({ hasText: 'Course B' })
-    .getByRole('button', { name: 'Manage students' })
-    .click()
+  await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course B' }), 'Manage students')
   await expect(page.getByLabel('Handbook received: Synthetic Student')).not.toBeChecked()
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('Advanced')
   await page.getByLabel('Teacher: Synthetic Student').selectOption(teacherId)
@@ -599,11 +631,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect.poll(() => enrollments[1].level).toBe('Updated B')
   expect(enrollments[1].id).toBe(enrollB)
   await page.getByRole('button', { name: 'Back to courses' }).click()
-  await page
-    .getByRole('row')
-    .filter({ hasText: 'Course A' })
-    .getByRole('button', { name: 'Manage students' })
-    .click()
+  await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course A' }), 'Manage students')
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('Draft A')
   await page.getByLabel('Course level: Synthetic Student').fill('Intermediate')
   await page
@@ -613,21 +641,17 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .click()
   await expect.poll(() => enrollments[0].level).toBe('Intermediate')
   await page.getByRole('button', { name: 'Back to courses' }).click()
-  await page
-    .getByRole('row')
-    .filter({ hasText: 'Course A' })
-    .getByRole('button', { name: 'Grades' })
-    .click()
+  await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course A' }), 'Grades')
   const originalViewport = page.viewportSize()
   await page.setViewportSize({ width: 1440, height: 900 })
   const compactGradeRow = page.getByRole('row').filter({ hasText: 'Synthetic' })
-  const overrideButton = compactGradeRow.getByRole('button', { name: 'Override result' })
+  const overrideButton = recordActions(compactGradeRow)
   const saveBounds = await compactGradeRow
     .getByRole('button', { name: 'Save grades' })
     .boundingBox()
   const overrideBounds = await overrideButton.boundingBox()
   expect(overrideBounds?.y).toBe(saveBounds?.y)
-  await overrideButton.click()
+  await clickRecordAction(compactGradeRow, 'Override result')
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Save decision' })).toBeDisabled()
@@ -636,7 +660,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
   await expect(overrideButton).toBeFocused()
-  await overrideButton.click()
+  await clickRecordAction(compactGradeRow, 'Override result')
   const decisionRequests: string[] = []
   await page.route('**/api/admin/enrollments/decision', async (route) => {
     decisionRequests.push(route.request().postDataJSON().requestId)
@@ -658,7 +682,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   )
   await page.reload()
   await expect(compactGradeRow).toContainText('Effective: Pass')
-  await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
+  await clickRecordAction(compactGradeRow, 'Override result')
   await page.getByRole('dialog').getByRole('combobox').selectOption('fail')
   await page
     .getByRole('dialog')
@@ -668,11 +692,11 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(compactGradeRow).toContainText('Effective: Fail')
   await expect(compactGradeRow).toHaveCSS('background-color', 'rgb(252, 238, 238)')
   await expect(compactGradeRow.locator('span.grade-fail')).toHaveCSS('color', 'rgb(161, 27, 27)')
-  await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
+  await clickRecordAction(compactGradeRow, 'Override result')
   await page.getByRole('dialog').getByRole('combobox').selectOption('calculated')
   await page.getByRole('dialog').getByLabel('Decision note (required)').fill('Restore')
   await page.getByRole('dialog').getByRole('button', { name: 'Save decision' }).click()
-  await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
+  await clickRecordAction(compactGradeRow, 'Override result')
   const storedDecisions = enrollmentSchema.parse(enrollments[0]).gradeDecisions
   const requestCount = decisionRequests.length
   await page.getByRole('dialog').getByText('Decision history').click()
@@ -716,7 +740,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(page.locator('.role-account strong')).toHaveText('Updated Admin')
   await expect(page.getByText('admin@example.test')).toBeVisible()
   await page.goBack()
-  await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
+  await clickRecordAction(compactGradeRow, 'Override result')
   await page.getByRole('dialog').getByText('Decision history').click()
   const emailFallback = page.getByRole('dialog').getByRole('link', {
     name: 'other-admin@example.test',
@@ -730,7 +754,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(page.getByLabel('Role')).toBeVisible()
   board.accounts[0].profileName = 'Other Admin'
   await page.goBack()
-  await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
+  await clickRecordAction(compactGradeRow, 'Override result')
   await page.getByRole('dialog').getByText('Decision history').click()
   expect(enrollmentSchema.parse(enrollments[0]).gradeDecisions).toEqual(storedDecisions)
   expect(decisionRequests).toHaveLength(requestCount)
@@ -774,13 +798,13 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await checkGradeSave('حفظ الدرجات')
   await checkGradeOrder('نظري', 'عملي')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  const arabicOverride = compactGradeRow.getByRole('button', { name: 'تعديل النتيجة' })
+  const arabicOverride = recordActions(compactGradeRow)
   const mobileSaveBounds = await compactGradeRow
     .getByRole('button', { name: 'حفظ الدرجات' })
     .boundingBox()
   const mobileOverrideBounds = await arabicOverride.boundingBox()
   expect(mobileOverrideBounds?.y).toBe(mobileSaveBounds?.y)
-  await arabicOverride.click()
+  await clickRecordAction(compactGradeRow, 'تعديل النتيجة')
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))
   await dialog.locator('.decision-history > summary').click()
@@ -803,10 +827,10 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await clickAccountAction(page, 'English')
   await checkGradeSave('Save grades')
   await checkGradeOrder('Theory', 'Practical')
-  await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
+  await clickRecordAction(compactGradeRow, 'Override result')
   await page.getByRole('dialog').getByLabel('Decision note (required)').fill('x'.repeat(300))
   await page.getByRole('dialog').getByRole('button', { name: 'Save decision' }).click()
-  await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
+  await clickRecordAction(compactGradeRow, 'Override result')
   await page.getByRole('dialog').getByText('Decision history').click()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await expect(dialog.locator('.decision-history li').first().locator('p')).toHaveText(
@@ -851,7 +875,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     await clickAccountAction(page, 'English')
   }
   if (originalViewport) await page.setViewportSize(originalViewport)
-  await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
+  await clickRecordAction(compactGradeRow, 'Override result')
   await page.getByRole('dialog').getByRole('combobox').selectOption('calculated')
   await page
     .getByRole('dialog')
@@ -911,8 +935,10 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('button', { name: 'History & corrections', exact: true }).click()
   const legacyRecord = page.locator('li').filter({ hasText: 'Synthetic Student' })
   await expect(legacyRecord).toContainText('present')
-  await legacyRecord.getByText('Record details').click()
+  await clickRecordAction(legacyRecord, 'Record details')
   await expect(legacyRecord.locator('pre')).toContainText('"status": "late"')
+  await clickRecordAction(legacyRecord, 'Record details')
+  await expect(legacyRecord.locator('pre')).toBeHidden()
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseB)
@@ -934,11 +960,13 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveValue('present')
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
   const courseRow = page.getByRole('row').filter({ hasText: 'Course A' })
-  await courseRow.getByRole('button', { name: 'Close', exact: true }).click()
+  await clickRecordAction(courseRow, 'Close course')
   await expect(courseRow).toContainText('Closed')
   await clickAccountAction(page, 'العربية')
   await expect(courseRow).toContainText('مغلقة')
-  await expect(courseRow.getByRole('button', { name: 'إعادة فتح' })).toBeVisible()
+  await recordActions(courseRow).click()
+  await expect(courseRow.getByRole('button', { name: 'إعادة فتح الدورة' })).toBeVisible()
+  await page.keyboard.press('Escape')
   await page.screenshot({
     path: `.artifacts/verification/closed-course-${testInfo.project.name}-ar.png`,
     fullPage: true,
@@ -946,7 +974,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await clickAccountAction(page, 'English')
   await page.reload()
   await expect(courseRow).toContainText('Closed')
-  await courseRow.getByRole('button', { name: 'History', exact: true }).click()
+  await clickRecordAction(courseRow, 'History')
   await expect(page.getByRole('status').filter({ hasText: 'This course is closed' })).toBeVisible()
   await expect(page.getByRole('combobox', { name: 'Course', exact: true })).toHaveCount(0)
   await expect(
@@ -955,9 +983,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveCount(0)
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
-  await courseRow.getByRole('button', { name: 'Reopen', exact: true }).click()
+  await clickRecordAction(courseRow, 'Reopen course')
   await expect(courseRow).toContainText('Open')
-  await courseRow.getByRole('button', { name: 'Grades' }).click()
+  await clickRecordAction(courseRow, 'Grades')
   await expect(page.getByLabel('Practical: Synthetic Student')).toHaveValue('0')
   await expect(page.getByLabel('Theory: Synthetic Student')).toHaveValue('100')
   const gradeRow = page.getByRole('row').filter({ hasText: 'Synthetic' })
@@ -1026,7 +1054,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(gradeRow).not.toContainText('Insufficient attendance')
   await expect(gradeRow).not.toContainText('Practical grade below passing')
   await expect(gradeRow.getByText('50.0%')).toHaveCSS('color', 'rgb(161, 27, 27)')
-  await gradeRow.getByRole('button', { name: 'Override result' }).click()
+  await clickRecordAction(gradeRow, 'Override result')
   await page.getByRole('dialog').getByRole('combobox').selectOption('pass')
   await page.getByRole('dialog').getByLabel('Decision note (required)').fill('Attendance reviewed')
   await page.getByRole('dialog').getByRole('button', { name: 'Save decision' }).click()
@@ -1037,7 +1065,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(gradeRow).not.toContainText('Insufficient attendance')
   await page.emulateMedia({ colorScheme: 'dark' })
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  await gradeRow.getByRole('button', { name: 'Override result' }).click()
+  await clickRecordAction(gradeRow, 'Override result')
   await expect(page.getByRole('dialog')).toHaveCSS('background-color', 'rgb(25, 59, 66)')
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click()
   await expect(gradeRow).toHaveCSS('background-color', 'rgb(32, 77, 64)')
@@ -1050,7 +1078,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     path: `.artifacts/verification/grade-pass-dark-${testInfo.project.name}.png`,
     fullPage: true,
   })
-  await gradeRow.getByRole('button', { name: 'Override result' }).click()
+  await clickRecordAction(gradeRow, 'Override result')
   await page.getByRole('dialog').getByRole('combobox').selectOption('calculated')
   await page
     .getByRole('dialog')
@@ -1147,7 +1175,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(page.getByText('Course closed', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await expect(courseRow).toContainText('Closed')
-  await courseRow.getByRole('button', { name: 'Reopen', exact: true }).click()
+  await clickRecordAction(courseRow, 'Reopen course')
   await expect(courseRow).toContainText('Open')
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
@@ -1155,7 +1183,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
-  await courseRow.getByRole('button', { name: 'Manage students' }).click()
+  await clickRecordAction(courseRow, 'Manage students')
   await page.getByRole('switch', { name: 'Enrolled: Synthetic Student' }).click()
   await expect.poll(() => enrollments[0].active).toBe(false)
   await page.getByRole('button', { name: 'History & corrections', exact: true }).click()

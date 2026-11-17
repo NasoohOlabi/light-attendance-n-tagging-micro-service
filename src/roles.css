@@ -137,13 +137,17 @@
   width: 20%;
 }
 .course-list-table th:nth-child(3) {
-  width: 17.35rem;
+  width: 6.5rem;
+}
+.course-list-table th:nth-child(3),
+.course-list-table td:nth-child(3) {
+  text-align: end;
 }
 
 @media (max-width: 40rem) {
   .course-list-table tr {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(4rem, 25%) 3.25rem;
   }
   .course-list-table th,
   .course-list-table td {
@@ -161,21 +165,6 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
-  }
-  .course-list-table td:nth-child(-n + 2) {
-    border-bottom: 0;
-    padding-bottom: 0;
-  }
-  .course-list-table td:nth-child(3) {
-    grid-column: 1 / -1;
-  }
-  .course-list-table td:nth-child(3) > div {
-    justify-content: space-between;
-    gap: 0;
-  }
-  .course-list-table button {
-    padding-inline: 0.5rem;
-    overflow-wrap: normal;
   }
 }
 
@@ -738,5 +727,43 @@
 
 .course-current {
   display: block;
-  margin-top: 0.35rem;
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+}
+
+.row-actions-popup {
+  width: min(15rem, calc(100vw - 1rem));
+  max-height: calc(100dvh - 1rem);
+  padding: 0.35rem;
+}
+@supports (position-area: block-end span-inline-start) {
+  .row-actions-popup {
+    inset: auto;
+    margin: 0.25rem 0;
+    position-area: block-end span-inline-start;
+    align-self: start;
+    justify-self: end;
+    position-try-fallbacks:
+      flip-block,
+      flip-inline,
+      flip-block flip-inline,
+      --center-row-actions;
+  }
+
+  @position-try --center-row-actions {
+    position-area: none;
+    inset: 0;
+    margin: auto;
+  }
+}
+.row-actions-popup button {
+  display: flex;
+  width: 100%;
+  justify-content: flex-start;
+  padding: 0.5rem 0.75rem;
+  text-align: start;
+}
+.row-actions-popup button:disabled {
+  opacity: 0.6;
+  cursor: default;
 }

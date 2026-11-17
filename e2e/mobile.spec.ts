@@ -1,4 +1,5 @@
 import { clickAccountAction } from './profileActions'
+import { clickRecordAction } from './recordActions'
 import { expect, test, type Page } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 
@@ -100,7 +101,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   }
   await page.getByRole('button', { name: 'السجل والتصحيحات', exact: true }).click()
   const savedNote = page.locator('li').filter({ hasText: 'مسودة مشتركة English draft' })
-  await savedNote.getByRole('button', { name: 'تراجع', exact: true }).click()
+  await clickRecordAction(savedNote, 'تراجع')
   await page.getByLabel('السبب', { exact: true }).fill('تصحيح تجريبي')
   await page.getByRole('button', { name: 'إضافة تصحيح', exact: true }).click()
   await expect(savedNote).toContainText('تم التراجع')

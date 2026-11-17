@@ -1,4 +1,5 @@
-﻿import { expect, test } from '@playwright/test'
+import { clickRecordAction } from './recordActions'
+import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 
 const browserErrors = new WeakMap<object, string[]>()
@@ -61,7 +62,7 @@ test('sample notebook supports attendance, notes and corrections without network
   }
   await page.getByRole('button', { name: 'History & corrections', exact: true }).click()
   const note = page.locator('li').filter({ hasText: 'راجعت السورة اليوم' })
-  await note.getByRole('button', { name: 'Undo' }).click()
+  await clickRecordAction(note, 'Undo')
   await page.getByLabel('Reason').fill('تصحيح')
   await page.getByRole('button', { name: 'Append correction' }).click()
   await expect(note).toContainText('Undone')

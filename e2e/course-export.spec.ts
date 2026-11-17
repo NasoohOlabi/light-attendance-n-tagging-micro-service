@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import { unzipSync, strFromU8 } from 'fflate'
+import { clickRecordAction } from './recordActions'
 
 test.use({ trace: 'off' })
 const admin = '10000000-0000-4000-8000-000000000001'
@@ -130,7 +131,10 @@ for (const width of [320, 390, 1280]) {
       if (ar) await page.addInitScript(() => localStorage.setItem('halaqa-language', 'ar'))
       await page.goto('/?page=app')
       await page.getByRole('button', { name: ar ? 'الدورات' : 'Courses', exact: true }).click()
-      await page.getByRole('button', { name: ar ? 'الدرجات' : 'Grades', exact: true }).click()
+      await clickRecordAction(
+        page.getByRole('row').filter({ hasText: 'Course A' }),
+        ar ? 'الدرجات' : 'Grades',
+      )
       const button = page.getByRole('button', { name: ar ? 'تصدير Excel' : 'Export Excel' })
       await expect(button).toBeVisible()
       const grade = page.getByLabel(ar ? 'نظري: Active Student' : 'Theory: Active Student')

@@ -1,3 +1,4 @@
+import { clickRecordAction } from './recordActions'
 import { clickAccountAction } from './profileActions'
 import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
@@ -85,7 +86,7 @@ test('dashboard charts and alphabetic fuzzy attendance preserve drafts', async (
   }
   await clickAccountAction(page, 'English')
   const record = page.locator('li').filter({ hasText: 'Omar' }).filter({ hasText: 'absent' })
-  await record.getByRole('button', { name: 'Undo' }).click()
+  await clickRecordAction(record, 'Undo')
   await page.getByLabel('Reason').fill('Correction')
   await page.getByRole('button', { name: 'Append correction' }).click()
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()

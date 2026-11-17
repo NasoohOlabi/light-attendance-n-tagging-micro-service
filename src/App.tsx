@@ -1,3 +1,4 @@
+import { RowActions } from './RowActions'
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
 import { PhoneNumber } from './PhoneNumber'
@@ -1633,6 +1634,7 @@ function History({
 }) {
   const { t, language } = useLanguage()
   const [target, setTarget] = useState('')
+  const [expandedRecords, setExpandedRecords] = useState<string[]>([])
   const [reason, setReason] = useState('')
   const query = useQueryState()
   const ids = new Set(students.map((student) => student.studentId))
@@ -1734,18 +1736,33 @@ function History({
                   : `${event.clientTime} (${t('device')})`}
                 {projected.reversed.has(event.id) ? ` · ${t('Undone')}` : ''}
               </p>
-              <details className="mt-2 text-xs text-slate-500">
-                <summary>{t('Record details')}</summary>
-                <pre dir="ltr" className="mt-2 text-start whitespace-pre-wrap break-all">
+              {expandedRecords.includes(event.id) && (
+                <pre
+                  dir="ltr"
+                  className="mt-2 text-start text-xs text-slate-500 whitespace-pre-wrap break-all"
+                >
                   {JSON.stringify(event, null, 2)}
                 </pre>
-              </details>
+              )}
             </div>
-            {event.payload.kind !== 'reversal' && !projected.reversed.has(event.id) && (
-              <button className="secondary" onClick={() => setTarget(event.id)}>
-                {t('Undo')}
-              </button>
-            )}
+            <RowActions
+              name={language === 'ar' ? 'السجل' : 'record'}
+              ar={language === 'ar'}
+              actions={[
+                {
+                  label: t('Record details'),
+                  onClick: () =>
+                    setExpandedRecords((items) =>
+                      items.includes(event.id)
+                        ? items.filter((id) => id !== event.id)
+                        : [...items, event.id],
+                    ),
+                },
+                ...(event.payload.kind !== 'reversal' && !projected.reversed.has(event.id)
+                  ? [{ label: t('Undo'), onClick: () => setTarget(event.id) }]
+                  : []),
+              ]}
+            />
           </li>
         ))}
       </ol>
