@@ -126,6 +126,14 @@ test('long grades remain navigable in both languages', async ({ page }, testInfo
       expect(
         await header.evaluate((element) => getComputedStyle(element).backgroundColor),
       ).not.toBe('rgba(0, 0, 0, 0)')
+      await expect(header).toHaveCSS(
+        'background-color',
+        await region.evaluate((element) => {
+          const panel = element.closest('.panel')
+          if (!panel) throw new Error('Missing Grades panel')
+          return getComputedStyle(panel).backgroundColor
+        }),
+      )
     } else {
       expect(metrics.scroll).toBe(metrics.client)
       expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.width + 1)
