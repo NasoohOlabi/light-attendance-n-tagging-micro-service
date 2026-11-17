@@ -307,7 +307,7 @@ test('student portal dates sort chronologically and combine course/status filter
 })
 
 test('multi-sort priority, URL state, and filter-preserving reset', async ({ page }, testInfo) => {
-  await syntheticTables(page)
+  const { writes } = await syntheticTables(page)
   await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
   const table = page.locator('table')
   const names = table.locator('tbody tr td:first-child')
@@ -319,28 +319,73 @@ test('multi-sort priority, URL state, and filter-preserving reset', async ({ pag
   await page.keyboard.press('Shift+Tab')
   await expect(enrolled).not.toHaveCSS('outline-style', 'none')
   await first.click({ modifiers: ['Shift'] })
+  await expect(
+    table.getByRole('button', { name: 'Reorder First name' }),
+  ).toHaveAccessibleDescription(/Press Space/)
+  await table.getByRole('button', { name: 'Sort help' }).click()
+  await expect(page.getByText('Filters combine (AND).', { exact: false })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByText('Filters combine (AND).', { exact: false })).toBeHidden()
   await expect(names).toHaveText(['Echo', 'Alpha', 'Charlie', 'Delta', 'Zulu'])
   await expect(enrolled.locator('.table-sort-priority')).toHaveText('1')
   await expect(first.locator('.table-sort-priority')).toHaveText('2')
   await expect(first.locator('..')).not.toHaveAttribute('aria-sort')
   await page.reload()
   await expect(names).toHaveText(['Echo', 'Alpha', 'Charlie', 'Delta', 'Zulu'])
-  await table.getByText('Custom sort', { exact: true }).click()
+  await table
+    .locator('.sort-toolbar')
+    .evaluate((element) => element.scrollIntoView({ block: 'center' }))
+  const source = await table.getByRole('button', { name: 'Reorder First name' }).boundingBox()
+  const target = await table.locator('.sort-pill').first().boundingBox()
+  if (!source || !target) throw new Error('Missing sort pills')
+  await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 })
+  await expect(table.locator('.sort-pill').first()).toContainText('First name')
+  await page.screenshot({
+    path: `.artifacts/verification/sort-pills-drag-${testInfo.project.name}.png`,
+  })
+  const feedback = await page.locator('[data-dnd-dragging]').boundingBox()
+  if (!feedback) throw new Error('Missing drag preview')
+  expect(Math.abs(feedback.y - target.y)).toBeLessThan(4)
+  expect(Math.abs(feedback.x - (target.x + target.width / 2 - source.width / 2))).toBeLessThan(4)
+  await page.mouse.up()
+  await expect(table.locator('.sort-pill').first()).toContainText('First name')
+  await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta', 'Echo', 'Zulu'])
+  await page.reload()
+  await expect(table.locator('.sort-pill').first()).toContainText('First name')
+  await table.getByRole('button', { name: 'Reset sort' }).click()
+  await enrolled.click()
+  await first.click({ modifiers: ['Shift'] })
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({
     path: `.artifacts/verification/multi-sort-${testInfo.project.name}.png`,
     fullPage: true,
   })
-  await table.getByLabel('Sort direction 2').selectOption('desc')
+  await table.getByRole('button', { name: 'Sort direction 2: Ascending' }).click()
   await expect(names).toHaveText(['Echo', 'Zulu', 'Delta', 'Charlie', 'Alpha'])
-  await table.getByRole('button', { name: 'Move up 2' }).click()
-  await expect(table.getByLabel('Sort column 1')).toHaveValue('first')
+  const grip = table.getByRole('button', { name: 'Reorder First name' })
+  await grip.focus()
+  const currentPill = await grip.locator('..').boundingBox()
+  const precedingPill = await table.locator('.sort-pill').first().boundingBox()
+  if (!currentPill || !precedingPill) throw new Error('Missing keyboard sort targets')
+  await page.keyboard.press('Space')
+  await expect(grip.locator('..')).toHaveClass(/is-dragging/)
+  await page.keyboard.press(
+    Math.abs(currentPill.y - precedingPill.y) > currentPill.height / 2
+      ? 'ArrowUp'
+      : currentPill.x > precedingPill.x
+        ? 'ArrowLeft'
+        : 'ArrowRight',
+  )
+  await expect(table.locator('.sort-pill').first()).toContainText('First name')
+  await page.keyboard.press('Space')
+  await expect(table.locator('.sort-pill').first()).toContainText('First name')
   await expect(names).toHaveText(['Zulu', 'Echo', 'Delta', 'Charlie', 'Alpha'])
-  await table.getByRole('button', { name: 'Move down 1' }).click()
   await table.getByRole('button', { name: 'Remove sort 2' }).click()
-  await table.getByRole('button', { name: 'Add sort', exact: true }).click()
+  await table.getByLabel('Add column').selectOption('enrolled')
   await first.click()
-  await expect(table.getByLabel('Sort column 2')).toHaveCount(0)
+  await expect(table.locator('.sort-pill')).toHaveCount(0)
   await table.getByLabel('Filter First name').fill('a')
   await table.getByLabel('Filter Enrolled').selectOption({ label: 'Yes' })
   await table.getByRole('button', { name: 'Reset sort', exact: true }).click()
@@ -360,10 +405,9 @@ test('multi-sort priority, URL state, and filter-preserving reset', async ({ pag
   url.searchParams.set('tables', JSON.stringify(state))
   await page.goto(url.toString())
   await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta'])
-  await table.getByText('Custom sort', { exact: true }).click()
-  await expect(table.getByLabel('Sort column 1')).toHaveValue('first')
-  await expect(table.getByLabel('Sort column 2')).toHaveCount(0)
-  await table.getByRole('button', { name: 'Add sort', exact: true }).click()
+  await expect(table.locator('.sort-pill')).toHaveCount(1)
+  await expect(table.locator('.sort-pill').first()).toContainText('First name')
+  await table.getByLabel('Add column').selectOption('enrolled')
   await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 })
@@ -375,4 +419,51 @@ test('multi-sort priority, URL state, and filter-preserving reset', async ({ pag
       fullPage: true,
     })
   }
+  const rtlGrip = table.getByRole('button', { name: 'ترتيب مسجل' })
+  await expect(rtlGrip).toHaveAccessibleDescription(/اضغط مسافة/)
+  await rtlGrip.focus()
+  await page.keyboard.press('Space')
+  await expect(rtlGrip.locator('..')).toHaveClass(/is-dragging/)
+  await page.keyboard.press('ArrowUp')
+  await expect(table.locator('.sort-pill').first()).not.toContainText('الاسم الأول')
+  await page.keyboard.press('Escape')
+  await expect(rtlGrip).toBeFocused()
+  await expect(table.locator('.sort-pill').first()).toContainText('الاسم الأول')
+  await page.keyboard.press('Space')
+  await expect(rtlGrip.locator('..')).toHaveClass(/is-dragging/)
+  await page.keyboard.press('ArrowUp')
+  await expect(table.locator('.sort-pill').first()).not.toContainText('الاسم الأول')
+  await page.keyboard.press('Space')
+  await expect(rtlGrip).toBeFocused()
+  await page.reload()
+  await expect(table.locator('.sort-pill').first()).not.toContainText('الاسم الأول')
+  await table
+    .locator('.sort-toolbar')
+    .evaluate((element) => element.scrollIntoView({ block: 'center' }))
+  const firstGrip = table.locator('.sort-pill').first().locator('.sort-grip')
+  const touchSource = await firstGrip.boundingBox()
+  const touchTarget = await table.locator('.sort-pill').last().boundingBox()
+  if (!touchSource || !touchTarget) throw new Error('Missing touch targets')
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true })
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [
+      { x: touchSource.x + touchSource.width / 2, y: touchSource.y + touchSource.height / 2 },
+    ],
+  })
+  await expect(firstGrip.locator('..')).toHaveClass(/is-dragging/)
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchMove',
+    touchPoints: [
+      { x: touchTarget.x + touchTarget.width / 2, y: touchTarget.y + touchTarget.height / 2 },
+    ],
+  })
+  await expect(table.locator('.sort-pill').first()).toContainText('الاسم الأول')
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await expect(table.locator('.sort-pill').first()).toContainText('الاسم الأول')
+  await page.reload()
+  await expect(table.locator('.sort-pill').first()).toContainText('الاسم الأول')
+  await cdp.detach()
+  expect(writes).toEqual([])
 })
