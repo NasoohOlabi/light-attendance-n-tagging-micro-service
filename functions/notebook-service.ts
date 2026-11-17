@@ -79,7 +79,11 @@ async function courseBoard(db: PoolClient, teacher: z.infer<typeof neonTeacherSc
   return board
 }
 
-async function snapshot(db: PoolClient, teacher: z.infer<typeof neonTeacherSchema>) {
+async function snapshot(
+  db: PoolClient,
+  teacher: z.infer<typeof neonTeacherSchema>,
+  includeInactiveStudents = false,
+) {
   const scope = teacher.role === 'administrator' ? 's.active' : 's.teacher_id = $1 AND s.active'
   const values = teacher.role === 'administrator' ? [] : [teacher.id]
   const students = z
@@ -87,7 +91,7 @@ async function snapshot(db: PoolClient, teacher: z.infer<typeof neonTeacherSchem
     .parse(
       (
         await db.query(
-          `SELECT s.id, s.name, s.group_name, s.active FROM students s WHERE ${scope} ORDER BY s.name, s.id FOR SHARE`,
+          `SELECT s.id, s.name, s.group_name, s.active FROM students s WHERE ${includeInactiveStudents && teacher.role === 'administrator' ? 'true' : scope} ORDER BY s.name, s.id FOR SHARE`,
           values,
         )
       ).rows,
@@ -616,7 +620,7 @@ export function createHandler(
           (batch && !teacher.canWrite)
         )
           throw new HttpError(403)
-        const current = await snapshot(db, teacher)
+        const current = await snapshot(db, teacher, !batch)
         if (batch) {
           if (batch.events.some((e) => e.actor !== teacher.name)) throw new HttpError(403)
           const newEvents = batch.events.filter((event) => {
@@ -680,7 +684,7 @@ export function createHandler(
           batch && !teacher.canRead
             ? { saved: batch.events.length }
             : batch
-              ? await snapshot(db, teacher)
+              ? await snapshot(db, teacher, true)
               : current
         await db.query('COMMIT')
         return reply(response)

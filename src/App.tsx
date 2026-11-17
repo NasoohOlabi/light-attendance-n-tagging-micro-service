@@ -139,6 +139,8 @@ function Notebook({
   const query = useQueryState()
   const ledger = useLedger(demo !== null, demo === 'assigned', neon)
   const assigned = !!neon || demo === 'assigned'
+  const fullRegister =
+    neon?.teacher.role === 'administrator' && query.tab === 'roster' && !query.course
   const baseProjection = projectEvents(ledger.events)
   const closedCourse = ledger.courses.find((course) => course.id === query.course && !course.open)
   const selectedEnrollments = ledger.enrollments.filter((entry) => entry.courseId === query.course)
@@ -165,7 +167,7 @@ function Notebook({
           ? activeEnrollments
           : selectedEnrollments
         ).some((entry) => entry.studentId === student.studentId)
-      : true,
+      : fullRegister || student.active,
   )
   const projected = assigned ? { ...scopedProjection, students: courseStudents } : baseProjection
   const groups = [
@@ -173,7 +175,7 @@ function Notebook({
   ].sort()
   const students = projected.students.filter(
     (student) =>
-      (query.all || student.active) &&
+      (fullRegister || query.all || student.active) &&
       (!assigned || !query.student || student.studentId === query.student) &&
       (!query.group || student.group === query.group) &&
       (query.tab === 'attendance' ||

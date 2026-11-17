@@ -679,3 +679,108 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     fullPage: true,
   })
 })
+
+test('administrator no-course Students includes the complete inactive register', async ({
+  page,
+}, testInfo) => {
+  const teacher = {
+    role: 'administrator',
+    id: teacherId,
+    name: 'Synthetic Admin',
+    canRead: true,
+    canWrite: true,
+    expiresAt: null,
+  }
+  const students = [
+    { kind: 'student', studentId, name: 'Current Student', group: 'Current', active: true },
+    {
+      kind: 'student',
+      studentId: secondStudentId,
+      name: 'Historical Student',
+      group: 'History',
+      active: false,
+    },
+    {
+      kind: 'student',
+      studentId: '20000000-0000-4000-8000-000000000003',
+      name: 'Unassigned Historical',
+      group: '',
+      active: false,
+    },
+  ]
+  const courses = [{ id: courseA, name: 'Synthetic Course', open: true }]
+  const enrollments = [
+    {
+      id: enrollA,
+      courseId: courseA,
+      studentId,
+      level: 'Course level',
+      active: true,
+      practical: null,
+      theory: null,
+    },
+  ]
+  await page.route('**/api/auth/**', (route) =>
+    route.fulfill({
+      json: {
+        user: { id: teacherId, name: teacher.name, email: 'synthetic@example.test' },
+        session: {
+          id: 'synthetic',
+          userId: teacherId,
+          expiresAt: new Date(Date.now() + 3600000).toISOString(),
+        },
+      },
+    }),
+  )
+  await page.route('**/api/**', (route) =>
+    new URL(route.request().url()).pathname.startsWith('/api/auth/')
+      ? route.fallback()
+      : route.fulfill({
+          json:
+            new URL(route.request().url()).pathname === '/api/me'
+              ? { account: teacher }
+              : { teacher, students, courses, enrollments, events: [] },
+        }),
+  )
+  await page.goto('/?page=app&tab=roster')
+  const rows = page.locator('.roster-table tbody tr'),
+    count = page.locator('.workspace-count strong')
+  await expect(rows).toHaveCount(3)
+  await expect(count).toHaveText('3')
+  await expect(page.getByRole('img', { name: 'Inactive', exact: true })).toHaveCount(2)
+  await page.getByLabel('Find a student').fill('Historical')
+  await expect(rows).toHaveCount(2)
+  await page.getByLabel('Find a student').fill('')
+  await page.getByRole('combobox', { name: 'Group', exact: true }).selectOption('History')
+  await expect(rows).toHaveCount(1)
+  await page.getByRole('combobox', { name: 'Group', exact: true }).selectOption('')
+  await page.reload()
+  await expect(rows).toHaveCount(3)
+  const course = page.getByRole('combobox', { name: 'Course', exact: true })
+  await course.selectOption(courseA)
+  await expect(rows).toHaveCount(1)
+  await expect(count).toHaveText('1')
+  await course.selectOption('')
+  await expect(rows).toHaveCount(3)
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
+  await expect(count).toHaveText('1')
+  await page.getByRole('button', { name: 'Students', exact: true }).click()
+  await expect(rows).toHaveCount(3)
+  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await expect(page.getByRole('columnheader')).toHaveText([
+    'الطالب',
+    'المستوى',
+    'الحالة',
+    'الإجراءات',
+  ])
+  await expect(page.getByRole('img', { name: 'غير نشط', exact: true })).toHaveCount(2)
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+  await mkdir('.artifacts/verification', { recursive: true })
+  await page.screenshot({
+    path: `.artifacts/verification/full-register-${testInfo.project.name}-ar.png`,
+    fullPage: false,
+  })
+})
