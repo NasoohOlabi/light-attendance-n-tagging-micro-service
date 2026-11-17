@@ -682,16 +682,15 @@
 .decision-history-actor {
   font-size: 0.875rem;
 }
+.decision-history-actor {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: underline;
+}
 .decision-history p {
   margin: 0.5rem 0 0;
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.decision-history-actor summary {
-  padding-block: 0.5rem;
-}
-.decision-history-actor span {
-  display: block;
   overflow-wrap: anywhere;
 }
 .grade-dialog > button {

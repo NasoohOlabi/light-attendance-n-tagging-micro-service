@@ -13,3 +13,9 @@ Events are append-only through the API. Pending batches can contain private stud
 [Railway setup](docs/railway-setup.md) covers deployment and recovery. Preserve the Neon source services and data and backup branch `backup/neon-current-2026-11-15` (`77cedae`). Local and synthetic tests do not prove live provider behavior.
 
 The frontend CSP permits three exact SHA-256 style hashes for dnd kit 0.5.3's feedback, grabbing cursor and selection rules. Arbitrary inline styles remain blocked. When upgrading dnd kit, regenerate hashes from its exact emitted style text and verify the actual dragged pill position under the production CSP; ordering alone does not prove the preview works. The synthetic table browser scenario asserts that visual geometry.
+
+## Temporary development dependency exception
+
+Until **2026-12-01 00:00 UTC**, `security:audit` permits only picomatch's [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf), after verifying the local backport described above. The advisory has no patched published version; npm's latest remains 4.0.7. The pinned, patched copies are used by Vite/tinyglobby and lint-staged for repository-controlled build/commit patterns. They are not production dependencies or an application input parser.
+
+The gate first checks installed parser bytes and regression behavior, then prints the full advisory report and the exception explicitly, rejects every other advisory or malformed/failed report, and requires an unfiltered `bun audit --prod` to pass. Moving picomatch into production therefore fails the gate even with the local patch. The exception fails on its expiry date; replace the backport with a verified fixed upstream release and remove the exception together, or review it again before that date. Raw `bun audit` continues to report the known high-severity upstream-version finding because it cannot recognize the local backport.

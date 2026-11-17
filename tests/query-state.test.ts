@@ -6,3 +6,9 @@ test('view URLs discard unknown parameters including bearer credentials', () => 
     'tab=notes&tag=review',
   )
 })
+
+test('account destinations survive URL sanitization', () => {
+  expect(
+    sanitizedSearch('?page=app&view=settings&account=auth%2Fsubject&token=secret').toString(),
+  ).toBe('page=app&view=settings&account=auth%2Fsubject')
+})
