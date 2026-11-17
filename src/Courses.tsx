@@ -556,7 +556,15 @@ function GradePage({
         id: 'result',
         choices: ar ? ['قيد الانتظار', 'ناجح', 'راسب'] : ['Pending', 'Pass', 'Fail'],
         label: ar ? 'النتيجة' : 'Result',
-        value: (entry) => resultLabel(gradeResult(entry, attendanceRatio(entry))),
+        value: (entry) => {
+          const result = gradeResult(entry, attendanceRatio(entry))
+          const average =
+            entry.practical === null || entry.theory === null
+              ? -1
+              : (entry.practical + entry.theory) / 2
+          // Scores span 0–100; separate bands keep status ahead of the average.
+          return (result === 'pass' ? 202 : result === 'fail' ? 101 : 0) + average
+        },
       },
     ],
     false,
