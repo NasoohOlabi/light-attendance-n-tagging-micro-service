@@ -1621,3 +1621,7 @@
 New attendance requires an active enrollment in an open course. Existing unscoped history, corrections and identical retries remain available. Each enrollment has a nullable reference to an existing teacher, independently of roster access or grading. Backup version 11 restores the reference and rejects lossy comparisons.
 
 The core verification gate passed. Disposable PostgreSQL 18.6 passed the course integration with 111 assertions and the backup transfer integration with 70. Production migration 012 committed and the foreign key was verified. Workbook import and UI verification are recorded separately.
+
+### 22:12 Asia/Damascus — Private workbook import
+
+Matched all 32 nonblank teacher cells in the supplied workbook to seven existing teachers and their course enrollments, using the original private roster import IDs. The other 39 named rows had blank teacher cells. Added a private workbook adapter and transactional import command. The adapter test passed. The production dry run matched 32, the transaction assigned 32, and a second dry run matched all 32 with zero changes. Removed temporary Railway SSH access. The workbook and identity mappings stay outside Git.
