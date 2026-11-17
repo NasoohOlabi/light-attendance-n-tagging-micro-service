@@ -56,6 +56,7 @@ const allowedKeys = new Set([
   'course',
   'courseView',
   'all',
+  'tables',
 ])
 export function sanitizedSearch(search: string) {
   const query = new URLSearchParams(search)
@@ -82,4 +83,30 @@ export function navigatePage(page: 'home' | 'app') {
   window.history.pushState(null, '', window.location.pathname + (page === 'app' ? '?page=app' : ''))
   window.dispatchEvent(new PopStateEvent('popstate'))
   window.scrollTo(0, 0)
+}
+
+const tableStateSchema = z.object({
+  sorting: z.array(z.object({ id: z.string().max(100), desc: z.boolean() })).max(1),
+  filters: z.array(z.object({ id: z.string().max(100), value: z.string().max(200) })).max(30),
+})
+type TableState = z.infer<typeof tableStateSchema>
+const emptyTableState: TableState = { sorting: [], filters: [] }
+function readTableStates(search: string) {
+  const raw = new URLSearchParams(search).get('tables')
+  if (!raw || raw.length > 10000) return {}
+  try {
+    return z.record(z.string().max(100), tableStateSchema).safeParse(JSON.parse(raw)).data ?? {}
+  } catch {
+    return {}
+  }
+}
+export function useTableQuery(id: string) {
+  const search = useSyncExternalStore(subscribe, () => window.location.search)
+  return readTableStates(search)[id] ?? emptyTableState
+}
+export function setTableQuery(id: string, state: TableState) {
+  const states = readTableStates(window.location.search)
+  if (!state.sorting.length && !state.filters.length) delete states[id]
+  else states[id] = state
+  setQuery({ tables: Object.keys(states).length ? JSON.stringify(states) : '' })
 }

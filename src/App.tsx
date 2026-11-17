@@ -1,3 +1,4 @@
+import { TableHeader, useDataTable } from './DataTable'
 import { CircleCheck, CircleMinus, RefreshCw, UserRound } from 'lucide-react'
 import { LanguageProvider, useLanguage, type TranslationKey } from './i18n'
 import { useEffect, useState } from 'react'
@@ -571,6 +572,28 @@ function StudentDetails({
 }) {
   const { t, language } = useLanguage()
   const ar = language === 'ar'
+  const detailRecords = projected.attendance.filter(
+    ({ value }) => value.studentId === student?.studentId,
+  )
+  const detailTable = useDataTable('student-history', detailRecords, [
+    { id: 'date', label: ar ? 'التاريخ' : 'Date', value: (row) => row.value.date },
+    {
+      id: 'course',
+      label: ar ? 'الدورة' : 'Course',
+      value: (row) =>
+        courses.find((course) =>
+          enrollments.some(
+            (entry) => entry.id === row.value.enrollmentId && entry.courseId === course.id,
+          ),
+        )?.name ?? (ar ? 'بلا دورة' : 'No course'),
+    },
+    {
+      id: 'status',
+      choices: [t('present'), t('absent'), t('excused')],
+      label: ar ? 'الحالة' : 'Status',
+      value: (row) => t(row.value.status),
+    },
+  ])
   if (!student)
     return (
       <section className="panel">
@@ -692,15 +715,9 @@ function StudentDetails({
           aria-label={ar ? 'سجل الحضور' : 'Attendance history'}
         >
           <table className="role-table">
-            <thead>
-              <tr>
-                <th>{ar ? 'التاريخ' : 'Date'}</th>
-                <th>{ar ? 'الدورة' : 'Course'}</th>
-                <th>{ar ? 'الحالة' : 'Status'}</th>
-              </tr>
-            </thead>
+            <TableHeader model={detailTable} />
             <tbody>
-              {records.map(({ event, value }) => (
+              {detailTable.rows.map(({ event, value }) => (
                 <tr key={event.id}>
                   <td>{value.date}</td>
                   <td>
@@ -759,8 +776,24 @@ function AttendanceView({
       .filter(({ value }) => value.date === date)
       .map(({ value }) => [value.studentId, value.status]),
   )
-  const visible = search.trim() ? rankStudents(students, search) : students
+  const candidates = search.trim() ? rankStudents(students, search) : students
   const level = (student: Student) => studentLevel(student, courseSelected, enrollments)
+  const attendanceTable = useDataTable('attendance', candidates, [
+    { id: 'student', label: t('Student'), value: (student) => student.name },
+    { id: 'level', label: language === 'ar' ? 'المستوى' : 'Level', value: level },
+    {
+      id: 'attendance',
+      choices: [t('Not marked'), t('present'), t('absent'), t('excused')],
+      label: language === 'ar' ? 'الحضور' : 'Attendance',
+      value: (student) => {
+        const status = draft[student.studentId] ?? current.get(student.studentId)
+        return status === 'present' || status === 'absent' || status === 'excused'
+          ? t(status)
+          : t('Not marked')
+      },
+    },
+  ])
+  const visible = attendanceTable.rows
   const rows = (items: Student[]) => (
     <div
       className="role-table-scroll"
@@ -774,13 +807,7 @@ function AttendanceView({
           <col className="roster-level-column" />
           <col className="roster-attendance-column" />
         </colgroup>
-        <thead>
-          <tr>
-            <th scope="col">{t('Student')}</th>
-            <th scope="col">{language === 'ar' ? 'المستوى' : 'Level'}</th>
-            <th scope="col">{language === 'ar' ? 'الحضور' : 'Attendance'}</th>
-          </tr>
-        </thead>
+        <TableHeader model={attendanceTable} />
         <tbody>
           {items.map((student) => (
             <tr key={student.studentId}>
@@ -841,7 +868,7 @@ function AttendanceView({
           />
         </label>
       </div>
-      {!visible.length ? (
+      {!candidates.length ? (
         <Empty
           text={
             search.trim()
@@ -866,7 +893,7 @@ function AttendanceView({
           </button>
           {search.trim()
             ? rows(visible)
-            : [...new Set(visible.map(level))].sort().map((group) => (
+            : [...new Set(candidates.map(level))].sort().map((group) => (
                 <details key={group} open className="attendance-group">
                   <summary>{group || (language === 'ar' ? 'بلا مستوى' : 'No level')}</summary>
                   {rows(visible.filter((student) => level(student) === group))}
@@ -1099,6 +1126,54 @@ function RosterView({
   const ar = language === 'ar'
   const [name, setName] = useState('')
   const [group, setGroup] = useState('')
+  const rosterTable = useDataTable('roster', students, [
+    { id: 'first', label: ar ? 'الاسم الأول' : 'First name', value: (s) => s.firstName ?? s.name },
+    { id: 'last', label: ar ? 'اسم العائلة' : 'Last name', value: (s) => s.lastName },
+    { id: 'phone', label: ar ? 'رقم الهاتف' : 'Phone', value: (s) => s.whatsapp },
+    {
+      id: 'attendance',
+      label: ar ? 'الحضور' : 'Attendance',
+      value: (s) => {
+        const rows = attendance.filter(({ value }) => value.studentId === s.studentId)
+        return rows.length
+          ? (rows.filter(({ value }) => value.status === 'present').length / rows.length) * 100
+          : null
+      },
+      filterText: (s) => {
+        const rows = attendance.filter(({ value }) => value.studentId === s.studentId)
+        return rows.length
+          ? `${((rows.filter(({ value }) => value.status === 'present').length / rows.length) * 100).toFixed(1)}%`
+          : ar
+            ? 'غير مسجل'
+            : 'Not recorded'
+      },
+    },
+    {
+      id: 'level',
+      label: ar ? 'المستوى' : 'Level',
+      value: (s) => studentLevel(s, courseSelected, enrollments),
+    },
+    {
+      id: 'courses',
+      label: ar ? 'الدورات' : 'Courses',
+      value: (s) =>
+        courses
+          .filter((course) =>
+            allEnrollments.some(
+              (entry) =>
+                entry.studentId === s.studentId && entry.courseId === course.id && entry.active,
+            ),
+          )
+          .map((course) => course.name)
+          .join(', ') || (ar ? 'لا يوجد' : 'None'),
+    },
+    {
+      id: 'active',
+      choices: ar ? ['نشط', 'غير نشط'] : ['Active', 'Inactive'],
+      label: ar ? 'الحالة' : 'Active',
+      value: (s) => (s.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'),
+    },
+  ])
   return (
     <section className="panel">
       <h2 className="title mb-5">{t('Your students')}</h2>
@@ -1155,20 +1230,9 @@ function RosterView({
               <col className="roster-active-column" />
               <col className="roster-actions-column" />
             </colgroup>
-            <thead>
-              <tr>
-                <th scope="col">{ar ? 'الاسم الأول' : 'First name'}</th>
-                <th scope="col">{ar ? 'اسم العائلة' : 'Last name'}</th>
-                <th scope="col">{ar ? 'رقم الهاتف' : 'Phone'}</th>
-                <th scope="col">{ar ? 'الحضور' : 'Attendance'}</th>
-                <th scope="col">{ar ? 'المستوى' : 'Level'}</th>
-                <th scope="col">{ar ? 'الدورات' : 'Courses'}</th>
-                <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
-                <th scope="col">{ar ? 'الإجراءات' : 'Actions'}</th>
-              </tr>
-            </thead>
+            <TableHeader model={rosterTable} actions />
             <tbody>
-              {students.map((student) => (
+              {rosterTable.rows.map((student) => (
                 <tr key={student.studentId} data-student-id={student.studentId}>
                   <td>
                     <bdi>{student.firstName ?? student.name}</bdi>
@@ -1351,6 +1415,23 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
   const { t, language } = useLanguage()
   const ids = new Set(students.map((student) => student.studentId))
   const records = projected.attendance.filter(({ value }) => ids.has(value.studentId))
+  const summaryTable = useDataTable('summary', students, [
+    { id: 'student', label: t('Student'), value: (student) => student.name },
+    ...statuses.map((status) => ({
+      id: status,
+      label: t(status),
+      value: (student: Student) =>
+        records.filter(
+          ({ value }) => value.studentId === student.studentId && value.status === status,
+        ).length,
+    })),
+    {
+      id: 'notes',
+      label: t('Notes'),
+      value: (student) =>
+        projected.notes.filter(({ value }) => value.studentId === student.studentId).length,
+    },
+  ])
   return (
     <section className="panel">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -1410,24 +1491,10 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
         aria-label={t('Attendance overview')}
         tabIndex={0}
       >
-        <table className="w-full min-w-[42rem] table-fixed text-start text-sm">
-          <thead>
-            <tr>
-              <th scope="col" className="w-40 p-3 text-start">
-                {t('Student')}
-              </th>
-              {statuses.map((status) => (
-                <th scope="col" key={status} className="p-3">
-                  {t(status)}
-                </th>
-              ))}
-              <th scope="col" className="p-3">
-                {t('Notes')}
-              </th>
-            </tr>
-          </thead>
+        <table className="role-table summary-table min-w-[42rem] table-fixed text-start text-sm">
+          <TableHeader model={summaryTable} />
           <tbody>
-            {students.map((student) => (
+            {summaryTable.rows.map((student) => (
               <tr key={student.studentId} className="border-t border-slate-100">
                 <th scope="row" dir="auto" className="p-3 text-start font-medium">
                   {student.name}

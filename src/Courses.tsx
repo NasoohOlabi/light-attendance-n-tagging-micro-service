@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from 'react'
+import { TableHeader, useDataTable } from './DataTable'
+import { useEffect, useState } from 'react'
 import { ClipboardList, History, Lock, LockOpen, Pencil, UsersRound } from 'lucide-react'
 import { neonAdminBoardSchema, type Course, type Enrollment } from '../shared/neon'
 import { projectEvents, type LedgerEvent } from '../shared/ledger'
@@ -79,6 +80,54 @@ export function Courses({
   const matching = rankedIds.flatMap(
     (id) => board?.students.filter((student) => student.studentId === id) ?? [],
   )
+  const courseTable = useDataTable('courses', courses, [
+    { id: 'name', label: ar ? 'الدورة' : 'Course', value: (item) => item.name },
+    {
+      id: 'status',
+      choices: ar ? ['مفتوحة', 'مغلقة'] : ['Open', 'Closed'],
+      label: ar ? 'الحالة' : 'Status',
+      value: (item) => (item.open ? (ar ? 'مفتوحة' : 'Open') : ar ? 'مغلقة' : 'Closed'),
+    },
+  ])
+  const membershipTable = useDataTable('course-students', matching, [
+    { id: 'first', label: ar ? 'الاسم الأول' : 'First name', value: (s) => s.firstName },
+    { id: 'last', label: ar ? 'اسم العائلة' : 'Last name', value: (s) => s.lastName },
+    { id: 'roster-level', label: ar ? 'مستوى القائمة' : 'Roster level', value: (s) => s.group },
+    {
+      id: 'course-level',
+      label: ar ? 'مستوى الدورة' : 'Course level',
+      value: (s) =>
+        drafts[`${course?.id}:${s.studentId}`]?.level ??
+        courseEntries.find((entry) => entry.studentId === s.studentId)?.level ??
+        s.group,
+    },
+    {
+      id: 'enrolled',
+      choices: ar ? ['نعم', 'لا'] : ['Yes', 'No'],
+      label: ar ? 'مسجل' : 'Enrolled',
+      value: (s) =>
+        courseEntries.find((entry) => entry.studentId === s.studentId)?.active
+          ? ar
+            ? 'نعم'
+            : 'Yes'
+          : ar
+            ? 'لا'
+            : 'No',
+    },
+    {
+      id: 'handbook',
+      choices: ar ? ['نعم', 'لا'] : ['Yes', 'No'],
+      label: ar ? 'استلم الكتاب' : 'Handbook received',
+      value: (s) =>
+        courseEntries.find((entry) => entry.studentId === s.studentId)?.handbookReceived
+          ? ar
+            ? 'نعم'
+            : 'Yes'
+          : ar
+            ? 'لا'
+            : 'No',
+    },
+  ])
   return (
     <section className="panel space-y-5">
       {!query.courseView && <h1 className="title">{ar ? 'الدورات' : 'Courses'}</h1>}
@@ -104,21 +153,9 @@ export function Courses({
               tabIndex={0}
             >
               <table className="role-table course-list-table w-full table-fixed" role="table">
-                <thead role="rowgroup">
-                  <tr role="row">
-                    <th scope="col" role="columnheader">
-                      {ar ? 'الدورة' : 'Course'}
-                    </th>
-                    <th scope="col" role="columnheader">
-                      {ar ? 'الحالة' : 'Status'}
-                    </th>
-                    <th scope="col" role="columnheader">
-                      {ar ? 'الإجراءات' : 'Actions'}
-                    </th>
-                  </tr>
-                </thead>
+                <TableHeader model={courseTable} actions />
                 <tbody role="rowgroup">
-                  {courses.map((item) => (
+                  {courseTable.rows.map((item) => (
                     <tr key={item.id} role="row">
                       <td dir="auto" role="cell">
                         {item.name}
@@ -282,19 +319,9 @@ export function Courses({
                 tabIndex={0}
               >
                 <table className="role-table course-students-table">
-                  <thead>
-                    <tr>
-                      <th>{ar ? 'الاسم الأول' : 'First name'}</th>
-                      <th>{ar ? 'اسم العائلة' : 'Last name'}</th>
-                      <th>{ar ? 'مستوى القائمة' : 'Roster level'}</th>
-                      <th>{ar ? 'مستوى الدورة' : 'Course level'}</th>
-                      <th>{ar ? 'مسجل' : 'Enrolled'}</th>
-                      <th>{ar ? 'استلم الكتاب' : 'Handbook received'}</th>
-                      <th>{ar ? 'الإجراءات' : 'Actions'}</th>
-                    </tr>
-                  </thead>
+                  <TableHeader model={membershipTable} actions />
                   <tbody>
-                    {matching.map((student) => {
+                    {membershipTable.rows.map((student) => {
                       const entry = courseEntries.find(
                         (item) => item.studentId === student.studentId,
                       )
@@ -434,6 +461,84 @@ function GradePage({
     )
   })
   const attendance = projectEvents(events).attendance
+  const gradeResult = (entry: Enrollment, ratio: number | null) => {
+    const draft = drafts[entry.id]
+    if (
+      settingsDirty ||
+      (draft &&
+        (draft.practical !== (entry.practical?.toString() ?? '') ||
+          draft.theory !== (entry.theory?.toString() ?? ''))) ||
+      entry.practical === null ||
+      entry.theory === null ||
+      ratio === null
+    )
+      return 'pending'
+    return entry.practical >= course.practicalMinimum &&
+      entry.theory >= course.theoryMinimum &&
+      ratio >= course.attendanceMinimum
+      ? 'pass'
+      : 'fail'
+  }
+  const attendanceRatio = (entry: Enrollment) => {
+    const rows = attendance.filter(({ value }) => value.enrollmentId === entry.id)
+    return rows.length
+      ? (rows.filter(({ value }) => value.status === 'present').length / rows.length) * 100
+      : null
+  }
+  const resultLabel = (result: string) =>
+    result === 'pending'
+      ? ar
+        ? 'قيد الانتظار'
+        : 'Pending'
+      : result === 'pass'
+        ? ar
+          ? 'ناجح'
+          : 'Pass'
+        : ar
+          ? 'راسب'
+          : 'Fail'
+  const gradeTable = useDataTable('grades', entries, [
+    {
+      id: 'first',
+      label: ar ? 'الاسم الأول' : 'First name',
+      value: (entry) => students.find((s) => s.studentId === entry.studentId)?.firstName,
+    },
+    {
+      id: 'last',
+      label: ar ? 'اسم العائلة' : 'Last name',
+      value: (entry) => students.find((s) => s.studentId === entry.studentId)?.lastName,
+    },
+    { id: 'level', label: ar ? 'مستوى الدورة' : 'Course level', value: (entry) => entry.level },
+    {
+      id: 'enrolled',
+      choices: ar ? ['نعم', 'لا'] : ['Yes', 'No'],
+      label: ar ? 'مسجل' : 'Enrolled',
+      value: (entry) => (entry.active ? (ar ? 'نعم' : 'Yes') : ar ? 'لا' : 'No'),
+    },
+    {
+      id: 'attendance',
+      label: ar ? 'الحضور' : 'Attendance',
+      value: attendanceRatio,
+      filterText: (entry) => {
+        const ratio = attendanceRatio(entry)
+        return ratio === null ? (ar ? 'غير متاح' : 'Unavailable') : `${ratio.toFixed(1)}%`
+      },
+    },
+    ...(['practical', 'theory'] as const).map((key) => ({
+      id: key,
+      label: key === 'practical' ? (ar ? 'عملي' : 'Practical') : ar ? 'نظري' : 'Theory',
+      value: (entry: Enrollment) => {
+        const value = drafts[entry.id]?.[key] ?? entry[key]
+        return value == null || value === '' ? null : Number(value)
+      },
+    })),
+    {
+      id: 'result',
+      choices: ar ? ['قيد الانتظار', 'ناجح', 'راسب'] : ['Pending', 'Pass', 'Fail'],
+      label: ar ? 'النتيجة' : 'Result',
+      value: (entry) => resultLabel(gradeResult(entry, attendanceRatio(entry))),
+    },
+  ])
   return (
     <>
       <form
@@ -488,46 +593,17 @@ function GradePage({
         tabIndex={0}
       >
         <table className="role-table min-w-[68rem] [&_th]:whitespace-nowrap [&_input]:w-24">
-          <thead>
-            <tr>
-              <th>{ar ? 'الاسم الأول' : 'First name'}</th>
-              <th>{ar ? 'اسم العائلة' : 'Last name'}</th>
-              <th>{ar ? 'مستوى الدورة' : 'Course level'}</th>
-              <th>{ar ? 'مسجل' : 'Enrolled'}</th>
-              <th>{ar ? 'الحضور' : 'Attendance'}</th>
-              <th>{ar ? 'عملي' : 'Practical'}</th>
-              <th>{ar ? 'نظري' : 'Theory'}</th>
-              <th>{ar ? 'النتيجة' : 'Result'}</th>
-              <th>{ar ? 'الإجراءات' : 'Actions'}</th>
-            </tr>
-          </thead>
+          <TableHeader model={gradeTable} actions />
           <tbody>
-            {entries.map((entry) => {
+            {gradeTable.rows.map((entry) => {
               const student = students.find((item) => item.studentId === entry.studentId)
               if (!student) return null
               const draft = drafts[entry.id] ?? {
                 practical: entry.practical?.toString() ?? '',
                 theory: entry.theory?.toString() ?? '',
               }
-              const records = attendance.filter(({ value }) => value.enrollmentId === entry.id)
-              const ratio = records.length
-                ? (records.filter(({ value }) => value.status === 'present').length /
-                    records.length) *
-                  100
-                : null
-              const result =
-                settingsDirty ||
-                draft.practical !== (entry.practical?.toString() ?? '') ||
-                draft.theory !== (entry.theory?.toString() ?? '') ||
-                entry.practical === null ||
-                entry.theory === null ||
-                ratio === null
-                  ? 'pending'
-                  : entry.practical >= course.practicalMinimum &&
-                      entry.theory >= course.theoryMinimum &&
-                      ratio >= course.attendanceMinimum
-                    ? 'pass'
-                    : 'fail'
+              const ratio = attendanceRatio(entry)
+              const result = gradeResult(entry, ratio)
               const formId = `grades-${entry.id}`
               return (
                 <tr key={entry.id}>
@@ -558,19 +634,7 @@ function GradePage({
                       />
                     </td>
                   ))}
-                  <td>
-                    {result === 'pending'
-                      ? ar
-                        ? 'قيد الانتظار'
-                        : 'Pending'
-                      : result === 'pass'
-                        ? ar
-                          ? 'ناجح'
-                          : 'Pass'
-                        : ar
-                          ? 'راسب'
-                          : 'Fail'}
-                  </td>
+                  <td>{resultLabel(result)}</td>
                   <td>
                     <form
                       id={formId}

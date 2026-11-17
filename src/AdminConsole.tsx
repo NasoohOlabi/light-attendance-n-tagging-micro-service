@@ -1,3 +1,4 @@
+import { TableHeader, useDataTable } from './DataTable'
 import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
@@ -86,6 +87,27 @@ export function AdminConsole({
       cancelled = true
     }
   }, [userId, revision])
+  const studentTable = useDataTable('admin-students', board?.students ?? [], [
+    { id: 'first', label: ar ? 'الاسم الأول' : 'First name', value: (s) => s.firstName },
+    { id: 'last', label: ar ? 'اسم العائلة' : 'Last name', value: (s) => s.lastName },
+    { id: 'level', label: ar ? 'المستوى' : 'Level', value: (s) => s.group },
+    { id: 'phone', label: ar ? 'واتساب' : 'WhatsApp', value: (s) => s.whatsapp },
+    { id: 'location', label: ar ? 'المنطقة' : 'Location', value: (s) => s.location },
+    { id: 'year', label: ar ? 'سنة الميلاد' : 'Birth year', value: (s) => s.birthYear },
+    {
+      id: 'teacher',
+      label: ar ? 'المعلم' : 'Teacher',
+      value: (s) =>
+        board?.teachers.find((teacher) => teacher.teacherId === s.teacherId)?.name ??
+        (ar ? 'غير معين' : 'Unassigned'),
+    },
+    {
+      id: 'active',
+      choices: ar ? ['نشط', 'غير نشط'] : ['Active', 'Inactive'],
+      label: ar ? 'الحالة' : 'Active',
+      value: (s) => (s.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'),
+    },
+  ])
   async function save(path: string, body: unknown) {
     setBusy(true)
     setError('')
@@ -227,21 +249,9 @@ export function AdminConsole({
                     tabIndex={0}
                   >
                     <table className="role-table role-students-table">
-                      <thead>
-                        <tr>
-                          <th scope="col">{ar ? 'الاسم الأول' : 'First name'}</th>
-                          <th scope="col">{ar ? 'اسم العائلة' : 'Last name'}</th>
-                          <th scope="col">{ar ? 'المستوى' : 'Level'}</th>
-                          <th scope="col">{ar ? 'واتساب' : 'WhatsApp'}</th>
-                          <th scope="col">{ar ? 'المنطقة' : 'Location'}</th>
-                          <th scope="col">{ar ? 'سنة الميلاد' : 'Birth year'}</th>
-                          <th scope="col">{ar ? 'المعلم' : 'Teacher'}</th>
-                          <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
-                          <th scope="col">{ar ? 'الإجراءات' : 'Actions'}</th>
-                        </tr>
-                      </thead>
+                      <TableHeader model={studentTable} actions />
                       <tbody>
-                        {board.students.map((student) => (
+                        {studentTable.rows.map((student) => (
                           <tr key={student.studentId}>
                             <td dir="auto">{student.firstName}</td>
                             <td dir="auto">{student.lastName || '—'}</td>
