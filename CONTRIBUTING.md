@@ -18,7 +18,7 @@ bun run verify:release
 3. Make one coherent user outcome or setup change. Keep behavior documentation and meaningful tests with the implementation. Add dated Asia/Damascus notes to `docs/work-log.md` with request, changes, verification and limitations; label recovered work and unknown provenance.
 4. Run `bun run verify`; use the verification skill for affected UI paths. Run `bun run verify:release` for promotion. Stage named paths or hunks, inspect `git diff --cached`, then `git diff --cached --check`. Never stage everything indiscriminately.
 5. Commit with a short imperative subject and a body explaining what changed, why and actual checks. Split unrelated units. Interrupted work gets a clearly labeled WIP commit naming remaining work and failed checks.
-6. Verify the resulting commit and final status. Report hashes, uncommitted paths and their ownership, and push state. Preserve history; amend/rebase/force-push only when authorized. If blocked, name the exact failed command and affected paths.
+6. Complete the development delivery sequence authorized in `AGENTS.md`: push completed work, merge its PR into `main` after required checks pass, then verify the exact-main Railway deployment and affected behavior. Verify the resulting commits and final status; report hashes, deployment proof, uncommitted paths and their ownership. Preserve history; amend/rebase/force-push only when authorized. If blocked, name the exact failed command and affected paths.
 
 ## Pull requests
 
