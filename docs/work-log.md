@@ -1660,8 +1660,30 @@ The mobile Courses screenshot showed five unlabeled icons per row. Courses now h
 
 `bun run verify:release` passed all local gates and 116 browser cases. The browser coverage exercises keyboard focus and Escape, outside dismissal, course selection and status, grade override and focus return, history details and undo, and 320/390/430px layouts in English and Arabic. Browser checks use Chromium on desktop and emulated phones with synthetic API responses. Four optional database suites skipped. Railway's production trigger points to `main` with Wait for CI enabled. Exact-commit deployment and shipped-asset verification follow the PR merge.
 
+## 2026-11-17 23:30 Asia/Damascus (UTC+03:00) - Complete the Courses header divider
+
+The screenshot showed a gap above the three-dot menus. Keep the Actions header cell in the phone grid so its bottom border meets the adjacent headers, and visually hide only the accessible label.
+
+The course browser regression reproduced the gap before the fix. It checks column alignment, divider style and menu interaction on desktop and at 320/390/430px in English and Arabic. The phone cases cover light and dark appearance with synthetic data. The Arabic dark screenshot shows a continuous divider. Railway's `main` trigger has Wait for CI enabled. The PR records the live deployment result.
+
+`bun run verify:release` passed all gates, including 116 browser cases and 33 local tests. Four optional database suites skipped. Phones were emulated in Chromium.
+
+## 2026-11-17 23:34 Asia/Damascus (UTC+03:00) - Move Courses table controls beside the title
+
+The mobile Courses screenshot requested more room for the course list. Sort and Filter now share the heading row, at the top-left in Arabic and top-right in English. The saved list starts with its column headings, and Create course retains its own row.
+
+The focused Chromium test reproduced the lower placement and passed after the change on desktop and 320/390/430px phones in both languages. It checks the 44px buttons, both popovers, and filtering through reload and clearing with synthetic data and zero writes. The full suite exposed that the first course action popover can cover the next row's trigger in the tighter layout. The test now opens the next menu by keyboard and still checks outside-tap dismissal. The focused enrollment scenario passed on desktop and mobile.
+
+`bun run verify:release` passed at 23:36 with 118 browser cases, 33 local tests, 138 assertions, and the build, lint, artifact, formatting and security gates. Four optional database tests skipped.
+
+Railway's production trigger reports `main` with `checkSuites: true` (Wait for CI). Exact-main deployment, health, and the synthetic layout check against the shipped build follow PR checks. Physical phones and live authenticated sessions are outside this layout check.
+
+At 23:40, `bun run verify:release` passed again after integrating the mobile divider fix from main `42fe9bc`. The combined run passed 118 browser cases and 33 local tests. Four optional database tests skipped.
+
 ## 2026-11-17 23:41 Asia/Damascus — Promote students on course closure
 
 Closing from Courses or Grades now advances an active passing enrollment's whole-number course level by one on the student's roster record. The server uses saved thresholds, scores, corrected attendance and any effective override. Closure and the roster updates commit together. Higher roster levels, custom labels and historical enrollment levels remain intact. This change applies on closure going forward and needs no database migration.
 
 The disposable PostgreSQL regression passed with 122 assertions covering closure, corrected and legacy attendance, overrides, fractional and Arabic numeric values, inactive records, preserved enrollment levels, and retry/reopen behavior. Real Better Auth sessions in Chromium at 390px and 1280px exercised both Close course buttons, saw level 2 then 3 in Manage students, and confirmed the roster after reload and the original course levels in Postgres. Fixtures were synthetic. Railway's main deployment trigger reports Wait for CI enabled. Physical-device checks are outside this verification.
+
+The local release gate passed with 116 browser cases and 35 tests, including the disposable course and same-origin Auth database cases. Two optional name and backup suites were skipped. After integrating the newer Courses header changes from `7ec2978`, `bun run verify` passed again with 294 assertions, and all 20 focused Courses and table browser cases passed. The integration retained both existing work-log entries. GitHub CI verifies the combined revision before merge.

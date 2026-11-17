@@ -161,7 +161,12 @@ async function syntheticTables(
   return { writes, snapshot }
 }
 
-async function everyColumn(table: Locator, count: number, actions = false, filters = true) {
+async function everyColumn(
+  table: Locator,
+  count: number,
+  actions = false,
+  hasFilterCaption = true,
+) {
   await expect(table).toBeVisible()
   const page = table.page()
   if ((page.viewportSize()?.width ?? 0) <= 1024) {
@@ -198,9 +203,11 @@ async function everyColumn(table: Locator, count: number, actions = false, filte
   const headers = table.locator('thead th[aria-sort]')
   await expect(headers).toHaveCount(count)
   await expect(table.locator('thead .table-filter')).toHaveCount(0)
-  await expect(table.getByRole('button', { name: 'Filter options' })).toHaveCount(filters ? 1 : 0)
+  await expect(table.getByRole('button', { name: 'Filter options' })).toHaveCount(
+    hasFilterCaption ? 1 : 0,
+  )
   const controls = table.locator('.table-controls')
-  if (filters) {
+  if (hasFilterCaption) {
     const controlSize = await controls.boundingBox()
     expect(controlSize?.height).toBeLessThanOrEqual(60)
     for (const trigger of await controls.getByRole('button').all()) {
@@ -272,7 +279,7 @@ test('every staff table column sorts and filters without writes', async ({ page 
       page.locator('table').first(),
       columns,
       actions,
-      !query.includes('courseView=grades'),
+      query !== 'view=courses' && !query.includes('courseView=grades'),
     )
   }
   for (const raw of [
@@ -313,6 +320,60 @@ test('every staff table column sorts and filters without writes', async ({ page 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true,
     )
+  }
+  expect(writes).toEqual([])
+})
+
+test('course list controls share the heading row at the opposite edge', async ({
+  page,
+}, testInfo) => {
+  const { writes } = await syntheticTables(page)
+  await page.goto('/?page=app&view=courses')
+  const table = page.locator('.course-list-table')
+  const widths = testInfo.project.name === 'mobile' ? [320, 390, 430] : [1280]
+  for (const ar of [false, true]) {
+    if (ar) await clickAccountAction(page, 'العربية')
+    const title = page.getByRole('heading', { name: ar ? 'الدورات' : 'Courses', exact: true })
+    const filter = page.getByRole('button', { name: ar ? 'خيارات التصفية' : 'Filter options' })
+    const sort = page.getByRole('button', { name: ar ? 'خيارات الفرز' : 'Sort options' })
+    const create = page.getByRole('button', { name: ar ? 'إنشاء دورة' : 'Create course' })
+    await expect(title).toBeVisible()
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 844 })
+      const heading = await title.boundingBox()
+      const createButton = await create.boundingBox()
+      if (!heading || !createButton) throw new Error('Courses heading or Create course is hidden')
+      for (const trigger of [filter, sort]) {
+        const button = await trigger.boundingBox()
+        if (!button) throw new Error('Course table control is hidden')
+        expect(button.width).toBeGreaterThanOrEqual(44)
+        expect(button.height).toBeGreaterThanOrEqual(44)
+        expect(button.y).toBeLessThan(heading.y + heading.height)
+        expect(button.y + button.height).toBeLessThanOrEqual(createButton.y)
+        if (ar) expect(button.x + button.width).toBeLessThanOrEqual(heading.x)
+        else expect(button.x).toBeGreaterThanOrEqual(heading.x + heading.width)
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        width,
+      )
+    }
+    await expect(table.locator('caption')).toHaveCount(0)
+    await sort.click()
+    await expect(
+      page.getByRole('dialog', { name: ar ? 'خيارات الفرز' : 'Sort options' }),
+    ).toBeVisible()
+    await page.keyboard.press('Escape')
+    await filter.click()
+    await page.getByLabel(ar ? 'إضافة تصفية' : 'Add filter').selectOption('status')
+    await page.getByLabel(ar ? 'تصفية الحالة' : 'Filter Status', { exact: true }).selectOption('2')
+    await expect(table.locator('tbody tr')).toHaveText(/Zebra course/)
+    await page.reload()
+    await expect(table.locator('tbody tr')).toHaveCount(1)
+    await expect(filter.locator('.table-control-count')).toHaveText('1')
+    await filter.click()
+    await page.getByRole('button', { name: ar ? 'مسح التصفية' : 'Clear filters' }).click()
+    await expect(table.locator('tbody tr')).toHaveCount(2)
+    await page.keyboard.press('Escape')
   }
   expect(writes).toEqual([])
 })
