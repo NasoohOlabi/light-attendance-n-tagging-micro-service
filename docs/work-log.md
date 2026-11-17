@@ -1593,3 +1593,13 @@
 **Main integration at 2026-11-17 21:18 Asia/Damascus** PR #92 conflicted with `ef70342` in this work log. Preserved both sets of entries. The full release gate passed on the combined tree with 108 browser cases and 30 local tests. Four optional database suites skipped. Fresh PR checks and exact-main Railway verification remain pending.
 
 **Profile settings integration at 2026-11-17 21:26 Asia/Damascus** Required checks passed on `eaced22`. Main advanced to `67df862`, and the work log conflicted again. Preserved both sets of entries and the new profile layout rules. `bun run verify:release` passed 114 browser cases and 33 local tests with 137 assertions, including mobile Grades spacing and the profile controls. Four optional database suites skipped. The new head needs CI before merge and Railway verification.
+
+## 2026-11-17 21:43 Asia/Damascus (UTC+03:00) - Align the profile icon beside the logo
+
+**Request/reason:** Owner reported the misplaced avatar below the logo in the selected-course desktop sidebar. Started clean at local main 54b6195, fast-forwarded to origin/main c91dada and created fix/profile-icon-alignment without a worktree.
+
+**Changes:** Removed the desktop selected-course rule that forced the brand to full width and wrapped the avatar onto a second row. Existing flex sizing and course-name ellipsis retain one aligned header row. Added vertical alignment to the shared real-browser header assertion and exercised branded/long course names, dropdown bounds, English/Arabic and 320/390/1440px widths. Updated behavior and verification documentation.
+
+**Verification/limits:** Before the fix, the focused course-preference check failed with a 52.4px center offset. After the fix all 10 targeted desktop/mobile course-preference and profile scenarios passed. Inspected the synthetic desktop capture. Full release gate and exact-main Railway delivery results follow. No API/schema changes; synthetic checks do not prove real account persistence or physical devices.
+
+**Final local gate:** bun run verify:release passed all 114 desktop/mobile browser cases, 33 local tests and all lint/build/artifact, formatting, secret/history and dependency checks. Four optional database suites skipped. The initial gate failed because the existing node_modules did not contain main's pinned parser patch; bun install --frozen-lockfile --force restored the tracked installation and the parser hash/regression gate passed. The existing dated development-only advisory exception remains as documented in SECURITY.md. Railway's main deployment trigger readback has checkSuites=true (Wait for CI).

@@ -13,6 +13,9 @@ export async function compactHeader(page: Page, selector: string) {
     if (!bounds || !avatar || !brand) throw new Error('Missing profile header geometry')
     expect(avatar.width).toBeGreaterThanOrEqual(44)
     expect(avatar.height).toBeGreaterThanOrEqual(44)
+    expect(Math.abs(avatar.y + avatar.height / 2 - brand.y - brand.height / 2)).toBeLessThanOrEqual(
+      1,
+    )
     expect(avatar.x).toBeGreaterThanOrEqual(bounds.x - 1)
     expect(avatar.x + avatar.width).toBeLessThanOrEqual(bounds.x + bounds.width + 1)
     expect(avatar.x + avatar.width <= brand.x || brand.x + brand.width <= avatar.x).toBe(true)
