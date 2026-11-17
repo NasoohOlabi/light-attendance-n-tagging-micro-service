@@ -17,7 +17,7 @@ test('dashboard charts and grouped fuzzy attendance preserve drafts', async ({
   )
   await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Take attendance' }).click()
-  await expect(page.locator('details.attendance-group summary')).toHaveCount(1)
+  await expect(page.locator('details.attendance-group > summary')).toHaveCount(1)
   await expect(
     page
       .getByRole('region', { name: 'Attendance list' })
@@ -54,8 +54,8 @@ test('dashboard charts and grouped fuzzy attendance preserve drafts', async ({
     await clickAccountAction(page, 'English')
   }
   await page.getByLabel('Attendance for Omar').selectOption('absent')
-  await page.locator('details.attendance-group summary').click()
-  await page.locator('details.attendance-group summary').click()
+  await page.locator('details.attendance-group > summary').click()
+  await page.locator('details.attendance-group > summary').click()
   await expect(page.getByLabel('Attendance for Omar')).toHaveValue('absent')
   await page.getByLabel('Find a student').fill('omr')
   await expect(page.getByLabel('Attendance for Omar')).toHaveValue('absent')

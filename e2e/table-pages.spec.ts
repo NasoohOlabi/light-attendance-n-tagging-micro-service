@@ -305,3 +305,74 @@ test('student portal dates sort chronologically and combine course/status filter
   await expect(table.locator('tbody tr')).toHaveCount(3)
   expect(writes).toEqual([])
 })
+
+test('multi-sort priority, URL state, and filter-preserving reset', async ({ page }, testInfo) => {
+  await syntheticTables(page)
+  await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
+  const table = page.locator('table')
+  const names = table.locator('tbody tr td:first-child')
+  const enrolled = table.getByRole('button', { name: 'Sort by Enrolled', exact: true })
+  const first = table.getByRole('button', { name: 'Sort by First name', exact: true })
+  await enrolled.click()
+  await expect(enrolled).toHaveCSS('outline-style', 'none')
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Shift+Tab')
+  await expect(enrolled).not.toHaveCSS('outline-style', 'none')
+  await first.click({ modifiers: ['Shift'] })
+  await expect(names).toHaveText(['Echo', 'Alpha', 'Charlie', 'Delta', 'Zulu'])
+  await expect(enrolled.locator('.table-sort-priority')).toHaveText('1')
+  await expect(first.locator('.table-sort-priority')).toHaveText('2')
+  await expect(first.locator('..')).not.toHaveAttribute('aria-sort')
+  await page.reload()
+  await expect(names).toHaveText(['Echo', 'Alpha', 'Charlie', 'Delta', 'Zulu'])
+  await table.getByText('Custom sort', { exact: true }).click()
+  await mkdir('.artifacts/verification', { recursive: true })
+  await page.screenshot({
+    path: `.artifacts/verification/multi-sort-${testInfo.project.name}.png`,
+    fullPage: true,
+  })
+  await table.getByLabel('Sort direction 2').selectOption('desc')
+  await expect(names).toHaveText(['Echo', 'Zulu', 'Delta', 'Charlie', 'Alpha'])
+  await table.getByRole('button', { name: 'Move up 2' }).click()
+  await expect(table.getByLabel('Sort column 1')).toHaveValue('first')
+  await expect(names).toHaveText(['Zulu', 'Echo', 'Delta', 'Charlie', 'Alpha'])
+  await table.getByRole('button', { name: 'Move down 1' }).click()
+  await table.getByRole('button', { name: 'Remove sort 2' }).click()
+  await table.getByRole('button', { name: 'Add sort', exact: true }).click()
+  await first.click()
+  await expect(table.getByLabel('Sort column 2')).toHaveCount(0)
+  await table.getByLabel('Filter First name').fill('a')
+  await table.getByLabel('Filter Enrolled').selectOption({ label: 'Yes' })
+  await table.getByRole('button', { name: 'Reset sort', exact: true }).click()
+  await expect(table.getByLabel('Filter First name')).toHaveValue('a')
+  await expect(table.getByLabel('Filter Enrolled')).toHaveValue('1')
+  await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta'])
+  await page.reload()
+  await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta'])
+  const state = JSON.parse(new URL(page.url()).searchParams.get('tables') ?? '{}')
+  const tableId = Object.keys(state)[0]
+  state[tableId].sorting = [
+    { id: 'first', desc: false },
+    { id: 'first', desc: true },
+    { id: 'unknown', desc: false },
+  ]
+  const url = new URL(page.url())
+  url.searchParams.set('tables', JSON.stringify(state))
+  await page.goto(url.toString())
+  await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta'])
+  await table.getByText('Custom sort', { exact: true }).click()
+  await expect(table.getByLabel('Sort column 1')).toHaveValue('first')
+  await expect(table.getByLabel('Sort column 2')).toHaveCount(0)
+  await table.getByRole('button', { name: 'Add sort', exact: true }).click()
+  await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    )
+    await page.screenshot({
+      path: `.artifacts/verification/multi-sort-ar-${testInfo.project.name}-${width}.png`,
+      fullPage: true,
+    })
+  }
+})

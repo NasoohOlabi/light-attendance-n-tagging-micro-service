@@ -86,7 +86,7 @@ export function navigatePage(page: 'home' | 'app') {
 }
 
 const tableStateSchema = z.object({
-  sorting: z.array(z.object({ id: z.string().max(100), desc: z.boolean() })).max(1),
+  sorting: z.array(z.object({ id: z.string().max(100), desc: z.boolean() })).max(30),
   filters: z.array(z.object({ id: z.string().max(100), value: z.string().max(200) })).max(30),
 })
 type TableState = z.infer<typeof tableStateSchema>

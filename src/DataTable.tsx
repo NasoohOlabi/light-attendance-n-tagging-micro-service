@@ -23,7 +23,10 @@ export function useDataTable<T>(id: string, data: T[], columns: TableColumn<T>[]
   const query = useTableQuery(id)
   const ids = new Set(columns.map((column) => column.id))
   const state = {
-    sorting: query.sorting.filter((item) => ids.has(item.id)),
+    sorting: query.sorting.filter(
+      (item, index, items) =>
+        ids.has(item.id) && items.findIndex((entry) => entry.id === item.id) === index,
+    ),
     filters: query.filters.filter((item) => {
       const column = columns.find((entry) => entry.id === item.id)
       return (
@@ -79,7 +82,7 @@ export function useDataTable<T>(id: string, data: T[], columns: TableColumn<T>[]
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    enableMultiSort: false,
+    enableMultiSort: true,
     sortDescFirst: false,
     autoResetPageIndex: false,
   })
@@ -88,6 +91,7 @@ export function useDataTable<T>(id: string, data: T[], columns: TableColumn<T>[]
     rows: table.getRowModel().rows.map((row) => row.original),
     columns,
     reset: () => setTableQuery(id, { sorting: [], filters: [] }),
+    resetSort: () => setTableQuery(id, { ...state, sorting: [] }),
   }
 }
 
@@ -100,82 +104,209 @@ export function TableHeader<T>({
 }) {
   const { language } = useLanguage()
   const ar = language === 'ar'
+  const sorting = model.table.getState().sorting
+  const setSorting = model.table.setSorting
+  const available = model.columns.filter((column) => !sorting.some((item) => item.id === column.id))
   return (
-    <thead>
-      <tr>
-        {model.columns.map(({ id, label, choices }, index) => {
-          const column = model.table.getColumn(id)
-          if (!column) return null
-          const sort = column.getIsSorted()
-          const Chevron =
-            sort === 'asc' ? ChevronUp : sort === 'desc' ? ChevronDown : ChevronsUpDown
-          return (
-            <th
-              scope="col"
-              key={id}
-              aria-label={label}
-              aria-sort={sort === 'asc' ? 'ascending' : sort === 'desc' ? 'descending' : 'none'}
-            >
+    <>
+      <caption className="table-controls">
+        <details>
+          <summary>{ar ? 'فرز مخصص' : 'Custom sort'}</summary>
+          <p>
+            {ar
+              ? 'انقر عنوان العمود للفرز، واستخدم Shift مع النقر لإضافة ترتيب. تجتمع الفلاتر معاً: النص يحتوي القيمة والخيارات تطابقها.'
+              : 'Click a column heading to sort; Shift-click to add a sort. All filters combine (AND): text contains the value and choices match exactly.'}
+          </p>
+          {sorting.map((item, index) => (
+            <div className="table-sort-criterion" key={item.id}>
+              <span>{index + 1}.</span>
+              <select
+                aria-label={`${ar ? 'عمود الفرز' : 'Sort column'} ${index + 1}`}
+                value={item.id}
+                onChange={(event) =>
+                  setSorting(
+                    sorting.map((entry, i) =>
+                      i === index ? { ...entry, id: event.target.value } : entry,
+                    ),
+                  )
+                }
+              >
+                {model.columns
+                  .filter(
+                    (column) =>
+                      column.id === item.id || !sorting.some((entry) => entry.id === column.id),
+                  )
+                  .map((column) => (
+                    <option key={column.id} value={column.id}>
+                      {column.label}
+                    </option>
+                  ))}
+              </select>
+              <select
+                aria-label={`${ar ? 'اتجاه الفرز' : 'Sort direction'} ${index + 1}`}
+                value={item.desc ? 'desc' : 'asc'}
+                onChange={(event) =>
+                  setSorting(
+                    sorting.map((entry, i) =>
+                      i === index ? { ...entry, desc: event.target.value === 'desc' } : entry,
+                    ),
+                  )
+                }
+              >
+                <option value="asc">{ar ? 'تصاعدي' : 'Ascending'}</option>
+                <option value="desc">{ar ? 'تنازلي' : 'Descending'}</option>
+              </select>
               <button
                 type="button"
-                className="table-sort"
-                aria-label={`${ar ? 'ترتيب حسب' : 'Sort by'} ${label}`}
-                onClick={column.getToggleSortingHandler()}
+                disabled={index === 0}
+                aria-label={`${ar ? 'رفع الأولوية' : 'Move up'} ${index + 1}`}
+                onClick={() =>
+                  setSorting(
+                    sorting.map((entry, i) =>
+                      i === index - 1 ? item : i === index ? sorting[index - 1] : entry,
+                    ),
+                  )
+                }
               >
-                <span className="table-sort-label">{label}</span>
-                <Chevron
-                  className="table-sort-chevron"
-                  size={14}
-                  strokeWidth={1.6}
-                  aria-hidden="true"
-                  focusable="false"
-                />
+                &#8593;
               </button>
-              <div className="table-filter-row">
-                {choices ? (
-                  <select
-                    className="table-filter"
-                    aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
-                    value={String(column.getFilterValue() ?? '')}
-                    onChange={(event) => column.setFilterValue(event.target.value)}
-                  >
-                    <option value="">{ar ? 'الكل' : 'All'}</option>
-                    {choices.map((choice, choiceIndex) => (
-                      <option key={choiceIndex} value={String(choiceIndex + 1)}>
-                        {choice}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    className="table-filter"
-                    type="search"
-                    maxLength={200}
-                    dir="auto"
-                    aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
-                    value={String(column.getFilterValue() ?? '')}
-                    onChange={(event) => column.setFilterValue(event.target.value)}
+              <button
+                type="button"
+                disabled={index === sorting.length - 1}
+                aria-label={`${ar ? 'خفض الأولوية' : 'Move down'} ${index + 1}`}
+                onClick={() =>
+                  setSorting(
+                    sorting.map((entry, i) =>
+                      i === index + 1 ? item : i === index ? sorting[index + 1] : entry,
+                    ),
+                  )
+                }
+              >
+                &#8595;
+              </button>
+              <button
+                type="button"
+                aria-label={`${ar ? 'إزالة الفرز' : 'Remove sort'} ${index + 1}`}
+                onClick={() => setSorting(sorting.filter((_, i) => i !== index))}
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+          <div className="table-sort-actions">
+            <button
+              type="button"
+              disabled={!available.length}
+              onClick={() => {
+                const first = available[0]
+                if (first) setSorting([...sorting, { id: first.id, desc: false }])
+              }}
+            >
+              {ar ? 'إضافة ترتيب' : 'Add sort'}
+            </button>
+          </div>
+        </details>
+        <button type="button" onClick={model.resetSort}>
+          {ar ? 'إعادة ضبط الفرز' : 'Reset sort'}
+        </button>
+        <button type="button" onClick={model.reset}>
+          {ar ? 'مسح الفرز والتصفية' : 'Clear sort and filters'}
+        </button>
+      </caption>
+      <thead>
+        <tr>
+          {model.columns.map(({ id, label, choices }) => {
+            const column = model.table.getColumn(id)
+            if (!column) return null
+            const sort = column.getIsSorted()
+            const priority = sorting.findIndex((item) => item.id === id)
+            const Chevron =
+              sort === 'asc' ? ChevronUp : sort === 'desc' ? ChevronDown : ChevronsUpDown
+            return (
+              <th
+                scope="col"
+                key={id}
+                aria-label={label}
+                aria-sort={
+                  priority > 0
+                    ? undefined
+                    : sort === 'asc'
+                      ? 'ascending'
+                      : sort === 'desc'
+                        ? 'descending'
+                        : 'none'
+                }
+              >
+                <button
+                  type="button"
+                  className={`table-sort${sort ? ' is-sorted' : ''}`}
+                  aria-label={`${ar ? 'ترتيب حسب' : 'Sort by'} ${label}`}
+                  onClick={(event) => {
+                    if (event.shiftKey) column.getToggleSortingHandler()?.(event)
+                    else
+                      setSorting(
+                        sort === 'asc'
+                          ? [{ id, desc: true }]
+                          : sort === 'desc'
+                            ? []
+                            : [{ id, desc: false }],
+                      )
+                  }}
+                >
+                  <span className="table-sort-label">{label}</span>
+                  {sort && (
+                    <span
+                      className="table-sort-priority"
+                      aria-label={`${ar ? 'الأولوية' : 'Priority'} ${priority + 1}, ${sort === 'asc' ? (ar ? 'تصاعدي' : 'ascending') : ar ? 'تنازلي' : 'descending'}`}
+                    >
+                      {priority + 1}
+                    </span>
+                  )}
+                  <Chevron
+                    className="table-sort-chevron"
+                    size={14}
+                    strokeWidth={1.6}
+                    aria-hidden="true"
+                    focusable="false"
                   />
-                )}
-                {index === 0 && (
-                  <button
-                    type="button"
-                    className="table-reset"
-                    aria-label={ar ? 'مسح الفرز والتصفية' : 'Clear sort and filters'}
-                    title={ar ? 'مسح الفرز والتصفية' : 'Clear sort and filters'}
-                    onClick={model.reset}
-                  />
-                )}
-              </div>
+                </button>
+                <div className="table-filter-row">
+                  {choices ? (
+                    <select
+                      className="table-filter"
+                      aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
+                      value={String(column.getFilterValue() ?? '')}
+                      onChange={(event) => column.setFilterValue(event.target.value)}
+                    >
+                      <option value="">{ar ? 'الكل' : 'All'}</option>
+                      {choices.map((choice, choiceIndex) => (
+                        <option key={choiceIndex} value={String(choiceIndex + 1)}>
+                          {choice}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      className="table-filter"
+                      type="search"
+                      maxLength={200}
+                      dir="auto"
+                      aria-label={`${ar ? 'تصفية' : 'Filter'} ${label}`}
+                      value={String(column.getFilterValue() ?? '')}
+                      onChange={(event) => column.setFilterValue(event.target.value)}
+                    />
+                  )}
+                </div>
+              </th>
+            )
+          })}
+          {actions && (
+            <th scope="col" className="table-actions-header">
+              {ar ? 'الإجراءات' : 'Actions'}
             </th>
-          )
-        })}
-        {actions && (
-          <th scope="col" className="table-actions-header">
-            {ar ? 'الإجراءات' : 'Actions'}
-          </th>
-        )}
-      </tr>
-    </thead>
+          )}
+        </tr>
+      </thead>
+    </>
   )
 }

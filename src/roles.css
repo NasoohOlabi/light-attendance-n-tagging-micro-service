@@ -247,6 +247,7 @@
   transform: translateY(-50%);
   opacity: 0;
 }
+.table-sort.is-sorted .table-sort-chevron,
 .table-sort:hover .table-sort-chevron,
 .table-sort:focus-visible .table-sort-chevron {
   opacity: 1;
@@ -388,4 +389,70 @@
     min-width: 0;
     min-height: 44px;
   }
+}
+
+.table-sort:focus:not(:focus-visible) {
+  outline: none;
+}
+.table-sort-priority {
+  margin-inline-start: 0.25rem;
+  font-size: 0.75em;
+  color: #007d8d;
+}
+.table-controls {
+  text-align: start;
+  padding: 0.5rem;
+  font-weight: normal;
+  white-space: normal;
+}
+@media (max-width: 64rem) {
+  .mobile-record-table .table-controls {
+    display: block;
+    width: 100%;
+  }
+}
+.table-controls summary {
+  cursor: pointer;
+  color: #006b78;
+  font-weight: 600;
+}
+.table-controls p {
+  margin: 0.4rem 0;
+}
+.table-sort-criterion,
+.table-sort-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin: 0.35rem 0;
+}
+.table-sort-criterion select {
+  min-width: 0;
+  max-width: 100%;
+}
+.table-sort-actions button,
+.table-sort-criterion button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.table-controls > button,
+.table-sort-actions button,
+.table-sort-criterion button {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #a5c8ca;
+  border-radius: 0.375rem;
+  color: #006b78;
+  background: #fff;
+  cursor: pointer;
+}
+.table-controls > button {
+  margin: 0.25rem 0.35rem 0 0;
+  min-height: 44px;
+}
+.table-sort-criterion button:disabled,
+.table-sort-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
