@@ -93,14 +93,25 @@ async function snapshot(
   teacher: z.infer<typeof neonTeacherSchema>,
   includeInactiveStudents = false,
 ) {
-  const scope = teacher.role === 'administrator' ? 's.active' : 's.teacher_id = $1 AND s.active'
+  const scope =
+    teacher.role === 'administrator'
+      ? includeInactiveStudents
+        ? 'true'
+        : 's.active'
+      : 's.teacher_id = $1 AND s.active'
   const values = teacher.role === 'administrator' ? [] : [teacher.id]
   const students = z
-    .array(studentRow)
+    .array(
+      studentRow.extend({
+        first_name: z.string().nullable().optional(),
+        last_name: z.string().nullable().optional(),
+        whatsapp: z.string().nullable().optional(),
+      }),
+    )
     .parse(
       (
         await db.query(
-          `SELECT s.id, s.name, s.group_name, s.active FROM students s WHERE ${includeInactiveStudents && teacher.role === 'administrator' ? 'true' : scope} ORDER BY s.name, s.id FOR SHARE`,
+          `SELECT s.id, s.name, s.group_name, s.active, s.first_name, s.last_name, s.whatsapp FROM students s WHERE ${scope} ORDER BY s.name, s.id FOR SHARE`,
           values,
         )
       ).rows,
@@ -111,6 +122,9 @@ async function snapshot(
       name: s.name,
       group: s.group_name,
       active: s.active,
+      firstName: s.first_name ?? s.name,
+      lastName: s.last_name ?? '',
+      whatsapp: s.whatsapp ?? null,
     }))
   const events = z
     .array(eventRow)

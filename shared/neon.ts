@@ -15,7 +15,11 @@ export const neonStudentSchema = z.object({
   name: z.string().trim().min(1).max(200),
   group: z.string().trim().max(100),
   active: z.boolean(),
+  firstName: z.string().trim().min(1).max(200).optional(),
+  lastName: z.string().trim().max(200).optional(),
+  whatsapp: z.string().trim().max(40).nullable().optional(),
 })
+export type NeonRosterStudent = z.infer<typeof neonStudentSchema>
 export const courseInputSchema = z.object({ id: z.uuid(), name: z.string().trim().min(1).max(200) })
 const percentage = z.number().min(0).max(100)
 export const courseSettingsSchema = z.strictObject({

@@ -660,3 +660,47 @@
   left: 0;
   right: auto;
 }
+
+.roster-students-table {
+  min-width: 70rem;
+}
+.roster-phone-column {
+  width: 10rem;
+}
+.student-details h3 {
+  font-weight: 600;
+  margin: 1.5rem 0 0.5rem;
+}
+.student-details-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.student-detail-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  margin: 1rem 0;
+}
+.student-detail-fields dt {
+  color: #52676a;
+  font-size: 0.875rem;
+}
+.student-detail-fields dd {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.roster-name-column {
+  width: 12rem;
+}
+.roster-summary-column {
+  width: 11rem;
+}
+.roster-students-table .roster-courses-column {
+  width: 14rem;
+}
+@media (max-width: 700px) {
+  .roster-students-table .roster-courses-column {
+    width: 8rem;
+  }
+}

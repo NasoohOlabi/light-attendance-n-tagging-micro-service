@@ -9,10 +9,9 @@ import {
   type Payload,
 } from '../shared/ledger'
 import { assignedEvents, validateAssignedPayloads } from '../shared/roster'
-import type { Student } from '../shared/ledger'
 import { demoEvents } from './demo'
 import { apiUrl, getNotebook, postEvents } from './neon'
-import type { Course, Enrollment, NeonTeacher } from '../shared/neon'
+import type { Course, Enrollment, NeonTeacher, NeonRosterStudent } from '../shared/neon'
 
 export function useLedger(
   demo: boolean,
@@ -23,7 +22,7 @@ export function useLedger(
   const neonUserId = neon?.userId
   const key = neon ? `halaqa-pending-neon:${apiUrl}:${neon.teacher.id}` : ''
   const [events, setEvents] = useState<LedgerEvent[]>(() => (demo ? demoEvents() : []))
-  const [roster, setRoster] = useState<Student[]>(() =>
+  const [roster, setRoster] = useState<NeonRosterStudent[]>(() =>
     assignedDemo ? projectEvents(events).students.slice(0, 1) : [],
   )
   const [courses, setCourses] = useState<Course[]>([])
