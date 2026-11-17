@@ -57,7 +57,7 @@
 .workspace-main {
   min-width: 0;
   flex: 1;
-  padding: 0 38px 40px;
+  padding: 32px 38px 40px;
 }
 .workspace-topline {
   direction: ltr;
@@ -81,7 +81,7 @@
   align-items: end;
   justify-content: space-between;
   gap: 20px;
-  padding: 32px 0 26px;
+  padding: 0 0 26px;
 }
 .workspace-welcome p {
   margin: 0 0 7px;

@@ -1601,3 +1601,11 @@
 **Change** Return the Auth profile name alongside the directory's existing name. Use the profile name for historical decision authors and the linked read-only self-account view. Blank profile names fall back to email. Stored decision IDs and notes, staff names, account roles and grants require no migration or data changes.
 
 **Verification and limits** The targeted browser regression failed on desktop and mobile before the fix and passed in both projects after it, including the Arabic 320 px decision modal, account reload and email fallback. `bun run verify:release` passed 114 browser cases and 33 tests with 137 assertions, plus build, artifact, format and security checks. That run skipped four optional database tests. The affected same-origin integration also passed separately with 34 assertions on disposable Postgres, including a Better Auth name update and the resulting directory profile, staff name and role. Exact-main Railway and live synthetic verification follow PR checks. Physical-device behavior is unverified.
+
+## 2026-11-17 21:50 Asia/Damascus (UTC+03:00) - Add space around desktop workspace content
+
+**Request and change** The Courses card touched the top of the desktop workspace. Add 32px of top padding to the shared content area and move the existing desktop welcome heading's inset into that shared padding. The desktop side inset is 38px. On mobile, keep the 16px gap below the header and the 16px side insets.
+
+**Verification and limits** The browser regression reproduced a 0px desktop gap before the fix. Synthetic Chromium checks measured 32px above the card at 1920px and 16px below the header at 320, 390 and 430px in English and Arabic. All measured layouts fit without horizontal overflow. Railway's production trigger targets main with Wait for CI enabled. The shipped-asset check uses synthetic API fixtures. Physical devices and real authenticated sessions are outside this layout verification.
+
+**Release gate** `bun run verify:release` passed 114 browser cases, 33 local tests with 137 assertions, build, lint, artifact and formatting checks, secret scans and dependency checks. Four optional database tests were skipped. The exact-main Railway deployment and shipped layout check follow the PR checks.
