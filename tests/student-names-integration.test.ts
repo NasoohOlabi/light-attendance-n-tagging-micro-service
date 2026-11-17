@@ -102,7 +102,14 @@ integration('student names survive migration, structured saves and legacy writes
     expect(await exportBackup(exportPath)).toBe(0)
     const backup = z
       .object({
-        version: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
+        version: z.union([
+          z.literal(2),
+          z.literal(3),
+          z.literal(4),
+          z.literal(5),
+          z.literal(6),
+          z.literal(7),
+        ]),
         tables: z.array(
           z.object({
             name: z.string(),
