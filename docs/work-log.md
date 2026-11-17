@@ -1152,6 +1152,20 @@
 
 **Verification/limits:** All 26 desktop/mobile authentication cases passed against the built preview without instrumentation. An initial typecheck caught the now-unused child-process import, which was removed. Run the final full release gate on this integrated revision before publication. Prior failed gates and the known optional database/provider limits remain documented above.
 
+## 2026-11-17 17:15 Asia/Damascus (UTC+03:00) - Simplify Grades and whole-number level displays
+
+**Request/reason:** Owner requested removing the Enrolled column from Grades and displaying levels such as 1.0 as 1 throughout the site. Started clean on `fix/theory-before-practical` at `1df8bf5` (prior PR #76 pending CI), then created `fix/course-level-display` without a worktree. Preserve that preceding Theory/Practical ordering change.
+
+**Changes/provenance:** Native `gpt-6.1-terra` owns the bounded UI, regression coverage and verification feature-map unit; the orchestrator owns documentation, review, gates and serial delivery. Remove the Grades enrollment column and sort choice, retaining withdrawn students' historical grades and the Manage students membership controls. Audit level displays across roster, course membership/grades, attendance, profile, student portal and history. Format whole-number numeric strings for display without rewriting saved records, rounding meaningful fractions, changing named levels or falling back from blank course levels.
+
+**Verification/limits:** Final release gate and exact-main Railway delivery pending. Synthetic browser boundaries do not prove real authenticated provider writes or physical-device behavior. No migration, API or authorization changes are intended.
+
+**Verification integration at 2026-11-17 17:22 Asia/Damascus:** Focused course/table Chromium checks passed. The first full browser run passed all affected scenarios but failed four synthetic-auth cases: its fixed 4182/4183 ports reached a different server (the captured header included a Device selector absent from this checkout), then lost connections. Preserved existing listeners. The orchestrator made synthetic-auth and role ports relative to PLAYWRIGHT_PORT, and added the existing role harness's occupied-port/child-exit checks to Auth, preventing silent reuse. All six previously affected desktop/mobile authentication cases passed with isolated ports. The initial release also caught and corrected work-log formatting. No product authentication behavior changed. Final complete release gate follows.
+
+**Final local gate at 2026-11-17 17:25 Asia/Damascus:** `bun run verify:release` passed all 84 desktop/mobile browser scenarios, 23 local unit tests/100 assertions, lint, build/artifact, formatting, file/history secret scans and dependency audit. Four optional database suites skipped. A separate deliberate port-collision run failed with the expected EADDRINUSE, proving the harness refuses unrelated listeners. Reviewed synthetic desktop and phone Grades captures; whole-number levels render without decimal suffixes and the membership column is absent. Prior PR #76 merged independently to main `388470b`; its resulting tree matches this task's starting tree. Railway source readback confirms main with Wait for CI enabled. Exact-main deployment, health and shipped-asset checks will be recorded in the PR delivery receipt; real authenticated provider writes and physical devices remain unverified for this presentation change.
+
+**Main integration at 2026-11-17 17:27 Asia/Damascus:** Main's squash of the preceding Theory-order PR caused repeated-patch conflicts in the work log and the Grades column-index assertions. The attempted push hook correctly rejected unresolved markers before any upload. Restored both files from verified commit `b0e9173`; the entire staged tree then exactly matched that tested revision. Preserve the normal merge history and record this note separately from product changes; publication proceeds only after the merge commit and required checks.
+
 ## 2026-11-17 17:20 Asia/Damascus (UTC+03:00) - Keep Grades headings visible while scrolling
 
 **Request/reason:** Owner asked for table-level scrolling or a sticky header after losing column context in a long Grades list. Chose both on desktop so the title and threshold settings stay outside the table scroller; retain natural page scrolling for stacked phone records. Started clean at `388470b` on `t3/sticky-table-header`; no worktree or unrelated changes.
@@ -1169,3 +1183,27 @@
 **Verification/limits:** Run the final integrated release gate, including main's new desktop/mobile scrolling scenarios, before publication. Optional disposable database suites and real provider writes remain outside this UI-only proof.
 
 **Final integrated gate at 17:38 Asia/Damascus:** `bun run verify:release` passed all 84 desktop/mobile browser cases, 22 unit tests/99 assertions, lint, build/artifact, formatting, file/history secret scans and dependency audit on the combined `f5d0f87` tree with the authentication harness fix. Four optional disposable database suites skipped. The prior post-fix release run also passed all 82 cases before sticky-heading integration. Actual colors, failure reasons, threshold/pending states, Theory/Practical order and opaque sticky headings are covered. No temporary instrumentation remains. Reviewed source/CSS conflict resolutions and retained both behavior documents/feature-map paragraphs. Provider deployment/health and shipped-asset results follow in the PR delivery receipt.
+
+## 2026-11-17 17:32 Asia/Damascus (UTC+03:00) - Integrate main into PR #78
+
+**Request/reason:** T3 reported all required checks passing on `12b4ec9` but a new conflict with main. Started clean on `fix/course-level-display`. Main advanced to `f5d0f87` with the independent Grades sticky-heading change (#77).
+
+**Changes:** Merge main normally, preserving both work-log and verification-map additions. Source merged cleanly: retain the desktop bounded scroller/sticky headings alongside the removed enrollment column and shared level formatting. No change to grades, membership, stored values or authorization. The orchestrator owns this small integration; no new feature or worker is needed.
+
+**Verification/limits:** PR #78 Verify, CodeQL and security checks passed on its preceding head, with no review comments. Rerun the complete release gate on this combined revision before pushing. Exact-main Railway deployment, health and synthetic shipped-asset behavior remain pending; real authenticated provider writes and physical devices are outside this presentation check.
+
+**Combined local gate at 2026-11-17 17:36 Asia/Damascus:** `bun run verify:release` passed all 86 desktop/mobile browser scenarios, 23 local unit tests/100 assertions, lint/build/artifact, formatting, secret scans and dependency audit on the combined revision. Four optional database suites skipped. Both the 30-student sticky-heading/keyboard regression and whole-number/raw-editor regression passed. Preserve main's independent feature and both documentation histories; CI must rerun on the merge commit before merge/publication.
+
+## 2026-11-17 17:44 Asia/Damascus (UTC+03:00) - Refresh Grades colors PR against current main
+
+**Reason/change:** PR #80 passed Verify, CodeQL and security on `63f8e59`, then main `42f5405` removed the Grades Enrolled column, formatted whole-number levels, and improved isolated role-test ports. Merged main normally and preserved those changes plus all color/failure-cause coverage. Retained both append-only work-log and feature-map entries. For the overlapping authentication harness change, retained #80's suite-owned preview (no redundant child ports), which addresses the observed collision directly and preserves every same-origin assertion. No history rewrite or unrelated work.
+
+**Verification/limits:** Recheck the integrated source and full release gate before completing the merge and updating the PR. Earlier CI establishes the previous head only. Four optional disposable database suites and real authenticated provider writes remain outside these local synthetic checks. Deployment proof follows the final merge.
+
+## 2026-11-17 17:46 Asia/Damascus (UTC+03:00) - Resolve PR 80 against simplified Grades
+
+**Request/reason:** T3 reported all required checks passed on `63f8e59`, but main advanced to `42f5405` and conflicted. Inspected the clean starting tree, successful Verify/CodeQL/security results, and main's full integration diff before merging normally.
+
+**Changes:** Preserve main's removed Enrolled column, whole-number level display/editing, updated column-order assertions, role-test port isolation, and both documentation/verification paragraphs. Retain this branch's suite-owned preview for authentication tests instead of restoring main's redundant dev-server lifecycle; every authentication assertion is preserved. No product conflict required a grading-rule change. Resolved append-only work-log conflicts by retaining both histories.
+
+**Verification/limits:** `bun run verify:release` passed all 86 desktop/mobile browser cases, 23 unit tests/100 assertions, lint/build/artifact/format/security/history/audit on the integrated tree. Four optional database suites skipped. Synthetic tests do not establish real authenticated provider writes or physical devices. Push the integration and wait for required checks on its exact head; exact-main Railway deployment and shipped-asset proof follow merge.
