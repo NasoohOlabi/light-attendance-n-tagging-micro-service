@@ -816,3 +816,13 @@
 **Delivery:** The feature, earlier Pages-deletion record and production proof are committed; this follow-up changes documentation only. No production data, credentials, access settings, migrations or extra services were changed. The publication record uses the already completed release gate and live checks above; its local verification is recorded below.
 
 **Record verification:** `bun run verify` passed: 20 tests/84 assertions, lint, strict build and artifact checks; the same four optional database integrations skipped and five existing nonblocking React warnings remain. Documentation formatting and staged whitespace checks passed.
+
+## 2026-11-17 07:55 Asia/Damascus (UTC+03:00) - Show notebook roster status with icons
+
+**Request/reason:** Replace the visible Arabic active status word in the notebook Students table with a symbol. Started clean on main at `5ff37c5` and created `fix/roster-status-icons` without a worktree.
+
+**Changes:** Terra updated the assigned roster status cells to use existing Lucide circled-check and circled-minus icons for active/inactive students, retaining localized accessible image names and native tooltips. The orchestrator reviewed the implementation, updated existing English/Arabic browser assertions and the roster verification map. Separate columns and status behavior are preserved; no dependencies or provider changes.
+
+**Verification:** `bun run verify` passed: 20 tests/84 assertions, lint, strict build and artifact checks. Four optional database integrations skipped; five existing nonblocking React warnings remain. The full UI run passed 57/58 cases, including both desktop/mobile course-and-roster cases; the remaining phone-layout case failed with missing Playwright trace files (ENOENT), then passed alone on port 4373 with a separate artifact directory. Reviewed the synthetic Arabic desktop screenshot and retained ignored browser evidence. Synthetic checks do not verify live Railway or physical devices.
+
+**Ownership/delivery:** Concurrent dashboard work appeared during verification in `src/NotebookDashboard.tsx`, `e2e/dashboard.spec.ts`, and the README/attendance verification maps. Its provenance is outside this task; leave it untouched and unstaged. Commit only this task's implementation, roster browser assertions, roster map and work-log entry. No push or deployment is included.
