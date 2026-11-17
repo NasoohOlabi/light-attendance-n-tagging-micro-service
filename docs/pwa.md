@@ -27,3 +27,7 @@ During the first upgrade from the previous cache-first worker, its download may 
 `e2e/pwa.spec.ts` serves the actual built artifact below `/notebook/` on an isolated local HTTP listener. It verifies the manifest through Chromium, icon dimensions, worker scope, offline shell/sample, stalled-network clean navigation, excluded private/authenticated/query/POST requests, native prompt wiring and single use, localized dismissal, iPad-style instructions, standalone hiding and a legacy-worker upgrade by normal refresh while another tab has an unsaved note. The suite runs desktop and touch-emulated cases. Synthetic screenshots are retained under `.artifacts/pwa/`.
 
 Native installation/OS launcher behavior on physical iOS/Android devices is not certified by these checks. The native prompt callback is simulated because headless browser verification cannot operate the OS installer; the manifest, service worker, cache and offline requests are real. No live provider writes are required or claimed.
+
+## Appearance
+
+Choose **Device**, **Light** or **Dark** from the homepage/sign-in appearance control or the notebook profile menu. Device follows the operating system, including changes while the app is open. Explicit choices are saved on this browser and synchronized across tabs. When browser storage is unavailable, the choice still works for the current page session. The same-origin startup script restores the palette before application rendering and is included in the public offline cache. Arabic labels and native form controls follow the selected appearance.

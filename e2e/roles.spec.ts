@@ -419,6 +419,10 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
   await page.goto(`${origin}/?page=app&view=administration`)
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
+  const tabColors = await page
+    .locator('.role-tabs button')
+    .evaluateAll((tabs) => tabs.map((tab) => getComputedStyle(tab).backgroundColor))
+  expect(tabColors[0]).not.toBe(tabColors[1])
   await expect(page.getByText('admin@example.test')).toHaveCount(0)
   await expect(page.getByLabel('Role').filter({ visible: true })).toHaveCount(0)
   await mkdir('.artifacts/verification', { recursive: true })
