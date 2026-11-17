@@ -1594,6 +1594,16 @@
 
 **Profile settings integration at 2026-11-17 21:26 Asia/Damascus** Required checks passed on `eaced22`. Main advanced to `67df862`, and the work log conflicted again. Preserved both sets of entries and the new profile layout rules. `bun run verify:release` passed 114 browser cases and 33 local tests with 137 assertions, including mobile Grades spacing and the profile controls. Four optional database suites skipped. The new head needs CI before merge and Railway verification.
 
+## 2026-11-17 21:43 Asia/Damascus (UTC+03:00) - Align the profile icon beside the logo
+
+**Request/reason:** Owner reported the misplaced avatar below the logo in the selected-course desktop sidebar. Started clean at local main 54b6195, fast-forwarded to origin/main c91dada and created fix/profile-icon-alignment without a worktree.
+
+**Changes:** Removed the desktop selected-course rule that forced the brand to full width and wrapped the avatar onto a second row. Existing flex sizing and course-name ellipsis retain one aligned header row. Added vertical alignment to the shared real-browser header assertion and exercised branded/long course names, dropdown bounds, English/Arabic and 320/390/1440px widths. Updated behavior and verification documentation.
+
+**Verification/limits:** Before the fix, the focused course-preference check failed with a 52.4px center offset. After the fix all 10 targeted desktop/mobile course-preference and profile scenarios passed. Inspected the synthetic desktop capture. Full release gate and exact-main Railway delivery results follow. No API/schema changes; synthetic checks do not prove real account persistence or physical devices.
+
+**Final local gate:** bun run verify:release passed all 114 desktop/mobile browser cases, 33 local tests and all lint/build/artifact, formatting, secret/history and dependency checks. Four optional database suites skipped. The initial gate failed because the existing node_modules did not contain main's pinned parser patch; bun install --frozen-lockfile --force restored the tracked installation and the parser hash/regression gate passed. The existing dated development-only advisory exception remains as documented in SECURITY.md. Railway's main deployment trigger readback has checkSuites=true (Wait for CI).
+
 ## 2026-11-17 21:39 Asia/Damascus (UTC+03:00) - Use the saved profile name for decision authors
 
 **Request and cause** After saving a new profile name, decision history and its linked self-account view still showed the legacy staff name “Administrator”. Both read the same administrator directory, which returned staff/roster names ahead of the Auth profile name.
@@ -1601,3 +1611,7 @@
 **Change** Return the Auth profile name alongside the directory's existing name. Use the profile name for historical decision authors and the linked read-only self-account view. Blank profile names fall back to email. Stored decision IDs and notes, staff names, account roles and grants require no migration or data changes.
 
 **Verification and limits** The targeted browser regression failed on desktop and mobile before the fix and passed in both projects after it, including the Arabic 320 px decision modal, account reload and email fallback. `bun run verify:release` passed 114 browser cases and 33 tests with 137 assertions, plus build, artifact, format and security checks. That run skipped four optional database tests. The affected same-origin integration also passed separately with 34 assertions on disposable Postgres, including a Better Auth name update and the resulting directory profile, staff name and role. Exact-main Railway and live synthetic verification follow PR checks. Physical-device behavior is unverified.
+
+**Main integration at 21:48 Asia/Damascus:** Main advanced to 224ae8a (#93) during PR creation. Merged main normally, resolving only the append-only work-log conflict by retaining both entries. Product source merged cleanly; re-run the release gate on the combined tree before pushing for fresh PR checks.
+
+**Integrated gate at 21:52 Asia/Damascus:** bun run verify:release passed again on the combined tree: 114 browser cases, 33 local tests and all release checks; four optional database suites skipped. Exact-main Railway deployment, health and live shipped-asset layout proof are recorded in the delivery receipt on [PR #94](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service/pull/94).

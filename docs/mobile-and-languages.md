@@ -5,3 +5,5 @@ The public homepage, sign-in and notebook support English and Arabic, including 
 The notebook uses one branded account header. On phones, 16px separates the header from workspace content. Select the profile photo (or fallback avatar) to change language, open Settings as an Administrator, or sign out. Samples offer Close session instead. The menu closes with Escape or an outside click; language changes preserve the current page and drafts. Page navigation remains in the desktop sidebar and the phone's bottom bar. Students have the same profile menu without Administrator settings.
 
 Browser emulation does not certify physical iOS or Android devices, keyboards, screen readers or OS controls. Native installation has not been verified on a physical device. See [PWA behavior](pwa.md).
+
+The workspace profile avatar stays beside the logo and selected course on one row on desktop and phones. Long course names truncate to preserve the avatar's touch target.
