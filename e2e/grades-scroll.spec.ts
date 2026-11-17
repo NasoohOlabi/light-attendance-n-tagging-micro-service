@@ -164,7 +164,13 @@ test('long grades remain navigable in both languages', async ({ page }, testInfo
           const notes = cells[6]?.getBoundingClientRect()
           const theory = cells[4]?.querySelector('input')?.getBoundingClientRect()
           const practical = cells[5]?.querySelector('input')?.getBoundingClientRect()
-          if (!notes || !theory || !practical) throw new Error('Missing grade fields')
+          const result = cells[7]?.getBoundingClientRect()
+          const actions = cells[8]?.getBoundingClientRect()
+          const save = cells[8]?.querySelector('form button')?.getBoundingClientRect()
+          const menu = cells[8]?.querySelector(':scope > button')?.getBoundingClientRect()
+          if (!notes || !theory || !practical || !result || !actions || !save || !menu)
+            throw new Error('Missing grade fields or actions')
+          const rtl = getComputedStyle(element).direction === 'rtl'
           return {
             padding: parseFloat(getComputedStyle(element).paddingInlineStart),
             notesWidth: notes.width,
@@ -172,6 +178,12 @@ test('long grades remain navigable in both languages', async ({ page }, testInfo
             theoryWidth: theory.width,
             theoryCellWidth: cells[4].getBoundingClientRect().width,
             scoreOffset: Math.abs(theory.top - practical.top),
+            footerOffset: Math.abs(result.top - actions.top),
+            actionsFollowResult: rtl ? actions.right <= result.left : actions.left >= result.right,
+            controlsFit: [save, menu].every(
+              (button) => button.left >= actions.left - 1 && button.right <= actions.right + 1,
+            ),
+            touchTarget: Math.min(save.width, save.height, menu.width, menu.height),
             overflow: document.documentElement.scrollWidth > innerWidth + 1,
           }
         })
@@ -179,6 +191,10 @@ test('long grades remain navigable in both languages', async ({ page }, testInfo
         expect(layout.notesWidth).toBeGreaterThan(layout.rowWidth * 0.8)
         expect(layout.theoryWidth).toBeGreaterThanOrEqual(layout.theoryCellWidth - 1)
         expect(layout.scoreOffset).toBeLessThan(1)
+        expect(layout.footerOffset).toBeLessThan(1)
+        expect(layout.actionsFollowResult).toBe(true)
+        expect(layout.controlsFit).toBe(true)
+        expect(layout.touchTarget).toBeGreaterThanOrEqual(44)
         expect(layout.overflow).toBe(false)
       }
       await page.setViewportSize({ width: 390, height: 844 })

@@ -1680,6 +1680,24 @@ Railway's production trigger reports `main` with `checkSuites: true` (Wait for C
 
 At 23:40, `bun run verify:release` passed again after integrating the mobile divider fix from main `42fe9bc`. The combined run passed 118 browser cases and 33 local tests. Four optional database tests skipped.
 
+## 2026-11-17 23:36 Asia/Damascus (UTC+03:00) - Compact mobile grade actions
+
+The marked-up phone screenshot asked to move the grade actions into the space beside the result. Save grades and its neighboring three-dot menu now share the row below Notes with the result. The actions sit to the left in Arabic and to the right in English. The desktop table retains separate Result and Actions columns.
+
+`bun run verify:release` passed with 116 browser cases and 33 local tests. The layout regression reproduced the extra row before the change and now confirms the controls fit with 44px touch targets at 320, 390 and 430px in both languages. The browser suite uses synthetic records and emulated phones. Four optional database tests skipped. Railway confirmed that production targets `main` with Wait for CI enabled. Exact-commit deployment and shipped layout verification follow the PR checks.
+
+**Main integration at 23:38 Asia/Damascus** Merged `42fe9bc` and retained both work-log entries. The mobile Courses divider and grade layout combined without source conflicts.
+
+**Integrated verification at 23:41 Asia/Damascus** The full release gate passed again with 116 browser cases and 33 local tests. Four optional database tests skipped. The production browser regression reproduced the separate actions row against the pre-change deployment using synthetic API responses and tracing disabled.
+
+**Main integration at 23:47 Asia/Damascus** The required check passed on `c719edc` before main advanced to `7ec2978`. The source merged cleanly and both work-log entries were preserved.
+
+**Integrated verification at 23:49 Asia/Damascus** `bun run verify:release` passed on the combined tree with 118 browser cases and 33 local tests. Four optional database tests skipped.
+
+**Main integration at 23:55 Asia/Damascus** The required check passed on `63236b0` before main advanced to `d643c56`. Kept both work-log entries in chronological order. The course closure changes and mobile Grades layout merged cleanly.
+
+**Integrated verification at 23:57 Asia/Damascus** The full release gate passed again with 118 browser cases and 33 local tests. Four optional database tests skipped.
+
 ## 2026-11-17 23:41 Asia/Damascus — Promote students on course closure
 
 Closing from Courses or Grades now advances an active passing enrollment's whole-number course level by one on the student's roster record. The server uses saved thresholds, scores, corrected attendance and any effective override. Closure and the roster updates commit together. Higher roster levels, custom labels and historical enrollment levels remain intact. This change applies on closure going forward and needs no database migration.
