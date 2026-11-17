@@ -1,9 +1,13 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { UserRound } from 'lucide-react'
-import { ThemeSelect, useLanguage } from './i18n'
+import { Globe, LogOut, Settings, UserRound } from 'lucide-react'
+import { ThemeChoices, useLanguage } from './i18n'
 import { setQuery } from './queryState'
 
-export type Profile = { name: string; image: string | null }
+export type Profile = {
+  name: string
+  image: string | null
+  update: (name: string, image?: string | null) => Promise<void>
+}
 
 export function ProfileMenu({
   profile,
@@ -72,10 +76,45 @@ export function ProfileMenu({
       {open && (
         <div className="profile-panel" id={panelId}>
           {profile?.name && <strong dir="auto">{profile.name}</strong>}
-          <ThemeSelect />
-          <button type="button" onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')}>
-            {language === 'en' ? '\u0627\u0644\u0639\u0631\u0628\u064a\u0629' : 'English'}
-          </button>
+          {profile && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                setQuery({ view: 'profile' }, true)
+              }}
+            >
+              <UserRound size={18} aria-hidden="true" />{' '}
+              {language === 'ar' ? 'إعدادات الملف الشخصي' : 'Profile settings'}
+            </button>
+          )}
+          <div className="preference-group">
+            <span>{language === 'ar' ? 'المظهر' : 'Theme'}</span>
+            <ThemeChoices />
+          </div>
+          <div className="preference-group">
+            <span>
+              <Globe size={16} aria-hidden="true" /> {language === 'ar' ? 'اللغة' : 'Language'}
+            </span>
+            <div className="preference-choices languages">
+              <button
+                type="button"
+                lang="en"
+                aria-pressed={language === 'en'}
+                onClick={() => setLanguage('en')}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                lang="ar"
+                aria-pressed={language === 'ar'}
+                onClick={() => setLanguage('ar')}
+              >
+                العربية
+              </button>
+            </div>
+          </div>
           {administrator && (
             <button
               type="button"
@@ -84,13 +123,12 @@ export function ProfileMenu({
                 setQuery({ view: 'settings' }, true)
               }}
             >
-              {language === 'ar'
-                ? '\u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a'
-                : 'Settings'}
+              <Settings size={18} aria-hidden="true" />{' '}
+              {language === 'ar' ? 'الإعدادات' : 'Settings'}
             </button>
           )}
           <button type="button" disabled={disabled} onClick={leave}>
-            {sample ? t('Close session') : t('Sign out')}
+            <LogOut size={18} aria-hidden="true" /> {sample ? t('Close session') : t('Sign out')}
           </button>
         </div>
       )}

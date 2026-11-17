@@ -205,6 +205,11 @@ function ConfiguredAuth({
     return children(userId, account.value, signOut, {
       name: session.data?.user.name ?? '',
       image: session.data?.user.image ?? null,
+      update: async (name, image) => {
+        const result = await client.updateUser({ name, ...(image === undefined ? {} : { image }) })
+        if (result.error) throw new Error('Could not save profile')
+        await session.refetch()
+      },
     })
   }
   return (

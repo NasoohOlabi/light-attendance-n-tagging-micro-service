@@ -614,7 +614,7 @@
   z-index: 50;
   inset-block-start: calc(100% + 8px);
   inset-inline-end: 0;
-  width: 180px;
+  width: min(280px, calc(100vw - 24px));
   padding: 8px;
   border: 1px solid #cde1df;
   border-radius: 8px;
@@ -628,14 +628,114 @@
   overflow-wrap: anywhere;
 }
 .profile-panel button {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
+  min-height: 44px;
   padding: 10px 8px;
   border: 0;
   border-radius: 5px;
   background: transparent;
   color: #133f46;
   text-align: start;
+}
+.profile-panel .preference-group {
+  padding: 8px 4px;
+  border-block-start: 1px solid #cde1df;
+}
+.preference-group > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.profile-panel .preference-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.profile-panel .preference-choices.languages {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.profile-panel .preference-choices button {
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 2px;
+  font-size: 0.8125rem;
+  text-align: center;
+  border: 1px solid transparent;
+}
+.profile-panel .preference-choices button[aria-pressed='true'] {
+  background: #d5eeee;
+  border-color: #579b9e;
+  color: #103d43;
+}
+:root[data-theme='dark'] .profile-panel .preference-choices button[aria-pressed='true'] {
+  background: #315b60;
+  color: #e3f1f1;
+  border-color: #70d6d5;
+}
+.profile-settings {
+  max-width: 36rem;
+}
+.profile-settings h1 {
+  font-size: 1.65rem;
+  font-weight: 700;
+  margin: 1rem 0;
+}
+.profile-settings form {
+  display: grid;
+  gap: 1rem;
+}
+.profile-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.profile-photo {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #d5eeee;
+  color: #176571;
+  flex: none;
+}
+.profile-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-photo-row > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.profile-upload {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.profile-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.profile-upload:focus-within {
+  outline: 3px solid #55d4d7;
+  outline-offset: 2px;
 }
 .profile-panel button:hover,
 .profile-panel button:focus-visible {
@@ -660,6 +760,16 @@
 .role-header .profile-panel {
   left: 0;
   right: auto;
+}
+@media (min-width: 701px) {
+  .workspace-rail .profile-panel {
+    left: 0;
+    right: auto;
+  }
+  [dir='rtl'] .workspace-rail .profile-panel {
+    right: 0;
+    left: auto;
+  }
 }
 
 .roster-students-table {
