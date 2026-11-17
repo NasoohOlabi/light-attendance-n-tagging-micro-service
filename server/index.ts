@@ -70,6 +70,10 @@ export async function handle(request: Request): Promise<Response> {
       await pool.query(
         'SELECT course_enrollments.active, course_enrollments.handbook_received, students.whatsapp, students.location, students.birth_year, courses.open, courses.attendance_minimum, courses.practical_minimum, courses.theory_minimum FROM app_accounts, teachers, students, courses, course_enrollments, events, neon_auth."user", neon_auth.account, neon_auth.session, neon_auth.verification LIMIT 0',
       )
+      const assignment = await pool.query(
+        "SELECT is_nullable FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name = 'teacher_id'",
+      )
+      if (assignment.rows[0]?.is_nullable !== 'YES') throw new Error('Roster migration required')
       return Response.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
     } catch {
       return Response.json({ ok: false }, { status: 503, headers: { 'Cache-Control': 'no-store' } })

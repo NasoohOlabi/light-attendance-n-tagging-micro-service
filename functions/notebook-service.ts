@@ -178,10 +178,10 @@ async function adminBoard(db: PoolClient) {
   }))
   const teachers = (
     await db.query(`SELECT t.id AS "teacherId", t.name,
-      (t.active AND a.active AND (t.expires_at IS NULL OR t.expires_at > now())
-        AND (a.expires_at IS NULL OR a.expires_at > now())) AS active
-      FROM teachers t JOIN app_accounts a ON a.teacher_id = t.id
-      WHERE a.role = 'teacher' ORDER BY t.name, t.id`)
+      COALESCE((t.active AND a.role = 'teacher' AND a.active AND (t.expires_at IS NULL OR t.expires_at > now())
+        AND (a.expires_at IS NULL OR a.expires_at > now())), false) AS active
+      FROM teachers t LEFT JOIN app_accounts a ON a.teacher_id = t.id
+      WHERE a.role = 'teacher' OR EXISTS (SELECT 1 FROM students s WHERE s.teacher_id = t.id) ORDER BY t.name, t.id`)
   ).rows
   const students = (
     await db.query(
@@ -350,13 +350,19 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
       'name' in student
         ? student.name
         : [student.firstName, student.lastName].filter(Boolean).join(' ')
-    const teacher = await db.query(
-      `SELECT t.id FROM teachers t JOIN app_accounts a ON a.teacher_id = t.id
-      WHERE t.id = $1 AND a.role = 'teacher' AND a.active AND (a.expires_at IS NULL OR a.expires_at > now())
-      AND t.active AND (t.expires_at IS NULL OR t.expires_at > now()) FOR SHARE OF t, a`,
-      [student.teacherId],
-    )
-    if (!teacher.rows.length) throw new HttpError(400)
+    await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [student.studentId])
+    const current = await db.query('SELECT teacher_id FROM students WHERE id = $1 FOR UPDATE', [
+      student.studentId,
+    ])
+    if (student.teacherId && current.rows[0]?.teacher_id !== student.teacherId) {
+      const teacher = await db.query(
+        `SELECT t.id FROM teachers t JOIN app_accounts a ON a.teacher_id = t.id
+        WHERE t.id = $1 AND a.role = 'teacher' AND a.active AND (a.expires_at IS NULL OR a.expires_at > now())
+        AND t.active AND (t.expires_at IS NULL OR t.expires_at > now()) FOR SHARE OF t, a`,
+        [student.teacherId],
+      )
+      if (!teacher.rows.length) throw new HttpError(400)
+    }
     await db.query(
       `INSERT INTO students (id, teacher_id, name, group_name, active, first_name, last_name, whatsapp, location, birth_year) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       ON CONFLICT (id) DO UPDATE SET teacher_id = EXCLUDED.teacher_id, name = EXCLUDED.name, group_name = EXCLUDED.group_name, active = EXCLUDED.active,

@@ -1,9 +1,11 @@
 # Assigned roster
 
-Administrators maintain the canonical student roster and assign each student to an active approved Teacher. Import only records with a nonblank teacher assignment; ignore the unmaintained old/former source flag. Preserve stable IDs on roster updates. Keep real data outside Git and use the private CLI in [Railway setup](railway-setup.md) when importing.
+Administrators maintain the complete student register, including historical students without a teacher assignment. Assignment controls Teacher access; it does not determine whether a student record is retained. Unassigned students display **Unassigned** in Settings and can be edited, kept inactive or assigned to an approved active Teacher later. Existing provisional or inactive assignments may be preserved while editing a profile; they cannot be newly assigned. Ignore the unmaintained old/former source flag and preserve stable IDs on roster updates. Keep real data outside Git and use the private CLI in [Railway setup](railway-setup.md) when importing.
 
 The server checks the authenticated role, active state, expiry, Teacher access mode and current assignment. Teachers see active assigned students and can submit student-specific attendance and notes according to their mode. Reassignment changes staff access to the student's history. Administrators have the full notebook; Students receive only their own projected attendance. Signup alone grants no access. See [roles](roles.md).
 
 Administrator student forms store optional WhatsApp number, general location and birth year (year only), alongside the existing roster level. Blank values clear these fields; legacy updates that omit them preserve them. They are not exposed in Student attendance responses.
+
+Settings lists active and inactive students. The notebook and current attendance include active students only; Teachers additionally require their own assignment. Historical students can remain inactive without being deleted or being given invented attendance, enrollments or teacher identities. Recover explicit source name parts and contact details when present; derive only the birth year from a dated birth field, and leave unavailable information blank.
 
 Notebook Students and attendance tables give the remaining width to student names. Level, status and action columns have compact, stable widths, with centered headers and values. Text direction is isolated inside cells so Arabic, Latin names and short level values stay aligned. Phone tables retain their labelled columns within bounded horizontal scrolling.

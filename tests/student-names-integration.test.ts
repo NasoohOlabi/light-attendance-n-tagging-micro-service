@@ -53,6 +53,8 @@ integration('student names survive migration, structured saves and legacy writes
       'neon/006-closed-courses.sql',
       'neon/007-student-profiles-handbooks.sql',
       'neon/008-course-grading.sql',
+      'neon/009-unassigned-students.sql',
+      'neon/009-unassigned-students.sql',
     ])
       await pool.query(await readFile(file, 'utf8'))
     const handler = createHandler(pool, async () => admin, ['https://app.example'])
@@ -90,6 +92,40 @@ integration('student names survive migration, structured saves and legacy writes
         ])
       ).rows[0],
     ).toEqual({ name: 'First Middle Last', first_name: 'First Middle', last_name: 'Last' })
+    // An inactive or unapproved existing assignment can be preserved, but not newly assigned.
+    await pool.query('UPDATE teachers SET active = false WHERE id = $1', [teacher])
+    await pool.query('DELETE FROM app_accounts WHERE auth_user_id = $1', [teacher])
+    expect(
+      neonAdminBoardSchema
+        .parse(await (await call()).json())
+        .teachers.find((item) => item.teacherId === teacher),
+    ).toMatchObject({ active: false })
+    expect((await call({ ...fields, firstName: 'Existing', lastName: '' })).status).toBe(200)
+    expect(
+      (await call({ ...fields, teacherId: null, firstName: 'Unassigned', lastName: '' })).status,
+    ).toBe(200)
+    expect(
+      neonAdminBoardSchema
+        .parse(await (await call()).json())
+        .students.find((item) => item.studentId === student)?.teacherId,
+    ).toBeNull()
+    expect((await call({ ...fields, firstName: 'Reassigned', lastName: '' })).status).toBe(400)
+    await pool.query('UPDATE teachers SET active = true WHERE id = $1', [teacher])
+    await pool.query(
+      "INSERT INTO app_accounts (auth_user_id, role, teacher_id) VALUES ($1::text, 'teacher', $1::uuid)",
+      [teacher],
+    )
+    const teacherHandler = createHandler(pool, async () => teacher, ['https://app.example'])
+    const notebook = await teacherHandler(
+      new Request('https://app.example/api/notebook', {
+        headers: { Authorization: 'Bearer synthetic', Origin: 'https://app.example' },
+      }),
+    )
+    expect(notebook.status).toBe(200)
+    expect(JSON.stringify(await notebook.json())).not.toContain(student)
+    expect((await call({ ...fields, firstName: 'First Middle', lastName: 'Last' })).status).toBe(
+      200,
+    )
     await mkdir('.local', { recursive: true })
     const exportBackup = async (path: string) => {
       const child = Bun.spawn([process.execPath, 'scripts/railway-transfer.ts', 'export', path], {
@@ -99,7 +135,20 @@ integration('student names survive migration, structured saves and legacy writes
       })
       return child.exited
     }
+    expect(
+      (await call({ ...fields, teacherId: null, firstName: 'First Middle', lastName: 'Last' }))
+        .status,
+    ).toBe(200)
     expect(await exportBackup(exportPath)).toBe(0)
+    const compare = Bun.spawn(
+      [process.execPath, 'scripts/railway-transfer.ts', 'compare', exportPath],
+      {
+        env: { ...process.env, MIGRATION_TARGET_DATABASE_URL: databaseUrl },
+        stdout: 'ignore',
+        stderr: 'ignore',
+      },
+    )
+    expect(await compare.exited).toBe(0)
     const backup = z
       .object({
         version: z.union([
@@ -109,6 +158,7 @@ integration('student names survive migration, structured saves and legacy writes
           z.literal(5),
           z.literal(6),
           z.literal(7),
+          z.literal(8),
         ]),
         tables: z.array(
           z.object({
@@ -118,11 +168,15 @@ integration('student names survive migration, structured saves and legacy writes
         ),
       })
       .parse(JSON.parse(await readFile(exportPath, 'utf8')))
+    expect(backup.version).toBe(8)
     expect(
       backup.tables
         .find((table) => table.name === 'public.students')
         ?.rows.find((row) => row.id === student),
-    ).toMatchObject({ first_name: 'First Middle', last_name: 'Last' })
+    ).toMatchObject({ first_name: 'First Middle', last_name: 'Last', teacher_id: null })
+    expect((await call({ ...fields, firstName: 'First Middle', lastName: 'Last' })).status).toBe(
+      200,
+    )
     const columns = await pool.query(
       "SELECT 1 FROM information_schema.columns WHERE table_schema = 'neon_auth' AND table_name = 'user' AND column_name = 'banned'",
     )
@@ -189,7 +243,11 @@ integration('student names survive migration, structured saves and legacy writes
       location: profile.location,
       birth_year: profile.birthYear,
     })
-    await importRoster({ whatsapp: '', location: null, birthYear: null })
+    await importRoster({ teacherId: null, whatsapp: '', location: null, birthYear: null })
+    expect(
+      (await pool.query('SELECT teacher_id FROM students WHERE id = $1', [student])).rows[0]
+        .teacher_id,
+    ).toBeNull()
     expect(
       (
         await pool.query('SELECT whatsapp, location, birth_year FROM students WHERE id = $1', [

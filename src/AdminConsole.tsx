@@ -208,14 +208,7 @@ export function AdminConsole({
                   <StudentForm
                     key={editing?.studentId ?? 'new'}
                     student={editing}
-                    teachers={board.teachers.filter((teacher) =>
-                      board.accounts.some(
-                        (account) =>
-                          account.teacherId === teacher.teacherId &&
-                          account.role === 'teacher' &&
-                          account.active,
-                      ),
-                    )}
+                    teachers={board.teachers}
                     busy={busy || (!!courseId && !courseName)}
                     ar={ar}
                     courseName={courseId ? courseName : ''}
@@ -259,6 +252,7 @@ export function AdminConsole({
                           <th scope="col">{ar ? 'واتساب' : 'WhatsApp'}</th>
                           <th scope="col">{ar ? 'المنطقة' : 'Location'}</th>
                           <th scope="col">{ar ? 'سنة الميلاد' : 'Birth year'}</th>
+                          <th scope="col">{ar ? 'المعلم' : 'Teacher'}</th>
                           <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
                           <th scope="col">{ar ? 'الإجراءات' : 'Actions'}</th>
                         </tr>
@@ -272,6 +266,11 @@ export function AdminConsole({
                             <td dir="ltr">{student.whatsapp || '—'}</td>
                             <td dir="auto">{student.location || '—'}</td>
                             <td>{student.birthYear ?? '—'}</td>
+                            <td dir="auto">
+                              {board.teachers.find(
+                                (teacher) => teacher.teacherId === student.teacherId,
+                              )?.name ?? (ar ? 'غير معين' : 'Unassigned')}
+                            </td>
                             <td>
                               {student.active
                                 ? ar
@@ -568,7 +567,7 @@ function StudentForm({
           whatsapp: whatsapp || null,
           location: location || null,
           birthYear: birthYear ? Number(birthYear) : null,
-          teacherId,
+          teacherId: teacherId || null,
           active,
         })
         if (value.success) save(value.data, courseLevel ?? group)
@@ -651,10 +650,10 @@ function StudentForm({
         </label>
         <label>
           {ar ? 'المعلم' : 'Teacher'}
-          <select required value={teacherId} onChange={(e) => setTeacherId(e.target.value)}>
-            <option value="">{ar ? 'اختر معلماً' : 'Choose a teacher'}</option>
+          <select value={teacherId} onChange={(e) => setTeacherId(e.target.value)}>
+            <option value="">{ar ? 'غير معين' : 'Unassigned'}</option>
             {teachers
-              .filter((teacher) => teacher.active || teacher.teacherId === teacherId)
+              .filter((teacher) => teacher.active || teacher.teacherId === student?.teacherId)
               .map((teacher) => (
                 <option key={teacher.teacherId} value={teacher.teacherId}>
                   {teacher.name}

@@ -57,3 +57,16 @@ test('optional profile fields validate boundaries and clearing', () => {
     expect(neonAdminStudentSchema.safeParse({ ...base, ...profile }).success).toBe(false)
   }
 })
+
+test('student assignment accepts explicit null', () => {
+  expect(
+    neonAdminStudentSchema.safeParse({
+      studentId: crypto.randomUUID(),
+      teacherId: null,
+      firstName: 'Synthetic',
+      lastName: '',
+      group: '',
+      active: false,
+    }).success,
+  ).toBe(true)
+})

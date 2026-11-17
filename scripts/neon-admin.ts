@@ -44,7 +44,7 @@ const studentInput = z
   .array(
     z.strictObject({
       id: z.uuid(),
-      teacherId: z.uuid(),
+      teacherId: z.uuid().nullable(),
       name: z.string().trim().min(1).max(200),
       group: z.string().trim().max(100),
       active: z.boolean(),

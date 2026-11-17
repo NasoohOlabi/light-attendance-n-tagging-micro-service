@@ -251,7 +251,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
         lastName: '',
         group: 'Level C',
         active: true,
-        teacherId,
+        teacherId: null,
       },
     ],
   }
@@ -334,6 +334,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     'WhatsApp',
     'Location',
     'Birth year',
+    'Teacher',
     'Active',
     'Actions',
   ])
@@ -341,11 +342,13 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await page.getByLabel('First name').fill('Synthetic Direct')
   await page.getByLabel('Last name').fill('Student')
   await page.getByLabel('Level', { exact: true }).fill('Group B')
-  await page.locator('.role-editor select').selectOption(teacherId)
+  await expect(page.getByLabel('Teacher')).toHaveValue('')
+  await expect(page.getByLabel('Teacher').locator('option:checked')).toHaveText('Unassigned')
   await page.getByRole('button', { name: 'Save student' }).click()
   await expect(page.getByRole('status')).toHaveText('Saved.')
   await expect(page.getByRole('heading', { name: 'Accounts' })).toHaveCount(0)
   expect(posts[0].path).toBe('/api/admin/students')
+  expect(posts[0].body).toMatchObject({ teacherId: null })
   posts.length = 0
   await page.getByRole('button', { name: 'Open notebook', exact: true }).click()
   await page.reload()
@@ -494,10 +497,11 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     'WhatsApp',
     'Location',
     'Birth year',
+    'Teacher',
     'Active',
     'Actions',
   ])
-  await expect(list.locator('th[scope="col"]')).toHaveCount(8)
+  await expect(list.locator('th[scope="col"]')).toHaveCount(9)
   const rows = list.locator('tbody tr')
   await expect(rows.nth(0).locator('td')).toHaveText([
     'Synthetic Student',
@@ -506,6 +510,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     '—',
     '—',
     '—',
+    'Synthetic Teacher',
     'Active',
     'Edit',
   ])
@@ -516,6 +521,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     '—',
     '—',
     '—',
+    'Synthetic Teacher',
     'Inactive',
     'Edit',
   ])
@@ -526,9 +532,17 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     '—',
     '—',
     '—',
+    'Unassigned',
     'Active',
     'Edit',
   ])
+  await rows.nth(2).getByRole('button', { name: 'Edit' }).click()
+  await expect(page.getByLabel('Teacher')).toHaveValue('')
+  await page.getByLabel('Teacher').selectOption(teacherId)
+  await page.getByRole('button', { name: 'Save student' }).click()
+  await expect.poll(() => posts.length).toBe(3)
+  expect(posts.at(-1)?.body).toMatchObject({ teacherId })
+  posts.pop()
   await page.screenshot({
     path: `.artifacts/verification/student-table-${testInfo.project.name}.png`,
     fullPage: true,
@@ -595,6 +609,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     'واتساب',
     'المنطقة',
     'سنة الميلاد',
+    'المعلم',
     'الحالة',
     'الإجراءات',
   ])
