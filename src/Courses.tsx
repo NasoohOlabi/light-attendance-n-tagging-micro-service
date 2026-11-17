@@ -572,11 +572,16 @@ function GradePage({
         label: ar ? 'النتيجة' : 'Result',
         value: (entry) => {
           const last = entry.gradeDecisions.at(-1)
-          return resultLabel(
+          const result =
             last && last.result !== 'calculated'
               ? last.result
-              : gradeResult(entry, attendanceRatio(entry)),
-          )
+              : gradeResult(entry, attendanceRatio(entry))
+          const average =
+            entry.practical === null || entry.theory === null
+              ? -1
+              : (entry.practical + entry.theory) / 2
+          // Include the missing-score sentinel (-1) in each separate status band.
+          return (result === 'pass' ? 204 : result === 'fail' ? 102 : 0) + average
         },
       },
     ],
