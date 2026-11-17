@@ -6,6 +6,7 @@
 }
 .workspace-rail {
   flex: 0 0 218px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   padding: 30px 18px;
@@ -702,5 +703,35 @@
 @media (max-width: 700px) {
   .roster-students-table .roster-courses-column {
     width: 8rem;
+  }
+}
+
+.workspace-brand-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.workspace-brand-name .wartaq-logo {
+  flex-shrink: 0;
+}
+.workspace-course-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+}
+@media (min-width: 701px) {
+  .workspace-brand:has(.workspace-course-name) {
+    flex-wrap: wrap;
+  }
+  .workspace-brand:has(.workspace-course-name) .workspace-brand-name {
+    flex-basis: 100%;
+  }
+  .workspace-brand:has(.workspace-course-name) .profile-menu {
+    margin-inline-start: auto;
   }
 }
