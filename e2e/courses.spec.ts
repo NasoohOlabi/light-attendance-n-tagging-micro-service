@@ -98,6 +98,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
         authUserId: otherAdminId,
         email: 'other-admin@example.test',
         name: 'Other Admin',
+        profileName: 'Other Admin',
         role: 'administrator',
         active: true,
         expiresAt: null,
@@ -107,8 +108,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       {
         authUserId: teacherId,
         email: 'admin@example.test',
-        name: 'Admin',
-        role: 'teacher',
+        name: 'Administrator',
+        profileName: 'Updated Admin',
+        role: 'administrator',
         active: true,
         expiresAt: null,
         teacherId,
@@ -132,7 +134,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       json: {
         user: {
           id: teacherId,
-          name: 'Admin',
+          name: 'Updated Admin',
           email: 'admin@example.test',
           emailVerified: true,
           createdAt: now,
@@ -673,18 +675,20 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     ),
   )
   await expect(time).toHaveText(formatted)
-  const actorLink = decisions.first().getByRole('link', { name: 'Admin' })
+  const actorLink = decisions.first().getByRole('link', { name: 'Updated Admin' })
   await expect(actorLink).toHaveAttribute('href', `?page=app&view=settings&account=${teacherId}`)
   await expect(decisions.first()).not.toContainText(teacherId)
   expect((await actorLink.boundingBox())?.height).toBeGreaterThanOrEqual(44)
   await page.screenshot({
     path: `.artifacts/verification/admin-name-link-${testInfo.project.name}.png`,
   })
-  board.accounts[0].name = '   '
+  board.accounts[0].profileName = '   '
   await actorLink.click()
+  await expect(page.locator('.role-account strong')).toHaveText('Updated Admin')
   await expect(page.getByText('admin@example.test')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save role' })).toHaveCount(0)
   await page.reload()
+  await expect(page.locator('.role-account strong')).toHaveText('Updated Admin')
   await expect(page.getByText('admin@example.test')).toBeVisible()
   await page.goBack()
   await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
@@ -699,7 +703,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await emailFallback.click()
   await expect(page.getByText('other-admin@example.test')).toBeVisible()
   await expect(page.getByLabel('Role')).toBeVisible()
-  board.accounts[0].name = 'Other Admin'
+  board.accounts[0].profileName = 'Other Admin'
   await page.goBack()
   await compactGradeRow.getByRole('button', { name: 'Override result' }).click()
   await page.getByRole('dialog').getByText('Decision history').click()
@@ -756,6 +760,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))
   await dialog.locator('.decision-history > summary').click()
   await expect(dialog.locator('.decision-history li')).toHaveCount(3)
+  await expect(dialog.getByRole('link', { name: 'Updated Admin' })).toBeVisible()
   const arabicTime = dialog.locator('.decision-history time').first()
   const arabicFormatted = await arabicTime.evaluate((element) =>
     new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(
