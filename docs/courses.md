@@ -44,4 +44,8 @@ Grades includes optional multiline enrollment notes, saved with each row. Notes 
 
 Grades opens directly on existing student records. Its Sort icon sits beside the page title, with no separate configuration row or Filter icon. Use the existing Courses navigation to return to the saved course list; Grades has no duplicate Back button. Saved Grades URL filters are ignored; heading sorting and the sort popup remain available. Edit scores and notes on each student's row. Student creation and membership remain on their separate screens. Other tables keep their filters inside the Filter popup.
 
+Administrators can override a grade result to Pass or Fail, or restore the calculated result. Each decision requires a nonblank note and is saved with the authenticated administrator and server time in an append-only enrollment history. The Grades page shows calculated and effective results and the decision history. Teachers and students do not receive decision notes or history. Decisions do not change scores, attendance, or closure rules.
+
+Apply migration `neon/011-grade-decisions.sql` before deployment. Version 10 backups preserve decision history; older backups cannot compare against a target with decisions.
+
 Grades uses a bounded scrolling table on desktop, with opaque sticky column headings. The title, Sort control and grading thresholds stay outside the table scroll area. Focus the Course grades region to scroll it with the keyboard. On phones and other stacked layouts, records continue to use normal page scrolling without a nested vertical scroller.
