@@ -1660,8 +1660,20 @@ The mobile Courses screenshot showed five unlabeled icons per row. Courses now h
 
 `bun run verify:release` passed all local gates and 116 browser cases. The browser coverage exercises keyboard focus and Escape, outside dismissal, course selection and status, grade override and focus return, history details and undo, and 320/390/430px layouts in English and Arabic. Browser checks use Chromium on desktop and emulated phones with synthetic API responses. Four optional database suites skipped. Railway's production trigger points to `main` with Wait for CI enabled. Exact-commit deployment and shipped-asset verification follow the PR merge.
 
+## 2026-11-17 23:30 Asia/Damascus (UTC+03:00) - Complete the Courses header divider
+
+The screenshot showed a gap above the three-dot menus. Keep the Actions header cell in the phone grid so its bottom border meets the adjacent headers, and visually hide only the accessible label.
+
+The course browser regression reproduced the gap before the fix. It checks column alignment, divider style and menu interaction on desktop and at 320/390/430px in English and Arabic. The phone cases cover light and dark appearance with synthetic data. The Arabic dark screenshot shows a continuous divider. Railway's `main` trigger has Wait for CI enabled. The PR records the live deployment result.
+
+`bun run verify:release` passed all gates, including 116 browser cases and 33 local tests. Four optional database suites skipped. Phones were emulated in Chromium.
+
 ## 2026-11-17 23:36 Asia/Damascus (UTC+03:00) - Compact mobile grade actions
 
 The marked-up phone screenshot asked to move the grade actions into the space beside the result. Save grades and its neighboring three-dot menu now share the row below Notes with the result. The actions sit to the left in Arabic and to the right in English. The desktop table retains separate Result and Actions columns.
 
 `bun run verify:release` passed with 116 browser cases and 33 local tests. The layout regression reproduced the extra row before the change and now confirms the controls fit with 44px touch targets at 320, 390 and 430px in both languages. The browser suite uses synthetic records and emulated phones. Four optional database tests skipped. Railway confirmed that production targets `main` with Wait for CI enabled. Exact-commit deployment and shipped layout verification follow the PR checks.
+
+**Main integration at 23:38 Asia/Damascus** Merged `42fe9bc` and retained both work-log entries. The mobile Courses divider and grade layout combined without source conflicts.
+
+**Integrated verification at 23:41 Asia/Damascus** The full release gate passed again with 116 browser cases and 33 local tests. Four optional database tests skipped. The production browser regression reproduced the separate actions row against the pre-change deployment using synthetic API responses and tracing disabled.
