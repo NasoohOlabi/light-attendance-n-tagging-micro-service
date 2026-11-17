@@ -1,6 +1,7 @@
 ﻿import { afterAll, expect, test } from 'bun:test'
 import { Pool } from 'pg'
 import { z } from 'zod'
+import { neonAdminBoardSchema } from '../shared/neon'
 
 // Set only to a disposable database with the Railway and application migrations applied.
 const databaseUrl = process.env.TEST_RAILWAY_DATABASE_URL
@@ -171,13 +172,28 @@ integration(
     adminId = z.object({ user: z.object({ id: z.uuid() }) }).parse(await adminSignUp.json()).user.id
     const adminCookie = adminSignUp.headers.get('set-cookie')?.split(';')[0] ?? ''
     await pool.query(
-      "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, 'Synthetic administrator', 'read_write')",
+      "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, 'Administrator', 'read_write')",
       [adminTeacherId, adminId],
     )
     await pool.query(
       "INSERT INTO app_accounts (auth_user_id, role, teacher_id) VALUES ($1, 'administrator', $2)",
       [adminId, adminTeacherId],
     )
+    const adminHeaders = { cookie: adminCookie, 'x-user-id': adminId }
+    const renamed = await fetch(`${origin}/api/auth/update-user`, {
+      method: 'POST',
+      headers: { ...adminHeaders, origin, 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Updated administrator' }),
+    })
+    expect(renamed.status).toBe(200)
+    const directory = await fetch(`${origin}/api/admin`, { headers: adminHeaders })
+    expect(directory.status).toBe(200)
+    const { accounts } = neonAdminBoardSchema.parse(await directory.json())
+    expect(accounts.find((account) => account.authUserId === adminId)).toMatchObject({
+      name: 'Administrator',
+      profileName: 'Updated administrator',
+      role: 'administrator',
+    })
     const resetPassword = crypto.randomUUID()
     const reset = (cookie: string, id: string, body: unknown, requestOrigin = origin) =>
       fetch(`${origin}/api/admin/accounts/reset-password`, {

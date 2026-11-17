@@ -197,7 +197,7 @@ const live = (active: boolean, expires: Date | null) =>
 async function adminBoard(db: PoolClient) {
   // ponytail: bounded to 1000 accounts; add pagination when that ceiling matters.
   const accounts = (
-    await db.query(`SELECT u.id AS "authUserId", u.email, COALESCE(t.name, s.name, u.name, '') AS name,
+    await db.query(`SELECT u.id AS "authUserId", u.email, u.name AS "profileName", COALESCE(t.name, s.name, u.name, '') AS name,
     a.role, COALESCE(a.active, false) AS active, a.expires_at AS "expiresAt", a.teacher_id AS "teacherId", a.student_id AS "studentId"
     FROM neon_auth."user" u LEFT JOIN app_accounts a ON a.auth_user_id = u.id::text
     LEFT JOIN teachers t ON t.id = a.teacher_id LEFT JOIN students s ON s.id = a.student_id

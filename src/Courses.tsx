@@ -13,7 +13,12 @@ import {
   Save,
   UsersRound,
 } from 'lucide-react'
-import { neonAdminBoardSchema, type Course, type Enrollment } from '../shared/neon'
+import {
+  accountProfileLabel,
+  neonAdminBoardSchema,
+  type Course,
+  type Enrollment,
+} from '../shared/neon'
 import { projectEvents, type LedgerEvent } from '../shared/ledger'
 import { courseAttendance, downloadCourseWorkbook, savedGradeResult } from './courseExport'
 import { request } from './neon'
@@ -965,7 +970,7 @@ function GradePage({
                                         dir="auto"
                                         href={`?${new URLSearchParams({ page: 'app', view: 'settings', account: actor.authUserId })}`}
                                       >
-                                        {actor.name.trim() || actor.email}
+                                        {accountProfileLabel(actor)}
                                       </a>
                                     ) : (
                                       <span>

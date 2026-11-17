@@ -178,6 +178,7 @@ export const neonAdminBoardSchema = z.object({
       authUserId,
       email: z.string(),
       name: z.string(),
+      profileName: z.string().optional(),
       role: z.enum(['administrator', 'teacher', 'student']).nullable(),
       active: z.boolean(),
       expiresAt: expiry,
@@ -201,3 +202,9 @@ export const neonAdminBoardSchema = z.object({
     }),
   ),
 })
+
+export function accountProfileLabel(
+  account: z.infer<typeof neonAdminBoardSchema>['accounts'][number],
+) {
+  return (account.profileName ?? account.name).trim() || account.email
+}
