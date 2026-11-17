@@ -16,7 +16,8 @@ let server: ChildProcess
 let origin = ''
 test.beforeAll(async ({ browserName }, testInfo) => {
   if (browserName !== 'chromium') throw new Error('Chromium required')
-  const port = testInfo.project.name === 'mobile' ? 4383 : 4382
+  const port =
+    Number(process.env.PLAYWRIGHT_PORT ?? 4173) + (testInfo.project.name === 'mobile' ? 210 : 209)
   await new Promise<void>((resolve, reject) => {
     const probe = createServer()
     probe.once('error', reject)

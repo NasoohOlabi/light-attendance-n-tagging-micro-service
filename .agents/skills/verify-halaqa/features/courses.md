@@ -24,4 +24,6 @@ Grades has no column-filter inputs beneath its headings. Its single Sort icon sh
 
 Verify administrators can save Pass, Fail, and restore the calculated result with a required nonblank note. Confirm calculated and effective results, history, persistence and desktop/mobile fit in English and Arabic. Teacher and student responses must exclude decision history.
 
+Grades omits the Enrolled column while retaining withdrawn students and their grades. Stale Enrolled sort settings are ignored. Whole-number decimal levels display without the zero-only fraction across course tables and unfocused editors; existing raw values survive unchanged saves.
+
 For long Grades tables, check English and Arabic on desktop (including short windows): the named, keyboard-focusable table region scrolls independently, column headings stay opaque and pinned, and the final row and its Save grades action are reachable. The title and thresholds stay outside the region. On phones, records remain stacked with normal page scrolling and no horizontal overflow.

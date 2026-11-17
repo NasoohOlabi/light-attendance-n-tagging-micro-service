@@ -592,10 +592,10 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await compactGradeRow.getByText('Override result').click()
   const checkGradeOrder = async (theory: string, practical: string) => {
     const headers = page.locator('thead th')
-    await expect(headers.nth(5)).toContainText(theory)
-    await expect(headers.nth(6)).toContainText(practical)
-    await expect(compactGradeRow.locator('td').nth(5)).toHaveAttribute('data-label', theory)
-    await expect(compactGradeRow.locator('td').nth(6)).toHaveAttribute('data-label', practical)
+    await expect(headers.nth(4)).toContainText(theory)
+    await expect(headers.nth(5)).toContainText(practical)
+    await expect(compactGradeRow.locator('td').nth(4)).toHaveAttribute('data-label', theory)
+    await expect(compactGradeRow.locator('td').nth(5)).toHaveAttribute('data-label', practical)
   }
   const checkGradeSave = async (label: string) => {
     const button = compactGradeRow.getByRole('button', { name: label })
