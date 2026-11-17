@@ -228,6 +228,7 @@
   display: inline;
   position: relative;
   min-width: 44px;
+  padding: 0.25rem 0.5rem;
   font: inherit;
   color: inherit;
   cursor: pointer;
@@ -239,16 +240,21 @@
   min-width: 0;
   font-weight: normal;
 }
-.table-sort::after {
-  content: ' ↕';
+.table-sort-chevron {
   position: absolute;
   inset-inline-start: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
 }
-.table-sort.sort-asc::after {
-  content: ' ↑';
+.table-sort:hover .table-sort-chevron,
+.table-sort:focus-visible .table-sort-chevron {
+  opacity: 1;
 }
-.table-sort.sort-desc::after {
-  content: ' ↓';
+@media (hover: none) {
+  .table-sort-chevron {
+    opacity: 1;
+  }
 }
 .table-reset::after {
   content: '×';
