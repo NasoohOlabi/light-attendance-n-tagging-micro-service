@@ -1,3 +1,5 @@
+import { LevelInput } from './level'
+import { formatLevel } from './levelFormat'
 import { PhoneNumber } from './PhoneNumber'
 import { TableHeader, useDataTable } from './DataTable'
 import { CircleCheck, CircleMinus, RefreshCw, UserRound } from 'lucide-react'
@@ -321,7 +323,9 @@ function Notebook({
             >
               <option value="">{t('All groups')}</option>
               {groups.map((group) => (
-                <option key={group}>{group}</option>
+                <option key={group} value={group}>
+                  {formatLevel(group)}
+                </option>
               ))}
             </select>
           </label>
@@ -747,8 +751,8 @@ function studentLevel(
   enrollments: import('../shared/neon').Enrollment[],
 ) {
   return courseSelected
-    ? (enrollments.find((entry) => entry.studentId === student.studentId)?.level ?? '')
-    : student.group
+    ? formatLevel(enrollments.find((entry) => entry.studentId === student.studentId)?.level ?? '')
+    : formatLevel(student.group)
 }
 
 function AttendanceView({
@@ -1392,7 +1396,7 @@ function StudentEditor({ student, save }: { student: Student; save: Save }) {
       </label>
       <label>
         {t('Group')}
-        <input
+        <LevelInput
           dir="auto"
           maxLength={100}
           value={group}
@@ -1621,7 +1625,7 @@ function History({
                   </div>
                   <div>
                     <dt>{language === 'ar' ? 'المستوى' : 'Level'}</dt>
-                    <dd dir="auto">{event.payload.group || '—'}</dd>
+                    <dd dir="auto">{formatLevel(event.payload.group) || '—'}</dd>
                   </div>
                   <div>
                     <dt>{language === 'ar' ? 'الحالة' : 'Status'}</dt>

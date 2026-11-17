@@ -20,8 +20,8 @@ async function syntheticTables(
     studentId: studentIds[index],
     name: `${firstName} Family`,
     firstName,
-    lastName: 'Family',
-    group: String(index + 1),
+    lastName: index === 4 ? 'Alpha Family' : 'Family',
+    group: index === 0 ? '1.0' : String(index + 1),
     active: true,
     teacherId: actorId,
     whatsapp: index === 4 ? null : `00123${index}`,
@@ -32,7 +32,7 @@ async function syntheticTables(
     id: `40000000-0000-4000-8000-00000000000${index + 1}`,
     courseId,
     studentId: student.studentId,
-    level: index === 4 ? '' : String(index + 1),
+    level: index === 4 ? '' : index === 0 ? '2.00' : String(index + 1),
     practical: scores[index] ?? null,
     theory: 100,
     active: index !== 4,
@@ -133,7 +133,7 @@ async function syntheticTables(
     if (path === '/api/student/attendance')
       return route.fulfill({
         json: {
-          student: { studentId: studentIds[0], name: 'Synthetic student', group: '1' },
+          student: { studentId: studentIds[0], name: 'Synthetic student', group: '1.0' },
           attendance: [
             { date: '2026-11-14', status: 'absent', course: 'Zebra course' },
             { date: '2026-11-12', status: 'present', course: 'Alpha course' },
@@ -209,12 +209,43 @@ async function everyColumn(table: Locator, count: number, actions = false, filte
   if (actions) await expect(table.locator('thead th').last().getByRole('button')).toHaveCount(0)
 }
 
+test('whole decimal levels display consistently and retain raw edit values', async ({ page }) => {
+  const { writes } = await syntheticTables(page)
+  await page.goto('/?page=app&tab=roster')
+  await expect(
+    page.locator('tbody tr').filter({ hasText: 'Zulu' }).locator('td').nth(4),
+  ).toHaveText('1')
+  await page.goto(`/?page=app&view=student&student=${studentIds[0]}`)
+  await expect(
+    page
+      .locator('dl div')
+      .filter({ has: page.locator('dt', { hasText: /^Level$/ }) })
+      .locator('dd'),
+  ).toHaveText('1')
+  await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=students`)
+  const row = page.locator('tbody tr').filter({ hasText: 'Zulu' })
+  await expect(row.locator('td').nth(2)).toHaveText('1')
+  const input = row.getByLabel('Course level: Zulu Family')
+  await expect(input).toHaveValue('2')
+  await input.focus()
+  await expect(input).toHaveValue('2.00')
+  await input.blur()
+  await expect(input).toHaveValue('2')
+  await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
+  await expect(
+    page.locator('tbody tr').filter({ hasText: 'Zulu' }).locator('td').nth(2),
+  ).toHaveText('2')
+  await expect(page.getByRole('button', { name: 'Sort by Enrolled' })).toHaveCount(0)
+  await expect(page.locator('tbody tr')).toHaveCount(5)
+  expect(writes).toEqual([])
+})
+
 test('every staff table column sorts and filters without writes', async ({ page }, testInfo) => {
   const { writes } = await syntheticTables(page)
   for (const [query, columns, actions] of [
     ['view=courses', 2, true],
     [`view=courses&course=${courseId}&courseView=students`, 6, true],
-    [`view=courses&course=${courseId}&courseView=grades`, 9, true],
+    [`view=courses&course=${courseId}&courseView=grades`, 8, true],
     ['tab=roster', 7, true],
     [`view=student&student=${studentIds[0]}`, 3, false],
     [`tab=attendance&course=${courseId}`, 3, false],
@@ -387,6 +418,12 @@ test('student portal dates sort chronologically and combine course/status filter
 }) => {
   const { writes } = await syntheticTables(page, 'student')
   await page.goto('/?page=app')
+  await expect(
+    page
+      .locator('dl div')
+      .filter({ has: page.locator('dt', { hasText: /^Roster level$/ }) })
+      .locator('dd'),
+  ).toHaveText('1')
   const table = page.locator('table')
   await everyColumn(table, 3)
   await page.getByRole('button', { name: 'Sort by Date', exact: true }).click()
@@ -425,13 +462,13 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
   const table = page.locator('table')
   const names = table.locator('tbody tr td:first-child')
-  const enrolled = table.getByRole('button', { name: 'Sort by Enrolled', exact: true })
+  const last = table.getByRole('button', { name: 'Sort by Last name', exact: true })
   const first = table.getByRole('button', { name: 'Sort by First name', exact: true })
-  await enrolled.click()
-  await expect(enrolled).toHaveCSS('outline-style', 'none')
+  await last.click()
+  await expect(last).toHaveCSS('outline-style', 'none')
   await page.keyboard.press('Tab')
   await page.keyboard.press('Shift+Tab')
-  await expect(enrolled).not.toHaveCSS('outline-style', 'none')
+  await expect(last).not.toHaveCSS('outline-style', 'none')
   await first.click({ modifiers: ['Shift'] })
   await expect(page.locator('.sort-pill').first()).toBeHidden()
   await page.getByRole('button', { name: 'Sort options' }).click()
@@ -443,7 +480,7 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await page.keyboard.press('Escape')
   await expect(page.getByText('Keyboard: Space to grab and drop', { exact: false })).toBeHidden()
   await expect(names).toHaveText(['Echo', 'Alpha', 'Charlie', 'Delta', 'Zulu'])
-  await expect(enrolled.locator('.table-sort-priority')).toHaveText('1')
+  await expect(last.locator('.table-sort-priority')).toHaveText('1')
   await expect(first.locator('.table-sort-priority')).toHaveText('2')
   await expect(first.locator('..')).not.toHaveAttribute('aria-sort')
   await page.reload()
@@ -474,7 +511,7 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await expect(page.locator('.sort-pill').first()).toContainText('First name')
   await page.getByRole('button', { name: 'Reset sort' }).click()
   await page.getByRole('button', { name: 'Close', exact: true }).click()
-  await enrolled.click()
+  await last.click()
   await first.click({ modifiers: ['Shift'] })
   await page.getByRole('button', { name: 'Sort options' }).click()
   await mkdir('.artifacts/verification', { recursive: true })
@@ -503,7 +540,7 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await expect(page.locator('.sort-pill').first()).toContainText('First name')
   await expect(names).toHaveText(['Zulu', 'Echo', 'Delta', 'Charlie', 'Alpha'])
   await page.getByRole('button', { name: 'Remove sort 2' }).click()
-  await page.getByLabel('Add column').selectOption('enrolled')
+  await page.getByLabel('Add column').selectOption('last')
   await page.getByRole('button', { name: 'Close', exact: true }).click()
   await first.click()
   await page.getByRole('button', { name: 'Sort options' }).click()
@@ -519,6 +556,7 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
       sorting: [
         { id: 'first', desc: false },
         { id: 'first', desc: true },
+        { id: 'enrolled', desc: false },
         { id: 'unknown', desc: false },
       ],
     },
@@ -530,7 +568,7 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'Sort options' }).click()
   await expect(page.locator('.sort-pill')).toHaveCount(1)
   await expect(page.locator('.sort-pill').first()).toContainText('First name')
-  await page.getByLabel('Add column').selectOption('enrolled')
+  await page.getByLabel('Add column').selectOption('last')
   await page.getByRole('button', { name: 'Close', exact: true }).click()
   await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
   await page.getByRole('button', { name: 'خيارات الفرز' }).click()
@@ -550,7 +588,7 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
     })
     await page.getByRole('button', { name: 'خيارات الفرز' }).click()
   }
-  const rtlGrip = page.getByRole('button', { name: 'ترتيب مسجل' })
+  const rtlGrip = page.getByRole('button', { name: 'ترتيب اسم العائلة' })
   await expect(rtlGrip).toHaveAccessibleDescription(/اضغط مسافة/)
   await rtlGrip.focus()
   await page.keyboard.press('Space')
