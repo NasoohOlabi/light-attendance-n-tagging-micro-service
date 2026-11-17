@@ -641,7 +641,7 @@ function GradePage({
         aria-label={ar ? 'درجات الدورة' : 'Course grades'}
         tabIndex={0}
       >
-        <table className="mobile-record-table role-table min-w-[68rem] [&_th]:whitespace-nowrap [&_input]:w-24">
+        <table className="mobile-record-table role-table min-w-[68rem] [&_th]:whitespace-nowrap [&_input]:w-24 [&_td]:align-top">
           <TableHeader model={gradeTable} actions showControls={false} />
           <tbody>
             {gradeTable.rows.map((entry) => {
@@ -737,7 +737,10 @@ function GradePage({
                       }
                     />
                   </td>
-                  <td data-label={ar ? 'النتيجة' : 'Result'}>
+                  <td
+                    data-label={ar ? 'النتيجة' : 'Result'}
+                    className="col-span-full min-[1025px]:min-w-72"
+                  >
                     <div>
                       {lastDecision && lastDecision.result !== 'calculated' && (
                         <>{ar ? 'المحسوبة' : 'Calculated'}: </>
