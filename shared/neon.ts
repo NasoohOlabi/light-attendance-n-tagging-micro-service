@@ -128,7 +128,7 @@ export const neonAdminPasswordResetSchema = z
   .refine((value) => value.password === value.passwordConfirmation)
 const studentFields = {
   studentId: z.uuid(),
-  teacherId: z.uuid(),
+  teacherId: z.uuid().nullable(),
   group: z.string().trim().max(100),
   active: z.boolean(),
   whatsapp: z.string().trim().max(40).nullable().optional(),
@@ -177,7 +177,7 @@ export const neonAdminBoardSchema = z.object({
       lastName: z.string(),
       group: z.string(),
       active: z.boolean(),
-      teacherId: z.uuid(),
+      teacherId: z.uuid().nullable(),
       whatsapp: z.string().nullable().default(null),
       location: z.string().nullable().default(null),
       birthYear: z.number().int().nullable().default(null),

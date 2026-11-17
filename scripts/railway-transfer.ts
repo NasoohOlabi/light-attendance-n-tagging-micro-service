@@ -44,7 +44,7 @@ const courseTables = [
     columns: ['id', 'course_id', 'student_id', 'level', 'practical', 'theory'],
   },
 ] as const
-type Version = 1 | 2 | 3 | 4 | 5 | 6 | 7
+type Version = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
 function tablesFor(version: Version) {
   if (version < 3) return [...baseTables]
   return [...baseTables.slice(0, -1), ...courseTables, baseTables[baseTables.length - 1]]
@@ -81,6 +81,7 @@ const backupSchema = z.strictObject({
     z.literal(5),
     z.literal(6),
     z.literal(7),
+    z.literal(8),
   ]),
   createdAt: z.iso.datetime(),
   tables: z.array(z.strictObject({ name: z.string(), rows: z.array(rowSchema) })),
@@ -148,6 +149,13 @@ function validateBackup(backup: Backup) {
     )
       throw new Error('Unexpected backup columns')
   }
+  if (
+    backup.version < 8 &&
+    backup.tables
+      .find((table) => table.name === 'public.students')
+      ?.rows.some((row) => row.teacher_id === null)
+  )
+    throw new Error('Unassigned students require backup version 8')
   const accounts = backup.tables.find((table) => table.name === 'neon_auth.account')
   if (
     accounts?.rows.some(
@@ -161,6 +169,7 @@ function validateBackup(backup: Backup) {
 }
 async function schemaVersion(db: PoolClient): Promise<Version> {
   const result = await db.query(`SELECT
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name = 'teacher_id' AND is_nullable = 'YES') AS unassigned,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name IN ('first_name', 'last_name')) AS names,
     (SELECT count(*)::int FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('courses', 'course_enrollments')) AS courses,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND ((table_name = 'courses' AND column_name IN ('id', 'name')) OR (table_name = 'course_enrollments' AND column_name IN ('id', 'course_id', 'student_id', 'level', 'practical', 'theory')))) AS course_columns,
@@ -176,6 +185,7 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name IN ('attendance_minimum', 'practical_minimum', 'theory_minimum') AND data_type = 'double precision' AND is_nullable = 'NO') AS grading,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name IN ('attendance_minimum', 'practical_minimum', 'theory_minimum')) AS grading_columns`)
   const {
+    unassigned,
     names,
     courses,
     enrollment,
@@ -192,6 +202,7 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     grading_columns,
   } = z
     .object({
+      unassigned: z.number(),
       names: z.number(),
       courses: z.number(),
       enrollment: z.number(),
@@ -228,6 +239,7 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     throw new Error('Incomplete application migration')
   if (membership !== membership_column) throw new Error('Incomplete application migration')
   if (membership && courses !== 2) throw new Error('Incomplete application migration')
+  if (unassigned && grading !== 3) throw new Error('Incomplete application migration')
   if (courses === 2 && names !== 2)
     throw new Error('Student name migration required for course backup')
   return courses === 2
@@ -235,7 +247,9 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
       ? course_open
         ? profile === 3
           ? grading === 3
-            ? 7
+            ? unassigned
+              ? 8
+              : 7
             : 6
           : 5
         : 4
@@ -339,6 +353,11 @@ async function main() {
         )
         if (thresholds.rowCount)
           throw new Error('Legacy backup cannot represent course grading thresholds')
+      }
+      if (backup.version < 8 && targetVersion >= 8) {
+        const unassigned = await db.query('SELECT 1 FROM students WHERE teacher_id IS NULL LIMIT 1')
+        if (unassigned.rowCount)
+          throw new Error('Legacy backup cannot represent unassigned students')
       }
       const actual = await snapshot(db, backup.version)
       for (const [index, table] of backup.tables.entries()) {

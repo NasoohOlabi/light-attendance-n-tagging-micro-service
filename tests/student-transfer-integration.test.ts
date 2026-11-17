@@ -14,7 +14,7 @@ integration(
     if (!url) throw new Error('Disposable database required')
     const admin = new Pool({ connectionString: url })
     const names = Array.from(
-      { length: 8 },
+      { length: 9 },
       () => `transfer_${crypto.randomUUID().replaceAll('-', '')}`,
     )
     const pools: Pool[] = []
@@ -27,7 +27,7 @@ integration(
       !localPath.startsWith('transfer-test-')
     )
       throw new Error('Refusing cleanup outside the disposable transfer directory')
-    const files = [1, 2, 3, 4, 5, 6, 7].map((version) => resolve(directory, `v${version}.json`))
+    const files = [1, 2, 3, 4, 5, 6, 7, 8].map((version) => resolve(directory, `v${version}.json`))
     const run = (command: string, file: string, dbUrl: string, succeeds = true) => {
       const result = Bun.spawnSync(
         [process.execPath, 'run', 'scripts/railway-transfer.ts', command, file],
@@ -151,6 +151,15 @@ integration(
       )
       run('export', files[6], urls[0])
       run('compare', files[5], urls[0], false)
+      await migrate(source, 'neon/009-unassigned-students.sql')
+      await migrate(source, 'neon/009-unassigned-students.sql')
+      const unassigned = crypto.randomUUID()
+      await source.query(
+        "INSERT INTO students (id, teacher_id, name, group_name, active) VALUES ($1, NULL, 'Synthetic unassigned', 'Level', false)",
+        [unassigned],
+      )
+      run('export', files[7], urls[0])
+      run('compare', files[6], urls[0], false)
       for (let index = 0; index < targets.length; index++) {
         await migrate(targets[index], 'neon/003-courses.sql')
         await migrate(targets[index], 'neon/004-student-names.sql')
@@ -158,6 +167,10 @@ integration(
         await migrate(targets[index], 'neon/006-closed-courses.sql')
         await migrate(targets[index], 'neon/007-student-profiles-handbooks.sql')
         await migrate(targets[index], 'neon/008-course-grading.sql')
+        if (index === 7) {
+          run('import', files[index], urls[index + 1], false)
+          await migrate(targets[index], 'neon/009-unassigned-students.sql')
+        }
         run('import', files[index], urls[index + 1])
         run('compare', files[index], urls[index + 1])
       }
@@ -169,7 +182,14 @@ integration(
                 .version,
           ),
         ),
-      ).toEqual([1, 2, 3, 4, 5, 6, 7])
+      ).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+      expect(
+        (
+          await targets[7].query('SELECT teacher_id, active FROM students WHERE id = $1', [
+            unassigned,
+          ])
+        ).rows[0],
+      ).toEqual({ teacher_id: null, active: false })
       expect(
         (await targets[5].query('SELECT whatsapp, location, birth_year FROM students')).rows[0],
       ).toEqual({ whatsapp: '+123', location: 'Area', birth_year: 2000 })
