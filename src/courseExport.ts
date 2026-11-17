@@ -1,34 +1,12 @@
 import type { projectEvents } from '../shared/ledger'
 import type { Course, Enrollment, neonAdminBoardSchema } from '../shared/neon'
+import { courseAttendance, effectiveGradeResult } from '../shared/courseGrading'
 
 type Student = Pick<
   ReturnType<typeof neonAdminBoardSchema.parse>['students'][number],
   'studentId' | 'name' | 'firstName' | 'lastName'
 >
 type Attendance = ReturnType<typeof projectEvents>['attendance']
-
-export function courseAttendance(attendance: Attendance, entry: Enrollment) {
-  const rows = attendance.filter(({ value }) => value.enrollmentId === entry.id)
-  const present = rows.filter(({ value }) => value.status === 'present').length
-  const absent = rows.filter(({ value }) => value.status === 'absent').length
-  const excused = rows.filter(({ value }) => value.status === 'excused').length
-  return {
-    present,
-    absent,
-    excused,
-    total: rows.length,
-    ratio: rows.length ? (present / rows.length) * 100 : null,
-  }
-}
-
-export function savedGradeResult(course: Course, entry: Enrollment, ratio: number | null) {
-  if (entry.practical === null || entry.theory === null || ratio === null) return 'pending'
-  return entry.practical >= course.practicalMinimum &&
-    entry.theory >= course.theoryMinimum &&
-    ratio >= course.attendanceMinimum
-    ? 'pass'
-    : 'fail'
-}
 
 export async function courseWorkbook({
   course,
@@ -96,11 +74,7 @@ export async function courseWorkbook({
       .map((entry) => {
         const student = students.find((item) => item.studentId === entry.studentId)
         const counts = courseAttendance(attendance, entry)
-        const decision = entry.gradeDecisions.at(-1)
-        const result =
-          decision && decision.result !== 'calculated'
-            ? decision.result
-            : savedGradeResult(course, entry, counts.ratio)
+        const result = effectiveGradeResult(course, entry, counts.ratio)
         return [
           student?.firstName || student?.name || '',
           student?.lastName ?? '',

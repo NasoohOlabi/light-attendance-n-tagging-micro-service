@@ -3,6 +3,7 @@ import { hashPassword } from 'better-auth/crypto'
 import type { Pool, PoolClient } from 'pg'
 import {
   courseBoardSchema,
+  courseSchema,
   courseInputSchema,
   courseStatusSchema,
   courseSettingsSchema,
@@ -20,11 +21,13 @@ import {
   neonAdminStudentEnrollSchema,
   neonBatchSchema,
   neonSnapshotSchema,
+  neonStudentSchema,
   neonStudentAttendanceSchema,
   neonTeacherSchema,
 } from '../shared/neon'
 import { eventSchema, projectEvents } from '../shared/ledger'
 import { validateAssignedPayloads } from '../shared/roster'
+import { courseAttendance, effectiveGradeResult } from '../shared/courseGrading'
 
 const teacherRow = z.object({
   id: z.uuid(),
@@ -46,6 +49,18 @@ const eventRow = z.object({
   received_at: z.date(),
   payload: z.unknown(),
 })
+
+function numericLevel(value: string) {
+  const normalized = value
+    .trim()
+    .replaceAll('\u066b', '.')
+    .replace(/[\u0660-\u0669\u06f0-\u06f9]/g, (digit) =>
+      String(digit.charCodeAt(0) - (digit.charCodeAt(0) <= 0x669 ? 0x660 : 0x6f0)),
+    )
+  const match = /^(\d+)(?:\.(\d+))?$/.exec(normalized)
+  return match && { whole: BigInt(match[1]), fractional: /[1-9]/.test(match[2] ?? '') }
+}
+
 class HttpError extends Error {
   constructor(public status: number) {
     super()
@@ -276,6 +291,78 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
     return { saved: true }
   } else if (path === '/api/admin/courses/status') {
     const status = courseStatusSchema.parse(body)
+    if (!status.open) {
+      // Serialize membership changes for this course, including newly inserted students.
+      await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [status.id])
+      const students = z
+        .array(studentRow)
+        .parse(
+          (
+            await db.query(
+              'SELECT s.id, s.name, s.group_name, s.active FROM students s JOIN course_enrollments ce ON ce.student_id = s.id WHERE ce.course_id = $1 ORDER BY s.name, s.id FOR UPDATE OF s',
+              [status.id],
+            )
+          ).rows,
+        )
+      const entries = z.array(enrollmentSchema).parse(
+        (
+          await db.query(
+            `SELECT id, course_id AS "courseId", student_id AS "studentId", level,
+          practical::float8 AS practical, theory::float8 AS theory, active, grade_decisions AS "gradeDecisions"
+          FROM course_enrollments WHERE course_id = $1 ORDER BY id FOR SHARE`,
+            [status.id],
+          )
+        ).rows,
+      )
+      const courseRows = await db.query(
+        'SELECT id, name, open, attendance_minimum AS "attendanceMinimum", practical_minimum AS "practicalMinimum", theory_minimum AS "theoryMinimum" FROM courses WHERE id = $1 FOR NO KEY UPDATE',
+        [status.id],
+      )
+      if (!courseRows.rowCount) throw new HttpError(400)
+      const course = courseSchema.parse(courseRows.rows[0])
+      if (course.open) {
+        const rows = z
+          .array(eventRow)
+          .parse(
+            (
+              await db.query(
+                'SELECT id, actor, client_time, received_at, payload FROM events WHERE student_id = ANY($1::uuid[]) ORDER BY sequence',
+                [students.map((student) => student.id)],
+              )
+            ).rows,
+          )
+        const events = rows.map((event) =>
+          eventSchema.parse({
+            id: event.id,
+            actor: event.actor,
+            clientTime: event.client_time.toISOString(),
+            receivedAt: event.received_at.toISOString(),
+            payload: event.payload,
+          }),
+        )
+        const attendance = projectEvents(events).attendance
+        for (const entry of entries.filter((item) => item.active)) {
+          if (
+            effectiveGradeResult(course, entry, courseAttendance(attendance, entry).ratio) !==
+            'pass'
+          )
+            continue
+          const student = students.find((item) => item.id === entry.studentId && item.active)
+          if (!student) continue
+          const level = numericLevel(entry.level)
+          const roster = numericLevel(student.group_name)
+          if (!level || level.fractional || (!roster && student.group_name.trim())) continue
+          const next = level.whole + 1n
+          if (roster && roster.whole >= next) continue
+          const nextLevel = neonStudentSchema.shape.group.safeParse(String(next))
+          if (!nextLevel.success) continue
+          await db.query('UPDATE students SET group_name = $2 WHERE id = $1', [
+            student.id,
+            nextLevel.data,
+          ])
+        }
+      }
+    }
     const result = await db.query('UPDATE courses SET open = $2 WHERE id = $1 RETURNING id', [
       status.id,
       status.open,
@@ -330,6 +417,7 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
           .extend({ active: z.boolean().optional(), teacherId: z.uuid().nullable().optional() })
           .parse(body)
       : enrollmentMembershipSchema.parse(body)
+    await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [enrollment.courseId])
     const student = await db.query('SELECT id FROM students WHERE id = $1 FOR UPDATE', [
       enrollment.studentId,
     ])
@@ -411,6 +499,10 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
   } else {
     const combined =
       path === '/api/admin/students/enroll' ? neonAdminStudentEnrollSchema.parse(body) : null
+    if (combined)
+      await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
+        combined.enrollment.courseId,
+      ])
     const student = combined ? combined.student : neonAdminStudentSchema.parse(body)
     const firstName = 'firstName' in student ? student.firstName : null
     const lastName = 'lastName' in student ? student.lastName : null
