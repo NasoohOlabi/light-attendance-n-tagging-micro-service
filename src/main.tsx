@@ -4,6 +4,7 @@ import { ApplicationEntry } from './Entry'
 import { initializeInstallPrompt } from './InstallApp'
 import { registerPwa } from './pwa'
 import './index.css'
+import './theme.css'
 
 initializeInstallPrompt()
 registerPwa()

@@ -149,6 +149,7 @@ test('repository-scoped PWA installs its real manifest and opens the public shel
   })
   expect(cachedUrls.every((url) => url.startsWith(origin + prefix))).toBe(true)
   expect(cachedUrls.some((url) => /private|token=|page=|api\//.test(url))).toBe(false)
+  await page.getByRole('combobox', { name: 'Color theme' }).selectOption('dark')
   await context.setOffline(true)
   const bypasses = await page.evaluate(async () =>
     Promise.all(
@@ -168,6 +169,8 @@ test('repository-scoped PWA installs its real manifest and opens the public shel
   expect(bypasses).toEqual([true, true, true, true])
   await page.reload()
   await expect(page.locator('.wartaq-home h1')).toBeVisible()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(page.getByRole('combobox', { name: 'Color theme' })).toHaveValue('dark')
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
   await expect(page.locator('.workspace')).toBeVisible()
   await context.setOffline(false)

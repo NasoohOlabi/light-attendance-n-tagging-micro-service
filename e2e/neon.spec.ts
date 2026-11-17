@@ -2,8 +2,8 @@ import { clickAccountAction } from './profileActions'
 import { expect, test, type Page } from '@playwright/test'
 import { compactHeader } from './headerLayout'
 import { spawn, type ChildProcess } from 'node:child_process'
-import { createServer } from 'node:net'
 import { mkdir } from 'node:fs/promises'
+import { availablePort } from './availablePort'
 
 test.use({ trace: 'off' })
 
@@ -28,15 +28,9 @@ const users = [
 let server: ChildProcess
 let origin = ''
 
-test.beforeAll(async ({ browserName }, testInfo) => {
+test.beforeAll(async ({ browserName }) => {
   if (browserName !== 'chromium') throw new Error('Synthetic test requires Chromium')
-  const port =
-    Number(process.env.PLAYWRIGHT_PORT ?? 4173) + (testInfo.project.name === 'mobile' ? 10 : 9)
-  await new Promise<void>((resolve, reject) => {
-    const probe = createServer()
-    probe.once('error', reject)
-    probe.listen(port, '127.0.0.1', () => probe.close(() => resolve()))
-  })
+  const port = await availablePort()
   origin = `http://127.0.0.1:${port}`
   auth = `${origin}/api/auth`
   api = `${origin}/api`
@@ -112,7 +106,8 @@ test('Arabic authentication keeps mobile input semantics and localized feedback'
   await expect(page.getByRole('alert')).toContainText('Invalid email or password')
   await page.getByRole('button', { name: 'Create account', exact: true }).click()
   await expect(page.getByLabel('Name', { exact: true })).toHaveAttribute('autocomplete', 'name')
-  await expect(page.getByRole('combobox')).toHaveCount(0)
+  await expect(page.getByRole('combobox')).toHaveCount(1)
+  await expect(page.getByRole('combobox', { name: 'Color theme' })).toBeVisible()
   await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute(
     'autocomplete',
     'new-password',
