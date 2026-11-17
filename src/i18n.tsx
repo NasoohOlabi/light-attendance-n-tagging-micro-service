@@ -1,4 +1,4 @@
-import { Globe } from 'lucide-react'
+import { Globe, Monitor, Moon, Sun } from 'lucide-react'
 import { createContext, useContext, useEffect, useState, useSyncExternalStore } from 'react'
 
 const arabic = {
@@ -225,11 +225,59 @@ function themePreference() {
   const value = document.documentElement.dataset.themePreference
   return value === 'light' || value === 'dark' ? value : 'system'
 }
+function setTheme(value: 'system' | 'light' | 'dark') {
+  document.documentElement.dataset.themePreference = value
+  document.documentElement.dataset.theme =
+    value === 'system'
+      ? matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+      : value
+  try {
+    if (value === 'system') localStorage.removeItem('halaqa-theme')
+    else localStorage.setItem('halaqa-theme', value)
+  } catch {
+    /* Preference is optional. */
+  }
+}
+export function ThemeChoices() {
+  const { language } = useLanguage()
+  const theme = useSyncExternalStore(subscribeTheme, themePreference)
+  const choices = [
+    { value: 'system', label: language === 'ar' ? 'الجهاز' : 'Device', Icon: Monitor },
+    { value: 'light', label: language === 'ar' ? 'فاتح' : 'Light', Icon: Sun },
+    { value: 'dark', label: language === 'ar' ? 'داكن' : 'Dark', Icon: Moon },
+  ] as const
+  return (
+    <div className="preference-choices">
+      {choices.map(({ value, label, Icon }) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={theme === value}
+          onClick={() => setTheme(value)}
+        >
+          <Icon size={17} aria-hidden="true" />
+          <span>{label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
 export function ThemeSelect() {
   const { language } = useLanguage()
   const theme = useSyncExternalStore(subscribeTheme, themePreference)
   return (
     <label className="theme-select">
+      <span className="theme-select-icon" aria-hidden="true">
+        {theme === 'dark' ? (
+          <Moon size={18} />
+        ) : theme === 'light' ? (
+          <Sun size={18} />
+        ) : (
+          <Monitor size={18} />
+        )}
+      </span>
       <span className="sr-only">
         {language === 'ar' ? '\u0627\u0644\u0645\u0638\u0647\u0631' : 'Color theme'}
       </span>
@@ -239,23 +287,11 @@ export function ThemeSelect() {
         onChange={(event) => {
           const value = event.target.value
           if (value !== 'light' && value !== 'dark' && value !== 'system') return
-          document.documentElement.dataset.themePreference = value
-          document.documentElement.dataset.theme =
-            value === 'system'
-              ? matchMedia('(prefers-color-scheme: dark)').matches
-                ? 'dark'
-                : 'light'
-              : value
-          try {
-            if (value === 'system') localStorage.removeItem('halaqa-theme')
-            else localStorage.setItem('halaqa-theme', value)
-          } catch {
-            /* Preference is optional. */
-          }
+          setTheme(value)
         }}
       >
         <option value="system">
-          {language === 'ar' ? '\u062d\u0633\u0628 \u0627\u0644\u062c\u0647\u0627\u0632' : 'Device'}
+          {language === 'ar' ? '\u0627\u0644\u062c\u0647\u0627\u0632' : 'Device'}
         </option>
         <option value="light">{language === 'ar' ? '\u0641\u0627\u062a\u062d' : 'Light'}</option>
         <option value="dark">{language === 'ar' ? '\u062f\u0627\u0643\u0646' : 'Dark'}</option>

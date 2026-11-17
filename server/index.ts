@@ -2,6 +2,7 @@
 import { Pool } from 'pg'
 import { z } from 'zod'
 import { createHandler } from '../functions/notebook-service'
+import { validProfileRequest, validSignupRequest } from './profile'
 
 const config = z
   .object({
@@ -65,6 +66,17 @@ const notebook = createHandler(
 
 export async function handle(request: Request): Promise<Response> {
   const url = new URL(request.url)
+  let authPath: string
+  try {
+    authPath = decodeURIComponent(url.pathname).replace(/\/+$/, '').toLowerCase()
+  } catch {
+    return new Response('Not found', { status: 404 })
+  }
+  if (
+    (authPath === '/api/auth/update-user' || authPath === '/api/auth/sign-up/email') &&
+    url.pathname !== authPath
+  )
+    return new Response('Not found', { status: 404 })
   if (url.pathname === '/health' && request.method === 'GET') {
     try {
       await pool.query(
@@ -86,6 +98,16 @@ export async function handle(request: Request): Promise<Response> {
       request.headers.get('origin') !== origin
     )
       return Response.json({ error: 'Forbidden' }, { status: 403 })
+    if (
+      request.method === 'POST' &&
+      (url.pathname === '/api/auth/update-user' || url.pathname === '/api/auth/sign-up/email')
+    ) {
+      const body = url.pathname.endsWith('/update-user')
+        ? await validProfileRequest(request)
+        : await validSignupRequest(request)
+      if (body === null) return Response.json({ error: 'Invalid account data' }, { status: 400 })
+      request = new Request(request.url, { method: request.method, headers: request.headers, body })
+    }
     let response: Response
     if (
       url.pathname.startsWith('/api/auth/') &&

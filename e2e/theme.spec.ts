@@ -33,7 +33,7 @@ test('theme follows the device, persists a choice, and works in the notebook on 
   await page.screenshot({ path: `.artifacts/theme-notebook-desktop-${testInfo.project.name}.png` })
   await page.setViewportSize({ width: 320, height: 700 })
   await page.getByRole('button', { name: 'الملف الشخصي' }).click()
-  await page.getByRole('combobox', { name: 'المظهر' }).selectOption('system')
+  await page.getByRole('button', { name: 'الجهاز', exact: true }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await page.emulateMedia({ colorScheme: 'light' })
   await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(245, 250, 252)')
@@ -63,8 +63,11 @@ test('theme controls stay synchronized across tabs and tolerate unavailable stor
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
   await page.getByRole('button', { name: 'Profile', exact: true }).click()
-  await expect(page.getByRole('combobox', { name: 'Color theme' })).toHaveValue('light')
-  await page.getByRole('combobox', { name: 'Color theme' }).selectOption('system')
+  await expect(page.getByRole('button', { name: 'Light', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await page.getByRole('button', { name: 'Device', exact: true }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
 })
 
