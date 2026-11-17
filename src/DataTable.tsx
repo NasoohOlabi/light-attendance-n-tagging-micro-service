@@ -103,12 +103,35 @@ export function useDataTable<T>(
   }
 }
 
+export function TableControls<T>({ model }: { model: ReturnType<typeof useDataTable<T>> }) {
+  const { language } = useLanguage()
+  const ar = language === 'ar'
+  const sorting = model.table.getState().sorting
+  const setSorting = model.table.setSorting
+  return (
+    <>
+      <SortPills
+        columns={model.columns}
+        sorting={sorting}
+        setSorting={setSorting}
+        reset={model.reset}
+        resetSort={model.resetSort}
+        ar={ar}
+        filtersEnabled={model.filtersEnabled}
+      />
+      {model.filtersEnabled && <TableFilters model={model} ar={ar} />}
+    </>
+  )
+}
+
 export function TableHeader<T>({
   model,
   actions = false,
+  showControls = true,
 }: {
   model: ReturnType<typeof useDataTable<T>>
   actions?: boolean
+  showControls?: boolean
 }) {
   const { language } = useLanguage()
   const ar = language === 'ar'
@@ -116,18 +139,11 @@ export function TableHeader<T>({
   const setSorting = model.table.setSorting
   return (
     <>
-      <caption className="table-controls">
-        <SortPills
-          columns={model.columns}
-          sorting={sorting}
-          setSorting={setSorting}
-          reset={model.reset}
-          resetSort={model.resetSort}
-          ar={ar}
-          filtersEnabled={model.filtersEnabled}
-        />
-        {model.filtersEnabled && <TableFilters model={model} ar={ar} />}
-      </caption>
+      {showControls && (
+        <caption className="table-controls">
+          <TableControls model={model} />
+        </caption>
+      )}
       <thead>
         <tr>
           {model.columns.map(({ id, label }) => {

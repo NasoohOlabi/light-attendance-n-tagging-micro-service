@@ -10,7 +10,11 @@ const courseId = '30000000-0000-4000-8000-000000000001'
 const studentIds = [1, 2, 3, 4, 5].map((n) => `20000000-0000-4000-8000-00000000000${n}`)
 const scores: (number | null)[] = [2, 10, 100, 0, null]
 
-async function syntheticTables(page: Page, role: 'administrator' | 'student' = 'administrator') {
+async function syntheticTables(
+  page: Page,
+  role: 'administrator' | 'student' = 'administrator',
+  courseName = 'Alpha course',
+) {
   const students = ['Zulu', 'Alpha', 'Charlie', 'Delta', 'Echo'].map((firstName, index) => ({
     kind: 'student',
     studentId: studentIds[index],
@@ -66,7 +70,7 @@ async function syntheticTables(page: Page, role: 'administrator' | 'student' = '
     enrollments,
     courses: [
       { id: '30000000-0000-4000-8000-000000000002', name: 'Zebra course', open: false },
-      { id: courseId, name: 'Alpha course', open: true },
+      { id: courseId, name: courseName, open: true },
     ],
     events: enrollments.flatMap((entry) =>
       ['2026-11-12', '2026-11-13', '2026-11-14'].map((date, index) =>
@@ -181,12 +185,14 @@ async function everyColumn(table: Locator, count: number, actions = false, filte
   await expect(table.locator('thead .table-filter')).toHaveCount(0)
   await expect(table.getByRole('button', { name: 'Filter options' })).toHaveCount(filters ? 1 : 0)
   const controls = table.locator('.table-controls')
-  const controlSize = await controls.boundingBox()
-  expect(controlSize?.height).toBeLessThanOrEqual(60)
-  for (const trigger of await controls.getByRole('button').all()) {
-    const size = await trigger.boundingBox()
-    expect(size?.width).toBeGreaterThanOrEqual(44)
-    expect(size?.height).toBeGreaterThanOrEqual(44)
+  if (filters) {
+    const controlSize = await controls.boundingBox()
+    expect(controlSize?.height).toBeLessThanOrEqual(60)
+    for (const trigger of await controls.getByRole('button').all()) {
+      const size = await trigger.boundingBox()
+      expect(size?.width).toBeGreaterThanOrEqual(44)
+      expect(size?.height).toBeGreaterThanOrEqual(44)
+    }
   }
   for (const header of await headers.all()) {
     const button = header.locator('.table-sort')
@@ -278,11 +284,22 @@ test('grade sorting is numeric, keeps drafts, and ignores stale filters', async 
   await expect(table.getByRole('button', { name: 'Clear sort and filters' })).toHaveCount(0)
   const names = table.locator('tbody tr td:first-child')
   await expect(names).toHaveCount(5)
+  await expect(table.locator('caption')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Back to courses' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
+  const header = page.locator('.grade-title-bar')
+  const headingBox = await header.getByRole('heading').boundingBox()
+  const triggerBox = await header.getByRole('button', { name: 'Sort options' }).boundingBox()
+  if (!headingBox || !triggerBox) throw new Error('Missing grade heading or sort control')
+  expect(
+    Math.abs(headingBox.y + headingBox.height / 2 - triggerBox.y - triggerBox.height / 2),
+  ).toBeLessThan(2)
+  expect(triggerBox.width).toBeGreaterThanOrEqual(44)
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({
     path: `.artifacts/verification/sort-popup-closed-${testInfo.project.name}.png`,
   })
-  const sortTrigger = table.getByRole('button', { name: 'Sort options' })
+  const sortTrigger = page.getByRole('button', { name: 'Sort options' })
   await sortTrigger.click()
   await page.screenshot({
     path: `.artifacts/verification/sort-popup-open-${testInfo.project.name}.png`,
@@ -290,27 +307,29 @@ test('grade sorting is numeric, keeps drafts, and ignores stale filters', async 
   await page.keyboard.press('Escape')
   await expect(sortTrigger).toBeFocused()
   await sortTrigger.click()
-  await table
+  await page
     .getByRole('dialog', { name: 'Sort options' })
     .getByRole('button', { name: 'Close' })
     .click()
   await expect(sortTrigger).toBeFocused()
   await sortTrigger.click()
   await page.mouse.click(2, 2)
-  await expect(table.getByRole('button', { name: 'Sort help' })).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Sort help' })).toBeHidden()
   const practical = page.getByRole('button', { name: 'Sort by Practical', exact: true })
   await practical.click()
   await expect(names).toHaveText(['Delta', 'Zulu', 'Alpha', 'Charlie', 'Echo'])
+  await expect(page.locator('.sort-pill').first()).toBeHidden()
+  await header.scrollIntoViewIfNeeded()
   await page.screenshot({
     path: `.artifacts/verification/sort-popup-active-closed-${testInfo.project.name}.png`,
   })
   await sortTrigger.click()
-  await expect(table.locator('.sort-pill').first()).toBeVisible()
+  await expect(page.locator('.sort-pill').first()).toBeVisible()
   await page.screenshot({
     path: `.artifacts/verification/sort-popup-active-open-${testInfo.project.name}.png`,
   })
   await page.keyboard.press('Escape')
-  await expect(table.locator('.sort-pill').first()).toBeHidden()
+  await expect(page.locator('.sort-pill').first()).toBeHidden()
   await practical.click()
   await expect(names).toHaveText(['Charlie', 'Alpha', 'Zulu', 'Delta', 'Echo'])
   await page.getByLabel('Practical: Zulu Family', { exact: true }).fill('90')
@@ -327,6 +346,40 @@ test('grade sorting is numeric, keeps drafts, and ignores stale filters', async 
     fullPage: true,
   })
   expect(writes).toEqual([])
+})
+
+test('grade title and sort fit long course names and navigation returns to courses', async ({
+  page,
+}) => {
+  await syntheticTables(
+    page,
+    'administrator',
+    'A very long synthetic course name without unnecessary spaces Supercalifragilisticexpialidocious',
+  )
+  await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
+  await expect(page.locator('table tbody tr')).toHaveCount(5)
+  for (const language of ['en', 'ar']) {
+    if (language === 'ar') await clickAccountAction(page, 'العربية')
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 })
+      const bar = page.locator('.grade-title-bar')
+      const bounds = await bar.evaluate((element) => ({
+        scroll: element.scrollWidth,
+        width: element.clientWidth,
+      }))
+      expect(bounds.scroll).toBeLessThanOrEqual(bounds.width + 1)
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+      ).toBe(true)
+      await expect(
+        bar.getByRole('button', { name: language === 'ar' ? 'خيارات الفرز' : 'Sort options' }),
+      ).toBeVisible()
+    }
+  }
+  await clickAccountAction(page, 'English')
+  await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Courses', exact: true })).toBeVisible()
+  await expect(page.locator('.grade-title-bar')).toHaveCount(0)
 })
 
 test('student portal dates sort chronologically and combine course/status filters', async ({
@@ -380,12 +433,12 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await page.keyboard.press('Shift+Tab')
   await expect(enrolled).not.toHaveCSS('outline-style', 'none')
   await first.click({ modifiers: ['Shift'] })
-  await expect(table.locator('.sort-pill').first()).toBeHidden()
-  await table.getByRole('button', { name: 'Sort options' }).click()
+  await expect(page.locator('.sort-pill').first()).toBeHidden()
+  await page.getByRole('button', { name: 'Sort options' }).click()
   await expect(
-    table.getByRole('button', { name: 'Reorder First name' }),
+    page.getByRole('button', { name: 'Reorder First name' }),
   ).toHaveAccessibleDescription(/Press Space/)
-  await table.getByRole('button', { name: 'Sort help' }).click()
+  await page.getByRole('button', { name: 'Sort help' }).click()
   await expect(page.getByText('Keyboard: Space to grab and drop', { exact: false })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByText('Keyboard: Space to grab and drop', { exact: false })).toBeHidden()
@@ -395,17 +448,17 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await expect(first.locator('..')).not.toHaveAttribute('aria-sort')
   await page.reload()
   await expect(names).toHaveText(['Echo', 'Alpha', 'Charlie', 'Delta', 'Zulu'])
-  await table.getByRole('button', { name: 'Sort options' }).click()
-  await table
+  await page.getByRole('button', { name: 'Sort options' }).click()
+  await page
     .locator('.sort-toolbar')
     .evaluate((element) => element.scrollIntoView({ block: 'center' }))
-  const source = await table.getByRole('button', { name: 'Reorder First name' }).boundingBox()
-  const target = await table.locator('.sort-pill').first().boundingBox()
+  const source = await page.getByRole('button', { name: 'Reorder First name' }).boundingBox()
+  const target = await page.locator('.sort-pill').first().boundingBox()
   if (!source || !target) throw new Error('Missing sort pills')
   await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2)
   await page.mouse.down()
   await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 })
-  await expect(table.locator('.sort-pill').first()).toContainText('First name')
+  await expect(page.locator('.sort-pill').first()).toContainText('First name')
   await page.screenshot({
     path: `.artifacts/verification/sort-pills-drag-${testInfo.project.name}.png`,
   })
@@ -414,27 +467,27 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   expect(Math.abs(feedback.y - target.y)).toBeLessThan(4)
   expect(Math.abs(feedback.x - (target.x + target.width / 2 - source.width / 2))).toBeLessThan(4)
   await page.mouse.up()
-  await expect(table.locator('.sort-pill').first()).toContainText('First name')
+  await expect(page.locator('.sort-pill').first()).toContainText('First name')
   await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta', 'Echo', 'Zulu'])
   await page.reload()
-  await table.getByRole('button', { name: 'Sort options' }).click()
-  await expect(table.locator('.sort-pill').first()).toContainText('First name')
-  await table.getByRole('button', { name: 'Reset sort' }).click()
-  await table.getByRole('button', { name: 'Close' }).click()
+  await page.getByRole('button', { name: 'Sort options' }).click()
+  await expect(page.locator('.sort-pill').first()).toContainText('First name')
+  await page.getByRole('button', { name: 'Reset sort' }).click()
+  await page.getByRole('button', { name: 'Close', exact: true }).click()
   await enrolled.click()
   await first.click({ modifiers: ['Shift'] })
-  await table.getByRole('button', { name: 'Sort options' }).click()
+  await page.getByRole('button', { name: 'Sort options' }).click()
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({
     path: `.artifacts/verification/multi-sort-${testInfo.project.name}.png`,
     fullPage: true,
   })
-  await table.getByRole('button', { name: 'Sort direction 2: Ascending' }).click()
+  await page.getByRole('button', { name: 'Sort direction 2: Ascending' }).click()
   await expect(names).toHaveText(['Echo', 'Zulu', 'Delta', 'Charlie', 'Alpha'])
-  const grip = table.getByRole('button', { name: 'Reorder First name' })
+  const grip = page.getByRole('button', { name: 'Reorder First name' })
   await grip.focus()
   const currentPill = await grip.locator('..').boundingBox()
-  const precedingPill = await table.locator('.sort-pill').first().boundingBox()
+  const precedingPill = await page.locator('.sort-pill').first().boundingBox()
   if (!currentPill || !precedingPill) throw new Error('Missing keyboard sort targets')
   await page.keyboard.press('Space')
   await expect(grip.locator('..')).toHaveClass(/is-dragging/)
@@ -445,17 +498,17 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
         ? 'ArrowLeft'
         : 'ArrowRight',
   )
-  await expect(table.locator('.sort-pill').first()).toContainText('First name')
+  await expect(page.locator('.sort-pill').first()).toContainText('First name')
   await page.keyboard.press('Space')
-  await expect(table.locator('.sort-pill').first()).toContainText('First name')
+  await expect(page.locator('.sort-pill').first()).toContainText('First name')
   await expect(names).toHaveText(['Zulu', 'Echo', 'Delta', 'Charlie', 'Alpha'])
-  await table.getByRole('button', { name: 'Remove sort 2' }).click()
-  await table.getByLabel('Add column').selectOption('enrolled')
-  await table.getByRole('button', { name: 'Close' }).click()
+  await page.getByRole('button', { name: 'Remove sort 2' }).click()
+  await page.getByLabel('Add column').selectOption('enrolled')
+  await page.getByRole('button', { name: 'Close', exact: true }).click()
   await first.click()
-  await table.getByRole('button', { name: 'Sort options' }).click()
-  await expect(table.locator('.sort-pill')).toHaveCount(0)
-  await table.getByRole('button', { name: 'Reset sort', exact: true }).click()
+  await page.getByRole('button', { name: 'Sort options' }).click()
+  await expect(page.locator('.sort-pill')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Reset sort', exact: true }).click()
   await expect(table.locator('.table-filter')).toHaveCount(0)
   await expect(names).toHaveText(['Zulu', 'Alpha', 'Charlie', 'Delta', 'Echo'])
   await page.reload()
@@ -474,13 +527,13 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   url.searchParams.set('tables', JSON.stringify(state))
   await page.goto(url.toString())
   await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta', 'Echo', 'Zulu'])
-  await table.getByRole('button', { name: 'Sort options' }).click()
-  await expect(table.locator('.sort-pill')).toHaveCount(1)
-  await expect(table.locator('.sort-pill').first()).toContainText('First name')
-  await table.getByLabel('Add column').selectOption('enrolled')
-  await table.getByRole('button', { name: 'Close' }).click()
+  await page.getByRole('button', { name: 'Sort options' }).click()
+  await expect(page.locator('.sort-pill')).toHaveCount(1)
+  await expect(page.locator('.sort-pill').first()).toContainText('First name')
+  await page.getByLabel('Add column').selectOption('enrolled')
+  await page.getByRole('button', { name: 'Close', exact: true }).click()
   await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
-  await table.getByRole('button', { name: 'خيارات الفرز' }).click()
+  await page.getByRole('button', { name: 'خيارات الفرز' }).click()
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
@@ -495,33 +548,33 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
       path: `.artifacts/verification/sort-popup-closed-ar-${testInfo.project.name}-${width}.png`,
       fullPage: true,
     })
-    await table.getByRole('button', { name: 'خيارات الفرز' }).click()
+    await page.getByRole('button', { name: 'خيارات الفرز' }).click()
   }
-  const rtlGrip = table.getByRole('button', { name: 'ترتيب مسجل' })
+  const rtlGrip = page.getByRole('button', { name: 'ترتيب مسجل' })
   await expect(rtlGrip).toHaveAccessibleDescription(/اضغط مسافة/)
   await rtlGrip.focus()
   await page.keyboard.press('Space')
   await expect(rtlGrip.locator('..')).toHaveClass(/is-dragging/)
   await page.keyboard.press('ArrowUp')
-  await expect(table.locator('.sort-pill').first()).not.toContainText('الاسم الأول')
+  await expect(page.locator('.sort-pill').first()).not.toContainText('الاسم الأول')
   await page.keyboard.press('Escape')
   await expect(rtlGrip).toBeFocused()
-  await expect(table.locator('.sort-pill').first()).toContainText('الاسم الأول')
+  await expect(page.locator('.sort-pill').first()).toContainText('الاسم الأول')
   await page.keyboard.press('Space')
   await expect(rtlGrip.locator('..')).toHaveClass(/is-dragging/)
   await page.keyboard.press('ArrowUp')
-  await expect(table.locator('.sort-pill').first()).not.toContainText('الاسم الأول')
+  await expect(page.locator('.sort-pill').first()).not.toContainText('الاسم الأول')
   await page.keyboard.press('Space')
   await expect(rtlGrip).toBeFocused()
   await page.reload()
-  await table.getByRole('button', { name: 'خيارات الفرز' }).click()
-  await expect(table.locator('.sort-pill').first()).not.toContainText('الاسم الأول')
-  await table
+  await page.getByRole('button', { name: 'خيارات الفرز' }).click()
+  await expect(page.locator('.sort-pill').first()).not.toContainText('الاسم الأول')
+  await page
     .locator('.sort-toolbar')
     .evaluate((element) => element.scrollIntoView({ block: 'center' }))
-  const firstGrip = table.locator('.sort-pill').first().locator('.sort-grip')
+  const firstGrip = page.locator('.sort-pill').first().locator('.sort-grip')
   const touchSource = await firstGrip.boundingBox()
-  const touchTarget = await table.locator('.sort-pill').last().boundingBox()
+  const touchTarget = await page.locator('.sort-pill').last().boundingBox()
   if (!touchSource || !touchTarget) throw new Error('Missing touch targets')
   const cdp = await page.context().newCDPSession(page)
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true })
@@ -538,12 +591,12 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
       { x: touchTarget.x + touchTarget.width / 2, y: touchTarget.y + touchTarget.height / 2 },
     ],
   })
-  await expect(table.locator('.sort-pill').first()).toContainText('الاسم الأول')
+  await expect(page.locator('.sort-pill').first()).toContainText('الاسم الأول')
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
-  await expect(table.locator('.sort-pill').first()).toContainText('الاسم الأول')
+  await expect(page.locator('.sort-pill').first()).toContainText('الاسم الأول')
   await page.reload()
-  await table.getByRole('button', { name: 'خيارات الفرز' }).click()
-  await expect(table.locator('.sort-pill').first()).toContainText('الاسم الأول')
+  await page.getByRole('button', { name: 'خيارات الفرز' }).click()
+  await expect(page.locator('.sort-pill').first()).toContainText('الاسم الأول')
   await cdp.detach()
   expect(writes).toEqual([])
 })

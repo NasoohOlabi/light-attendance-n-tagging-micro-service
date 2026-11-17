@@ -738,7 +738,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   ).toBeVisible()
   await page.reload()
   await expect(page.getByText('Course closed', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Back to courses', exact: true }).click()
+  await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await expect(courseRow).toContainText('Closed')
   await courseRow.getByRole('button', { name: 'Reopen', exact: true }).click()
   await expect(courseRow).toContainText('Open')

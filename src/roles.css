@@ -405,6 +405,19 @@
   font-weight: normal;
   white-space: normal;
 }
+.grade-title-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.grade-title-bar h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.grade-title-bar .sort-toolbar {
+  flex: none;
+}
 @media (max-width: 64rem) {
   .mobile-record-table .table-controls {
     display: block;

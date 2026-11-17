@@ -1100,6 +1100,14 @@
 
 **Latest steering:** Owner requested eliminating the controls' separate row and questioned the duplicate Back to courses button. Repository navigation already returns to the saved course list on desktop and phones. Next move Grades' Sort control beside its page title and remove its redundant Back button, retaining meaningful form cancellation elsewhere. This verified popup unit is committed before that header adjustment; publication remains pending the final layout and checks.
 
+## 2026-11-17 16:05 Asia/Damascus (UTC+03:00) - Put Grades sorting in the page header
+
+**Request/reason:** Owner requested less wasted space and correct placement of configuration and return navigation. The existing desktop/sidebar and phone Courses navigation already clears the detail view and returns to the saved list, making a second Grades Back button redundant.
+
+**Changes/provenance:** Terra owns the bounded Courses/shared-controls/test header unit from verified popup commit `a3de503`; the orchestrator owns documentation and final delivery. Place Grades' single Sort trigger beside its title, omit its table-control caption entirely, remove the duplicate Grades Back button and preserve other forms' navigation/cancellation. Keep Grade thresholds, score/note drafts, all sorting and popup behavior, and Grades' filter exclusion intact. Reuse shared controls rather than duplicate their state or move DOM elements manually.
+
+**Verification/limits:** At 16:10 Asia/Damascus, final `bun run verify:release` passed all 82 desktop/mobile browser cases, 22 local tests/99 assertions, lint/build/artifact, formatting, file/history secret scans and dependency audit on the final header/popup revision integrated with `c2e5184`. Four optional database suites skipped. Targeted checks cover one heading, exactly one header Sort trigger, no Grades caption/Back button, long English/Arabic titles at 320/390px and return via Courses navigation. Reviewed the actual loaded closed header and active popup/drag captures. Publication proceeds through a PR and CI; exact-main Railway, health and shipped-asset results will be recorded in that PR's delivery receipt. Synthetic behavior does not prove real authenticated provider writes or physical devices.
+
 ## 2026-11-17 15:20 Asia/Damascus (UTC+03:00) - Remove Grades header filters
 
 **Request/reason:** Owner identified the blank fields beneath the Grades headings as a confusing apparent student-entry row and requested removal. Source inspection confirmed they were column filters. Started clean at `cc8e2e4`, matching origin/main, and created `fix/remove-grades-filter-row` in this checkout; no worktree or unrelated changes.
