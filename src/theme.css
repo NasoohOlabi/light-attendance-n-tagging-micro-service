@@ -216,3 +216,18 @@
   color: #102b31;
   border-color: #70d6d5;
 }
+
+:root[data-theme='dark'] .grade-row-pass {
+  background-color: #204d40;
+}
+:root[data-theme='dark'] .grade-row-fail {
+  background-color: #582f35;
+}
+:root[data-theme='dark'] .grade-pass,
+:root[data-theme='dark'] .role-table input.grade-pass {
+  color: #b5efd2;
+}
+:root[data-theme='dark'] .grade-fail,
+:root[data-theme='dark'] .role-table input.grade-fail {
+  color: #ffc1c5;
+}

@@ -664,7 +664,7 @@ function GradePage({
               }
               const formId = `grades-${entry.id}`
               return (
-                <tr key={entry.id}>
+                <tr key={entry.id} className={`grade-row-${effective}`}>
                   <td dir="auto" data-label={ar ? 'الاسم الأول' : 'First name'}>
                     {student.firstName}
                   </td>
@@ -675,7 +675,17 @@ function GradePage({
                     {formatLevel(entry.level) || '—'}
                   </td>
                   <td data-label={ar ? 'الحضور' : 'Attendance'}>
-                    {ratio === null ? (ar ? 'غير متاح' : 'Unavailable') : `${ratio.toFixed(1)}%`}
+                    <span
+                      className={
+                        !settingsDirty && ratio !== null
+                          ? ratio >= course.attendanceMinimum
+                            ? 'grade-pass'
+                            : 'grade-fail'
+                          : undefined
+                      }
+                    >
+                      {ratio === null ? (ar ? 'غير متاح' : 'Unavailable') : `${ratio.toFixed(1)}%`}
+                    </span>
                   </td>
                   {(['theory', 'practical'] as const).map((key) => (
                     <td
@@ -686,6 +696,16 @@ function GradePage({
                     >
                       <input
                         form={formId}
+                        className={
+                          !settingsDirty &&
+                          entry[key] !== null &&
+                          draft[key] === entry[key].toString()
+                            ? entry[key] >=
+                              (key === 'practical' ? course.practicalMinimum : course.theoryMinimum)
+                              ? 'grade-pass'
+                              : 'grade-fail'
+                            : undefined
+                        }
                         aria-label={`${key === 'practical' ? (ar ? 'عملي' : 'Practical') : ar ? 'نظري' : 'Theory'}: ${student.firstName} ${student.lastName}`}
                         type="number"
                         disabled={busy}
@@ -721,17 +741,41 @@ function GradePage({
                     data-label={ar ? 'النتيجة' : 'Result'}
                     className="col-span-full min-[1025px]:min-w-72"
                   >
-                    {lastDecision && lastDecision.result !== 'calculated' ? (
-                      <>
-                        <div>
-                          {ar ? 'المحسوبة' : 'Calculated'}: {resultLabel(result)}
-                        </div>
-                        <div>
-                          {ar ? 'النهائية' : 'Effective'}: {resultLabel(effective)}
-                        </div>
-                      </>
-                    ) : (
-                      resultLabel(result)
+                    <div>
+                      {lastDecision && lastDecision.result !== 'calculated' && (
+                        <>{ar ? 'المحسوبة' : 'Calculated'}: </>
+                      )}
+                      <span className={result === 'pending' ? undefined : `grade-${result}`}>
+                        {resultLabel(result)}
+                      </span>
+                      {result === 'fail' && (
+                        <ul className="grade-causes grade-fail">
+                          {ratio !== null && ratio < course.attendanceMinimum && (
+                            <li>{ar ? 'الحضور أقل من الحد الأدنى' : 'Insufficient attendance'}</li>
+                          )}
+                          {entry.practical !== null &&
+                            entry.practical < course.practicalMinimum && (
+                              <li>
+                                {ar
+                                  ? 'الدرجة العملية أقل من حد النجاح'
+                                  : 'Practical grade below passing'}
+                              </li>
+                            )}
+                          {entry.theory !== null && entry.theory < course.theoryMinimum && (
+                            <li>
+                              {ar
+                                ? 'الدرجة النظرية أقل من حد النجاح'
+                                : 'Theory grade below passing'}
+                            </li>
+                          )}
+                        </ul>
+                      )}
+                    </div>
+                    {lastDecision && lastDecision.result !== 'calculated' && (
+                      <div>
+                        {ar ? 'النهائية' : 'Effective'}:{' '}
+                        <span className={`grade-${effective}`}>{resultLabel(effective)}</span>
+                      </div>
                     )}
                     <details>
                       <summary>{ar ? 'تعديل النتيجة' : 'Override result'}</summary>
