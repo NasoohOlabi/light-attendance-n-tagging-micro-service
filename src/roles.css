@@ -613,3 +613,23 @@
   background: white;
   box-shadow: 0 6px 24px #004d5726;
 }
+
+/* Saved grade outcomes retain contrast on both desktop rows and mobile cards. */
+.grade-row-pass {
+  background-color: #eaf7ed;
+}
+.grade-row-fail {
+  background-color: #fceeee;
+}
+.grade-pass,
+.role-table input.grade-pass {
+  color: #17652c;
+}
+.grade-fail,
+.role-table input.grade-fail {
+  color: #a11b1b;
+}
+.grade-causes {
+  margin: 0.25rem 0 0;
+  padding-inline-start: 1.25rem;
+}
