@@ -1626,6 +1626,16 @@
 
 **Main integration at 22:01 Asia/Damascus** Required checks passed on bc51d18 before main advanced to 23c7333. The merge preserved both work-log entries and combined the desktop padding with main's profile icon alignment. The full release gate passed again with 114 browser cases, 33 local tests and 137 assertions. Four optional database tests skipped. Fresh CI and exact-main Railway verification follow.
 
+## 2026-11-17 21:59 Asia/Damascus (UTC+03:00) - Align level columns with the page language
+
+**Request and change** The Arabic Grades table placed the numeric course level `1` at the left edge. Let the Grades course level and the corresponding read-only roster level cells in Manage students and Settings follow the table direction. Isolate each value with `<bdi>` so mixed-script labels retain their own reading order.
+
+**Verification and limits** The focused Grades regression measured the Arabic `1` about 96 px from its expected position on desktop and 123 px on mobile before the fix. It passed in both Playwright projects after the fix, with the number against the right edge in Arabic and the left edge in English. `bun run verify:release` passed 114 browser checks and the local release gates. Four optional database suites skipped. Railway's main deployment trigger returned `checkSuites: true` for Wait for CI. The delivery receipt on [PR #96](https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service/pull/96) will record the exact deployment and public build checks. Browser cases use synthetic responses and emulated phones.
+
+**Main integration at 22:06 Asia/Damascus** PR #96 checks passed on `e4a59f7`. GitHub rejected the squash merge after `main` advanced to `e4d5097` with the desktop workspace inset from PR #95. Merged `main` and resolved the work-log conflict by preserving both entries. The application changes combined cleanly.
+
+**Integrated gate at 22:10 Asia/Damascus** `bun run verify:release` passed on Bun 1.3.0 with 114 browser checks, 33 local tests and 137 assertions. Four optional database tests skipped. The suite used port 4273 because 4173 was busy. The focused alignment check also reproduced the offset against the previous Railway build with synthetic API responses. Fresh PR checks and exact-main deployment verification follow.
+
 ## 2026-11-17 22:10 Asia/Damascus — Course attendance and enrollment teachers
 
 New attendance requires an active enrollment in an open course. Existing unscoped history, corrections and identical retries remain available. Each enrollment has a nullable reference to an existing teacher, independently of roster access or grading. Backup version 11 restores the reference and rejects lossy comparisons.

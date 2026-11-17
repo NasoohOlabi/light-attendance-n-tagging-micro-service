@@ -22,6 +22,8 @@ Inactive enrollments remain available for historical attendance, corrections and
 
 Grades omits the redundant Enrolled column; use Manage students to inspect or change current membership. Historical grades remain visible after withdrawal. Across the notebook, whole-number numeric levels display without a decimal suffix (`1.0` becomes `1`). Named levels and meaningful fractional values remain intact, blank course levels stay blank, and stored values are preserved.
 
+Level columns follow the page language. Values align right in Arabic and left in English, including numeric levels and names written in another script.
+
 Migration `neon/005-active-enrollments.sql` adds an active membership flag, defaulting existing enrollments to active, without deleting data. Backup versions 4 and later preserve that flag; versions 1–3 remain supported without silently hiding inactive memberships. Test against a disposable database first; synthetic tests do not verify the live provider.
 
 Administrators can manually close and reopen a course from the course list. Closing does not depend on grades and preserves enrollments, grades and history. Closed courses remain in the management list. Notebook selectors omit them unless the course is the saved default or the course currently being viewed; a previously saved course URL can still show history and corrections, while new attendance is rejected. Reopening permits attendance again. Notes remain student-scoped.

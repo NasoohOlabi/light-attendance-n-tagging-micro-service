@@ -409,8 +409,8 @@ export function Courses({
                           <td dir="auto" data-label={ar ? 'اسم العائلة' : 'Last name'}>
                             {student.lastName || '—'}
                           </td>
-                          <td dir="auto" data-label={ar ? 'مستوى القائمة' : 'Roster level'}>
-                            {formatLevel(student.group) || '—'}
+                          <td data-label={ar ? 'مستوى القائمة' : 'Roster level'}>
+                            <bdi>{formatLevel(student.group) || '—'}</bdi>
                           </td>
                           <td data-label={ar ? 'مستوى الدورة' : 'Course level'}>
                             <LevelInput
@@ -766,8 +766,8 @@ function GradePage({
                   <td dir="auto" data-label={ar ? 'اسم العائلة' : 'Last name'}>
                     {student.lastName || '—'}
                   </td>
-                  <td dir="auto" data-label={ar ? 'مستوى الدورة' : 'Course level'}>
-                    {formatLevel(entry.level) || '—'}
+                  <td data-label={ar ? 'مستوى الدورة' : 'Course level'}>
+                    <bdi>{formatLevel(entry.level) || '—'}</bdi>
                   </td>
                   <td data-label={ar ? 'الحضور' : 'Attendance'}>
                     <span

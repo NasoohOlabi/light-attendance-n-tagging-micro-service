@@ -34,7 +34,7 @@ test('long grades remain navigable in both languages', async ({ page }, testInfo
     id: `40000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
     courseId,
     studentId: student.studentId,
-    level: '',
+    level: index === 0 ? '1.0' : '',
     practical: null,
     theory: null,
     active: true,
@@ -93,6 +93,17 @@ test('long grades remain navigable in both languages', async ({ page }, testInfo
     if (ar) await clickAccountAction(page, 'العربية')
     const region = page.getByRole('region', { name: ar ? 'درجات الدورة' : 'Course grades' })
     await expect(region).toBeVisible()
+    const level = region.locator(`td[data-label="${ar ? 'مستوى الدورة' : 'Course level'}"]`).first()
+    await expect(level).toHaveText('1')
+    const startGap = await level.evaluate((cell, rtl) => {
+      const range = document.createRange()
+      range.selectNodeContents(cell)
+      const value = range.getBoundingClientRect()
+      const bounds = cell.getBoundingClientRect()
+      const padding = parseFloat(getComputedStyle(cell).paddingInlineStart)
+      return Math.abs((rtl ? bounds.right - value.right : value.left - bounds.left) - padding)
+    }, ar)
+    expect(startGap).toBeLessThan(1)
     const metrics = await region.evaluate((element) => ({
       client: element.clientHeight,
       scroll: element.scrollHeight,
