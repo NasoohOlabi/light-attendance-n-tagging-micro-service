@@ -36,4 +36,6 @@ Migration `neon/008-course-grading.sql` adds the course thresholds. Version 7 ba
 
 Each Grades row saves through a disk icon with a localized **Save grades** accessible label and tooltip. Data tables use tighter body-cell padding and compact phone records; action and input touch targets retain their existing size.
 
+Table headings provide quick single-column sorting. Hold Shift while clicking another heading to add a secondary sort. **Custom sort** offers the same ordered hierarchy without a keyboard shortcut: choose each column and direction, add or remove levels, and move levels up or down. Priority 1 is applied first; later levels break ties. **Reset sort** preserves filters; **Clear sort and filters** resets both. Sort order and filters survive reload in the view URL. Column filters combine: text fields match contained text, and choice fields match the selected value exactly. No modifier key is needed to combine filters.
+
 Grades includes optional multiline enrollment notes, saved with each row. Notes belong to that student and course, survive membership and grade changes, and are visible only to authorized staff; student attendance responses exclude them. Migration 010 adds the field with an empty default. Version 9 backups preserve it; older backups cannot compare against nonempty enrollment notes.

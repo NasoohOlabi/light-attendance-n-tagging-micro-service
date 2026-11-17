@@ -75,7 +75,7 @@ test('table filtering limits bulk attendance and preserves hidden drafts', async
     await expect(header).toHaveAttribute('aria-sort', 'ascending')
     await expect(chevron).toHaveClass(/lucide-chevron-up/)
     await page.keyboard.press('Tab')
-    await expect(chevron).toHaveCSS('opacity', hoverDevice ? '0' : '1')
+    await expect(chevron).toHaveCSS('opacity', '1')
     await page.keyboard.press('Shift+Tab')
     await page.keyboard.press('Enter')
     await expect(header).toHaveAttribute('aria-sort', 'descending')
