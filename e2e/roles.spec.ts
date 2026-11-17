@@ -183,7 +183,7 @@ test('student sees only their attendance and loses it after access is denied', a
     await expect(page.locator('td[data-label]').first()).toBeVisible()
   }
   await expect(page.getByText('2026-11-12')).toBeVisible()
-  await expect(page.getByText('present', { exact: true })).toBeVisible()
+  await expect(page.locator('tbody').getByText('present', { exact: true })).toBeVisible()
   await expect(page.locator('.profile-trigger img')).toBeVisible()
   await expect
     .poll(() =>
@@ -208,7 +208,7 @@ test('student sees only their attendance and loses it after access is denied', a
       .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top))
     expect(new Set(fields).size).toBe(1)
   }
-  await expect(page.getByText('حاضر', { exact: true })).toBeVisible()
+  await expect(page.locator('tbody').getByText('حاضر', { exact: true })).toBeVisible()
   await compactHeader(page, '.role-header')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
     true,
@@ -360,13 +360,15 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await expect(page.getByRole('heading', { name: 'Accounts' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Add student', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Students', level: 1 })).toBeVisible()
-  await expect(page.getByLabel('First name')).toBeVisible()
+  await expect(page.locator('form.role-editor').getByLabel('First name')).toBeVisible()
   await expect(
     page.getByRole('navigation', { name: 'Notebook' }).getByRole('button', { name: 'Dashboard' }),
   ).toBeVisible()
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Accounts' })).toHaveCount(0)
-  await expect(page.getByRole('columnheader')).toHaveText([
+  await expect(
+    page.locator('thead th > button.table-sort, thead th:not(:has(button.table-sort))'),
+  ).toHaveText([
     'First name',
     'Last name',
     'Level',
@@ -378,11 +380,13 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     'Actions',
   ])
   await page.getByRole('button', { name: 'Add student', exact: true }).click()
-  await page.getByLabel('First name').fill('Synthetic Direct')
-  await page.getByLabel('Last name').fill('Student')
-  await page.getByLabel('Level', { exact: true }).fill('Group B')
-  await expect(page.getByLabel('Teacher')).toHaveValue('')
-  await expect(page.getByLabel('Teacher').locator('option:checked')).toHaveText('Unassigned')
+  await page.locator('form.role-editor').getByLabel('First name').fill('Synthetic Direct')
+  await page.locator('form.role-editor').getByLabel('Last name').fill('Student')
+  await page.locator('form.role-editor').getByLabel('Level', { exact: true }).fill('Group B')
+  await expect(page.locator('form.role-editor').getByLabel('Teacher')).toHaveValue('')
+  await expect(
+    page.locator('form.role-editor').getByLabel('Teacher').locator('option:checked'),
+  ).toHaveText('Unassigned')
   await page.getByRole('button', { name: 'Save student' }).click()
   await expect(page.getByRole('status')).toHaveText('Saved.')
   await expect(page.getByRole('heading', { name: 'Accounts' })).toHaveCount(0)
@@ -529,7 +533,9 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     .getByRole('button', { name: 'Students' })
     .click()
   const list = page.getByRole('region', { name: 'Student list' })
-  await expect(list.getByRole('columnheader')).toHaveText([
+  await expect(
+    list.locator('thead th > button.table-sort, thead th:not(:has(button.table-sort))'),
+  ).toHaveText([
     'First name',
     'Last name',
     'Level',
@@ -576,8 +582,8 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     'Edit',
   ])
   await rows.nth(2).getByRole('button', { name: 'Edit' }).click()
-  await expect(page.getByLabel('Teacher')).toHaveValue('')
-  await page.getByLabel('Teacher').selectOption(teacherId)
+  await expect(page.locator('form.role-editor').getByLabel('Teacher')).toHaveValue('')
+  await page.locator('form.role-editor').getByLabel('Teacher').selectOption(teacherId)
   await page.getByRole('button', { name: 'Save student' }).click()
   await expect.poll(() => posts.length).toBe(3)
   expect(posts.at(-1)?.body).toMatchObject({ teacherId })
@@ -587,12 +593,12 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     fullPage: true,
   })
   await rows.nth(1).getByRole('button', { name: 'Edit' }).click()
-  await expect(page.getByLabel('First name')).toHaveValue('أحمد محمد')
-  await expect(page.getByLabel('Last name')).toHaveValue('علي')
-  await page.getByLabel('Last name').fill('خالد')
+  await expect(page.locator('form.role-editor').getByLabel('First name')).toHaveValue('أحمد محمد')
+  await expect(page.locator('form.role-editor').getByLabel('Last name')).toHaveValue('علي')
+  await page.locator('form.role-editor').getByLabel('Last name').fill('خالد')
   await page.getByLabel('WhatsApp number').fill('+963 123')
-  await page.getByLabel('Location').fill('Area')
-  await page.getByLabel('Birth year').fill('2000')
+  await page.locator('form.role-editor').getByLabel('Location').fill('Area')
+  await page.locator('form.role-editor').getByLabel('Birth year').fill('2000')
   await page.getByRole('button', { name: 'Save student' }).click()
   await expect.poll(() => posts.length).toBe(3)
   expect(posts[2]).toEqual({
@@ -611,11 +617,11 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   })
   posts.pop()
   await rows.nth(1).getByRole('button', { name: 'Edit' }).click()
-  await expect(page.getByLabel('First name')).toHaveValue('أحمد محمد')
-  await expect(page.getByLabel('Last name')).toHaveValue('خالد')
+  await expect(page.locator('form.role-editor').getByLabel('First name')).toHaveValue('أحمد محمد')
+  await expect(page.locator('form.role-editor').getByLabel('Last name')).toHaveValue('خالد')
   await expect(page.getByLabel('WhatsApp number')).toHaveValue('+963 123')
-  await expect(page.getByLabel('Location')).toHaveValue('Area')
-  await expect(page.getByLabel('Birth year')).toHaveValue('2000')
+  await expect(page.locator('form.role-editor').getByLabel('Location')).toHaveValue('Area')
+  await expect(page.locator('form.role-editor').getByLabel('Birth year')).toHaveValue('2000')
   if (testInfo.project.name === 'mobile') {
     await page.setViewportSize({ width: 320, height: 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
@@ -626,8 +632,11 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     path: `.artifacts/verification/student-profile-${testInfo.project.name}-en.png`,
   })
   await clickAccountAction(page, 'العربية')
-  await expect(page.getByLabel('سنة الميلاد')).toHaveValue('2000')
-  await expect(page.getByLabel('سنة الميلاد')).toHaveAttribute('type', 'number')
+  await expect(page.locator('form.role-editor').getByLabel('سنة الميلاد')).toHaveValue('2000')
+  await expect(page.locator('form.role-editor').getByLabel('سنة الميلاد')).toHaveAttribute(
+    'type',
+    'number',
+  )
   await page.locator('form.role-editor').screenshot({
     path: `.artifacts/verification/student-profile-${testInfo.project.name}-ar.png`,
   })
@@ -640,7 +649,9 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     await expect(rows.nth(0).getByRole('button', { name: 'Edit' })).toBeVisible()
   }
   await clickAccountAction(page, 'العربية')
-  await expect(page.getByRole('columnheader')).toHaveText([
+  await expect(
+    page.locator('thead th > button.table-sort, thead th:not(:has(button.table-sort))'),
+  ).toHaveText([
     'الاسم الأول',
     'اسم العائلة',
     'المستوى',
@@ -660,9 +671,9 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   })
   await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Add student' }).click()
-  await page.getByLabel('First name').fill('Synthetic New')
-  await page.getByLabel('Last name').fill('Student')
-  await page.getByLabel('Level', { exact: true }).fill('Group B')
+  await page.locator('form.role-editor').getByLabel('First name').fill('Synthetic New')
+  await page.locator('form.role-editor').getByLabel('Last name').fill('Student')
+  await page.locator('form.role-editor').getByLabel('Level', { exact: true }).fill('Group B')
   await page
     .locator('form')
     .filter({ has: page.getByRole('button', { name: 'Save student' }) })

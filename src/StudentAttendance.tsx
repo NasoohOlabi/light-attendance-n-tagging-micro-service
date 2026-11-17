@@ -1,3 +1,4 @@
+import { TableHeader, useDataTable } from './DataTable'
 import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
@@ -50,6 +51,20 @@ export function StudentAttendance({
       cancelled = true
     }
   }, [userId, revision])
+  const attendanceTable = useDataTable('portal-attendance', data?.attendance ?? [], [
+    {
+      id: 'course',
+      label: ar ? 'الدورة' : 'Course',
+      value: (item) => item.course ?? (ar ? 'سجل سابق' : 'Previous record'),
+    },
+    { id: 'date', label: t('Date'), value: (item) => item.date },
+    {
+      id: 'status',
+      choices: [t('present'), t('absent'), t('excused')],
+      label: ar ? 'الحالة' : 'Status',
+      value: (item) => t(item.status),
+    },
+  ])
   return (
     <main id="main-content" className="role-page" tabIndex={-1}>
       <header className="role-header">
@@ -92,15 +107,9 @@ export function StudentAttendance({
         <section className="panel">
           {data.attendance.length ? (
             <table className="mobile-record-table role-table">
-              <thead>
-                <tr>
-                  <th>{ar ? 'الدورة' : 'Course'}</th>
-                  <th>{t('Date')}</th>
-                  <th>{ar ? 'الحالة' : 'Status'}</th>
-                </tr>
-              </thead>
+              <TableHeader model={attendanceTable} />
               <tbody>
-                {data.attendance.map((item) => (
+                {attendanceTable.rows.map((item) => (
                   <tr key={`${item.enrollmentId ?? 'legacy'}:${item.date}`}>
                     <td data-label={ar ? 'الدورة' : 'Course'}>
                       {item.course ?? (ar ? 'سجل سابق' : 'Previous record')}

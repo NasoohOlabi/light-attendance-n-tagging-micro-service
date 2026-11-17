@@ -24,7 +24,7 @@ async function expectCompactLevel(list: Locator) {
     if (!headers[levelIndex] || !level) throw new Error('Student and level columns must be present')
     const textCenter = (element: Element) => {
       const range = document.createRange()
-      range.selectNodeContents(element)
+      range.selectNodeContents(element.querySelector('.table-sort') ?? element)
       const bounds = range.getBoundingClientRect()
       return (bounds.left + bounds.right) / 2
     }
@@ -210,7 +210,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   const list = page.getByRole('region', { name: 'Student list' })
   const row = list.locator(`[data-student-id="${studentId}"]`)
-  await expect(list.getByRole('columnheader')).toHaveText([
+  await expect(
+    list.locator('thead th > button.table-sort, thead th:not(:has(button.table-sort))'),
+  ).toHaveText([
     'First name',
     'Last name',
     'Phone',
@@ -310,7 +312,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     path: `.artifacts/verification/roster-layout-${testInfo.project.name}-ar.png`,
     fullPage: true,
   })
-  await expect(arabicList.getByRole('columnheader')).toHaveText([
+  await expect(
+    arabicList.locator('thead th > button.table-sort, thead th:not(:has(button.table-sort))'),
+  ).toHaveText([
     'الاسم الأول',
     'اسم العائلة',
     'رقم الهاتف',
@@ -938,7 +942,9 @@ test('administrator no-course Students includes the complete inactive register',
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await expect(rows).toHaveCount(3)
   await clickAccountAction(page, 'العربية')
-  await expect(page.getByRole('columnheader')).toHaveText([
+  await expect(
+    page.locator('thead th > button.table-sort, thead th:not(:has(button.table-sort))'),
+  ).toHaveText([
     'الاسم الأول',
     'اسم العائلة',
     'رقم الهاتف',
