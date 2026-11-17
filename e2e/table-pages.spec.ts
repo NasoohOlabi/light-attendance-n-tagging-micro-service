@@ -7,15 +7,20 @@ import { clickAccountAction } from './profileActions'
 test.use({ trace: 'off' })
 const actorId = '10000000-0000-4000-8000-000000000001'
 const courseId = '30000000-0000-4000-8000-000000000001'
-const studentIds = [1, 2, 3, 4, 5].map((n) => `20000000-0000-4000-8000-00000000000${n}`)
+const studentIds = [1, 2, 3, 4, 5, 6].map((n) => `20000000-0000-4000-8000-00000000000${n}`)
 const scores: (number | null)[] = [2, 10, 100, 0, null]
 
 async function syntheticTables(
   page: Page,
   role: 'administrator' | 'student' = 'administrator',
   courseName = 'Alpha course',
+  resultScenario = false,
 ) {
-  const students = ['Zulu', 'Alpha', 'Charlie', 'Delta', 'Echo'].map((firstName, index) => ({
+  const students = (
+    resultScenario
+      ? ['Zulu', 'Alpha', 'Charlie', 'Delta', 'Echo', 'Foxtrot']
+      : ['Zulu', 'Alpha', 'Charlie', 'Delta', 'Echo']
+  ).map((firstName, index) => ({
     kind: 'student',
     studentId: studentIds[index],
     name: `${firstName} Family`,
@@ -33,14 +38,16 @@ async function syntheticTables(
     courseId,
     studentId: student.studentId,
     level: index === 4 ? '' : index === 0 ? '2.00' : String(index + 1),
-    practical: scores[index] ?? null,
-    theory: 100,
+    practical: resultScenario
+      ? ([90.5, 85, 100, 0, null, 0][index] ?? null)
+      : (scores[index] ?? null),
+    theory: resultScenario ? [90, 85, 100, 0, 100, 0][index] : 100,
     active: index !== 4,
     handbookReceived: index % 2 === 0,
   }))
   students.push({
     kind: 'student',
-    studentId: '20000000-0000-4000-8000-000000000006',
+    studentId: '20000000-0000-4000-8000-000000000007',
     name: 'Historical Family',
     firstName: 'Historical',
     lastName: 'Family',
@@ -73,15 +80,23 @@ async function syntheticTables(
       { id: courseId, name: courseName, open: true },
     ],
     events: enrollments.flatMap((entry) =>
-      ['2026-11-12', '2026-11-13', '2026-11-14'].map((date, index) =>
-        makeEvent('synthetic-table-check', {
-          kind: 'attendance',
-          studentId: entry.studentId,
-          enrollmentId: entry.id,
-          date,
-          status: index === 2 ? 'absent' : 'present',
-        }),
-      ),
+      resultScenario && entry.studentId === studentIds[5]
+        ? []
+        : ['2026-11-12', '2026-11-13', '2026-11-14'].map((date, index) =>
+            makeEvent('synthetic-table-check', {
+              kind: 'attendance',
+              studentId: entry.studentId,
+              enrollmentId: entry.id,
+              date,
+              status: resultScenario
+                ? entry.studentId === studentIds[2]
+                  ? 'absent'
+                  : 'present'
+                : index === 2
+                  ? 'absent'
+                  : 'present',
+            }),
+          ),
     ),
   })
   const writes: string[] = []
@@ -143,7 +158,7 @@ async function syntheticTables(
       })
     return route.fulfill({ status: 501, json: { error: 'Unexpected synthetic request' } })
   })
-  return { writes }
+  return { writes, snapshot }
 }
 
 async function everyColumn(table: Locator, count: number, actions = false, filters = true) {
@@ -376,6 +391,54 @@ test('grade sorting is numeric, keeps drafts, and ignores stale filters', async 
     path: `.artifacts/verification/table-grades-${testInfo.project.name}.png`,
     fullPage: true,
   })
+  expect(writes).toEqual([])
+})
+
+test('result sorting ranks status then average without writes', async ({ page }) => {
+  const { writes, snapshot } = await syntheticTables(page, 'administrator', 'Alpha course', true)
+  await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
+  const names = page.locator('table tbody tr td:first-child')
+  for (const language of ['en', 'ar']) {
+    await expect(page.locator('.profile-trigger')).toBeVisible()
+    if (language === 'ar')
+      await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
+    await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
+    const sort = page.getByRole('button', {
+      name:
+        language === 'ar'
+          ? '\u062a\u0631\u062a\u064a\u0628 \u062d\u0633\u0628 \u0627\u0644\u0646\u062a\u064a\u062c\u0629'
+          : 'Sort by Result',
+      exact: true,
+    })
+    await sort.click()
+    await expect(names).toHaveText(['Echo', 'Foxtrot', 'Delta', 'Charlie', 'Alpha', 'Zulu'])
+    await sort.click()
+    await expect(names).toHaveText(['Zulu', 'Alpha', 'Charlie', 'Delta', 'Foxtrot', 'Echo'])
+    await page.reload()
+    await expect(names).toHaveText(['Zulu', 'Alpha', 'Charlie', 'Delta', 'Foxtrot', 'Echo'])
+    await page
+      .getByLabel(
+        language === 'ar' ? '\u0639\u0645\u0644\u064a: Zulu Family' : 'Practical: Zulu Family',
+        {
+          exact: true,
+        },
+      )
+      .fill('91')
+    await expect(names).toHaveText(['Alpha', 'Charlie', 'Delta', 'Zulu', 'Foxtrot', 'Echo'])
+    await page.reload()
+  }
+  for (const entry of snapshot.enrollments) {
+    if (entry.studentId !== studentIds[1] && entry.studentId !== studentIds[4]) continue
+    entry.gradeDecisions.push({
+      requestId: crypto.randomUUID(),
+      result: entry.studentId === studentIds[1] ? 'fail' : 'pass',
+      note: 'Synthetic override sorting check',
+      actor: 'Synthetic administrator',
+      at: '2026-11-17T14:00:00.000Z',
+    })
+  }
+  await page.reload()
+  await expect(names).toHaveText(['Zulu', 'Echo', 'Charlie', 'Alpha', 'Delta', 'Foxtrot'])
   expect(writes).toEqual([])
 })
 

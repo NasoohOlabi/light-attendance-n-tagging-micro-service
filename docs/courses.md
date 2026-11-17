@@ -1,4 +1,4 @@
-﻿# Courses and enrollment
+# Courses and enrollment
 
 Administrators open **Courses** to see every saved course, including courses with no students. The default is the list; **Create course** opens a separate page and returns to the list after saving. Create/edit a course, **Manage students**, and **Grades** are separate destinations with individual page headings and the notebook navigation retained. Course pages omit the generic notebook introduction and unrelated student count. The localized account role appears once in the header. Choose a course from its row rather than combining course/student selectors and scores in one form.
 
@@ -49,3 +49,5 @@ Administrators can override a grade result to Pass or Fail, or restore the calcu
 Apply migration `neon/011-grade-decisions.sql` before deployment. Version 10 backups preserve decision history; older backups cannot compare against a target with decisions.
 
 Grades uses a bounded scrolling table on desktop, with opaque sticky column headings. The title, Sort control and grading thresholds stay outside the table scroll area. Focus the Course grades region to scroll it with the keyboard. On phones and other stacked layouts, records continue to use normal page scrolling without a nested vertical scroller.
+
+Result sorting uses the effective result, including saved administrator decisions, and ranks pending, fail, then pass in ascending order, and reverses that order descending. Within each status, it sorts by the arithmetic mean of the saved theory and practical scores; pending rows missing either score precede completed-score pending rows in ascending order. Unsaved drafts retain their calculated pending status; an explicit administrator decision remains effective. Sorting does not save changes.

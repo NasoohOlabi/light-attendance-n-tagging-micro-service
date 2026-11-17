@@ -27,3 +27,5 @@ Verify administrators can save Pass, Fail, and restore the calculated result wit
 Grades omits the Enrolled column while retaining withdrawn students and their grades. Stale Enrolled sort settings are ignored. Whole-number decimal levels display without the zero-only fraction across course tables and unfocused editors; existing raw values survive unchanged saves.
 
 For long Grades tables, check English and Arabic on desktop (including short windows): the named, keyboard-focusable table region scrolls independently, column headings stay opaque and pinned, and the final row and its Save grades action are reachable. The title and thresholds stay outside the region. On phones, records remain stacked with normal page scrolling and no horizontal overflow.
+
+Sort Grades by Result in both directions in English and Arabic on desktop and mobile: status comes first, then the mean of both saved grades, including attendance failures, pending incomplete scores and unsaved drafts. Reload retains the sort and sorting sends no writes. Saved manual decisions determine the status group; an overridden Pass with missing grades must remain above a Fail averaging 100 when descending.
