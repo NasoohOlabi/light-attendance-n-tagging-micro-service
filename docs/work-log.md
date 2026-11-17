@@ -1659,3 +1659,13 @@ The integrated release gate passed with 116 desktop/mobile browser cases, 33 loc
 The mobile Courses screenshot showed five unlabeled icons per row. Courses now has one three-dot trigger beside the course name and status. The menu names each action in English and Arabic. Current course is a text label. The same control opens grade overrides and history record actions. The view audit kept primary tasks such as Create course, Save grades, attendance entry, and form submissions visible. It also covered single record actions, account forms, table configuration, profile, public navigation, and the student portal.
 
 `bun run verify:release` passed all local gates and 116 browser cases. The browser coverage exercises keyboard focus and Escape, outside dismissal, course selection and status, grade override and focus return, history details and undo, and 320/390/430px layouts in English and Arabic. Browser checks use Chromium on desktop and emulated phones with synthetic API responses. Four optional database suites skipped. Railway's production trigger points to `main` with Wait for CI enabled. Exact-commit deployment and shipped-asset verification follow the PR merge.
+
+## 2026-11-17 23:34 Asia/Damascus (UTC+03:00) - Move Courses table controls beside the title
+
+The mobile Courses screenshot requested more room for the course list. Sort and Filter now share the heading row, at the top-left in Arabic and top-right in English. The saved list starts with its column headings, and Create course retains its own row.
+
+The focused Chromium test reproduced the lower placement and passed after the change on desktop and 320/390/430px phones in both languages. It checks the 44px buttons, both popovers, and filtering through reload and clearing with synthetic data and zero writes. The full suite exposed that the first course action popover can cover the next row's trigger in the tighter layout. The test now opens the next menu by keyboard and still checks outside-tap dismissal. The focused enrollment scenario passed on desktop and mobile.
+
+`bun run verify:release` passed at 23:36 with 118 browser cases, 33 local tests, 138 assertions, and the build, lint, artifact, formatting and security gates. Four optional database tests skipped.
+
+Railway's production trigger reports `main` with `checkSuites: true` (Wait for CI). Exact-main deployment, health, and the synthetic layout check against the shipped build follow PR checks. Physical phones and live authenticated sessions are outside this layout check.
