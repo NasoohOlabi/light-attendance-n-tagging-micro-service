@@ -26,7 +26,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run setup:security
       - run: bun run security:history
-      - run: bun audit
+      - run: bun run security:audit
       - run: bun run format:check
       - run: bun run verify
       - run: bun run security:files

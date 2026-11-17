@@ -1,4 +1,6 @@
 * text=auto eol=lf
+# Unified diffs require a space on blank context lines.
+*.patch -whitespace
 *.png binary
 *.jpg binary
 *.ico binary
