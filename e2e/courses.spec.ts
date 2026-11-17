@@ -813,10 +813,36 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(gradeRow).toHaveCSS('background-color', 'rgb(234, 247, 237)')
   await expect(gradeRow.getByText('50.0%')).toHaveCSS('color', 'rgb(161, 27, 27)')
   await expect(gradeRow).toContainText('Insufficient attendance')
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(gradeRow).toHaveCSS('background-color', 'rgb(32, 77, 64)')
+  await expect(gradeRow.getByText('50.0%')).toHaveCSS('color', 'rgb(255, 193, 197)')
+  await expect(page.getByLabel('Practical: Synthetic Student')).toHaveCSS(
+    'color',
+    'rgb(181, 239, 210)',
+  )
+  await gradeRow.getByText('Override result').click()
+  await page.screenshot({
+    path: `.artifacts/verification/grade-pass-dark-${testInfo.project.name}.png`,
+    fullPage: true,
+  })
+  await gradeRow.getByText('Override result').click()
   await gradeRow.getByRole('combobox').selectOption('calculated')
   await gradeRow.getByLabel('Decision note (required)').fill('Restore calculated attendance')
   await gradeRow.getByRole('button', { name: 'Save decision' }).click()
   await gradeRow.getByText('Override result').click()
+  await expect(gradeRow).toHaveCSS('background-color', 'rgb(88, 47, 53)')
+  await clickAccountAction(page, 'العربية')
+  await page.setViewportSize({ width: 320, height: 844 })
+  await expect(gradeRow).toContainText('الحضور أقل من الحد الأدنى')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({
+    path: `.artifacts/verification/grade-fail-dark-${testInfo.project.name}-ar.png`,
+    fullPage: true,
+  })
+  await clickAccountAction(page, 'English')
+  if (originalViewport) await page.setViewportSize(originalViewport)
+  await page.emulateMedia({ colorScheme: 'light' })
   await expect(gradeRow).toHaveCSS('background-color', 'rgb(252, 238, 238)')
   await page.getByLabel('Practical: Synthetic Student').fill('0')
   await page.getByLabel('Theory: Synthetic Student').fill('0')

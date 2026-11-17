@@ -51,3 +51,5 @@ Administrators can override a grade result to Pass or Fail, or restore the calcu
 Apply migration `neon/011-grade-decisions.sql` before deployment. Version 10 backups preserve decision history; older backups cannot compare against a target with decisions.
 
 Grades uses a bounded scrolling table on desktop, with opaque sticky column headings. The title, Sort control and grading thresholds stay outside the table scroll area. Focus the Course grades region to scroll it with the keyboard. On phones and other stacked layouts, records continue to use normal page scrolling without a nested vertical scroller.
+
+Light and dark appearance use matching readable red/green grade indicators and row tints. Color meanings and failure reasons are the same in both palettes.

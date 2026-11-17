@@ -31,3 +31,5 @@ Grades omits the Enrolled column while retaining withdrawn students and their gr
 For long Grades tables, check English and Arabic on desktop (including short windows): the named, keyboard-focusable table region scrolls independently, column headings stay opaque and pinned, and the final row and its Save grades action are reachable. The title and thresholds stay outside the region. On phones, records remain stacked with normal page scrolling and no horizontal overflow.
 
 With an override, verify row shading follows the effective result while the calculated result and below-threshold attendance/scores retain their own colors and causes. Test manual Pass/Fail, restore calculated, and a passing override of an attendance failure.
+
+Verify passing and failing row backgrounds, attendance, scores and calculated/effective results remain readable and correctly colored in light and dark appearance, including Arabic phones and a passing override of an attendance failure.

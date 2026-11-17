@@ -25,7 +25,7 @@ export async function compactHeader(page: Page, selector: string) {
   await expect(header).toBeVisible()
   const bounds = await header.boundingBox()
   if (!bounds) throw new Error('Header has no layout bounds')
-  const buttons = await header.locator('button').evaluateAll((elements) =>
+  const buttons = await header.locator('button, select').evaluateAll((elements) =>
     elements
       .map((element) => {
         const box = element.getBoundingClientRect()

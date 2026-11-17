@@ -10,7 +10,7 @@ function publicAssets(directory: string, prefix = ''): string[] {
     const name = prefix + entry.name
     return entry.isDirectory()
       ? publicAssets(join(directory, entry.name), `${name}/`)
-      : /\.(?:png|ico|svg|woff2|webmanifest)$/.test(name)
+      : /\.(?:js|png|ico|svg|woff2|webmanifest)$/.test(name)
         ? [name]
         : []
   })

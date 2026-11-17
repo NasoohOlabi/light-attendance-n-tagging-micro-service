@@ -76,7 +76,8 @@ test('Arabic authentication keeps mobile input semantics and localized feedback'
   await expect(page.getByRole('alert')).toContainText('Invalid email or password')
   await page.getByRole('button', { name: 'Create account', exact: true }).click()
   await expect(page.getByLabel('Name', { exact: true })).toHaveAttribute('autocomplete', 'name')
-  await expect(page.getByRole('combobox')).toHaveCount(0)
+  await expect(page.getByRole('combobox')).toHaveCount(1)
+  await expect(page.getByRole('combobox', { name: 'Color theme' })).toBeVisible()
   await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute(
     'autocomplete',
     'new-password',
