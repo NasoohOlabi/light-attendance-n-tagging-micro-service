@@ -29,9 +29,10 @@ export function NotebookDashboard({
   ]
     .sort()
     .slice(-5)
+  const present = records.filter(({ value }) => value.status === 'present')
   const max = Math.max(
     1,
-    ...recentDates.map((day) => records.filter(({ value }) => value.date === day).length),
+    ...recentDates.map((day) => present.filter(({ value }) => value.date === day).length),
   )
   return (
     <section className="dashboard" aria-label={ar ? 'الرئيسية' : 'Dashboard'}>
@@ -98,15 +99,13 @@ export function NotebookDashboard({
         </section>
         <section className="panel dashboard-chart">
           <h2>{ar ? 'الجلسات الأخيرة' : 'Recent sessions'}</h2>
-          <p className="muted">
-            {ar ? 'عدد الطلاب المسجلين في كل يوم' : 'Students marked per date'}
-          </p>
+          <p className="muted">{ar ? 'عدد الحاضرين في كل يوم' : 'Present per date'}</p>
           {!recentDates.length ? (
             <p className="muted">{ar ? 'لا توجد بيانات حضور بعد.' : 'No attendance data yet.'}</p>
           ) : (
             <ol className="dashboard-trend">
               {recentDates.map((day) => {
-                const count = records.filter(({ value }) => value.date === day).length
+                const count = present.filter(({ value }) => value.date === day).length
                 return (
                   <li key={day}>
                     <time dateTime={day}>{day}</time>

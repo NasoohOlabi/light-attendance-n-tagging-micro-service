@@ -6,7 +6,7 @@ Present, Absent and Excused only; group marking of displayed active students, ca
 
 ## How to get to it (user POV)
 
-Sign in or choose **Explore with sample students**. The dashboard opens first. Use **Take attendance** to find a student by fuzzy search or browse group accordions when the query is empty. Drafts survive search and filter changes. The dashboard shows effective status counts for the selected date, including unmarked, and marked-student counts for up to five recorded dates through that date. **Summary** shows all-date totals for the selected course's authorized roster, including inactive memberships, with Course as its only filter. Notes remain student-scoped and count across all dates.
+Sign in or choose **Explore with sample students**. The dashboard opens first. Use **Take attendance** to find a student by fuzzy search or browse group accordions when the query is empty. Drafts survive search and filter changes. The dashboard shows effective status counts for the selected date, including unmarked, and present-student counts for up to five recorded dates through that date, including dates with zero present. **Summary** shows all-date totals for the selected course's authorized roster, including inactive memberships, with Course as its only filter. Notes remain student-scoped and count across all dates.
 
 ## Driving it with Playwright
 

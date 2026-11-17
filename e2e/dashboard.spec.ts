@@ -100,3 +100,45 @@ test('dashboard charts and grouped fuzzy attendance preserve drafts', async ({
   await expect(page.getByLabel('absent: 0')).toBeVisible()
   await expect(page.getByText('1 marked, 1 unmarked')).toBeVisible()
 })
+
+test('recent sessions count present students, including zero-present dates', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Explore with sample students' }).click()
+  const dateInput = page.getByLabel('Session date')
+  const firstDate = await dateInput.inputValue()
+  const nextDate = new Date(`${firstDate}T00:00:00Z`)
+  nextDate.setUTCDate(nextDate.getUTCDate() + 1)
+  const secondDate = nextDate.toISOString().slice(0, 10)
+
+  await page.getByRole('button', { name: 'Take attendance' }).click()
+  await page.getByLabel('Attendance for Omar').selectOption('absent')
+  await page.getByRole('button', { name: 'Save attendance (1)' }).click()
+  await page.getByLabel('Session date').fill(secondDate)
+  await page.getByLabel('Attendance for Omar').selectOption('excused')
+  await page.getByRole('button', { name: 'Save attendance (1)' }).click()
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
+
+  await expect(page.getByText('Present per date')).toBeVisible()
+  await expect(page.getByLabel(`${firstDate}: 1`)).toHaveAttribute('value', '1')
+  await expect(page.getByLabel(`${secondDate}: 0`)).toHaveAttribute('value', '0')
+  await expect(page.getByLabel('excused: 1')).toBeVisible()
+  await expect(page.getByText('1 marked, 1 unmarked')).toBeVisible()
+  await page.getByLabel('Session date').fill(firstDate)
+  await expect(page.getByLabel(`${secondDate}: 0`)).toHaveCount(0)
+  await expect(page.getByLabel('absent: 1')).toBeVisible()
+  await page.getByLabel('Session date').fill(secondDate)
+  await page.getByRole('button', { name: 'العربية', exact: true }).click()
+  await expect(page.getByText('عدد الحاضرين في كل يوم')).toBeVisible()
+  await expect(page.getByLabel(`${firstDate}: 1`)).toBeVisible()
+  await expect(page.getByLabel(`${secondDate}: 0`)).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+    true,
+  )
+  await mkdir('.artifacts/verification', { recursive: true })
+  await page.screenshot({
+    path: `.artifacts/verification/dashboard-present-${testInfo.project.name}-ar.png`,
+    fullPage: true,
+  })
+})
