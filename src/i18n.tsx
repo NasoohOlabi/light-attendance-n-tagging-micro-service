@@ -1,5 +1,5 @@
 import { Globe } from 'lucide-react'
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useSyncExternalStore } from 'react'
 
 const arabic = {
   'Your account is awaiting approval or no longer has access. Contact your manager.':
@@ -213,11 +213,62 @@ export function useLanguage() {
   }
   return { language, setLanguage, t, errorMessage }
 }
+function subscribeTheme(listener: () => void) {
+  const observer = new MutationObserver(listener)
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme-preference'],
+  })
+  return () => observer.disconnect()
+}
+function themePreference() {
+  const value = document.documentElement.dataset.themePreference
+  return value === 'light' || value === 'dark' ? value : 'system'
+}
+export function ThemeSelect() {
+  const { language } = useLanguage()
+  const theme = useSyncExternalStore(subscribeTheme, themePreference)
+  return (
+    <label className="theme-select">
+      <span className="sr-only">
+        {language === 'ar' ? '\u0627\u0644\u0645\u0638\u0647\u0631' : 'Color theme'}
+      </span>
+      <select
+        aria-label={language === 'ar' ? '\u0627\u0644\u0645\u0638\u0647\u0631' : 'Color theme'}
+        value={theme}
+        onChange={(event) => {
+          const value = event.target.value
+          if (value !== 'light' && value !== 'dark' && value !== 'system') return
+          document.documentElement.dataset.themePreference = value
+          document.documentElement.dataset.theme =
+            value === 'system'
+              ? matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+              : value
+          try {
+            if (value === 'system') localStorage.removeItem('halaqa-theme')
+            else localStorage.setItem('halaqa-theme', value)
+          } catch {
+            /* Preference is optional. */
+          }
+        }}
+      >
+        <option value="system">
+          {language === 'ar' ? '\u062d\u0633\u0628 \u0627\u0644\u062c\u0647\u0627\u0632' : 'Device'}
+        </option>
+        <option value="light">{language === 'ar' ? '\u0641\u0627\u062a\u062d' : 'Light'}</option>
+        <option value="dark">{language === 'ar' ? '\u062f\u0627\u0643\u0646' : 'Dark'}</option>
+      </select>
+    </label>
+  )
+}
 export function LanguageSwitch() {
   const { language, setLanguage } = useLanguage()
   const target = language === 'en' ? 'ar' : 'en'
   return (
     <div className="language-switch" role="group" aria-label="Language / اللغة">
+      <ThemeSelect />
       <button
         type="button"
         className="icon-button"

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { UserRound } from 'lucide-react'
-import { useLanguage } from './i18n'
+import { ThemeSelect, useLanguage } from './i18n'
 import { setQuery } from './queryState'
 
 export type Profile = { name: string; image: string | null }
@@ -72,6 +72,7 @@ export function ProfileMenu({
       {open && (
         <div className="profile-panel" id={panelId}>
           {profile?.name && <strong dir="auto">{profile.name}</strong>}
+          <ThemeSelect />
           <button type="button" onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')}>
             {language === 'en' ? '\u0627\u0644\u0639\u0631\u0628\u064a\u0629' : 'English'}
           </button>
