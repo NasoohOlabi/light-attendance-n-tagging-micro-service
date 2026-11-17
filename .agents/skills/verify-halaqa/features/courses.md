@@ -22,6 +22,8 @@ On Grades, save multiline enrollment notes, reload and clear them. Check indepen
 
 Grades has no column-filter inputs beneath its headings. Its single Sort icon shares the page-title header; the table has no separate configuration caption and there is no duplicate Back to courses button. Verify the existing Courses navigation returns to the saved list on desktop and phones. Old saved Grades URL filters must not hide students, including after reload; heading sorting and the Sort popup remain functional. Existing student score/note fields and save actions remain available. Check long titles, 44px targets, English/Arabic desktop and 320/390px layouts, and other tables' Filter popups.
 
+On Grades, check green passing values and rows, red failing values and rows, and localized causes for attendance and each score. Pending rows are neutral; unsaved scores and all values while thresholds are dirty have neutral indicators. Check saved values at their threshold and 320px English/Arabic without overflow.
+
 Verify administrators can save Pass, Fail, and restore the calculated result with a required nonblank note. Confirm calculated and effective results, history, persistence and desktop/mobile fit in English and Arabic. Teacher and student responses must exclude decision history.
 
 Grades omits the Enrolled column while retaining withdrawn students and their grades. Stale Enrolled sort settings are ignored. Whole-number decimal levels display without the zero-only fraction across course tables and unfocused editors; existing raw values survive unchanged saves.
@@ -30,4 +32,10 @@ For long Grades tables, check English and Arabic on desktop (including short win
 
 Export Excel from Grades in English and Arabic on desktop and at 320/390px. The phone download icon retains its accessible name and keeps Sort aligned with the title. Inspect the downloaded workbook for saved thresholds, every membership, saved scores, projected corrected attendance across all dates and blank missing values. Result must respect the latest saved administrator override. Sorting and page filters must not remove rows; unsaved grade or threshold drafts disable export. Verify names beginning with formula characters remain literal strings and no notes or decision history are exported.
 
+With an override, verify row shading follows the effective result while the calculated result and below-threshold attendance/scores retain their own colors and causes. Test manual Pass/Fail, restore calculated, and a passing override of an attendance failure.
+
+Verify passing and failing row backgrounds, attendance, scores and calculated/effective results remain readable and correctly colored in light and dark appearance, including Arabic phones and a passing override of an attendance failure.
+
 Sort Grades by Result in both directions in English and Arabic on desktop and mobile: status comes first, then the mean of both saved grades, including attendance failures, pending incomplete scores and unsaved drafts. Reload retains the sort and sorting sends no writes. Saved manual decisions determine the status group; an overridden Pass with missing grades must remain above a Fail averaging 100 when descending.
+
+Wait for the displayed calculated result after saving, not row-wide text that also contains override choices/history. Hold a grade-save response, assert Pending until released, then confirm the persisted score before reload.

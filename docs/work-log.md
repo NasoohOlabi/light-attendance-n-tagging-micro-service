@@ -1118,6 +1118,16 @@
 
 **Final local gate at 15:22 Asia/Damascus:** `bun run verify:release` passed all 80 desktop/mobile browser cases, 22 unit tests/99 assertions, lint, strict build/artifact checks, formatting, file/history secret scans and dependency audit. Four optional disposable database suites were skipped. Reviewed synthetic desktop and Arabic 320px screenshots. Focused table checks separately passed 8/8. Exact-main Railway deployment, health and shipped-asset UI results will be recorded in the PR delivery receipt after merge.
 
+## 2026-11-17 17:13 Asia/Damascus (UTC+03:00) - Color Grades outcomes and failure causes
+
+**Request/reason:** Owner requested green passing grades/attendance and results, red failure-causing values and results, plus subtle green/red whole-row tints. Started clean at deployed main `54b6195` on `t3/color-code-failure-grades` in the existing checkout. No worktrees or unrelated edits.
+
+**Changes/provenance:** The first Terra delegate inspected only and ended without changes; the second bounded `gpt-6.1-terra` implementation owns Grades markup/styles, focused browser coverage and behavior/feature documentation. The orchestrator owns review, work log, release verification and serial commits/publication. Preserve saved thresholds, pending/unsaved behavior, attendance calculation, backend and access rules. Use localized visible reasons alongside color, and keep English/Arabic desktop and phone layouts readable.
+
+**Verification/limits:** Implementation and final gate are in progress. Baseline local tests passed 22 tests/99 assertions with four optional database suites skipped, and the history secret scan passed. Dependencies and checksum-verified scanner were installed. An existing process occupies preview port 4173 and is preserved; final browser runs use another port. Railway is linked to the existing production application, whose current successful deployment matches starting main. Synthetic UI checks do not prove real authenticated provider writes or physical-device behavior. Final check and delivery results follow.
+
+**Verified base unit at 17:18 Asia/Damascus:** `bun run verify:release` passed all 82 desktop/mobile browser cases, 22 local tests/99 assertions, lint, build/artifact, formatting, file/history secret scans and dependency audit with Bun 1.3.0. Four optional disposable-database suites skipped. The orchestrator reviewed synthetic desktop and 320px Arabic failure screenshots and the complete diff; passing thresholds, attendance-only and multiple failures, draft/invalid/pending states and actual computed colors/backgrounds are covered. Main advanced independently to `388470b` (Theory before Practical). Commit this verified unit, merge main normally while retaining that order and both work-log entries, then verify the combined tree before publication. No history rewrite or extra worktree.
+
 ## 2026-11-17 17:09 Asia/Damascus (UTC+03:00) - Show Theory before Practical
 
 **Request/reason:** Owner requested Theory (نظري) before Practical (عملي) in the course Grades table. Started clean at main `54b6195` and created `fix/theory-before-practical` in the existing checkout.
@@ -1127,6 +1137,20 @@
 **Verification/limits:** Full release gate pending. Existing course coverage saves distinct 0/100 scores and reloads them to check identity. Synthetic browser checks do not establish real authenticated provider writes or physical-device behavior. Exact-main Railway deployment, health and shipped-asset checks will be recorded in the PR delivery receipt after merge.
 
 **Final local gate at 2026-11-17 17:12 Asia/Damascus:** `bun run verify:release` passed all 82 desktop/mobile browser cases, 22 local unit tests/99 assertions, lint, build/artifact, formatting, file/history secret scans and dependency audit. Four optional database suites skipped. Reviewed the synthetic Arabic rendered fields. Railway production source readback via CLI confirms main with Wait for CI enabled (`checkSuites: true`). No production records were changed; live delivery verification follows merge.
+
+## 2026-11-17 17:19 Asia/Damascus (UTC+03:00) - Integrate Grades colors with main
+
+**Main integration:** Merged main `388470b` normally. Source, feature-map and browser changes merged cleanly; resolved the work-log append conflict by retaining both entries. Theory remains before Practical in both heading and score-input order. Rechecking the integrated tree before the merge commit and publication.
+
+**Integrated gate follow-up at 17:23 Asia/Damascus:** The first integrated release run passed 81/82 UI cases, including both course-color scenarios, then failed the unrelated mobile account-retry test at `e2e/neon.spec.ts:427`: navigation to its separate localhost:4183 server returned `net::ERR_CONNECTION_REFUSED`. No Grades assertion failed. Preserve the failure log; rerun that scenario independently and repeat the full gate before publication. No authentication source/test edits are part of this UI change.
+
+**Runtime diagnosis at 17:30 Asia/Damascus:** The second integrated run passed 80/82 cases but both storage-write scenarios lost their fixed-port test servers. All 26 authentication cases passed in isolation. A temporary Node lifecycle probe then reproduced an owned Vite child exiting with code 1: `Port 4182 is already in use`. The existing readiness check had accepted another process's HTTP response, so later navigation could lose that unrelated server. Log-pool was unreachable at its recorded endpoint; ignored JSONL retains the lifecycle evidence. Remove the redundant authentication dev servers and use the suite-owned preview/baseURL, already used by the course cases. This is a repository-tooling integration fix; no product/auth logic change. Remove the temporary probe before final verification.
+
+## 2026-11-17 17:33 Asia/Damascus (UTC+03:00) - Isolate authentication verification from fixed ports
+
+**Reason/change:** Runtime lifecycle evidence showed the authentication harness accepting another Vite process's ready response after its own fixed-port child exited. Reuse Playwright's suite-owned `baseURL` preview, as the synthetic course scenarios already do, and remove the redundant dev-server spawn/readiness/kill code. Keep every Auth/API interception and assertion. No application authentication code changed. Temporary preload probes were removed; their ignored JSONL remains for diagnosis.
+
+**Verification/limits:** All 26 desktop/mobile authentication cases passed against the built preview without instrumentation. An initial typecheck caught the now-unused child-process import, which was removed. Run the final full release gate on this integrated revision before publication. Prior failed gates and the known optional database/provider limits remain documented above.
 
 ## 2026-11-17 17:10 Asia/Damascus (UTC+03:00) - Add dark mode
 
@@ -1182,6 +1206,14 @@
 
 **Final local gate at 2026-11-17 17:25 Asia/Damascus:** `bun run verify:release` passed all 84 desktop/mobile browser cases, 22 local unit tests/99 assertions, lint, build/artifact, formatting, file/history secret scans and dependency audit. Four optional disposable database suites skipped. Focused 30-student tests also passed separately; the orchestrator inspected the actual English/Arabic desktop and phone renders. Synthetic fixtures verify keyboard navigation, sticky geometry and intercepted saving without touching production data. Exact-main deployment, health and shipped-asset results follow in the PR delivery receipt.
 
+## 2026-11-17 17:36 Asia/Damascus (UTC+03:00) - Preserve sticky Grades headings during color integration
+
+**Reason/change:** The full release gate passed all 82 browser cases on `db9303e` after the authentication harness fix, including 22 local tests/99 assertions, lint/build/artifact, formatting, secret scans and audit. Main then advanced to `f5d0f87` with bounded desktop scrolling/sticky headings. Merged it normally, preserving both complete CSS blocks, documentation paragraphs and work-log entries. The Grades wrapper retains its new scrolling class alongside our row/value colors. No unrelated work was discarded.
+
+**Verification/limits:** Run the final integrated release gate, including main's new desktop/mobile scrolling scenarios, before publication. Optional disposable database suites and real provider writes remain outside this UI-only proof.
+
+**Final integrated gate at 17:38 Asia/Damascus:** `bun run verify:release` passed all 84 desktop/mobile browser cases, 22 unit tests/99 assertions, lint, build/artifact, formatting, file/history secret scans and dependency audit on the combined `f5d0f87` tree with the authentication harness fix. Four optional disposable database suites skipped. The prior post-fix release run also passed all 82 cases before sticky-heading integration. Actual colors, failure reasons, threshold/pending states, Theory/Practical order and opaque sticky headings are covered. No temporary instrumentation remains. Reviewed source/CSS conflict resolutions and retained both behavior documents/feature-map paragraphs. Provider deployment/health and shipped-asset results follow in the PR delivery receipt.
+
 ## 2026-11-17 17:35 Asia/Damascus (UTC+03:00) - Sort results by status and grade average
 
 **Request/reason:** Owner requested granular Result (النتيجة) sorting using the mean of practical and theory scores. Started clean at `f5d0f87` on `t3/result-average-sorting`; no new worktree or unrelated changes.
@@ -1224,6 +1256,20 @@
 
 **Final integrated gate at 2026-11-17 17:50 Asia/Damascus:** Merged main `42f5405` normally into the export checkpoint, preserving sticky desktop headings, simplified Grades columns, level displays, updated synthetic-server isolation and both documentation histories. Resolved only append conflicts in course docs, the verification map and work log. `bun run verify:release` passed all 98 desktop/mobile browser scenarios, 24 local unit tests/109 assertions, lint/build/artifact, formatting, file/history secret scans and dependency audit; four optional database suites skipped. The phone icon keeps Sort centred beside the title, with its localized accessible name/title retained. Real XLSX contents and English/Arabic screenshots were inspected. Publication now proceeds through the PR and required checks; exact-main Railway health and synthetic shipped-asset downloads will be recorded in the PR delivery receipt. No real provider data or physical-device testing is claimed.
 
+## 2026-11-17 17:44 Asia/Damascus (UTC+03:00) - Refresh Grades colors PR against current main
+
+**Reason/change:** PR #80 passed Verify, CodeQL and security on `63f8e59`, then main `42f5405` removed the Grades Enrolled column, formatted whole-number levels, and improved isolated role-test ports. Merged main normally and preserved those changes plus all color/failure-cause coverage. Retained both append-only work-log and feature-map entries. For the overlapping authentication harness change, retained #80's suite-owned preview (no redundant child ports), which addresses the observed collision directly and preserves every same-origin assertion. No history rewrite or unrelated work.
+
+**Verification/limits:** Recheck the integrated source and full release gate before completing the merge and updating the PR. Earlier CI establishes the previous head only. Four optional disposable database suites and real authenticated provider writes remain outside these local synthetic checks. Deployment proof follows the final merge.
+
+## 2026-11-17 17:46 Asia/Damascus (UTC+03:00) - Resolve PR 80 against simplified Grades
+
+**Request/reason:** T3 reported all required checks passed on `63f8e59`, but main advanced to `42f5405` and conflicted. Inspected the clean starting tree, successful Verify/CodeQL/security results, and main's full integration diff before merging normally.
+
+**Changes:** Preserve main's removed Enrolled column, whole-number level display/editing, updated column-order assertions, role-test port isolation, and both documentation/verification paragraphs. Retain this branch's suite-owned preview for authentication tests instead of restoring main's redundant dev-server lifecycle; every authentication assertion is preserved. No product conflict required a grading-rule change. Resolved append-only work-log conflicts by retaining both histories.
+
+**Verification/limits:** `bun run verify:release` passed all 86 desktop/mobile browser cases, 23 unit tests/100 assertions, lint/build/artifact/format/security/history/audit on the integrated tree. Four optional database suites skipped. Synthetic tests do not establish real authenticated provider writes or physical devices. Push the integration and wait for required checks on its exact head; exact-main Railway deployment and shipped-asset proof follow merge.
+
 **Integration at 2026-11-17 17:42 Asia/Damascus:** Main advanced to `42f5405` (#78) during PR creation. Merge it normally, preserving its removed enrollment column and whole-number level display. Resolve only the overlapping synthetic enrollment fixture (keep main's `2.00` level and this task's scenario scores) and retain both work-log histories. Source merged cleanly. Rerun the full release gate on the combined tree before pushing; no unrelated main changes are discarded.
 
 **Combined gate at 2026-11-17 17:45 Asia/Damascus:** `bun run verify:release` passed all 88 browser cases, 23 local tests/100 assertions, lint/build/artifact, formatting, file/history secret scans and dependency audit after integrating `42f5405`. Four optional disposable-database suites skipped. Both independent feature regressions pass. Commit the merge and push for refreshed CI before publication.
@@ -1251,6 +1297,18 @@
 **Result-sort integration at 2026-11-17 18:12 Asia/Damascus:** T3 reported all required checks passing on `71dcef7`, then conflicts after main advanced to `6c1f8ea` (#81). Started clean and merged main normally. Product code merged cleanly, preserving status-plus-saved-average Result sorting alongside the complete export. Resolved only appended course documentation, verification-map and work-log conflicts, retaining both histories. The exporter keeps human-readable effective results and remains independent of table sort keys and filters. `bun run verify:release` passed all 106 desktop/mobile browser cases, 24 local tests/112 assertions, lint/build/artifact, formatting, file/history secret scans and dependency audit; four optional database suites skipped. Push and require fresh CI before merge. Exact-main Railway health and synthetic shipped-asset downloads remain pending, with no claim of live authenticated provider or physical-device testing.
 
 **Override-layout integration at 2026-11-17 18:21 Asia/Damascus:** T3 reported required checks passing on `3f08b43`, followed by conflicts after main advanced to `11d57eb`. Started clean and merged main normally. Product code merged cleanly, retaining top-aligned desktop cells and full-width phone override details; only appended work-log entries needed resolution, with both histories preserved. The complete `bun run verify:release` gate passed all 106 desktop/mobile browser cases, 24 local tests/112 assertions, lint/build/artifact, formatting, file/history secret scans and dependency audit. Four optional database suites skipped. Fresh PR CI and exact-main Railway delivery checks remain required; synthetic UI checks do not establish real authenticated provider or physical-device behavior.
+
+**Grade-indicator integration at 2026-11-17 18:30 Asia/Damascus:** All checks passed and GitHub reported head `1b93a19` clean, but main advanced to `a015030` (#80) between the readiness check and guarded squash-merge request. GitHub rejected the attempt without merging. Merged main normally and preserved its saved score/attendance indicators, effective-result row tints, failure causes and light/dark checks. Product code merged cleanly; resolved only appended course documentation, verification-map and work-log sections, retaining both histories. `bun run verify:release` passed all 106 browser cases, 24 local tests/112 assertions, lint/build/artifact, formatting, file/history secret scans and dependency audit; four optional database suites skipped. The export still writes saved values and readable effective results without exporting notes/history or UI sort keys. Fresh PR CI and exact-main Railway health/download verification remain required.
+
+## 2026-11-17 17:53 Asia/Damascus (UTC+03:00) - Integrate Grades colors with result overrides
+
+**Request/reason:** PR #80 passed all required checks, CodeQL and security on `43d2ecf`, then main `94384b1` added administrator grade-result overrides and conflicted. Started clean and merged main normally, preserving its override/API/migration/audit/backup implementation and all documentation histories.
+
+**Integration:** Keep the row tint tied to the effective result, with separately colored calculated/effective labels. Threshold-based attendance/grade colors and failure causes stay beside the calculated result even when an administrator overrides it. Preserve override forms/history and restore-calculated behavior. Extend existing browser coverage for manual Pass/Fail tints, restored calculation, and a passing override of insufficient attendance; restore calculation before the existing grade checks. No backend changes beyond merging main; migration 011 was already applied/verified by the originating task.
+
+**Verification/limits:** Typecheck passed; final integrated release verification follows. Preserve local synthetic/provider limitations. Main's own work log records its disposable Railway checks and production migration proof; this UI integration does not repeat or claim those checks.
+
+**Final override integration gate at 17:55 Asia/Damascus:** `bun run verify:release` passed all 86 desktop/mobile cases, 23 unit tests/100 assertions, lint/build/artifact/format/security/history/audit on the `94384b1` integration. Four optional database suites skipped. Browser checks assert effective manual Pass/Fail colors and row tints, calculated attendance failure remaining red under a passing override, restored-calculated shading, and the original threshold/draft/RTL scenarios. Review retained both result displays, override history/form and all main backend changes. Push the new exact head for required CI before merge/publication.
 
 ## 2026-11-17 17:56 Asia/Damascus (UTC+03:00) - Verify live overrides and widen result details
 
@@ -1282,6 +1340,16 @@
 
 **Verification/limits:** On the combined tree, `bun run verify:release` passed all 92 desktop/mobile browser cases, 23 unit tests/100 assertions, lint/build/artifact/formatting, secret scans and dependency audit. Four optional database suites skipped. Both additional forced-dark course/override scenarios passed, including required note, Pass/Fail/calculated restoration and phone layouts. The preceding main task records production migration 011 as applied and verified; this appearance integration did not modify it. Commit/push the merge and require fresh CI; exact-main Railway health and shipped-theme/offline proof remain pending in PR #82. Physical devices and real authenticated writes remain outside this UI verification.
 
+## 2026-11-17 18:04 Asia/Damascus (UTC+03:00) - Integrate Grades indicators with the dark palette
+
+**Request/reason:** PR #80 passed all required checks on `3797306`, then main `d207ce2` introduced saved light/dark/system appearance and conflicted with the prior authentication harness and append-only work log. Started clean and merged main normally.
+
+**Changes:** Preserve main's theme initialization, controls, tests, random-port role harness and dark sticky headings. Keep the authentication suite on its existing suite-owned preview while retaining main's new theme-control assertion. Use the dark palette's existing green/red surfaces and foregrounds for grade rows, values and results so generic dark input rules do not hide the requested status colors. Add actual dark pass/fail/attendance/grade and Arabic phone checks alongside light-theme coverage. Preserve both work-log histories; no grading rule, provider, schema or access change beyond previously merged main.
+
+**Verification/limits:** Full combined release gate pending. Synthetic UI tests do not establish real authenticated provider writes or physical-device behavior. Exact-main Railway and shipped-asset checks follow final merge.
+
+**Final dark integration gate at 18:05 Asia/Damascus:** `bun run verify:release` passed all 92 desktop/mobile cases, 23 unit tests/100 assertions, lint/build/artifact/format/security/history/audit. Four optional database suites skipped. Reviewed actual dark desktop passing-override and 320px Arabic attendance-failure screenshots; grade inputs retain semantic foreground colors above the generic dark input rule. Dark and light effective/calculated results and row backgrounds are asserted. No unrelated edits or temporary instrumentation remain. Require fresh CI on the pushed integration; Railway/shipped-asset proof follows merge.
+
 **Palette integration at 2026-11-17 18:01 Asia/Damascus:** Main advanced to `d207ce2` (#82) while preparing the layout follow-up PR #84. Merge main normally and preserve its appearance controls, dark styles and test-port handling. Only the appended work log conflicted; product code merged cleanly. Recheck the release gate on this combined revision before pushing.
 
 **Combined layout gate at 2026-11-17 18:02 Asia/Damascus:** `bun run verify:release` passed all 92 desktop/mobile browser scenarios, all 23 local tests/100 assertions, lint/build/artifact, formatting, secret scans and audit after integrating main's palette. Four optional database cases skipped. No backend changes occurred. Push the integration and require fresh CI; retain the successful live provider proof for #79 and verify the follow-up layout on its exact resulting main deployment.
@@ -1296,6 +1364,26 @@
 
 **Combined appearance gate at 2026-11-17 18:02 Asia/Damascus:** `bun run verify:release` passed all 94 browser scenarios, 23 local tests/100 assertions, lint/build/artifact, formatting, secret scans and dependency audit with main `d207ce2`. Four optional database suites skipped. Result-average/manual-decision and dark-appearance regressions passed. Push the integration and require refreshed CI before merge/publication.
 
+## 2026-11-17 18:12 Asia/Damascus (UTC+03:00) - Fix the course-save CI race and integrate result sorting
+
+**Request/reason:** Verify on PR #80 head `ee96cab` failed both course scenarios while 90 cases passed. CI showed the attendance-only fixture still held practical 0: the row-wide Pass assertion matched the hidden override Pass option before the grade save completed, allowing an early reload. Main also advanced to `6c1f8ea` with result-status/average sorting and documentation append conflicts. Started clean, inspected the actual failed log and merged main normally.
+
+**Changes:** Preserve result sorting and both work-log/behavior histories. Scope all calculated-result assertions to the displayed result span, assert the saved practical score before reloading, and hold the relevant synthetic save response to prove Pending persists until completion. No grading or product behavior change is needed. Keep dark/light colors and calculated/effective override semantics.
+
+**Verification/limits:** Run the focused course scenarios and complete release gate before pushing. Prior local success did not expose this Linux CI timing; retain the failed CI URL and exact root cause above. Four optional database suites, real authenticated provider writes and physical devices remain outside these local UI checks.
+
+**Final save-race integration gate at 18:14 Asia/Damascus:** Focused course coverage passed all four desktop/mobile cases, then `bun run verify:release` passed all 94 desktop/mobile cases, 23 unit tests/100 assertions, lint/build/artifact/format/security/history/audit on the `6c1f8ea` integration. The held-save regression asserts the actual calculated result remains Pending until release and the persisted practical score is 80 before reload. Four optional database suites skipped. Failed Linux CI evidence: https://github.com/NasoohOlabi/light-attendance-n-tagging-micro-service/actions/runs/44110410424/job/134134136397 . Fresh CI must validate this correction before publication; no product grading change was made for the test race.
+
 **Result-sorting integration at 2026-11-17 18:08 Asia/Damascus:** All PR #84 checks passed on `3acf01a`, but main advanced to `6c1f8ea` (#81) immediately before merge and GitHub rejected the merge. Merge main normally, preserving its effective-result ranking and grade-average tie-breaker alongside the readable editor/history layout. Source merged automatically; preserve both appended work-log histories. Recheck the complete release gate before pushing; no backend changes.
 
 **Sorting integration gate at 2026-11-17 18:10 Asia/Damascus:** `bun run verify:release` passed all 94 desktop/mobile browser scenarios and all local unit/lint/build/artifact/format/security/audit gates on the combined revision. The new result-ranking/grade-average tests and the readable override geometry both pass. Push this normal merge and require fresh CI before final deployment verification.
+
+## 2026-11-17 18:18 Asia/Damascus (UTC+03:00) - Preserve readable override details in the color integration
+
+**Request/reason:** T3 reported another main conflict while Verify on `99bf4d4` was still running. Started clean; main `11d57eb` widens the Grades result cell on desktop, gives it the full phone record width, and aligns row content to the top.
+
+**Changes:** Merge main normally. Keep its result-cell/table classes and width/alignment regressions together with the color-coded calculated/effective displays, failure causes and held-save CI-race fix. Preserve both append-only work-log histories. No grading, sorting, provider, schema or access behavior changes.
+
+**Verification/limits:** Run the complete release gate on this combined UI before pushing. Old-head CodeQL/security passed and Verify was still running at inspection; neither result establishes this new integration. Four optional database suites, real authenticated provider writes and physical-device checks remain outside the local synthetic gate.
+
+**Final result-layout gate at 18:20 Asia/Damascus:** `bun run verify:release` passed all 94 desktop/mobile cases, 23 unit tests/100 assertions, lint/build/artifact/format/security/history/audit on the `11d57eb` integration. Four optional database suites skipped. GitHub Verify, CodeQL and security also completed successfully on preceding head `99bf4d4`, confirming the held-save correction passes Linux CI. Main's desktop minimum result width, full-width phone result cell and top alignment are retained and asserted. Fresh CI must validate this merge head before final publication.

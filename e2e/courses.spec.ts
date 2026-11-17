@@ -579,9 +579,20 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await compactGradeRow.getByLabel('Decision note (required)').fill('Reviewed')
   await compactGradeRow.getByRole('button', { name: 'Save decision' }).click()
   await expect(compactGradeRow).toContainText('Effective: Pass')
+  await expect(compactGradeRow).toHaveCSS('background-color', 'rgb(234, 247, 237)')
+  await expect(compactGradeRow.locator('span.grade-pass').filter({ hasText: /^Pass$/ })).toHaveCSS(
+    'color',
+    'rgb(23, 101, 44)',
+  )
   await page.reload()
   await expect(compactGradeRow).toContainText('Effective: Pass')
   await compactGradeRow.getByText('Override result').click()
+  await compactGradeRow.getByRole('combobox').selectOption('fail')
+  await compactGradeRow.getByLabel('Decision note (required)').fill('Reviewed failure')
+  await compactGradeRow.getByRole('button', { name: 'Save decision' }).click()
+  await expect(compactGradeRow).toContainText('Effective: Fail')
+  await expect(compactGradeRow).toHaveCSS('background-color', 'rgb(252, 238, 238)')
+  await expect(compactGradeRow.locator('span.grade-fail')).toHaveCSS('color', 'rgb(161, 27, 27)')
   await compactGradeRow.getByRole('combobox').selectOption('calculated')
   await compactGradeRow.getByLabel('Decision note (required)').fill('Restore')
   await compactGradeRow.getByRole('button', { name: 'Save decision' }).click()
@@ -659,6 +670,11 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     await clickAccountAction(page, 'English')
   }
   if (originalViewport) await page.setViewportSize(originalViewport)
+  await compactGradeRow.getByText('Override result').click()
+  await compactGradeRow.getByRole('combobox').selectOption('calculated')
+  await compactGradeRow.getByLabel('Decision note (required)').fill('Resume calculated grading')
+  await compactGradeRow.getByRole('button', { name: 'Save decision' }).click()
+  await compactGradeRow.getByText('Override result').click()
   await expect(page.getByRole('button', { name: 'Close course' })).toBeDisabled()
   await expect(page.getByText('Unavailable')).toBeVisible()
   await page.getByLabel('Minimum attendance %').fill('60')
@@ -752,13 +768,52 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(page.getByLabel('Practical: Synthetic Student')).toHaveValue('0')
   await expect(page.getByLabel('Theory: Synthetic Student')).toHaveValue('100')
   const gradeRow = page.getByRole('row').filter({ hasText: 'Synthetic' })
+  const calculatedResult = gradeRow
+    .locator('td[data-label="Result"], td[data-label="النتيجة"]')
+    .locator('div > span')
+    .first()
   await expect(gradeRow).toContainText('100.0%')
-  await expect(gradeRow).toContainText('Fail')
+  await expect(calculatedResult).toHaveText('Fail')
+  await expect(gradeRow).toContainText('Practical grade below passing')
+  await expect(gradeRow).not.toContainText('Insufficient attendance')
+  await expect(gradeRow).toHaveCSS('background-color', 'rgb(252, 238, 238)')
+  await expect(page.getByLabel('Practical: Synthetic Student')).toHaveCSS(
+    'color',
+    'rgb(161, 27, 27)',
+  )
+  await expect(page.getByLabel('Theory: Synthetic Student')).toHaveCSS('color', 'rgb(23, 101, 44)')
   await page.getByLabel('Practical: Synthetic Student').fill('80')
-  await expect(gradeRow).toContainText('Pending')
+  await expect(calculatedResult).toHaveText('Pending')
+  await expect(gradeRow).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(page.getByLabel('Practical: Synthetic Student')).not.toHaveCSS(
+    'color',
+    'rgb(23, 101, 44)',
+  )
+  await expect(gradeRow).not.toContainText('Practical grade below passing')
   await expect(page.getByRole('button', { name: 'Close course' })).toBeDisabled()
+  await page.getByLabel('Practical: Synthetic Student').fill('101')
+  await expect(page.getByLabel('Practical: Synthetic Student')).not.toHaveCSS(
+    'color',
+    'rgb(23, 101, 44)',
+  )
+  await page.getByLabel('Practical: Synthetic Student').fill('80')
+  let releaseGradeSave = () => {}
+  const heldGradeSave = new Promise<void>((resolve) => {
+    releaseGradeSave = resolve
+  })
+  await page.route(
+    '**/api/admin/enrollments/grades',
+    async (route) => {
+      await heldGradeSave
+      await route.fallback()
+    },
+    { times: 1 },
+  )
   await gradeRow.getByRole('button', { name: 'Save grades' }).click()
-  await expect(gradeRow).toContainText('Pass')
+  await expect(calculatedResult).toHaveText('Pending')
+  releaseGradeSave()
+  await expect(calculatedResult).toHaveText('Pass')
+  await expect.poll(() => enrollments[0].practical).toBe(80)
   events.push({
     id: '50000000-0000-4000-8000-000000000002',
     actor: 'Admin',
@@ -774,14 +829,102 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   })
   await page.reload()
   await expect(gradeRow).toContainText('50.0%')
-  await expect(gradeRow).toContainText('Fail')
+  await expect(calculatedResult).toHaveText('Fail')
+  await expect(gradeRow).toContainText('Insufficient attendance')
+  await expect(gradeRow).not.toContainText('Practical grade below passing')
+  await expect(gradeRow.getByText('50.0%')).toHaveCSS('color', 'rgb(161, 27, 27)')
+  await gradeRow.getByText('Override result').click()
+  await gradeRow.getByRole('combobox').selectOption('pass')
+  await gradeRow.getByLabel('Decision note (required)').fill('Attendance reviewed')
+  await gradeRow.getByRole('button', { name: 'Save decision' }).click()
+  await expect(gradeRow).toContainText('Calculated: Fail')
+  await expect(gradeRow).toContainText('Effective: Pass')
+  await expect(gradeRow).toHaveCSS('background-color', 'rgb(234, 247, 237)')
+  await expect(gradeRow.getByText('50.0%')).toHaveCSS('color', 'rgb(161, 27, 27)')
+  await expect(gradeRow).toContainText('Insufficient attendance')
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(gradeRow).toHaveCSS('background-color', 'rgb(32, 77, 64)')
+  await expect(gradeRow.getByText('50.0%')).toHaveCSS('color', 'rgb(255, 193, 197)')
+  await expect(page.getByLabel('Practical: Synthetic Student')).toHaveCSS(
+    'color',
+    'rgb(181, 239, 210)',
+  )
+  await gradeRow.getByText('Override result').click()
+  await page.screenshot({
+    path: `.artifacts/verification/grade-pass-dark-${testInfo.project.name}.png`,
+    fullPage: true,
+  })
+  await gradeRow.getByText('Override result').click()
+  await gradeRow.getByRole('combobox').selectOption('calculated')
+  await gradeRow.getByLabel('Decision note (required)').fill('Restore calculated attendance')
+  await gradeRow.getByRole('button', { name: 'Save decision' }).click()
+  await gradeRow.getByText('Override result').click()
+  await expect(gradeRow).toHaveCSS('background-color', 'rgb(88, 47, 53)')
+  await clickAccountAction(page, 'العربية')
+  await page.setViewportSize({ width: 320, height: 844 })
+  await expect(gradeRow).toContainText('الحضور أقل من الحد الأدنى')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({
+    path: `.artifacts/verification/grade-fail-dark-${testInfo.project.name}-ar.png`,
+    fullPage: true,
+  })
+  await clickAccountAction(page, 'English')
+  if (originalViewport) await page.setViewportSize(originalViewport)
+  await page.emulateMedia({ colorScheme: 'light' })
+  await expect(gradeRow).toHaveCSS('background-color', 'rgb(252, 238, 238)')
+  await page.getByLabel('Practical: Synthetic Student').fill('0')
+  await page.getByLabel('Theory: Synthetic Student').fill('0')
+  await gradeRow.getByRole('button', { name: 'Save grades' }).click()
+  await expect(gradeRow).toContainText('Insufficient attendance')
+  await expect(gradeRow).toContainText('Practical grade below passing')
+  await expect(gradeRow).toContainText('Theory grade below passing')
+  await page.screenshot({
+    path: `.artifacts/verification/grade-failure-${testInfo.project.name}-en.png`,
+    fullPage: true,
+  })
+  await clickAccountAction(page, 'العربية')
+  await expect(gradeRow).toContainText('الحضور أقل من الحد الأدنى')
+  await expect(gradeRow).toContainText('الدرجة العملية أقل من حد النجاح')
+  await expect(gradeRow).toContainText('الدرجة النظرية أقل من حد النجاح')
+  await page.setViewportSize({ width: 320, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({
+    path: `.artifacts/verification/grade-failure-${testInfo.project.name}-ar.png`,
+    fullPage: true,
+  })
+  await clickAccountAction(page, 'English')
+  await page.getByLabel('Practical: Synthetic Student').fill('80')
+  await page.getByLabel('Theory: Synthetic Student').fill('80')
+  await gradeRow.getByRole('button', { name: 'Save grades' }).click()
   await page.getByLabel('Minimum attendance %').fill('50')
-  await expect(gradeRow).toContainText('Pending')
+  await expect(calculatedResult).toHaveText('Pending')
+  await expect(gradeRow).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(gradeRow.getByText('50.0%')).not.toHaveCSS('color', 'rgb(161, 27, 27)')
+  await expect(page.getByLabel('Practical: Synthetic Student')).not.toHaveCSS(
+    'color',
+    'rgb(23, 101, 44)',
+  )
   await page.getByRole('button', { name: 'Save thresholds' }).click()
-  await expect(gradeRow).toContainText('Pass')
+  await expect(calculatedResult).toHaveText('Pass')
+  await expect(gradeRow).toHaveCSS('background-color', 'rgb(234, 247, 237)')
+  await expect(gradeRow.locator('span.grade-pass').filter({ hasText: /^Pass$/ })).toHaveCSS(
+    'color',
+    'rgb(23, 101, 44)',
+  )
+  await expect(gradeRow.getByText('50.0%')).toHaveCSS('color', 'rgb(23, 101, 44)')
+  await expect(page.getByLabel('Practical: Synthetic Student')).toHaveCSS(
+    'color',
+    'rgb(23, 101, 44)',
+  )
+  await page.getByLabel('Notes: Synthetic Student').fill('Draft note')
+  await expect(calculatedResult).toHaveText('Pending')
+  await expect(gradeRow).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await page.getByLabel('Notes: Synthetic Student').fill('')
+  await expect(calculatedResult).toHaveText('Pass')
   await clickAccountAction(page, 'العربية')
   await expect(page.getByLabel('الحد الأدنى للحضور %')).toHaveValue('50')
-  await expect(gradeRow).toContainText('ناجح')
+  await expect(calculatedResult).toHaveText('ناجح')
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 })
     const grades = page.getByRole('region', { name: 'درجات الدورة' })
