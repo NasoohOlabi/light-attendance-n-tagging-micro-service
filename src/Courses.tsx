@@ -1,7 +1,7 @@
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
 import { TableControls, TableHeader, useDataTable } from './DataTable'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ClipboardList,
   Download,
@@ -9,6 +9,7 @@ import {
   Lock,
   LockOpen,
   Pencil,
+  Scale,
   Save,
   UsersRound,
 } from 'lucide-react'
@@ -475,6 +476,12 @@ function GradePage({
   const [drafts, setDrafts] = useState<
     Record<string, { practical: string; theory: string; notes: string }>
   >({})
+  const [decisionEntry, setDecisionEntry] = useState<string | null>(null)
+  const [decisionError, setDecisionError] = useState(false)
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    if (decisionEntry) dialogRef.current?.showModal()
+  }, [decisionEntry])
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(false)
   const [decisions, setDecisions] = useState<
@@ -767,10 +774,7 @@ function GradePage({
                       }
                     />
                   </td>
-                  <td
-                    data-label={ar ? 'النتيجة' : 'Result'}
-                    className="col-span-full min-[1025px]:min-w-72"
-                  >
+                  <td data-label={ar ? 'النتيجة' : 'Result'} className="col-span-full">
                     <div>
                       {lastDecision && lastDecision.result !== 'calculated' && (
                         <>{ar ? 'المحسوبة' : 'Calculated'}: </>
@@ -778,28 +782,6 @@ function GradePage({
                       <span className={result === 'pending' ? undefined : `grade-${result}`}>
                         {resultLabel(result)}
                       </span>
-                      {result === 'fail' && (
-                        <ul className="grade-causes grade-fail">
-                          {ratio !== null && ratio < course.attendanceMinimum && (
-                            <li>{ar ? 'الحضور أقل من الحد الأدنى' : 'Insufficient attendance'}</li>
-                          )}
-                          {entry.practical !== null &&
-                            entry.practical < course.practicalMinimum && (
-                              <li>
-                                {ar
-                                  ? 'الدرجة العملية أقل من حد النجاح'
-                                  : 'Practical grade below passing'}
-                              </li>
-                            )}
-                          {entry.theory !== null && entry.theory < course.theoryMinimum && (
-                            <li>
-                              {ar
-                                ? 'الدرجة النظرية أقل من حد النجاح'
-                                : 'Theory grade below passing'}
-                            </li>
-                          )}
-                        </ul>
-                      )}
                     </div>
                     {lastDecision && lastDecision.result !== 'calculated' && (
                       <div>
@@ -807,86 +789,8 @@ function GradePage({
                         <span className={`grade-${effective}`}>{resultLabel(effective)}</span>
                       </div>
                     )}
-                    <details>
-                      <summary>{ar ? 'تعديل النتيجة' : 'Override result'}</summary>
-                      <form
-                        onSubmit={(event) => {
-                          event.preventDefault()
-                          setDecisions((current) => ({ ...current, [entry.id]: decisionDraft }))
-                          void save('/api/admin/enrollments/decision', {
-                            id: entry.id,
-                            ...decisionDraft,
-                          }).then((ok) => {
-                            if (ok)
-                              setDecisions((current) => {
-                                const next = { ...current }
-                                delete next[entry.id]
-                                return next
-                              })
-                          })
-                        }}
-                      >
-                        <label>
-                          {ar ? 'القرار' : 'Decision'}
-                          <select
-                            value={decisionDraft.result}
-                            disabled={busy}
-                            onChange={(event) => {
-                              const result = event.target.value
-                              if (result === 'pass' || result === 'fail' || result === 'calculated')
-                                setDecisions((current) => ({
-                                  ...current,
-                                  [entry.id]: { ...decisionDraft, result },
-                                }))
-                            }}
-                          >
-                            <option value="pass">{ar ? 'ناجح' : 'Pass'}</option>
-                            <option value="fail">{ar ? 'راسب' : 'Fail'}</option>
-                            <option value="calculated">
-                              {ar ? 'استعادة النتيجة المحسوبة' : 'Restore calculated result'}
-                            </option>
-                          </select>
-                        </label>
-                        <label>
-                          {ar ? 'سبب القرار (مطلوب)' : 'Decision note (required)'}
-                          <textarea
-                            required
-                            maxLength={2000}
-                            disabled={busy}
-                            value={decisionDraft.note}
-                            onChange={(event) =>
-                              setDecisions((current) => ({
-                                ...current,
-                                [entry.id]: { ...decisionDraft, note: event.target.value },
-                              }))
-                            }
-                          />
-                        </label>
-                        <button className="secondary" disabled={busy || !decisionDraft.note.trim()}>
-                          {ar ? 'حفظ القرار' : 'Save decision'}
-                        </button>
-                      </form>
-                    </details>
-                    {entry.gradeDecisions.length > 0 && (
-                      <details>
-                        <summary>{ar ? 'سجل القرارات' : 'Decision history'}</summary>
-                        <ul>
-                          {entry.gradeDecisions.map((item) => (
-                            <li key={item.requestId} dir="auto" className="break-all">
-                              {item.at} / {item.actor} /{' '}
-                              {item.result === 'calculated'
-                                ? ar
-                                  ? 'المحسوبة'
-                                  : 'Calculated'
-                                : resultLabel(item.result)}{' '}
-                              / {item.note}
-                            </li>
-                          ))}
-                        </ul>
-                      </details>
-                    )}
                   </td>
-                  <td data-label={ar ? 'الإجراءات' : 'Actions'}>
+                  <td className="grade-actions" data-label={ar ? 'الإجراءات' : 'Actions'}>
                     <form
                       id={formId}
                       onSubmit={(event) => {
@@ -915,6 +819,136 @@ function GradePage({
                         <Save size={20} aria-hidden="true" />
                       </button>
                     </form>
+                    <button
+                      type="button"
+                      className="icon-button"
+                      disabled={busy}
+                      aria-label={ar ? 'تعديل النتيجة' : 'Override result'}
+                      title={ar ? 'تعديل النتيجة' : 'Override result'}
+                      onClick={() => {
+                        setDecisionError(false)
+                        setDecisionEntry(entry.id)
+                      }}
+                    >
+                      <Scale size={20} aria-hidden="true" />
+                    </button>
+                    {decisionEntry === entry.id && (
+                      <dialog
+                        ref={dialogRef}
+                        className="grade-dialog"
+                        aria-labelledby={`decision-title-${entry.id}`}
+                        onClose={() => setDecisionEntry(null)}
+                        onCancel={(event) => {
+                          if (busy) event.preventDefault()
+                        }}
+                      >
+                        <h2 id={`decision-title-${entry.id}`}>
+                          {ar ? 'تعديل النتيجة' : 'Override result'}: {student.firstName}{' '}
+                          {student.lastName}
+                        </h2>
+                        <form
+                          onSubmit={(event) => {
+                            event.preventDefault()
+                            setDecisions((current) => ({ ...current, [entry.id]: decisionDraft }))
+                            void save('/api/admin/enrollments/decision', {
+                              id: entry.id,
+                              ...decisionDraft,
+                            }).then((ok) => {
+                              if (!ok) {
+                                setDecisionError(true)
+                                return
+                              }
+                              dialogRef.current?.close()
+                              setDecisions((current) => {
+                                const next = { ...current }
+                                delete next[entry.id]
+                                return next
+                              })
+                            })
+                          }}
+                        >
+                          <label>
+                            {ar ? 'القرار' : 'Decision'}
+                            <select
+                              value={decisionDraft.result}
+                              disabled={busy}
+                              onChange={(event) => {
+                                const result = event.target.value
+                                if (
+                                  result === 'pass' ||
+                                  result === 'fail' ||
+                                  result === 'calculated'
+                                )
+                                  setDecisions((current) => ({
+                                    ...current,
+                                    [entry.id]: { ...decisionDraft, result },
+                                  }))
+                              }}
+                            >
+                              <option value="pass">{ar ? 'ناجح' : 'Pass'}</option>
+                              <option value="fail">{ar ? 'راسب' : 'Fail'}</option>
+                              <option value="calculated">
+                                {ar ? 'استعادة النتيجة المحسوبة' : 'Restore calculated result'}
+                              </option>
+                            </select>
+                          </label>
+                          <label>
+                            {ar ? 'سبب القرار (مطلوب)' : 'Decision note (required)'}
+                            <textarea
+                              required
+                              maxLength={2000}
+                              disabled={busy}
+                              value={decisionDraft.note}
+                              onChange={(event) =>
+                                setDecisions((current) => ({
+                                  ...current,
+                                  [entry.id]: { ...decisionDraft, note: event.target.value },
+                                }))
+                              }
+                            />
+                          </label>
+                          {decisionError && (
+                            <p role="alert">
+                              {ar
+                                ? 'تعذر حفظ القرار. حاول مرة أخرى.'
+                                : 'Could not save decision. Try again.'}
+                            </p>
+                          )}
+                          <button
+                            className="secondary"
+                            disabled={busy || !decisionDraft.note.trim()}
+                          >
+                            {ar ? 'حفظ القرار' : 'Save decision'}
+                          </button>
+                        </form>
+                        {entry.gradeDecisions.length > 0 && (
+                          <details>
+                            <summary>{ar ? 'سجل القرارات' : 'Decision history'}</summary>
+                            <ul>
+                              {entry.gradeDecisions.map((item) => (
+                                <li key={item.requestId} dir="auto" className="break-all">
+                                  {item.at} / {item.actor} /{' '}
+                                  {item.result === 'calculated'
+                                    ? ar
+                                      ? 'المحسوبة'
+                                      : 'Calculated'
+                                    : resultLabel(item.result)}{' '}
+                                  / {item.note}
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={busy}
+                          onClick={() => dialogRef.current?.close()}
+                        >
+                          {ar ? 'إلغاء' : 'Cancel'}
+                        </button>
+                      </dialog>
+                    )}
                   </td>
                 </tr>
               )

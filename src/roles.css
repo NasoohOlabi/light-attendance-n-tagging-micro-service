@@ -629,9 +629,36 @@
 .role-table input.grade-fail {
   color: #a11b1b;
 }
-.grade-causes {
-  margin: 0.25rem 0 0;
-  padding-inline-start: 1.25rem;
+.grade-dialog {
+  white-space: normal;
+  margin: auto;
+  width: min(32rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  overflow: auto;
+  padding: 1rem;
+  color: inherit;
+  background: var(--surface, white);
+}
+.grade-dialog::backdrop {
+  background: rgb(0 0 0 / 0.55);
+}
+.grade-dialog form,
+.grade-dialog label {
+  display: grid;
+  gap: 0.5rem;
+}
+.grade-dialog textarea,
+.grade-dialog select {
+  width: 100%;
+}
+.grade-dialog > button {
+  margin-top: 0.75rem;
+}
+.role-table .grade-actions {
+  white-space: nowrap;
+}
+.role-table .grade-actions > form {
+  display: inline;
 }
 
 @media (min-width: 64.001rem) {
