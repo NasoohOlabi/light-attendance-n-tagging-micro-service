@@ -14,6 +14,7 @@ export const tabs: { id: Exclude<Tab, 'dashboard'>; label: TranslationKey }[] = 
 
 export function WorkspaceNavigation({
   administrator,
+  courseName,
   assigned,
   profile,
   leave,
@@ -21,6 +22,7 @@ export function WorkspaceNavigation({
   disabled,
 }: {
   administrator: boolean
+  courseName?: string
   assigned: boolean
   profile?: Profile
   leave: () => void
@@ -32,7 +34,21 @@ export function WorkspaceNavigation({
   return (
     <aside className="workspace-rail">
       <div className="workspace-brand">
-        <WartaqLogo />
+        <div className="workspace-brand-name">
+          <WartaqLogo />
+          {courseName && (
+            <span
+              className="workspace-course-name"
+              title={courseName}
+              aria-label={courseName}
+              dir="auto"
+            >
+              {courseName.match(
+                /^\u0648\u0627\u0631\u062a\u0642\s+([0-9\u0660-\u0669\u06f0-\u06f9]+)$/u,
+              )?.[1] ?? courseName}
+            </span>
+          )}
+        </div>
         <ProfileMenu
           profile={profile}
           administrator={administrator}

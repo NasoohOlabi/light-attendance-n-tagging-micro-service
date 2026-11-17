@@ -14,7 +14,13 @@ import {
   type Payload,
   type Student,
 } from '../shared/ledger'
-import { navigatePage, setQuery, useQueryState } from './queryState'
+import {
+  navigatePage,
+  selectCourse,
+  setQuery,
+  useCoursePreference,
+  useQueryState,
+} from './queryState'
 import { HomePage } from './HomePage'
 import { NotebookDashboard } from './NotebookDashboard'
 import { rankStudents } from './studentSearch'
@@ -147,6 +153,7 @@ function Notebook({
   const { t, language, errorMessage } = useLanguage()
   const query = useQueryState()
   const ledger = useLedger(demo !== null, demo === 'assigned', neon)
+  const courseReady = useCoursePreference(neon?.userId, ledger.loaded, ledger.courses)
   const assigned = !!neon || demo === 'assigned'
   const fullRegister =
     neon?.teacher.role === 'administrator' &&
@@ -206,7 +213,7 @@ function Notebook({
     !!ledger.storageBlocked ||
     !ledger.loaded ||
     !!(neon && !neon.teacher.canWrite)
-  if (!ledger.loaded)
+  if (!ledger.loaded || !courseReady)
     return ledger.error ? (
       <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
         <p role="alert">{errorMessage(ledger.error)}</p>
@@ -220,6 +227,7 @@ function Notebook({
   return (
     <div className="workspace">
       <WorkspaceNavigation
+        courseName={ledger.courses.find((course) => course.id === query.course)?.name}
         administrator={neon?.teacher.role === 'administrator'}
         assigned={assigned}
         profile={profile}
@@ -254,12 +262,10 @@ function Notebook({
             <select
               value={closedCourse ? '__closed__' : query.course}
               onChange={(event) =>
-                setQuery(
-                  {
-                    course: event.target.value,
-                    ...(query.view === 'student' ? {} : { student: '' }),
-                  },
-                  true,
+                selectCourse(
+                  neon.userId,
+                  event.target.value,
+                  query.view === 'student' ? {} : { student: '' },
                 )
               }
             >

@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { z } from 'zod'
 
 export const tabSchema = z.enum([
@@ -83,6 +83,69 @@ export function navigatePage(page: 'home' | 'app') {
   window.history.pushState(null, '', window.location.pathname + (page === 'app' ? '?page=app' : ''))
   window.dispatchEvent(new PopStateEvent('popstate'))
   window.scrollTo(0, 0)
+}
+
+const coursePreferenceSchema = z.union([z.literal(''), z.uuid()])
+const coursePreferenceKey = (accountId: string) => `halaqa-course:${accountId}`
+
+function saveCoursePreference(accountId: string, course: string) {
+  try {
+    localStorage.setItem(coursePreferenceKey(accountId), JSON.stringify(course))
+  } catch {
+    // The URL remains usable when preference storage is unavailable.
+  }
+}
+
+export function useCoursePreference(
+  accountId: string | undefined,
+  loaded: boolean,
+  courses: { id: string }[],
+) {
+  const [ready, setReady] = useState(!accountId)
+  const search = useSyncExternalStore(subscribe, () => window.location.search)
+  useEffect(() => {
+    if (!accountId || !loaded || ready) return
+    const query = new URLSearchParams(window.location.search)
+    let selection: string | undefined
+    const notebook = !query.has('view') || query.get('view') === 'notebook'
+    if (query.has('course')) {
+      selection = coursePreferenceSchema.safeParse(query.get('course')).data
+    } else if (notebook && query.get('tab') !== 'roster') {
+      try {
+        const stored = localStorage.getItem(coursePreferenceKey(accountId))
+        if (stored !== null) selection = coursePreferenceSchema.safeParse(JSON.parse(stored)).data
+      } catch {
+        // Ignore an unavailable or malformed preference.
+      }
+    }
+    if (selection && !courses.some((course) => course.id === selection)) selection = ''
+    if (selection !== undefined) {
+      if (query.get('course') !== selection) setQuery({ course: selection })
+      if (notebook) saveCoursePreference(accountId, selection)
+    } else if (query.has('course')) {
+      setQuery({ course: '' })
+    }
+    // oxlint-disable-next-line react/set-state-in-effect
+    setReady(true)
+  }, [accountId, loaded, courses, ready])
+  useEffect(() => {
+    if (!accountId || !ready) return
+    const query = new URLSearchParams(search)
+    const course = coursePreferenceSchema.safeParse(query.get('course')).data
+    if (
+      (!query.has('view') || query.get('view') === 'notebook') &&
+      course &&
+      courses.some((item) => item.id === course)
+    ) {
+      saveCoursePreference(accountId, course)
+    }
+  }, [accountId, ready, courses, search])
+  return ready
+}
+
+export function selectCourse(accountId: string, course: string, values: Record<string, string>) {
+  saveCoursePreference(accountId, course)
+  setQuery({ ...values, course }, true)
 }
 
 const tableStateSchema = z.object({
