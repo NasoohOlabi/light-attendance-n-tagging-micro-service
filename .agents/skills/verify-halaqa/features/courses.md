@@ -30,6 +30,8 @@ Grades omits the Enrolled column while retaining withdrawn students and their gr
 
 For long Grades tables, check English and Arabic on desktop (including short windows): the named, keyboard-focusable table region scrolls independently, column headings stay opaque and pinned, and the final row and its Save grades action are reachable. The title and thresholds stay outside the region. On phones, records remain stacked with normal page scrolling and no horizontal overflow.
 
+Export Excel from Grades in English and Arabic on desktop and at 320/390px. The phone download icon retains its accessible name and keeps Sort aligned with the title. Inspect the downloaded workbook for saved thresholds, every membership, saved scores, projected corrected attendance across all dates and blank missing values. Result must respect the latest saved administrator override. Sorting and page filters must not remove rows; unsaved grade or threshold drafts disable export. Verify names beginning with formula characters remain literal strings and no notes or decision history are exported.
+
 With an override, verify row shading follows the effective result while the calculated result and below-threshold attendance/scores retain their own colors and causes. Test manual Pass/Fail, restore calculated, and a passing override of an attendance failure.
 
 Verify passing and failing row backgrounds, attendance, scores and calculated/effective results remain readable and correctly colored in light and dark appearance, including Arabic phones and a passing override of an attendance failure.

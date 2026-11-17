@@ -2,9 +2,19 @@ import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
 import { TableControls, TableHeader, useDataTable } from './DataTable'
 import { useEffect, useState } from 'react'
-import { ClipboardList, History, Lock, LockOpen, Pencil, Save, UsersRound } from 'lucide-react'
+import {
+  ClipboardList,
+  Download,
+  History,
+  Lock,
+  LockOpen,
+  Pencil,
+  Save,
+  UsersRound,
+} from 'lucide-react'
 import { neonAdminBoardSchema, type Course, type Enrollment } from '../shared/neon'
 import { projectEvents, type LedgerEvent } from '../shared/ledger'
+import { courseAttendance, downloadCourseWorkbook, savedGradeResult } from './courseExport'
 import { request } from './neon'
 import { useLanguage } from './i18n'
 import { setQuery, useQueryState } from './queryState'
@@ -18,12 +28,14 @@ export function Courses({
   userId,
   courses,
   enrollments,
+  exportEnrollments,
   events,
   refresh,
 }: {
   userId: string
   courses: Course[]
   enrollments: Enrollment[]
+  exportEnrollments: Enrollment[]
   events: LedgerEvent[]
   refresh: () => Promise<void>
 }) {
@@ -427,6 +439,7 @@ export function Courses({
               key={course.id}
               course={course}
               entries={courseEntries}
+              exportEntries={exportEnrollments.filter((item) => item.courseId === course.id)}
               students={board.students}
               events={events}
               busy={busy}
@@ -443,6 +456,7 @@ export function Courses({
 function GradePage({
   course,
   entries,
+  exportEntries,
   students,
   events,
   busy,
@@ -451,6 +465,7 @@ function GradePage({
 }: {
   course: Course
   entries: Enrollment[]
+  exportEntries: Enrollment[]
   students: Board['students']
   events: LedgerEvent[]
   busy: boolean
@@ -460,6 +475,8 @@ function GradePage({
   const [drafts, setDrafts] = useState<
     Record<string, { practical: string; theory: string; notes: string }>
   >({})
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState(false)
   const [decisions, setDecisions] = useState<
     Record<string, { requestId: string; result: 'pass' | 'fail' | 'calculated'; note: string }>
   >({})
@@ -490,24 +507,12 @@ function GradePage({
       (draft &&
         (draft.practical !== (entry.practical?.toString() ?? '') ||
           draft.theory !== (entry.theory?.toString() ?? '') ||
-          draft.notes !== entry.notes)) ||
-      entry.practical === null ||
-      entry.theory === null ||
-      ratio === null
+          draft.notes !== entry.notes))
     )
       return 'pending'
-    return entry.practical >= course.practicalMinimum &&
-      entry.theory >= course.theoryMinimum &&
-      ratio >= course.attendanceMinimum
-      ? 'pass'
-      : 'fail'
+    return savedGradeResult(course, entry, ratio)
   }
-  const attendanceRatio = (entry: Enrollment) => {
-    const rows = attendance.filter(({ value }) => value.enrollmentId === entry.id)
-    return rows.length
-      ? (rows.filter(({ value }) => value.status === 'present').length / rows.length) * 100
-      : null
-  }
+  const attendanceRatio = (entry: Enrollment) => courseAttendance(attendance, entry).ratio
   const resultLabel = (result: string) =>
     result === 'pending'
       ? ar
@@ -588,8 +593,33 @@ function GradePage({
         <h1 className="title">
           {course.name} — {ar ? 'الدرجات' : 'Grades'}
         </h1>
-        <TableControls model={gradeTable} />
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            className="secondary flex items-center gap-2"
+            aria-label={ar ? 'تصدير Excel' : 'Export Excel'}
+            title={ar ? 'تصدير Excel' : 'Export Excel'}
+            disabled={busy || exporting || settingsDirty || !!gradeDirty}
+            onClick={() => {
+              setExporting(true)
+              setExportError(false)
+              void downloadCourseWorkbook({
+                course,
+                entries: exportEntries,
+                students,
+                attendance,
+                ar,
+              })
+                .catch(() => setExportError(true))
+                .finally(() => setExporting(false))
+            }}
+          >
+            <Download size={20} aria-hidden="true" />
+            <span className="hidden sm:inline">{ar ? 'تصدير Excel' : 'Export Excel'}</span>
+          </button>
+          <TableControls model={gradeTable} />
+        </div>
       </div>
+      {exportError && <p role="alert">{ar ? 'تعذر تصدير الملف' : 'Could not export file'}</p>}
       <form
         className="flex flex-wrap items-end justify-end gap-3"
         dir="ltr"
