@@ -144,6 +144,11 @@ function Notebook({
   const query = useQueryState()
   const ledger = useLedger(demo !== null, demo === 'assigned', neon)
   const assigned = !!neon || demo === 'assigned'
+  const fullRegister =
+    neon?.teacher.role === 'administrator' &&
+    query.view === 'notebook' &&
+    query.tab === 'roster' &&
+    !query.course
   const baseProjection = projectEvents(ledger.events)
   const closedCourse = ledger.courses.find((course) => course.id === query.course && !course.open)
   const selectedEnrollments = ledger.enrollments.filter((entry) => entry.courseId === query.course)
@@ -166,11 +171,10 @@ function Notebook({
   const scopedProjection = projectEvents(scopedEvents)
   const courseStudents = ledger.roster.filter((student) =>
     query.course
-      ? (query.tab === 'dashboard' || query.tab === 'attendance' || query.tab === 'roster'
-          ? activeEnrollments
-          : selectedEnrollments
-        ).some((entry) => entry.studentId === student.studentId)
-      : true,
+      ? query.tab === 'dashboard' || query.tab === 'attendance' || query.tab === 'roster'
+        ? student.active && activeEnrollments.some((entry) => entry.studentId === student.studentId)
+        : selectedEnrollments.some((entry) => entry.studentId === student.studentId)
+      : fullRegister || student.active,
   )
   const projected = assigned ? { ...scopedProjection, students: courseStudents } : baseProjection
   const groups = [
@@ -178,7 +182,7 @@ function Notebook({
   ].sort()
   const students = projected.students.filter(
     (student) =>
-      (query.all || student.active) &&
+      (fullRegister || query.all || student.active) &&
       (!assigned || !query.student || student.studentId === query.student) &&
       (!query.group || student.group === query.group) &&
       (query.tab === 'attendance' ||
@@ -253,7 +257,13 @@ function Notebook({
                 </option>
               )}
               <option value="">
-                {language === 'ar' ? 'السجل السابق / بلا دورة' : 'Previous / no course'}
+                {query.tab === 'roster'
+                  ? language === 'ar'
+                    ? 'جميع الطلاب'
+                    : 'All students'
+                  : language === 'ar'
+                    ? 'السجل السابق / بلا دورة'
+                    : 'Previous / no course'}
               </option>
               {ledger.courses
                 .filter((course) => course.open)
@@ -390,7 +400,11 @@ function Notebook({
           <Courses
             userId={neon.userId}
             courses={ledger.courses}
-            enrollments={ledger.enrollments}
+            enrollments={ledger.enrollments.filter((entry) =>
+              ledger.roster.some(
+                (student) => student.active && student.studentId === entry.studentId,
+              ),
+            )}
             events={ledger.events}
             refresh={ledger.refresh}
           />
@@ -455,6 +469,8 @@ function Notebook({
                 assigned={assigned}
                 courseSelected={!!query.course}
                 enrollments={selectedEnrollments}
+                courses={ledger.courses}
+                allEnrollments={ledger.enrollments}
               />
             )}
             {query.tab === 'summary' && (
@@ -865,12 +881,16 @@ function RosterView({
   assigned,
   courseSelected,
   enrollments,
+  courses,
+  allEnrollments,
 }: {
   students: Student[]
   save: Save
   assigned: boolean
   courseSelected: boolean
   enrollments: import('../shared/neon').Enrollment[]
+  courses: import('../shared/neon').Course[]
+  allEnrollments: import('../shared/neon').Enrollment[]
 }) {
   const { t, language } = useLanguage()
   const ar = language === 'ar'
@@ -921,10 +941,11 @@ function RosterView({
           aria-label={ar ? 'قائمة الطلاب' : 'Student list'}
           tabIndex={0}
         >
-          <table className="role-table roster-table">
+          <table className="role-table roster-table roster-students-table">
             <colgroup>
               <col />
               <col className="roster-level-column" />
+              <col className="roster-courses-column" />
               <col className="roster-active-column" />
               <col className="roster-actions-column" />
             </colgroup>
@@ -932,6 +953,7 @@ function RosterView({
               <tr>
                 <th scope="col">{t('Student')}</th>
                 <th scope="col">{ar ? 'المستوى' : 'Level'}</th>
+                <th scope="col">{ar ? 'الدورات' : 'Courses'}</th>
                 <th scope="col">{ar ? 'الحالة' : 'Active'}</th>
                 <th scope="col">{ar ? 'الإجراءات' : 'Actions'}</th>
               </tr>
@@ -944,6 +966,45 @@ function RosterView({
                   </td>
                   <td>
                     <bdi>{studentLevel(student, courseSelected, enrollments) || '—'}</bdi>
+                  </td>
+                  <td>
+                    {(() => {
+                      const names = courses.filter((course) =>
+                        allEnrollments.some(
+                          (entry) =>
+                            entry.studentId === student.studentId &&
+                            entry.courseId === course.id &&
+                            entry.active,
+                        ),
+                      )
+                      return names.length ? (
+                        <>
+                          <div className="roster-courses-desktop">
+                            {names.map((course) => (
+                              <span key={course.id} className="roster-course-badge" dir="auto">
+                                {course.name}
+                              </span>
+                            ))}
+                          </div>
+                          <details className="roster-courses-mobile">
+                            <summary>
+                              {ar ? `الدورات (${names.length})` : `Courses (${names.length})`}
+                            </summary>
+                            <div>
+                              {names.map((course) => (
+                                <span key={course.id} className="roster-course-badge" dir="auto">
+                                  {course.name}
+                                </span>
+                              ))}
+                            </div>
+                          </details>
+                        </>
+                      ) : ar ? (
+                        'لا يوجد'
+                      ) : (
+                        'None'
+                      )
+                    })()}
                   </td>
                   <td>
                     <span

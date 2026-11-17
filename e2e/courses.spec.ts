@@ -197,8 +197,14 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   const row = list
     .getByRole('row')
     .filter({ has: page.getByRole('cell', { name: 'Synthetic Student', exact: true }) })
-  await expect(list.getByRole('columnheader')).toHaveText(['Student', 'Level', 'Active', 'Actions'])
-  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Roster level', '', ''])
+  await expect(list.getByRole('columnheader')).toHaveText([
+    'Student',
+    'Level',
+    'Courses',
+    'Active',
+    'Actions',
+  ])
+  await expect(row.getByRole('cell').nth(1)).toHaveText('Roster level')
   await expect(row.getByRole('img', { name: 'Active', exact: true })).toBeVisible()
   await expect(row.getByRole('img', { name: 'Active', exact: true })).toHaveAttribute(
     'title',
@@ -207,11 +213,11 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expectCompactLevel(list)
   const courseFilter = page.getByRole('combobox', { name: 'Course', exact: true })
   await courseFilter.selectOption(courseA)
-  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', '—', '', ''])
+  await expect(row.getByRole('cell').nth(1)).toHaveText('—')
   await courseFilter.selectOption(courseB)
-  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Advanced', '', ''])
+  await expect(row.getByRole('cell').nth(1)).toHaveText('Advanced')
   await page.reload()
-  await expect(row.getByRole('cell')).toHaveText(['Synthetic Student', 'Advanced', '', ''])
+  await expect(row.getByRole('cell').nth(1)).toHaveText('Advanced')
   await mkdir('.artifacts/verification', { recursive: true })
   if (testInfo.project.name === 'chromium') await page.setViewportSize({ width: 1715, height: 993 })
   await expectCompactLevel(list)
@@ -255,12 +261,12 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await clickAccountAction(page, 'العربية')
   const arabicList = page.getByRole('region', { name: 'قائمة الطلاب' })
-  await expect(arabicList.getByRole('img', { name: 'نشط', exact: true })).toBeVisible()
-  await expect(arabicList.getByRole('img', { name: 'نشط', exact: true })).toHaveAttribute(
+  await expect(arabicList.getByRole('img', { name: 'نشط', exact: true }).first()).toBeVisible()
+  await expect(arabicList.getByRole('img', { name: 'نشط', exact: true }).first()).toHaveAttribute(
     'title',
     'نشط',
   )
-  await expect(arabicList.getByRole('row').nth(1).getByRole('cell').nth(2)).toHaveText('')
+  await expect(arabicList.getByRole('row').nth(1).getByRole('cell').nth(3)).toHaveText('')
   await expectCompactLevel(arabicList)
   await page.screenshot({
     path: `.artifacts/verification/roster-layout-${testInfo.project.name}-ar.png`,
@@ -269,6 +275,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(arabicList.getByRole('columnheader')).toHaveText([
     'الطالب',
     'المستوى',
+    'الدورات',
     'الحالة',
     'الإجراءات',
   ])
@@ -674,5 +681,158 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.screenshot({
     path: `.artifacts/verification/courses-${testInfo.project.name}-ar.png`,
     fullPage: true,
+  })
+})
+
+test('administrator no-course Students includes the complete inactive register', async ({
+  page,
+}, testInfo) => {
+  const teacher = {
+    role: 'administrator',
+    id: teacherId,
+    name: 'Synthetic Admin',
+    canRead: true,
+    canWrite: true,
+    expiresAt: null,
+  }
+  const students = [
+    { kind: 'student', studentId, name: 'Current Student', group: 'Current', active: true },
+    {
+      kind: 'student',
+      studentId: secondStudentId,
+      name: 'Historical Student',
+      group: 'History',
+      active: false,
+    },
+    {
+      kind: 'student',
+      studentId: '20000000-0000-4000-8000-000000000003',
+      name: 'Unassigned Historical',
+      group: '',
+      active: false,
+    },
+  ]
+  const courses = [
+    { id: courseA, name: 'Synthetic Course', open: true },
+    { id: courseB, name: 'Closed Course', open: false },
+    { id: '30000000-0000-4000-8000-000000000003', name: 'Third Course', open: true },
+    { id: '30000000-0000-4000-8000-000000000004', name: 'Fourth Course', open: true },
+    { id: '30000000-0000-4000-8000-000000000005', name: 'Withdrawn Course', open: true },
+  ]
+  const enrollments = [
+    {
+      id: enrollA,
+      courseId: courseA,
+      studentId,
+      level: 'Course level',
+      active: true,
+      practical: null,
+      theory: null,
+    },
+  ]
+  for (const [index, course] of courses.entries()) {
+    enrollments.push({
+      id: `40000000-0000-4000-8000-00000000001${index}`,
+      courseId: course.id,
+      studentId: secondStudentId,
+      level: 'Historical level',
+      active: index < 4,
+      practical: null,
+      theory: null,
+    })
+  }
+  await page.route('**/api/auth/**', (route) =>
+    route.fulfill({
+      json: {
+        user: { id: teacherId, name: teacher.name, email: 'synthetic@example.test' },
+        session: {
+          id: 'synthetic',
+          userId: teacherId,
+          expiresAt: new Date(Date.now() + 3600000).toISOString(),
+        },
+      },
+    }),
+  )
+  await page.route('**/api/**', (route) =>
+    new URL(route.request().url()).pathname.startsWith('/api/auth/')
+      ? route.fallback()
+      : route.fulfill({
+          json:
+            new URL(route.request().url()).pathname === '/api/me'
+              ? { account: teacher }
+              : { teacher, students, courses, enrollments, events: [] },
+        }),
+  )
+  await page.goto('/?page=app&tab=roster')
+  const rows = page.locator('.roster-table tbody tr'),
+    count = page.locator('.workspace-count strong')
+  await expect(rows).toHaveCount(3)
+  await expect(page.getByRole('combobox', { name: 'Course', exact: true })).toHaveValue('')
+  await expect(page.getByRole('option', { name: 'All students' })).toHaveCount(1)
+  const historical = rows.filter({ hasText: 'Historical Student' })
+  const unassigned = rows.filter({ hasText: 'Unassigned Historical' })
+  await expect(unassigned.getByRole('cell').nth(2)).toHaveText('None')
+  if (testInfo.project.name === 'chromium') {
+    await page.setViewportSize({ width: 1200, height: 800 })
+    for (const name of ['Synthetic Course', 'Closed Course', 'Third Course', 'Fourth Course'])
+      await expect(
+        historical.locator('.roster-courses-desktop').getByText(name, { exact: true }),
+      ).toBeVisible()
+    await expect(historical).not.toContainText('Withdrawn Course')
+  }
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const disclosure = historical.locator('.roster-courses-mobile')
+    if (!(await disclosure.evaluate((element) => element.hasAttribute('open'))))
+      await disclosure.locator('summary').click()
+    for (const name of ['Synthetic Course', 'Closed Course', 'Third Course', 'Fourth Course'])
+      await expect(disclosure.getByText(name, { exact: true })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+  await expect(count).toHaveText('3')
+  await expect(page.getByRole('img', { name: 'Inactive', exact: true })).toHaveCount(2)
+  await page.getByLabel('Find a student').fill('Historical')
+  await expect(rows).toHaveCount(2)
+  await page.getByLabel('Find a student').fill('')
+  await page.getByRole('combobox', { name: 'Group', exact: true }).selectOption('History')
+  await expect(rows).toHaveCount(1)
+  await page.getByRole('combobox', { name: 'Group', exact: true }).selectOption('')
+  await page.reload()
+  await expect(rows).toHaveCount(3)
+  const course = page.getByRole('combobox', { name: 'Course', exact: true })
+  await course.selectOption(courseA)
+  await expect(rows).toHaveCount(1)
+  await expect(count).toHaveText('1')
+  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
+  await expect(page.getByLabel('Attendance for Historical Student')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Students', exact: true }).click()
+  await expect(course).toHaveValue('')
+  await expect(rows).toHaveCount(3)
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
+  await expect(count).toHaveText('1')
+  await page.getByRole('button', { name: 'Students', exact: true }).click()
+  await expect(rows).toHaveCount(3)
+  await clickAccountAction(page, 'العربية')
+  await expect(page.getByRole('columnheader')).toHaveText([
+    'الطالب',
+    'المستوى',
+    'الدورات',
+    'الحالة',
+    'الإجراءات',
+  ])
+  await expect(page.getByRole('img', { name: 'غير نشط', exact: true })).toHaveCount(2)
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const disclosure = historical.locator('.roster-courses-mobile')
+    if (!(await disclosure.evaluate((element) => element.hasAttribute('open'))))
+      await disclosure.locator('summary').click()
+    for (const name of ['Synthetic Course', 'Closed Course', 'Third Course', 'Fourth Course'])
+      await expect(disclosure.getByText(name, { exact: true })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+  await mkdir('.artifacts/verification', { recursive: true })
+  await page.screenshot({
+    path: `.artifacts/verification/full-register-${testInfo.project.name}-ar.png`,
+    fullPage: false,
   })
 })

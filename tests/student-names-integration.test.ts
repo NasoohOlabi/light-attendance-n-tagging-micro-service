@@ -3,7 +3,8 @@ import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { Pool } from 'pg'
 import { z } from 'zod'
 import { createHandler } from '../functions/notebook-service'
-import { neonAdminBoardSchema } from '../shared/neon'
+import { neonAdminBoardSchema, neonSnapshotSchema } from '../shared/neon'
+import { makeEvent } from '../shared/ledger'
 
 // Only point this at a disposable database; the test applies application migrations.
 const databaseUrl = process.env.TEST_STUDENT_NAMES_DATABASE_URL
@@ -14,6 +15,7 @@ integration('student names survive migration, structured saves and legacy writes
   const admin = crypto.randomUUID()
   const teacher = crypto.randomUUID()
   const student = crypto.randomUUID()
+  const rosterCourseIds = Array.from({ length: 4 }, () => crypto.randomUUID())
   let migrated = false
   let addedBanColumn = false
   const exportPath = `.local/student-names-${student}.json`
@@ -255,6 +257,91 @@ integration('student names survive migration, structured saves and legacy writes
         ])
       ).rows[0],
     ).toEqual({ whatsapp: null, location: null, birth_year: null })
+    const readNotebook = () =>
+      handler(
+        new Request('https://app.example/api/notebook', {
+          headers: { Authorization: 'Bearer synthetic', Origin: 'https://app.example' },
+        }),
+      )
+    const post = (event: ReturnType<typeof makeEvent>) =>
+      handler(
+        new Request('https://app.example/api/events', {
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer synthetic',
+            Origin: 'https://app.example',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({ events: [event] }),
+        }),
+      )
+    const savedNote = makeEvent('Synthetic admin', {
+      kind: 'note',
+      studentId: student,
+      date: '2026-11-17',
+      tags: ['synthetic'],
+      text: 'Synthetic retry',
+    })
+    expect((await post(savedNote)).status).toBe(200)
+    expect((await post(savedNote)).status).toBe(200)
+    for (const [index, courseId] of rosterCourseIds.entries()) {
+      await pool.query('INSERT INTO courses(id,name,open) VALUES($1,$2,$3)', [
+        courseId,
+        `Synthetic roster course ${index + 1}`,
+        index !== 0,
+      ])
+      await pool.query(
+        'INSERT INTO course_enrollments(id,course_id,student_id,level) VALUES($1,$2,$3,$4)',
+        [crypto.randomUUID(), courseId, student, `Independent course level ${index + 1}`],
+      )
+    }
+    await pool.query('UPDATE students SET active = false WHERE id = $1', [student])
+    const completeRoster = neonSnapshotSchema.parse(await (await readNotebook()).json())
+    expect(completeRoster.students.find((s) => s.studentId === student)).toMatchObject({
+      active: false,
+    })
+    expect(
+      completeRoster.enrollments
+        .filter((e) => e.studentId === student)
+        .map((e) => e.courseId)
+        .sort(),
+    ).toEqual([...rosterCourseIds].sort())
+    expect(completeRoster.courses.find((c) => c.id === rosterCourseIds[0])).toMatchObject({
+      open: false,
+    })
+    for (const event of [
+      makeEvent('Synthetic admin', {
+        kind: 'attendance',
+        studentId: student,
+        date: '2026-11-17',
+        status: 'present',
+      }),
+      makeEvent('Synthetic admin', {
+        kind: 'note',
+        studentId: student,
+        date: '2026-11-17',
+        tags: ['synthetic'],
+        text: 'Must be denied',
+      }),
+    ])
+      expect((await post(event)).status).toBe(403)
+    expect(
+      (
+        await pool.query('SELECT count(*)::int AS count FROM events WHERE student_id = $1', [
+          student,
+        ])
+      ).rows[0].count,
+    ).toBe(1)
+    const teacherNotebook = await teacherHandler(
+      new Request('https://app.example/api/notebook', {
+        headers: { Authorization: 'Bearer synthetic', Origin: 'https://app.example' },
+      }),
+    )
+    expect(
+      neonSnapshotSchema
+        .parse(await teacherNotebook.json())
+        .students.some((s) => s.studentId === student),
+    ).toBe(false)
   } finally {
     await Promise.all(
       [exportPath, bannedPath, importPath].map(async (path) => {
@@ -266,6 +353,9 @@ integration('student names survive migration, structured saves and legacy writes
       }),
     )
     if (migrated) {
+      await pool.query('DELETE FROM events WHERE student_id = $1', [student])
+      await pool.query('DELETE FROM course_enrollments WHERE student_id = $1', [student])
+      await pool.query('DELETE FROM courses WHERE id = ANY($1::uuid[])', [rosterCourseIds])
       await pool.query('DELETE FROM app_accounts WHERE auth_user_id = ANY($1::text[])', [
         [admin, teacher],
       ])

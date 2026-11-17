@@ -80,7 +80,16 @@ export function WorkspaceNavigation({
             aria-current={query.view === 'notebook' && query.tab === tab.id ? 'page' : undefined}
             onClick={() =>
               setQuery(
-                { tab: tab.id, view: 'notebook', ...(assigned ? {} : { student: '' }), tag: '' },
+                {
+                  tab: tab.id,
+                  view: 'notebook',
+                  ...(tab.id === 'roster'
+                    ? { course: '', student: '' }
+                    : assigned
+                      ? {}
+                      : { student: '' }),
+                  tag: '',
+                },
                 true,
               )
             }
