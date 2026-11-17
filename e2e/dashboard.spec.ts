@@ -33,20 +33,15 @@ test('dashboard charts and grouped fuzzy attendance preserve drafts', async ({
     await mkdir('.artifacts/verification', { recursive: true })
     for (const language of ['en', 'ar']) {
       if (language === 'ar') await clickAccountAction(page, 'العربية')
-      for (const width of [320, 390]) {
-        await page.setViewportSize({ width, height: 844 })
+      for (const width of [320, 390, 430, 844]) {
+        await page.setViewportSize({ width, height: width === 844 ? 390 : 844 })
         const table = page.getByRole('region', {
           name: language === 'en' ? 'Attendance list' : 'قائمة الحضور',
         })
-        await expect(table).toHaveAttribute('tabindex', '0')
-        expect(await table.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+        expect(await table.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
           true,
         )
-        await table.focus()
-        await page.keyboard.press(language === 'en' ? 'ArrowRight' : 'ArrowLeft')
-        await expect
-          .poll(() => table.evaluate((element) => Math.abs(element.scrollLeft)))
-          .toBeGreaterThan(0)
+        await expect(table.locator('td[data-label]').first()).toBeVisible()
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
           true,
         )

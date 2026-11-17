@@ -13,6 +13,10 @@ const enrollA = '40000000-0000-4000-8000-000000000001'
 const enrollB = '40000000-0000-4000-8000-000000000002'
 
 async function expectCompactLevel(list: Locator) {
+  if (((await list.page().viewportSize())?.width ?? 0) <= 1024) {
+    await expect(list.locator('td[data-label]').first()).toBeVisible()
+    return
+  }
   const geometry = await list.locator('table').evaluate((table) => {
     const headers = [...table.querySelectorAll('thead th')]
     const levelIndex = table.classList.contains('roster-students-table') ? 4 : 1
@@ -236,13 +240,16 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   if (testInfo.project.name === 'chromium') await page.setViewportSize({ width: 1715, height: 993 })
   await expectCompactLevel(list)
   if (testInfo.project.name === 'mobile') {
-    for (const width of [320, 390]) {
-      await page.setViewportSize({ width, height: 844 })
+    for (const width of [320, 390, 430, 844]) {
+      await page.setViewportSize({ width, height: width === 844 ? 390 : 844 })
       await expect(list).toHaveAttribute('tabindex', '0')
-      expect(await list.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true)
-      await list.focus()
-      await page.keyboard.press('ArrowRight')
-      await expect.poll(() => list.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0)
+      const open = row.getByRole('button', { name: 'Open student' })
+      await expect(open.locator('.roster-open-label')).toBeVisible()
+      const openBounds = await open.boundingBox()
+      expect(openBounds && openBounds.x >= 0 && openBounds.x + openBounds.width <= width).toBe(true)
+      expect(await list.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+        true,
+      )
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true)
@@ -256,8 +263,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     path: `.artifacts/verification/student-levels-${testInfo.project.name}-en.png`,
     fullPage: true,
   })
-  await expect(row.getByRole('cell', { name: 'Synthetic', exact: true })).toBeVisible()
-  await expect(row.getByRole('cell', { name: 'Student', exact: true })).toBeVisible()
+  await expect(row.getByRole('cell').nth(0)).toBeVisible()
+  await expect(row.getByRole('cell').nth(1)).toBeVisible()
   await expect(row.getByRole('cell', { name: '012 345' }).locator('bdi')).toHaveAttribute(
     'dir',
     'ltr',
@@ -318,11 +325,11 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     'الإجراءات',
   ])
   if (testInfo.project.name === 'mobile') {
-    for (const width of [320, 390]) {
+    for (const width of [320, 390, 430]) {
       await page.setViewportSize({ width, height: 844 })
       await expect(arabicList).toHaveAttribute('tabindex', '0')
       expect(
-        await arabicList.evaluate((element) => element.scrollWidth > element.clientWidth),
+        await arabicList.evaluate((element) => element.scrollWidth <= element.clientWidth),
       ).toBe(true)
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
@@ -341,7 +348,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       if (language === 'ar') {
         await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
       }
-      for (const width of [320, 390]) {
+      for (const width of [320, 390, 430]) {
         await page.setViewportSize({ width, height: 844 })
         const actions = page
           .getByRole('region', {
@@ -426,10 +433,10 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await newRow.getByRole('switch').click()
   await expect.poll(() => enrollments[2].active).toBe(true)
   if (testInfo.project.name === 'mobile') {
-    for (const width of [320, 390]) {
+    for (const width of [320, 390, 430]) {
       await page.setViewportSize({ width, height: 844 })
       const table = page.getByRole('region', { name: 'Course students' })
-      expect(await table.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+      expect(await table.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
         true,
       )
       expect(
@@ -444,13 +451,13 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       })
     }
     await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
-    for (const width of [320, 390]) {
+    for (const width of [320, 390, 430]) {
       await page.setViewportSize({ width, height: 844 })
       const table = page.getByRole('region', {
         name: '\u0637\u0644\u0627\u0628 \u0627\u0644\u062f\u0648\u0631\u0629',
       })
       await expect(table.getByRole('columnheader')).toHaveCount(7)
-      expect(await table.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+      expect(await table.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
         true,
       )
       expect(
@@ -659,7 +666,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await clickAccountAction(page, 'العربية')
   await expect(page.getByLabel('الحد الأدنى للحضور %')).toHaveValue('50')
   await expect(gradeRow).toContainText('ناجح')
-  for (const width of [320, 390]) {
+  for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 })
     const grades = page.getByRole('region', { name: 'درجات الدورة' })
     const bounds = await grades.evaluate((element) => ({
@@ -667,8 +674,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       visible: element.clientWidth,
       table: element.querySelector('table')?.getBoundingClientRect().width ?? 0,
     }))
-    expect(bounds.table).toBeGreaterThanOrEqual(1088)
-    expect(bounds.scroll).toBeGreaterThan(bounds.visible)
+    expect(bounds.table).toBeLessThanOrEqual(bounds.visible + 1)
+    expect(bounds.scroll).toBeLessThanOrEqual(bounds.visible + 1)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }
   await page.screenshot({
@@ -700,7 +707,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveCount(0)
   if (testInfo.project.name === 'mobile') {
-    for (const width of [320, 390]) {
+    for (const width of [320, 390, 430]) {
       await page.setViewportSize({ width, height: 844 })
       const navigation = page.locator('.workspace-rail nav')
       const buttons = await navigation.locator('button').evaluateAll((elements) =>
@@ -902,7 +909,7 @@ test('administrator no-course Students includes the complete inactive register',
       ).toBeVisible()
     await expect(historical).not.toContainText('Withdrawn Course')
   }
-  for (const width of [320, 390]) {
+  for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 })
     const disclosure = historical.locator('.roster-courses-mobile')
     if (!(await disclosure.evaluate((element) => element.hasAttribute('open'))))
@@ -950,13 +957,13 @@ test('administrator no-course Students includes the complete inactive register',
   await historical.getByRole('button', { name: 'فتح الطالب' }).click()
   await expect(page.getByRole('heading', { name: 'معلومات الطالب' })).toBeVisible()
   await expect(page.locator('.student-details').getByText('غير متوفر')).toBeVisible()
-  for (const width of [320, 390]) {
+  for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }
   await page.goBack()
   await expect(page.getByRole('img', { name: 'غير نشط', exact: true })).toHaveCount(2)
-  for (const width of [320, 390]) {
+  for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 })
     const disclosure = historical.locator('.roster-courses-mobile')
     if (!(await disclosure.evaluate((element) => element.hasAttribute('open'))))

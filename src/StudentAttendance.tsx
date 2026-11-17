@@ -106,16 +106,18 @@ export function StudentAttendance({
       {data && !loading && (
         <section className="panel">
           {data.attendance.length ? (
-            <table className="role-table">
+            <table className="mobile-record-table role-table">
               <TableHeader model={attendanceTable} />
               <tbody>
                 {attendanceTable.rows.map((item) => (
                   <tr key={`${item.enrollmentId ?? 'legacy'}:${item.date}`}>
-                    <td>{item.course ?? (ar ? 'سجل سابق' : 'Previous record')}</td>
-                    <td>
+                    <td data-label={ar ? 'الدورة' : 'Course'}>
+                      {item.course ?? (ar ? 'سجل سابق' : 'Previous record')}
+                    </td>
+                    <td data-label={t('Date')}>
                       <bdi>{item.date}</bdi>
                     </td>
-                    <td>{t(item.status)}</td>
+                    <td data-label={ar ? 'الحالة' : 'Status'}>{t(item.status)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -114,7 +114,10 @@ async function utilityIcon(page: Page, name: string) {
   }
   const button = page.getByRole('button', { name, exact: true })
   await expect(button).toBeVisible()
-  await expect(button).toHaveText('')
+  if (name === 'Open student' || name === 'فتح الطالب') {
+    await expect(button).toHaveText(name)
+    await expect(button.locator('.roster-open-label')).toBeVisible()
+  } else await expect(button).toHaveText('')
   await expect(button).toHaveAttribute('title', /\S/)
   await expect(button.locator('svg[aria-hidden="true"]')).toHaveClass(/lucide/)
   const box = await button.boundingBox()
@@ -168,15 +171,19 @@ test('student sees only their attendance and loses it after access is denied', a
   await expect(page.getByText('Synthetic Student')).toBeVisible()
   await expect(page.locator('dl')).toContainText('Roster level')
   await expect(page.locator('dl dd')).toHaveText(['Synthetic Student', 'Synthetic Group'])
-  for (const width of [320, 390]) {
+  for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 })
     const fields = await page
       .locator('dl > div')
       .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top))
     expect(new Set(fields).size).toBe(1)
+    expect(
+      await page.locator('table').evaluate((table) => table.scrollWidth <= table.clientWidth),
+    ).toBe(true)
+    await expect(page.locator('td[data-label]').first()).toBeVisible()
   }
   await expect(page.getByText('2026-11-12')).toBeVisible()
-  await expect(page.getByRole('cell', { name: 'present', exact: true })).toBeVisible()
+  await expect(page.locator('tbody').getByText('present', { exact: true })).toBeVisible()
   await expect(page.locator('.profile-trigger img')).toBeVisible()
   await expect
     .poll(() =>
@@ -201,7 +208,7 @@ test('student sees only their attendance and loses it after access is denied', a
       .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top))
     expect(new Set(fields).size).toBe(1)
   }
-  await expect(page.getByRole('cell', { name: 'حاضر', exact: true })).toBeVisible()
+  await expect(page.locator('tbody').getByText('حاضر', { exact: true })).toBeVisible()
   await compactHeader(page, '.role-header')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
     true,
@@ -636,12 +643,11 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await page.setViewportSize({ width: 320, height: 844 })
-  await list.focus()
-  const beforeScroll = await list.evaluate((element) => element.scrollLeft)
-  await page.keyboard.press('ArrowRight')
-  await expect
-    .poll(() => list.evaluate((element) => element.scrollLeft))
-    .toBeGreaterThan(beforeScroll)
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    expect(await list.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    await expect(rows.nth(0).getByRole('button', { name: 'Edit' })).toBeVisible()
+  }
   await clickAccountAction(page, 'العربية')
   await expect(
     page.locator('thead th > button.table-sort, thead th:not(:has(button.table-sort))'),

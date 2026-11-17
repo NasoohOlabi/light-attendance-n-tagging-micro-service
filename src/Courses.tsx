@@ -318,7 +318,7 @@ export function Courses({
                 aria-label={ar ? 'طلاب الدورة' : 'Course students'}
                 tabIndex={0}
               >
-                <table className="role-table course-students-table">
+                <table className="mobile-record-table role-table course-students-table">
                   <TableHeader model={membershipTable} actions />
                   <tbody>
                     {membershipTable.rows.map((student) => {
@@ -346,10 +346,16 @@ export function Courses({
                       }
                       return (
                         <tr key={student.studentId}>
-                          <td dir="auto">{student.firstName}</td>
-                          <td dir="auto">{student.lastName || '—'}</td>
-                          <td dir="auto">{student.group || '—'}</td>
-                          <td>
+                          <td dir="auto" data-label={ar ? 'الاسم الأول' : 'First name'}>
+                            {student.firstName}
+                          </td>
+                          <td dir="auto" data-label={ar ? 'اسم العائلة' : 'Last name'}>
+                            {student.lastName || '—'}
+                          </td>
+                          <td dir="auto" data-label={ar ? 'مستوى القائمة' : 'Roster level'}>
+                            {student.group || '—'}
+                          </td>
+                          <td data-label={ar ? 'مستوى الدورة' : 'Course level'}>
                             <input
                               aria-label={`${ar ? 'مستوى الدورة' : 'Course level'}: ${student.firstName} ${student.lastName}`}
                               maxLength={200}
@@ -363,7 +369,7 @@ export function Courses({
                               }
                             />
                           </td>
-                          <td>
+                          <td data-label={ar ? 'مسجل' : 'Enrolled'}>
                             <input
                               type="checkbox"
                               role="switch"
@@ -373,7 +379,7 @@ export function Courses({
                               onChange={(event) => saveMembership(event.target.checked)}
                             />
                           </td>
-                          <td>
+                          <td data-label={ar ? 'استلم الكتاب' : 'Handbook received'}>
                             <input
                               type="checkbox"
                               className="h-11 w-11"
@@ -389,7 +395,7 @@ export function Courses({
                               }
                             />
                           </td>
-                          <td>
+                          <td data-label={ar ? 'الإجراءات' : 'Actions'}>
                             <button
                               className="secondary"
                               disabled={busy || !entry}
@@ -592,7 +598,7 @@ function GradePage({
         aria-label={ar ? 'درجات الدورة' : 'Course grades'}
         tabIndex={0}
       >
-        <table className="role-table min-w-[68rem] [&_th]:whitespace-nowrap [&_input]:w-24">
+        <table className="mobile-record-table role-table min-w-[68rem] [&_th]:whitespace-nowrap [&_input]:w-24">
           <TableHeader model={gradeTable} actions />
           <tbody>
             {gradeTable.rows.map((entry) => {
@@ -607,15 +613,28 @@ function GradePage({
               const formId = `grades-${entry.id}`
               return (
                 <tr key={entry.id}>
-                  <td dir="auto">{student.firstName}</td>
-                  <td dir="auto">{student.lastName || '—'}</td>
-                  <td dir="auto">{entry.level || '—'}</td>
-                  <td>{entry.active ? (ar ? 'نعم' : 'Yes') : ar ? 'لا' : 'No'}</td>
-                  <td>
+                  <td dir="auto" data-label={ar ? 'الاسم الأول' : 'First name'}>
+                    {student.firstName}
+                  </td>
+                  <td dir="auto" data-label={ar ? 'اسم العائلة' : 'Last name'}>
+                    {student.lastName || '—'}
+                  </td>
+                  <td dir="auto" data-label={ar ? 'مستوى الدورة' : 'Course level'}>
+                    {entry.level || '—'}
+                  </td>
+                  <td data-label={ar ? 'مسجل' : 'Enrolled'}>
+                    {entry.active ? (ar ? 'نعم' : 'Yes') : ar ? 'لا' : 'No'}
+                  </td>
+                  <td data-label={ar ? 'الحضور' : 'Attendance'}>
                     {ratio === null ? (ar ? 'غير متاح' : 'Unavailable') : `${ratio.toFixed(1)}%`}
                   </td>
                   {(['practical', 'theory'] as const).map((key) => (
-                    <td key={key}>
+                    <td
+                      key={key}
+                      data-label={
+                        key === 'practical' ? (ar ? 'عملي' : 'Practical') : ar ? 'نظري' : 'Theory'
+                      }
+                    >
                       <input
                         form={formId}
                         aria-label={`${key === 'practical' ? (ar ? 'عملي' : 'Practical') : ar ? 'نظري' : 'Theory'}: ${student.firstName} ${student.lastName}`}
@@ -634,8 +653,8 @@ function GradePage({
                       />
                     </td>
                   ))}
-                  <td>{resultLabel(result)}</td>
-                  <td>
+                  <td data-label={ar ? 'النتيجة' : 'Result'}>{resultLabel(result)}</td>
+                  <td data-label={ar ? 'الإجراءات' : 'Actions'}>
                     <form
                       id={formId}
                       onSubmit={(event) => {

@@ -144,11 +144,46 @@ async function syntheticTables(page: Page, role: 'administrator' | 'student' = '
 
 async function everyColumn(table: Locator, count: number, actions = false) {
   await expect(table).toBeVisible()
+  const page = table.page()
+  if ((page.viewportSize()?.width ?? 0) <= 1024) {
+    for (const width of [320, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      const geometry = await table.evaluate((element) => {
+        const bounds = element.getBoundingClientRect()
+        return {
+          scroll: element.scrollWidth,
+          client: element.clientWidth,
+          overflow: [...element.querySelectorAll('*')].flatMap((child) => {
+            const rect = child.getBoundingClientRect()
+            return rect.width > 0 &&
+              rect.height > 0 &&
+              (rect.right > bounds.right + 1 || rect.left < bounds.left - 1)
+              ? [
+                  {
+                    tag: child.tagName,
+                    className: child.className,
+                    left: rect.left,
+                    right: rect.right,
+                  },
+                ]
+              : []
+          }),
+        }
+      })
+      expect(geometry.scroll, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.client + 1)
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+      ).toBe(true)
+    }
+  }
   const headers = table.locator('thead th[aria-sort]')
   await expect(headers).toHaveCount(count)
   await expect(table.locator('.table-filter')).toHaveCount(count)
   for (const header of await headers.all()) {
     const button = header.locator('.table-sort')
+    const bounds = await button.boundingBox()
+    expect(bounds?.width).toBeGreaterThanOrEqual(44)
+    expect(bounds?.height).toBeGreaterThanOrEqual(44)
     await button.click()
     await expect(header).toHaveAttribute('aria-sort', 'ascending')
     await button.click()
