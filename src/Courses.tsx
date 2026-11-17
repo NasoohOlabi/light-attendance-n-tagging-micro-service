@@ -539,7 +539,7 @@ function GradePage({
           return ratio === null ? (ar ? 'غير متاح' : 'Unavailable') : `${ratio.toFixed(1)}%`
         },
       },
-      ...(['practical', 'theory'] as const).map((key) => ({
+      ...(['theory', 'practical'] as const).map((key) => ({
         id: key,
         label: key === 'practical' ? (ar ? 'عملي' : 'Practical') : ar ? 'نظري' : 'Theory',
         value: (entry: Enrollment) => {
@@ -651,7 +651,7 @@ function GradePage({
                   <td data-label={ar ? 'الحضور' : 'Attendance'}>
                     {ratio === null ? (ar ? 'غير متاح' : 'Unavailable') : `${ratio.toFixed(1)}%`}
                   </td>
-                  {(['practical', 'theory'] as const).map((key) => (
+                  {(['theory', 'practical'] as const).map((key) => (
                     <td
                       key={key}
                       data-label={
