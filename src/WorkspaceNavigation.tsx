@@ -72,96 +72,7 @@ export function WorkspaceNavigation({
   return (
     <aside className="workspace-rail">
       <div className="workspace-brand">
-        <div className="workspace-brand-name">
-          <WartaqLogo />
-          {courses && chooseDefault && (
-            <details ref={switcher} className="workspace-course-switcher">
-              <summary
-                className="workspace-course-name"
-                aria-label={language === 'ar' ? 'تغيير الدورة' : 'Change course'}
-                aria-description={courseName}
-                title={courseName}
-              >
-                <span dir="auto">
-                  {courseName?.match(
-                    /^\u0648\u0627\u0631\u062a\u0642\s+([0-9\u0660-\u0669\u06f0-\u06f9]+)$/u,
-                  )?.[1] ??
-                    courseName ??
-                    (roster
-                      ? language === 'ar'
-                        ? 'جميع الطلاب'
-                        : 'All students'
-                      : query.view === 'history'
-                        ? language === 'ar'
-                          ? 'السجل السابق'
-                          : 'Previous'
-                        : language === 'ar'
-                          ? 'اختر دورة'
-                          : 'Choose course')}
-                </span>
-              </summary>
-              <div className="workspace-course-menu">
-                {[
-                  roster
-                    ? {
-                        id: 'all',
-                        name: language === 'ar' ? 'جميع الطلاب' : 'All students',
-                      }
-                    : {
-                        id: 'none',
-                        name:
-                          language === 'ar' ? 'السجل السابق / بلا دورة' : 'Previous / no course',
-                      },
-                  ...courses.filter(
-                    (course) =>
-                      query.view === 'history' ||
-                      !course.closed ||
-                      course.id === currentCourse ||
-                      course.id === defaultCourse,
-                  ),
-                ].map((course) => (
-                  <button
-                    key={course.id}
-                    type="button"
-                    aria-pressed={
-                      (roster && (!currentCourse || currentCourse === 'none')
-                        ? 'all'
-                        : currentCourse || 'none') === course.id
-                    }
-                    onClick={(event) => {
-                      setQuery(
-                        { course: course.id, ...(query.view === 'student' ? {} : { student: '' }) },
-                        true,
-                      )
-                      const details = event.currentTarget.closest('details')
-                      details?.removeAttribute('open')
-                      details?.querySelector('summary')?.focus()
-                    }}
-                    dir="auto"
-                  >
-                    {course.name}
-                  </button>
-                ))}
-                {currentCourse !== 'all' &&
-                  (!roster || !!query.course) &&
-                  !courses.find((course) => course.id === currentCourse)?.closed &&
-                  query.course !== (defaultCourse || '') && (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        chooseDefault(currentCourse === 'none' ? '' : currentCourse || '')
-                        const details = event.currentTarget.closest('details')
-                        details?.removeAttribute('open')
-                        details?.querySelector('summary')?.focus()
-                      }}
-                    >
-                      {language === 'ar' ? 'تعيين كافتراضية' : 'Make default'}
-                    </button>
-                  )}
-              </div>
-            </details>
-          )}
-        </div>
+        <WartaqLogo />
         <ProfileMenu
           profile={profile}
           administrator={administrator}
@@ -170,6 +81,89 @@ export function WorkspaceNavigation({
           sampleHistory={sampleHistory}
           disabled={disabled}
         />
+        {courses && chooseDefault && (
+          <details ref={switcher} className="workspace-course-switcher">
+            <summary
+              className="workspace-course-name"
+              aria-label={language === 'ar' ? 'تغيير الدورة' : 'Change course'}
+              aria-description={courseName}
+              title={courseName}
+            >
+              <span dir="auto">
+                {courseName ??
+                  (roster
+                    ? language === 'ar'
+                      ? 'جميع الطلاب'
+                      : 'All students'
+                    : query.view === 'history'
+                      ? language === 'ar'
+                        ? 'السجل السابق'
+                        : 'Previous'
+                      : language === 'ar'
+                        ? 'اختر دورة'
+                        : 'Choose course')}
+              </span>
+            </summary>
+            <div className="workspace-course-menu">
+              {[
+                roster
+                  ? {
+                      id: 'all',
+                      name: language === 'ar' ? 'جميع الطلاب' : 'All students',
+                    }
+                  : {
+                      id: 'none',
+                      name: language === 'ar' ? 'السجل السابق / بلا دورة' : 'Previous / no course',
+                    },
+                ...courses.filter(
+                  (course) =>
+                    query.view === 'history' ||
+                    !course.closed ||
+                    course.id === currentCourse ||
+                    course.id === defaultCourse,
+                ),
+              ].map((course) => (
+                <button
+                  key={course.id}
+                  type="button"
+                  aria-pressed={
+                    (roster && (!currentCourse || currentCourse === 'none')
+                      ? 'all'
+                      : currentCourse || 'none') === course.id
+                  }
+                  onClick={(event) => {
+                    setQuery(
+                      { course: course.id, ...(query.view === 'student' ? {} : { student: '' }) },
+                      true,
+                    )
+                    const details = event.currentTarget.closest('details')
+                    details?.removeAttribute('open')
+                    details?.querySelector('summary')?.focus()
+                  }}
+                  dir="auto"
+                >
+                  {course.name}
+                </button>
+              ))}
+              {currentCourse !== 'all' &&
+                (!roster || !!query.course) &&
+                !courses.find((course) => course.id === currentCourse)?.closed &&
+                query.course !== (defaultCourse || '') && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      chooseDefault(currentCourse === 'none' ? '' : currentCourse || '')
+                      const details = event.currentTarget.closest('details')
+                      details?.removeAttribute('open')
+                      details?.querySelector('summary')?.focus()
+                    }}
+                  >
+                    {language === 'ar' ? 'تعيين كافتراضية' : 'Make default'}
+                  </button>
+                )}
+            </div>
+          </details>
+        )}
       </div>
       <nav aria-label={t('Main navigation')} data-courses={administrator}>
         <button
