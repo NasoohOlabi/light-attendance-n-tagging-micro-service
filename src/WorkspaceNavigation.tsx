@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { ProfileMenu, type Profile } from './ProfileMenu'
 import { BookOpen, House } from 'lucide-react'
 import { useLanguage, type TranslationKey } from './i18n'
@@ -7,12 +8,14 @@ import { WartaqIcon, WartaqLogo } from './brand/components'
 const tabs: { id: Exclude<Tab, 'dashboard'>; label: TranslationKey }[] = [
   { id: 'attendance', label: 'Attendance' },
   { id: 'roster', label: 'Students' },
-  { id: 'summary', label: 'Summary' },
 ]
 
 export function WorkspaceNavigation({
   administrator,
   courseName,
+  courses,
+  currentCourse,
+  chooseDefault,
   defaultCourse,
   assigned,
   profile,
@@ -23,6 +26,9 @@ export function WorkspaceNavigation({
 }: {
   administrator: boolean
   courseName?: string
+  courses?: { id: string; name: string; closed?: boolean }[]
+  currentCourse?: string
+  chooseDefault?: (course: string) => void
   defaultCourse?: string
   assigned: boolean
   profile?: Profile
@@ -33,22 +39,127 @@ export function WorkspaceNavigation({
 }) {
   const { t, language } = useLanguage()
   const query = useQueryState()
+  const notebookCourse =
+    query.view === 'notebook' || query.view === 'history' || query.view === 'student'
+      ? query.courseScope === 'all'
+        ? ''
+        : query.courseScope || defaultCourse
+      : defaultCourse
+  const roster = query.view === 'notebook' && query.tab === 'roster'
+  const switcher = useRef<HTMLDetailsElement>(null)
+  useEffect(() => {
+    function dismiss(event: MouseEvent | KeyboardEvent) {
+      const element = switcher.current
+      if (!element?.open) return
+      if (event instanceof KeyboardEvent && event.key === 'Escape') {
+        element.open = false
+        element.querySelector('summary')?.focus()
+      } else if (
+        event instanceof MouseEvent &&
+        event.target instanceof Node &&
+        !element.contains(event.target)
+      ) {
+        element.open = false
+      }
+    }
+    document.addEventListener('click', dismiss)
+    document.addEventListener('keydown', dismiss)
+    return () => {
+      document.removeEventListener('click', dismiss)
+      document.removeEventListener('keydown', dismiss)
+    }
+  }, [])
   return (
     <aside className="workspace-rail">
       <div className="workspace-brand">
         <div className="workspace-brand-name">
           <WartaqLogo />
-          {courseName && (
-            <span
-              className="workspace-course-name"
-              title={courseName}
-              aria-label={courseName}
-              dir="auto"
-            >
-              {courseName.match(
-                /^\u0648\u0627\u0631\u062a\u0642\s+([0-9\u0660-\u0669\u06f0-\u06f9]+)$/u,
-              )?.[1] ?? courseName}
-            </span>
+          {courses && chooseDefault && (
+            <details ref={switcher} className="workspace-course-switcher">
+              <summary
+                className="workspace-course-name"
+                aria-label={language === 'ar' ? 'تغيير الدورة' : 'Change course'}
+                aria-description={courseName}
+                title={courseName}
+              >
+                <span dir="auto">
+                  {courseName?.match(
+                    /^\u0648\u0627\u0631\u062a\u0642\s+([0-9\u0660-\u0669\u06f0-\u06f9]+)$/u,
+                  )?.[1] ??
+                    courseName ??
+                    (roster
+                      ? language === 'ar'
+                        ? 'جميع الطلاب'
+                        : 'All students'
+                      : query.view === 'history'
+                        ? language === 'ar'
+                          ? 'السجل السابق'
+                          : 'Previous'
+                        : language === 'ar'
+                          ? 'اختر دورة'
+                          : 'Choose course')}
+                </span>
+              </summary>
+              <div className="workspace-course-menu">
+                {[
+                  roster
+                    ? {
+                        id: 'all',
+                        name: language === 'ar' ? 'جميع الطلاب' : 'All students',
+                      }
+                    : {
+                        id: 'none',
+                        name:
+                          language === 'ar' ? 'السجل السابق / بلا دورة' : 'Previous / no course',
+                      },
+                  ...courses.filter(
+                    (course) =>
+                      query.view === 'history' ||
+                      !course.closed ||
+                      course.id === currentCourse ||
+                      course.id === defaultCourse,
+                  ),
+                ].map((course) => (
+                  <button
+                    key={course.id}
+                    type="button"
+                    aria-pressed={
+                      (roster && (!currentCourse || currentCourse === 'none')
+                        ? 'all'
+                        : currentCourse || 'none') === course.id
+                    }
+                    onClick={(event) => {
+                      setQuery(
+                        { course: course.id, ...(query.view === 'student' ? {} : { student: '' }) },
+                        true,
+                      )
+                      const details = event.currentTarget.closest('details')
+                      details?.removeAttribute('open')
+                      details?.querySelector('summary')?.focus()
+                    }}
+                    dir="auto"
+                  >
+                    {course.name}
+                  </button>
+                ))}
+                {currentCourse !== 'all' &&
+                  (!roster || !!query.course) &&
+                  !courses.find((course) => course.id === currentCourse)?.closed &&
+                  query.course !== (defaultCourse || '') && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        chooseDefault(currentCourse === 'none' ? '' : currentCourse || '')
+                        const details = event.currentTarget.closest('details')
+                        details?.removeAttribute('open')
+                        details?.querySelector('summary')?.focus()
+                      }}
+                    >
+                      {language === 'ar' ? 'تعيين كافتراضية' : 'Make default'}
+                    </button>
+                  )}
+              </div>
+            </details>
           )}
         </div>
         <ProfileMenu
@@ -65,7 +176,7 @@ export function WorkspaceNavigation({
           className={query.view === 'notebook' && query.tab === 'dashboard' ? 'active' : ''}
           aria-label={language === 'ar' ? 'الرئيسية' : 'Dashboard'}
           aria-current={query.view === 'notebook' && query.tab === 'dashboard' ? 'page' : undefined}
-          onClick={() => navigateNotebook('dashboard', defaultCourse)}
+          onClick={() => navigateNotebook('dashboard', notebookCourse)}
         >
           <House size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
           <span className="workspace-tab-long">{language === 'ar' ? 'الرئيسية' : 'Dashboard'}</span>
@@ -94,13 +205,27 @@ export function WorkspaceNavigation({
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            className={query.view === 'notebook' && query.tab === tab.id ? 'active' : ''}
+            className={
+              query.view === 'notebook' &&
+              (query.tab === tab.id || (tab.id === 'attendance' && query.tab === 'summary'))
+                ? 'active'
+                : ''
+            }
             aria-label={t(tab.label)}
-            aria-current={query.view === 'notebook' && query.tab === tab.id ? 'page' : undefined}
+            aria-current={
+              query.view === 'notebook' &&
+              (query.tab === tab.id || (tab.id === 'attendance' && query.tab === 'summary'))
+                ? 'page'
+                : undefined
+            }
             onClick={() =>
-              navigateNotebook(tab.id, defaultCourse, {
-                ...(tab.id === 'roster' || !assigned ? { student: '' } : {}),
-              })
+              navigateNotebook(
+                tab.id,
+                tab.id === 'roster' && query.courseScope === 'all' ? 'all' : notebookCourse,
+                {
+                  ...(tab.id === 'roster' || !assigned ? { student: '' } : {}),
+                },
+              )
             }
           >
             <WartaqIcon name={tab.id === 'roster' ? 'students' : tab.id} />

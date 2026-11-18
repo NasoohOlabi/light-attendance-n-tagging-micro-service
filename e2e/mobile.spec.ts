@@ -55,7 +55,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.goto('/')
   await usableLayout(page)
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
-  for (const name of ['Attendance', 'Students', 'Summary']) {
+  for (const name of ['Students', 'Attendance', 'Summary']) {
     await page.getByRole('button', { name, exact: true }).click()
     await usableLayout(page)
   }
@@ -77,7 +77,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   const row = page.getByRole('row').filter({ hasText: longName })
-  const rowNote = row.getByRole('button')
+  const rowNote = row.getByRole('button', { name: /إضافة ملاحظة/ })
   await expect(rowNote).toBeVisible()
   const markBounds = await row.getByRole('combobox').boundingBox()
   const noteBounds = await rowNote.boundingBox()
@@ -90,10 +90,14 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await usableLayout(page)
   await page.getByRole('button', { name: 'حفظ الملاحظة', exact: true }).click()
   await expect(page.getByRole('dialog')).toBeHidden()
-  await page.getByRole('row').filter({ hasText: longName }).getByRole('button').click()
+  await page
+    .getByRole('row')
+    .filter({ hasText: longName })
+    .getByRole('button', { name: /إضافة ملاحظة/ })
+    .click()
   await expect(page.getByRole('dialog').getByText('مسودة مشتركة English draft')).toBeVisible()
   await page.keyboard.press('Escape')
-  for (const name of ['الحضور', 'الطلاب', 'الملخص']) {
+  for (const name of ['الطلاب', 'الحضور', 'الملخص']) {
     await page.getByRole('button', { name, exact: true }).click()
     await usableLayout(page)
   }
@@ -103,7 +107,11 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.getByLabel(`الحضور للطالب ${longName}`).selectOption('absent')
   await page.getByRole('button', { name: 'حفظ الحضور (1)', exact: true }).click()
   await expect(page.getByRole('status')).not.toContainText('saved')
-  await page.getByRole('row').filter({ hasText: longName }).getByRole('button').click()
+  await page
+    .getByRole('row')
+    .filter({ hasText: longName })
+    .getByRole('button', { name: /إضافة ملاحظة/ })
+    .click()
   for (const size of [
     { width: 390, height: 844 },
     { width: 844, height: 390 },
@@ -119,6 +127,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.getByRole('button', { name: 'إضافة تصحيح', exact: true }).click()
   await expect(savedNote).toContainText('تم التراجع')
   await page.setViewportSize({ width: 320, height: 568 })
+  await page.getByRole('button', { name: 'الحضور', exact: true }).click()
   await page.getByRole('button', { name: 'الملخص', exact: true }).click()
   await expect(page.locator('table thead')).toBeHidden()
   await expect(page.getByRole('button', { name: 'خيارات الفرز' })).toBeVisible()

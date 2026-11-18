@@ -1851,3 +1851,13 @@ The course browser scenario passed in English and Arabic on desktop and emulated
 At 12:08 Asia/Damascus, integrated the responsive course row actions from main at `8ac18fb`. The combined course browser scenario passed on desktop and emulated mobile. The PR records final CI, Railway deployment and verification of the deployed interface.
 
 At 12:16 Asia/Damascus, integrated `3363d11`, which removes Back to courses from Manage students. Both browser projects passed the combined course scenario, including navigation through Courses and the localized toast.
+
+## 2026-11-18 08:40 Asia/Damascus (UTC+03:00) - Simplify staff navigation and attendance
+
+The owner approved the role-based navigation proposal and requested compact layouts with visual verification. Staff can continue a partially marked session, filter unmarked students, preserve exceptions during bulk marking and reach Save above the phone navigation. The course switcher separates the current view from the remembered default. Membership, grading and history share course navigation. Staff can return from student information to their roster position. The student portal shows the latest recorded dates first. Staff notes and course performance notes have distinct labels.
+
+Visually compared the original and changed attendance screen with synthetic records at 320px, 390px and desktop width. Removed a redundant membership Back action and reduced its stacked buttons to text tabs. The integrated browser run at the starting base passed 127 cases, skipped two project-specific cases and flagged one grade-scroll test tied to outdated form placement. Updated that locator and refined the compact save and correction controls. Integration with concurrent chart and workbook exports, final release checks and Railway verification follow. Physical device behavior remains unverified.
+
+Integrated main through `e5fe629`, retaining the latest absence follow-up dashboard, course readiness, attendance charts and customizable workbook exports. Rechecked the changed attendance screen with synthetic data. At 390px the pending Save occupied 44px directly above navigation. English desktop and Arabic 320px screenshots also showed the intended controls within the viewport. Course membership uses three text tabs in one row at 320px. The authenticated production workflow and physical devices require separate verification.
+
+At 12:25 Asia/Damascus (UTC+03:00), integrated the course save toast from main. GitHub Verify passed on the prior head. The local desktop course case passed on an isolated rerun, while the mobile scenario exhausted its 30-second budget during a language switch. Extended the budget for that multi-screen scenario and retained all its assertions.

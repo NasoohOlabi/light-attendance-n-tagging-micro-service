@@ -39,10 +39,15 @@ export function useQueryState() {
     student: query.get('student') ?? '',
     account: z.string().min(1).max(256).safeParse(query.get('account')).data ?? '',
     course: z.uuid().safeParse(query.get('course')).data ?? '',
+    courseScope:
+      z.union([z.uuid(), z.literal('none'), z.literal('all')]).safeParse(query.get('course'))
+        .data ?? '',
     courseView:
       z.enum(['create', 'edit', 'students', 'grades']).safeParse(query.get('courseView')).data ??
       '',
     all: query.get('all') === '1',
+    missingScores: query.get('missing') === '1',
+    unmarked: query.get('unmarked') === '1',
   }
 }
 const allowedKeys = new Set([
@@ -60,6 +65,8 @@ const allowedKeys = new Set([
   'course',
   'courseView',
   'all',
+  'missing',
+  'unmarked',
   'tables',
 ])
 export function sanitizedSearch(search: string) {
@@ -142,7 +149,9 @@ export function useCoursePreference(
   function chooseDefault(course: string) {
     if (accountId) saveCoursePreference(accountId, course)
     setDefaultCourse(course)
-    setQuery({ course: course || 'none', student: '' }, true)
+    const scope = course || 'none'
+    if (new URLSearchParams(window.location.search).get('course') !== scope)
+      setQuery({ course: scope, student: '' }, true)
   }
   return { ready, defaultCourse, chooseDefault }
 }

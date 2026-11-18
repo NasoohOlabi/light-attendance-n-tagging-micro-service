@@ -1,3 +1,4 @@
+import './course-sections.css'
 import { RowActions } from './RowActions'
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
@@ -32,6 +33,71 @@ import { rankStudents } from './studentSearch'
 type Board = ReturnType<typeof neonAdminBoardSchema.parse>
 
 type Draft = { id: string; level: string; teacherId: string }
+
+export function CourseSections({
+  courseId,
+  ar,
+  current,
+}: {
+  courseId: string
+  ar: boolean
+  current: 'students' | 'grades' | 'history'
+}) {
+  const sections = [
+    {
+      id: 'students',
+      label: ar ? 'الطلاب' : 'Students',
+      accessible: ar ? 'إدارة طلاب الدورة' : 'Manage course students',
+    },
+    {
+      id: 'grades',
+      label: ar ? 'الدرجات' : 'Grades',
+      accessible: ar ? 'درجات الدورة' : 'Course grades',
+    },
+    {
+      id: 'history',
+      label: ar ? 'السجل' : 'History',
+      accessible: ar ? 'سجل الدورة' : 'Course history',
+    },
+  ] as const
+  return (
+    <nav aria-label={ar ? 'أقسام الدورة' : 'Course sections'} className="course-sections">
+      {sections.map(({ id, label, accessible }) => (
+        <a
+          key={id}
+          aria-label={accessible}
+          onClick={(event) => {
+            if (
+              event.button !== 0 ||
+              event.metaKey ||
+              event.ctrlKey ||
+              event.shiftKey ||
+              event.altKey
+            )
+              return
+            event.preventDefault()
+            setQuery(
+              {
+                view: id === 'history' ? 'history' : 'courses',
+                course: courseId,
+                courseView: id === 'history' ? '' : id,
+                tab: '',
+                q: '',
+                group: '',
+                student: '',
+              },
+              true,
+            )
+          }}
+          aria-current={current === id ? 'page' : undefined}
+          href={`?${new URLSearchParams({ page: 'app', view: id === 'history' ? 'history' : 'courses', course: courseId, ...(id === 'history' ? {} : { courseView: id }) })}`}
+        >
+          {label}
+        </a>
+      ))}
+    </nav>
+  )
+}
 
 export function Courses({
   userId,
@@ -220,7 +286,24 @@ export function Courses({
                   {courseTable.rows.map((item) => (
                     <tr key={item.id} role="row">
                       <td role="cell">
-                        <bdi>{item.name}</bdi>
+                        <a
+                          className="course-name-link"
+                          onClick={(event) => {
+                            if (
+                              event.button !== 0 ||
+                              event.metaKey ||
+                              event.ctrlKey ||
+                              event.shiftKey ||
+                              event.altKey
+                            )
+                              return
+                            event.preventDefault()
+                            go('students', item.id)
+                          }}
+                          href={`?${new URLSearchParams({ page: 'app', view: 'courses', course: item.id, courseView: 'students' })}`}
+                        >
+                          <bdi>{item.name}</bdi>
+                        </a>
                         {item.id === defaultCourse && (
                           <span className="course-current">
                             {ar ? 'الدورة الحالية' : 'Current course'}
@@ -233,6 +316,7 @@ export function Courses({
                       <td role="cell">
                         <RowActions
                           name={item.name}
+                          rowShortcut
                           ar={ar}
                           inlineIcons
                           actions={[
@@ -240,7 +324,7 @@ export function Courses({
                               ? []
                               : [
                                   {
-                                    label: ar ? 'تعيين كدورة حالية' : 'Make current',
+                                    label: ar ? 'تعيين كافتراضية' : 'Make default',
                                     icon: Star,
                                     disabled: !item.open,
                                     onClick: () => chooseDefault(item.id),
@@ -348,11 +432,14 @@ export function Courses({
       {course && (query.courseView === 'students' || query.courseView === 'grades') && (
         <>
           {query.courseView === 'students' && (
-            <TableToolbar model={membershipTable}>
-              <h1 className="title">
-                {course.name} — {ar ? 'إدارة الطلاب' : 'Manage students'}
-              </h1>
-            </TableToolbar>
+            <>
+              <TableToolbar model={membershipTable}>
+                <h1 className="title course-page-heading">
+                  {course.name} — {ar ? 'إدارة الطلاب' : 'Manage students'}
+                </h1>
+              </TableToolbar>
+              <CourseSections courseId={course.id} ar={ar} current="students" />
+            </>
           )}
           {query.courseView === 'grades' && !board && (
             <h1 className="title">
@@ -549,6 +636,10 @@ function GradePage({
   useEffect(() => {
     if (decisionEntry) dialogRef.current?.showModal()
   }, [decisionEntry])
+  const { missingScores: showMissing } = useQueryState()
+  const missing = entries.filter(
+    (entry) => entry.active && (entry.practical === null || entry.theory === null),
+  )
   const [exportOpen, setExportOpen] = useState(false)
   const [decisions, setDecisions] = useState<
     Record<string, { requestId: string; result: 'pass' | 'fail' | 'calculated'; note: string }>
@@ -600,7 +691,7 @@ function GradePage({
           : 'Fail'
   const gradeTable = useDataTable(
     'grades',
-    entries,
+    showMissing ? missing : entries,
     [
       {
         id: 'first',
@@ -636,7 +727,7 @@ function GradePage({
       })),
       {
         id: 'notes',
-        label: ar ? 'ملاحظات' : 'Notes',
+        label: ar ? 'ملاحظة أداء الدورة' : 'Course performance note',
         value: (entry) => drafts[entry.id]?.notes ?? entry.notes,
       },
       {
@@ -678,10 +769,11 @@ function GradePage({
           </button>
         }
       >
-        <h1 className="title">
+        <h1 className="title course-page-heading">
           {course.name} — {ar ? 'الدرجات' : 'Grades'}
         </h1>
       </TableToolbar>
+      <CourseSections courseId={course.id} ar={ar} current="grades" />
       {exportOpen && (
         <CourseExportDialog
           course={course}
@@ -737,6 +829,18 @@ function GradePage({
           ? 'الحضور = الحاضر / (الحاضر + الغائب + المعذور). الأيام غير المسجلة مستبعدة.'
           : 'Attendance = Present / (Present + Absent + Excused). Unmarked days are excluded.'}
       </p>
+      {(missing.length > 0 || showMissing) && (
+        <button
+          type="button"
+          className="secondary"
+          aria-pressed={showMissing}
+          onClick={() => setQuery({ missing: showMissing ? '' : '1' })}
+        >
+          {ar
+            ? `إظهار الدرجات الناقصة (${missing.length})`
+            : `Show missing scores (${missing.length})`}
+        </button>
+      )}
       <div
         className="role-table-scroll grade-table-scroll"
         role="region"
@@ -824,11 +928,14 @@ function GradePage({
                       />
                     </td>
                   ))}
-                  <td className="grade-notes" data-label={ar ? 'ملاحظات' : 'Notes'}>
+                  <td
+                    className="grade-notes"
+                    data-label={ar ? 'ملاحظة أداء الدورة' : 'Course performance note'}
+                  >
                     <textarea
                       form={formId}
                       className="resize-y min-[1025px]:min-w-48"
-                      aria-label={`${ar ? 'ملاحظات' : 'Notes'}: ${student.firstName} ${student.lastName}`}
+                      aria-label={`${ar ? 'ملاحظة أداء الدورة' : 'Course performance note'}: ${student.firstName} ${student.lastName}`}
                       disabled={busy}
                       value={draft.notes}
                       onChange={(event) =>

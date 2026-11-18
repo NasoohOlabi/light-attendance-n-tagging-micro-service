@@ -19,9 +19,9 @@ export function NotebookDashboard({
   date: string
   canAdd: boolean
   canRecord: boolean
-  onAttendance: () => void
+  onAttendance: (unmarked?: boolean) => void
   onAdd: () => void
-  onStudent: (studentId: string) => void
+  onStudent: (studentId: string, trigger: HTMLElement) => void
   children?: ReactNode
 }) {
   const { language, t } = useLanguage()
@@ -110,8 +110,17 @@ export function NotebookDashboard({
           )}
         </div>
         <div className="dashboard-buttons">
-          <button className="primary dashboard-primary" onClick={onAttendance}>
-            {ar ? 'تسجيل الحضور' : 'Take attendance'}
+          <button
+            className="primary dashboard-primary"
+            onClick={() => onAttendance(canRecord && marked > 0 && unmarked > 0)}
+          >
+            {canRecord && marked > 0 && unmarked > 0
+              ? ar
+                ? `\u0645\u062a\u0627\u0628\u0639\u0629 \u0627\u0644\u062d\u0636\u0648\u0631 (${unmarked})`
+                : `Continue attendance · ${unmarked} unmarked`
+              : ar
+                ? '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062d\u0636\u0648\u0631'
+                : 'Take attendance'}
           </button>
           {canAdd && (
             <button className="secondary" onClick={onAdd}>
@@ -143,7 +152,7 @@ export function NotebookDashboard({
                   <div className="dashboard-followup-heading">
                     <button
                       className="dashboard-student"
-                      onClick={() => onStudent(student.studentId)}
+                      onClick={(event) => onStudent(student.studentId, event.currentTarget)}
                       dir="auto"
                     >
                       {student.name}

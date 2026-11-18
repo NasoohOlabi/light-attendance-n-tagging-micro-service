@@ -5,7 +5,7 @@ import { mkdir } from 'node:fs/promises'
 test('profile menu preserves attendance draft and dismisses', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Explore with sample students' }).click()
-  await page.getByRole('button', { name: 'Take attendance' }).click()
+  await page.getByRole('button', { name: /Continue attendance/i }).click()
   const attendance = page.locator('select[aria-label$=" Omar"]')
   await attendance.selectOption('absent')
   const trigger = page.locator('.profile-trigger')
