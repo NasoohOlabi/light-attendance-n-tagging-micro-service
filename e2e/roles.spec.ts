@@ -370,6 +370,15 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await page.getByRole('button', { name: 'Add student', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Students', level: 1 })).toBeVisible()
   await expect(page.locator('form.role-editor').getByLabel('First name')).toBeVisible()
+  await expect(page.getByRole('table')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Sort options' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Filter options' })).toHaveCount(0)
+  await clickAccountAction(page, 'العربية')
+  await expect(page.getByRole('button', { name: 'حفظ الطالب' })).toBeVisible()
+  await expect(page.getByRole('table')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'خيارات الفرز' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'خيارات التصفية' })).toHaveCount(0)
+  await clickAccountAction(page, 'English')
   await expect(
     page.getByRole('navigation', { name: 'Notebook' }).getByRole('button', { name: 'Dashboard' }),
   ).toBeVisible()
@@ -398,6 +407,9 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   ).toHaveText('Unassigned')
   await page.getByRole('button', { name: 'Save student' }).click()
   await expect(page.getByRole('status')).toHaveText('Saved.')
+  await expect(page.getByRole('region', { name: 'Student list' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sort options' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Filter options' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Accounts' })).toHaveCount(0)
   expect(posts[0].path).toBe('/api/admin/students')
   expect(posts[0].body).toMatchObject({ teacherId: null })
@@ -699,6 +711,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Add student' }).click()
   await page.locator('form.role-editor').getByLabel('First name').fill('Synthetic New')
+  await expect(list).toHaveCount(0)
   await page.locator('form.role-editor').getByLabel('Last name').fill('Student')
   await page.locator('form.role-editor').getByLabel('Level', { exact: true }).fill('Group B')
   await page

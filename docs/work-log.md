@@ -1743,3 +1743,13 @@ The Attendance screenshot showed detached column headings after the Students ros
 The synthetic test reproduced the detached Attendance headings in Railway deployment `125bd67`. The focused local run passed 30 browser cases with two desktop skips for phone-only regressions. It covered narrow Arabic and English layouts, all table sort fields, keyboard and touch sorting, filter persistence, and attendance draft preservation. The PR receipt records the exact-main deployment, health and shipped UI check. Phone evidence uses emulation and synthetic records.
 
 `bun run verify:release` passed at 06:45 with 120 browser cases and 34 local tests. The two phone-only cases skipped on desktop and four optional database tests skipped. The pre-PR review found no issues. Railway confirmed the production trigger targets `main` with Wait for CI enabled.
+
+## 2026-11-18 06:46 Asia/Damascus (UTC+03:00) - Hide the roster during student creation
+
+The phone screenshot showed the Students table below the new-student form. The Administrator register and its Sort and Filter controls now disappear while the creation form is open. Save and Cancel return to the list for standalone creation. Creating a student from a course still returns to that course's membership list.
+
+The previous Railway deployment reproduced the table in English on desktop and Arabic at 390px. The updated desktop and mobile Administrator tests verify the form without a table, plus list restoration after Save and Cancel. The browser checks use synthetic data and an emulated phone. Railway confirmed that the production trigger targets `main` with Wait for CI enabled. The PR records exact-main deployment and production smoke verification.
+
+`bun run verify:release` passed with 119 browser cases, 34 local tests and all build, formatting and security gates. One phone-only case skipped on desktop, and four optional database tests skipped.
+
+**Table-toolbar integration at 06:55 Asia/Damascus** GitHub Verify passed on `fe56694` before main advanced to `a58608d`. Resolved the work-log conflict and tied the Administrator toolbar to the same visibility condition as the student table. Desktop and phone tests confirmed Sort and Filter stay hidden during creation and return with the list after save. The combined `bun run verify:release` passed with 120 browser cases and 34 local tests. Four optional database tests skipped.

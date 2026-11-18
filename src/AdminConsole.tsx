@@ -92,6 +92,7 @@ export function AdminConsole({
       cancelled = true
     }
   }, [userId, revision])
+  const showStudentTable = !courseId && !creating
   const studentTable = useDataTable('admin-students', board?.students ?? [], [
     { id: 'first', label: ar ? 'الاسم الأول' : 'First name', value: (s) => s.firstName },
     { id: 'last', label: ar ? 'اسم العائلة' : 'Last name', value: (s) => s.lastName },
@@ -246,7 +247,10 @@ export function AdminConsole({
             )}
             {section === 'students' && (
               <section className="panel role-section">
-                <TableToolbar model={courseId ? undefined : studentTable} className="mt-8 mb-4">
+                <TableToolbar
+                  model={showStudentTable ? studentTable : undefined}
+                  className="mt-8 mb-4"
+                >
                   <h2 className="title">{ar ? 'الطلاب' : 'Students'}</h2>
                 </TableToolbar>
                 {!courseId && (
@@ -292,7 +296,7 @@ export function AdminConsole({
                     }}
                   />
                 )}
-                {!courseId && (
+                {showStudentTable && (
                   <div
                     className="role-table-scroll"
                     role="region"
