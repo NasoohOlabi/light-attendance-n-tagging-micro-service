@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { makeEvent, statuses, type Status } from '../shared/ledger'
 import { offlineAttendanceRecordSchema } from '../shared/offlineAttendance'
 import { useLanguage } from './useLanguage'
@@ -31,7 +31,9 @@ export function OfflineAttendance({
   const [pending, setPending] = useState<PendingAttendance[]>([])
   const [selected, setSelected] = useState('')
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const syncLock = useRef(false)
   const [leaseExpired, setLeaseExpired] = useState(false)
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -49,8 +51,9 @@ export function OfflineAttendance({
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
   const sync = async () => {
-    if (!navigator.onLine) return
-    setBusy(true)
+    if (!navigator.onLine || syncLock.current) return
+    syncLock.current = true
+    setSyncing(true)
     try {
       await syncOfflineAttendance(userId)
       await refresh()
@@ -67,7 +70,8 @@ export function OfflineAttendance({
           : 'Sync failed. Sign in again and retry.',
       )
     } finally {
-      setBusy(false)
+      syncLock.current = false
+      setSyncing(false)
     }
   }
   useEffect(() => {
@@ -97,7 +101,7 @@ export function OfflineAttendance({
   const roster = rosters.find((item) => `${item.courseId}:${item.date}` === selected)
   const save = async (student: PreparedRoster['students'][number], status: Status) => {
     if (!roster || student.revision.kind !== 'confirmed') return
-    setBusy(true)
+    setSaving(true)
     try {
       await queueAttendance(
         userId,
@@ -114,11 +118,11 @@ export function OfflineAttendance({
       )
       await refresh()
       setError('')
-      if (navigator.onLine) await sync()
+      if (navigator.onLine) void sync()
     } catch {
       setError(ar ? 'تعذر حفظ الحضور على الجهاز.' : 'Could not save attendance on this device.')
     } finally {
-      setBusy(false)
+      setSaving(false)
     }
   }
   return (
@@ -189,7 +193,7 @@ export function OfflineAttendance({
                       key={choice}
                       className={status === choice ? 'primary' : 'secondary'}
                       aria-pressed={status === choice}
-                      disabled={busy || conflict || student.revision.kind !== 'confirmed'}
+                      disabled={saving || conflict || student.revision.kind !== 'confirmed'}
                       onClick={() => void save(student, choice)}
                     >
                       {t(choice)}
@@ -211,7 +215,7 @@ export function OfflineAttendance({
                     </p>
                     <button
                       className="secondary"
-                      disabled={busy}
+                      disabled={saving || syncing}
                       onClick={() =>
                         void resolveAttendanceConflict(userId, failed.event.id, 'server').then(
                           refresh,
@@ -222,7 +226,7 @@ export function OfflineAttendance({
                     </button>
                     <button
                       className="secondary"
-                      disabled={busy}
+                      disabled={saving || syncing}
                       onClick={() =>
                         void resolveAttendanceConflict(userId, failed.event.id, 'local').then(
                           async () => {
@@ -251,7 +255,7 @@ export function OfflineAttendance({
       <div className="flex flex-wrap gap-2">
         <button
           className="secondary"
-          disabled={busy || !navigator.onLine}
+          disabled={saving || syncing || !navigator.onLine}
           onClick={() => void sync()}
         >
           {ar ? 'مزامنة الآن' : 'Sync now'}

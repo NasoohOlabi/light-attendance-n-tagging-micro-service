@@ -620,7 +620,7 @@ function Notebook({
                     disabled={disabled}
                     onClick={async () => {
                       try {
-                        if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller)
+                        if (!navigator.serviceWorker?.controller || !navigator.locks)
                           throw new Error('Offline app is not ready')
                         await navigator.serviceWorker.ready
                         const expires = Math.min(
@@ -659,7 +659,7 @@ function Notebook({
                             ]
                           }),
                         })
-                        allowOfflineAccess(neon.userId, neon.teacher.id, neon.teacher.name, expires)
+                        allowOfflineAccess(neon.userId, neon.teacher.name, expires)
                         setOfflineMessage(
                           language === 'ar'
                             ? 'الجلسة جاهزة على هذا الجهاز.'

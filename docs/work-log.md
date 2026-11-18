@@ -1973,3 +1973,5 @@ The local sample smoke verified three distinct selected fills, 44px targets and 
 The owner requested attendance that teachers can record during connectivity loss and sync on return. Teachers can prepare an open course and date, reopen its local roster and save marks in IndexedDB. Sync rechecks current access and attendance versions, retries the same event ID after a lost reply and lets the teacher resolve a differing mark. The existing student projection receives accepted marks.
 
 The focused desktop and mobile Chromium scenarios passed for offline reopen, persisted marks, lost replies and conflict resolution. The API tests passed for conflicts and exact retries. A disposable Postgres scenario checks competing teachers and the student projection in CI. Physical phones are outside the automated suite. The PR records release and Railway evidence.
+
+Mark entry waits for the local transaction only. A slow sync leaves the other attendance controls available and overlapping sync attempts are serialized.

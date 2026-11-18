@@ -153,7 +153,7 @@ export async function recordAttendanceOutcome(userId: string, outcome: Attendanc
         const queue = z.array(pendingSchema).parse(request.result ?? [])
         const item = queue.find((entry) => entry.event.id === outcome.id)
         if (!item) return
-        if ((outcome.kind === 'saved' || outcome.kind === 'unchanged') && outcome.current) {
+        if (outcome.kind === 'saved' || outcome.kind === 'unchanged') {
           const cursorRequest = tx.objectStore('rosters').openCursor()
           cursorRequest.onsuccess = () => {
             const cursor = cursorRequest.result
