@@ -1,14 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { z } from 'zod'
 
-export const tabSchema = z.enum([
-  'dashboard',
-  'attendance',
-  'notes',
-  'roster',
-  'summary',
-  'history',
-])
+export const tabSchema = z.enum(['dashboard', 'attendance', 'roster', 'summary', 'history'])
 export type Tab = z.infer<typeof tabSchema>
 export function today() {
   const date = new Date()
@@ -20,7 +13,7 @@ function subscribe(callback: () => void) {
 }
 export function useQueryState() {
   const search = useSyncExternalStore(subscribe, () => window.location.search)
-  const query = new URLSearchParams(search)
+  const query = sanitizedSearch(search)
   return {
     page: z.enum(['home', 'app']).safeParse(query.get('page')).data ?? 'home',
     view:
@@ -41,7 +34,6 @@ export function useQueryState() {
     to: z.iso.date().safeParse(query.get('to')).data ?? today(),
     q: query.get('q') ?? '',
     group: query.get('group') ?? '',
-    tag: query.get('tag') ?? '',
     student: query.get('student') ?? '',
     account: z.string().min(1).max(256).safeParse(query.get('account')).data ?? '',
     course: z.uuid().safeParse(query.get('course')).data ?? '',
@@ -60,7 +52,6 @@ const allowedKeys = new Set([
   'to',
   'q',
   'group',
-  'tag',
   'student',
   'account',
   'course',
@@ -71,6 +62,10 @@ const allowedKeys = new Set([
 export function sanitizedSearch(search: string) {
   const query = new URLSearchParams(search)
   for (const key of [...query.keys()]) if (!allowedKeys.has(key)) query.delete(key)
+  if (query.get('tab') === 'notes') {
+    query.set('tab', 'attendance')
+    for (const key of ['from', 'to', 'student', 'q', 'group']) query.delete(key)
+  }
   return query
 }
 export function setQuery(values: Record<string, string>, push = false) {

@@ -10,7 +10,7 @@ Open **History & corrections**, then the three-dot menu for the record. Choose *
 
 ## Driving it with Playwright
 
-The `sample notebook` test scopes an `li` containing the saved Arabic note, clicks its Undo, fills Reason with تصحيح and appends. Assert the original row contains **Undone** and a separate **Correction: تصحيح** record exists. For changed correction behavior, also prove the note disappears from Notes; create two attendance statuses then undo newest and verify older status/summary returns; similarly undo a renamed/regrouped student snapshot. Unit ledger tests cover forward/reversal-of-reversal rejection and duplicate/conflicting IDs.
+The `sample notebook` test scopes an `li` containing the saved Arabic note, clicks its Undo, fills Reason with تصحيح and appends. Assert the original row contains **Undone** and a separate **Correction: تصحيح** record exists. For changed correction behavior, also prove the note disappears from the student's attendance dialog for that day. Create two attendance statuses, undo the newest and verify the older status and summary return. Repeat with a renamed or regrouped student snapshot. Unit ledger tests cover forward/reversal-of-reversal rejection and duplicate/conflicting IDs.
 
 ## Gotchas
 
