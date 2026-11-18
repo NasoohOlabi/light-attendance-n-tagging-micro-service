@@ -1895,3 +1895,9 @@ Integrated main commit `c197bf5` into the audit. Course navigation, grading filt
 The older role suite served mutable source from a second Vite process. During integration its failure snapshot showed a source conflict marker. Both role tests now exercise the built preview with the same synthetic API handlers. The shared preview also removes the separate server, port allocation and startup polling.
 
 At 12:35 Asia/Damascus, the combined release gate passed with 150 browser cases, including both role scenarios on desktop and mobile. Two phone-only cases skipped on desktop. The local Bun run passed 38 tests and skipped six optional database suites. The earlier database-enabled run passed all 44 tests. The production dependency audit found no vulnerabilities. PR 119 tracks final CI and the Railway deployment.
+
+## 2026-11-18 13:53 Asia/Damascus (UTC+03:00) - Show the full course title
+
+The owner reported a cut-off title in the Arabic sidebar. The course selector shared the wordmark and profile row and clipped the title to fit. The selector now has its own row, wraps long titles and shows the complete stored name, including branded course names that previously appeared as a number.
+
+The browser regression reproduced clipping at 320px. The updated scenario checks the full title, wordmark and avatar alignment, 44px controls and bounded dropdowns in English and Arabic at 320px, 390px, 701px and 1440px. `bun run verify:release` passed with 38 Bun tests and 150 browser cases. Six optional database tests and two phone-only cases on desktop skipped. Browser coverage uses synthetic records on desktop and emulated phones. The PR records hosted checks and the production verification.
