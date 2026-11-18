@@ -597,6 +597,14 @@ async function saveAttendance(page: Page) {
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
 }
 
+async function saveAttendanceAndWaitForFailure(page: Page) {
+  await saveAttendance(page)
+  await expect(page.getByRole('alert')).toContainText(
+    'The save may already have reached the server',
+  )
+  await expect(page.getByText('1 records awaiting confirmation')).toBeVisible()
+}
+
 test('storage write failure prevents authenticated writes', async ({ page }) => {
   let posts = 0
   await page.addInitScript(() => {
@@ -634,8 +642,7 @@ test('foreign pending storage also blocks retry of a restored batch', async ({ p
     posts++
     return route.fulfill({ status: 503, json: { error: 'Synthetic response loss' } })
   })
-  await saveAttendance(page)
-  await expect(page.getByText('1 records awaiting confirmation')).toBeVisible()
+  await saveAttendanceAndWaitForFailure(page)
   await page.evaluate(() => localStorage.setItem('halaqa-pending-v1:old', 'pending'))
   await page.reload()
   await expect(page.getByRole('alert').first()).toContainText('Copy the pending batch')
@@ -725,8 +732,7 @@ test('a stale retry cannot recreate a batch cleared in another tab', async ({ pa
     posts++
     return route.fulfill({ status: 503, json: { error: 'Synthetic response loss' } })
   })
-  await saveAttendance(page)
-  await expect(page.getByText('1 records awaiting confirmation')).toBeVisible()
+  await saveAttendanceAndWaitForFailure(page)
   await page.evaluate(
     (id) => localStorage.removeItem(`halaqa-pending-neon:${location.origin}:${id}`),
     users[0].id,
@@ -772,9 +778,7 @@ test('pending retry rejects a student removed from the current assignment', asyn
     posts++
     return route.fulfill({ status: 503, json: { error: 'Synthetic response loss' } })
   })
-  await saveAttendance(page)
-  await expect(page.getByText('1 records awaiting confirmation')).toBeVisible()
-  await expect.poll(() => posts).toBe(1)
+  await saveAttendanceAndWaitForFailure(page)
   const teacher = {
     role: 'teacher',
     id: users[0].id,
