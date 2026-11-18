@@ -1,6 +1,6 @@
 import { clickRecordAction, recordActions } from './recordActions'
 import { clickAccountAction } from './profileActions'
-import { expect, test, type Locator } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import { enrollmentSchema, courseSchema } from '../shared/neon'
 
@@ -13,6 +13,11 @@ const courseA = '30000000-0000-4000-8000-000000000001'
 const courseB = '30000000-0000-4000-8000-000000000002'
 const enrollA = '40000000-0000-4000-8000-000000000001'
 const enrollB = '40000000-0000-4000-8000-000000000002'
+
+async function selectCourse(page: Page, name: string) {
+  await page.locator('.workspace-course-switcher summary').click()
+  await page.locator('.workspace-course-menu').getByRole('button', { name, exact: true }).click()
+}
 
 async function expectCompactLevel(list: Locator) {
   if (((await list.page().viewportSize())?.width ?? 0) <= 1024) {
@@ -265,10 +270,18 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     if (!panel || !content) throw new Error('Missing course list or workspace content')
     expect(panel.y - content.y).toBeGreaterThanOrEqual(32)
   }
+  const makeCurrent = async (name: string) => {
+    await page.getByLabel('Change course').click()
+    await page.locator('.workspace-course-menu').getByRole('button', { name, exact: true }).click()
+    await page.getByLabel('Change course').click()
+    const makeDefault = page.getByRole('button', { name: 'Make default' })
+    if (await makeDefault.isVisible()) await makeDefault.click()
+    else await page.getByLabel('Change course').click()
+  }
   await page.goto('/?page=app&tab=attendance')
-  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseB)
+  await makeCurrent('Course B')
   await page.getByRole('button', { name: 'Students', exact: true }).click()
-  await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption('')
+  await selectCourse(page, 'All students')
   const list = page.getByRole('region', { name: 'Student list' })
   const row = list.locator(`[data-student-id="${studentId}"]`)
   await expect(
@@ -291,10 +304,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     'Active',
   )
   await expectCompactLevel(list)
-  const courseFilter = page.getByRole('combobox', { name: 'Course', exact: true })
-  await courseFilter.selectOption(courseA)
+  await selectCourse(page, 'Course A')
   await expect(level).toHaveText('—')
-  await courseFilter.selectOption(courseB)
+  await selectCourse(page, 'Course B')
   await expect(level).toHaveText('Advanced')
   await page.reload()
   await expect(level).toHaveText('Advanced')
@@ -355,7 +367,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(attendanceRow.getByRole('cell').first()).toHaveText('Synthetic Student')
   await expectCompactLevel(page.getByRole('region', { name: 'Attendance list' }))
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
-  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseA)
+  await makeCurrent('Course A')
   await expect(attendanceRow.getByRole('cell').nth(1)).toHaveText('—')
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await clickAccountAction(page, 'العربية')
@@ -429,6 +441,31 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expectActionDivider('en')
   await expect(firstCourseActions).toBeVisible()
   await expect(firstCourseMenu).toBeHidden()
+  await firstCourseRow.getByRole('cell').nth(1).click({ button: 'right' })
+  await expect(firstCourseMenu).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(firstCourseActions).toBeFocused()
+  if (testInfo.project.name === 'mobile') {
+    const cell = firstCourseRow.getByRole('cell').nth(1)
+    const box = await cell.boundingBox()
+    if (!box) throw new Error('Missing course row')
+    const touch = await page.context().newCDPSession(page)
+    const point = { x: box.x + box.width - 4, y: box.y + box.height - 4 }
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
+    await page.waitForTimeout(700)
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await expect(firstCourseMenu).toBeVisible()
+    await page.keyboard.press('Escape')
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
+    await touch.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ ...point, y: point.y + 30 }],
+    })
+    await page.waitForTimeout(700)
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await expect(firstCourseMenu).toBeHidden()
+    await touch.detach()
+  }
   const coursesBeforeOpening = structuredClone(courses)
   await firstCourseActions.press('Enter')
   await expect(firstCourseMenu).toBeVisible()
@@ -622,8 +659,26 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     location: 'Area',
     birthYear: 2000,
   })
-  await page.getByRole('button', { name: 'Back to courses' }).click()
+  await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course A' }), 'Manage students')
+  if (testInfo.project.name === 'mobile') {
+    await page.setViewportSize({ width: 320, height: 844 })
+    const tabs = page.getByRole('navigation', { name: 'Course sections' })
+    const links = tabs.getByRole('link')
+    await expect(links).toHaveCount(3)
+    const boxes = await links.evaluateAll((items) =>
+      items.map((item) => {
+        const r = item.getBoundingClientRect()
+        return { y: r.y, height: r.height }
+      }),
+    )
+    expect(boxes.every((box) => box.height >= 44 && box.y === boxes[0].y)).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({
+      path: '.artifacts/verification/course-membership-320.png',
+      fullPage: true,
+    })
+  }
   await expect(page.getByLabel('Handbook received: Synthetic Student')).not.toBeChecked()
   await page.getByLabel('Handbook received: Synthetic Student').click()
   await expect(page.getByLabel('Handbook received: Synthetic Student')).toBeChecked()
@@ -639,7 +694,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   })
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('')
   await page.getByLabel('Course level: Synthetic Student').fill('Draft A')
-  await page.getByRole('button', { name: 'Back to courses' }).click()
+  await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course B' }), 'Manage students')
   await expect(page.getByLabel('Handbook received: Synthetic Student')).not.toBeChecked()
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('Advanced')
@@ -659,7 +714,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .click()
   await expect.poll(() => enrollments[1].level).toBe('Updated B')
   expect(enrollments[1].id).toBe(enrollB)
-  await page.getByRole('button', { name: 'Back to courses' }).click()
+  await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course A' }), 'Manage students')
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('Draft A')
   await page.getByLabel('Course level: Synthetic Student').fill('Intermediate')
@@ -669,8 +724,26 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .getByRole('button', { name: 'Save level' })
     .click()
   await expect.poll(() => enrollments[0].level).toBe('Intermediate')
-  await page.getByRole('button', { name: 'Back to courses' }).click()
+  await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course A' }), 'Grades')
+  enrollments.push({
+    ...enrollments[0],
+    id: '40000000-0000-4000-8000-000000000099',
+    studentId: secondStudentId,
+    active: false,
+  })
+  await page.reload()
+  const missingScores = page.getByRole('button', { name: /Show missing scores/ })
+  await expect(missingScores).toBeVisible()
+  await missingScores.click()
+  await expect(missingScores).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByLabel('Theory: Synthetic Student')).toBeVisible()
+  await expect(page.getByLabel('Theory: New Student')).toHaveCount(0)
+  await missingScores.click()
+  await expect(missingScores).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByLabel('Theory: New Student')).toBeVisible()
+  enrollments.pop()
+  await page.reload()
   const originalViewport = page.viewportSize()
   await page.setViewportSize({ width: 1440, height: 900 })
   const compactGradeRow = page.getByRole('row').filter({ hasText: 'Synthetic' })
@@ -813,15 +886,17 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   expect(
     (await page.getByLabel('Practical: Synthetic Student').boundingBox())?.height,
   ).toBeGreaterThanOrEqual(44)
-  await expect(page.getByLabel('Notes: Synthetic Student')).toBeVisible()
+  await expect(page.getByLabel('Course performance note: Synthetic Student')).toBeVisible()
   expect(
-    (await page.getByLabel('Notes: Synthetic Student').boundingBox())?.width,
+    (await page.getByLabel('Course performance note: Synthetic Student').boundingBox())?.width,
   ).toBeGreaterThanOrEqual(192)
   await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
   await checkGradeSave('حفظ الدرجات')
   await checkGradeOrder('نظري', 'عملي')
   await expect(
-    page.getByLabel('\u0645\u0644\u0627\u062d\u0638\u0627\u062a: Synthetic Student'),
+    page.getByLabel(
+      '\u0645\u0644\u0627\u062d\u0638\u0629 \u0623\u062f\u0627\u0621 \u0627\u0644\u062f\u0648\u0631\u0629: Synthetic Student',
+    ),
   ).toBeVisible()
   await page.setViewportSize({ width: 320, height: 844 })
   await checkGradeSave('حفظ الدرجات')
@@ -891,7 +966,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
     await expect(
-      page.getByLabel('\u0645\u0644\u0627\u062d\u0638\u0627\u062a: Synthetic Student'),
+      page.getByLabel(
+        '\u0645\u0644\u0627\u062d\u0638\u0629 \u0623\u062f\u0627\u0621 \u0627\u0644\u062f\u0648\u0631\u0629: Synthetic Student',
+      ),
     ).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await clickAccountAction(page, 'English')
@@ -911,7 +988,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(page.getByLabel('Minimum attendance %')).toHaveValue('60')
   await page.getByLabel('Practical: Synthetic Student').fill('0')
   await page.getByLabel('Theory: Synthetic Student').fill('100')
-  await page.getByLabel('Notes: Synthetic Student').fill('First line\nSecond line')
+  await page
+    .getByLabel('Course performance note: Synthetic Student')
+    .fill('First line\nSecond line')
   await page
     .getByRole('row')
     .filter({ hasText: 'Synthetic' })
@@ -925,12 +1004,14 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     theory: 100,
   })
   await page.reload()
-  await expect(page.getByLabel('Notes: Synthetic Student')).toHaveValue('First line\nSecond line')
-  await page.getByLabel('Notes: Synthetic Student').fill('')
+  await expect(page.getByLabel('Course performance note: Synthetic Student')).toHaveValue(
+    'First line\nSecond line',
+  )
+  await page.getByLabel('Course performance note: Synthetic Student').fill('')
   await compactGradeRow.getByRole('button', { name: 'Save grades' }).click()
   await expect.poll(() => enrollments[0].notes).toBe('')
   await page.reload()
-  await expect(page.getByLabel('Notes: Synthetic Student')).toHaveValue('')
+  await expect(page.getByLabel('Course performance note: Synthetic Student')).toHaveValue('')
   await expect(page.getByLabel('Practical: Synthetic Student')).toHaveValue('0')
   await page.goBack()
   await page.goForward()
@@ -941,7 +1022,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     fullPage: true,
   })
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
-  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseA)
+  await makeCurrent('Course A')
   const date = await page.getByLabel('Session date').inputValue()
   events.push({
     id: '50000000-0000-4000-8000-000000000001',
@@ -958,7 +1039,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('button', { name: 'History & corrections', exact: true }).click()
   await expect(historyHeading).toBeVisible()
   await expect(page).toHaveURL(/view=history/)
-  await expect(page.getByRole('combobox', { name: 'Course', exact: true })).toHaveValue(courseA)
+  await expect(page).toHaveURL(new RegExp(`course=${courseA}`))
   await page.reload()
   await expect(historyHeading).toBeVisible()
   await page.goBack()
@@ -971,7 +1052,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await clickRecordAction(legacyRecord, 'Record details')
   await expect(legacyRecord.locator('pre')).toBeHidden()
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
-  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseB)
+  await makeCurrent('Course B')
   await expect(
     page
       .getByRole('region', { name: 'Attendance list' })
@@ -983,7 +1064,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByLabel('Attendance for Synthetic Student').selectOption('absent')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await expect.poll(() => events.length).toBe(2)
-  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseA)
+  await makeCurrent('Course A')
   await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveValue('present')
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
   const courseRow = page.getByRole('row').filter({ hasText: 'Course A' })
@@ -1003,7 +1084,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(courseRow).toContainText('Closed')
   await clickRecordAction(courseRow, 'History')
   await expect(page.getByRole('status').filter({ hasText: 'This course is closed' })).toBeVisible()
-  await expect(page.getByRole('combobox', { name: 'Course', exact: true })).toHaveValue(courseA)
+  await expect(page).toHaveURL(new RegExp(`course=${courseA}`))
   await expect(
     page.locator('li').filter({ hasText: 'Synthetic Student' }).filter({ hasText: 'present' }),
   ).toBeVisible()
@@ -1169,10 +1250,10 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     'color',
     'rgb(23, 101, 44)',
   )
-  await page.getByLabel('Notes: Synthetic Student').fill('Draft note')
+  await page.getByLabel('Course performance note: Synthetic Student').fill('Draft note')
   await expect(calculatedResult).toHaveText('Pending')
   await expect(gradeRow).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-  await page.getByLabel('Notes: Synthetic Student').fill('')
+  await page.getByLabel('Course performance note: Synthetic Student').fill('')
   await expect(calculatedResult).toHaveText('Pass')
   await clickAccountAction(page, 'العربية')
   await expect(page.getByLabel('الحد الأدنى للحضور %')).toHaveValue('50')
@@ -1205,7 +1286,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await clickRecordAction(courseRow, 'Reopen course')
   await expect(courseRow).toContainText('Open')
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
-  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseA)
+  await makeCurrent('Course A')
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await clickRecordAction(courseRow, 'Manage students')
@@ -1386,8 +1467,14 @@ test('administrator no-course Students includes the complete inactive register',
   const rows = page.locator('.roster-table tbody tr'),
     count = page.locator('.workspace-count strong')
   await expect(rows).toHaveCount(3)
-  await expect(page.getByRole('combobox', { name: 'Course', exact: true })).toHaveValue('')
-  await expect(page.getByRole('option', { name: 'All students' })).toHaveCount(1)
+  await expect(page.locator('.workspace-course-name')).toHaveText('All students')
+  await page.locator('.workspace-course-switcher summary').click()
+  await expect(
+    page
+      .locator('.workspace-course-menu')
+      .getByRole('button', { name: 'All students', exact: true }),
+  ).toBeVisible()
+  await page.locator('.workspace-course-switcher summary').click()
   const historical = rows.filter({ hasText: 'Historical Student' })
   const unassigned = rows.filter({ hasText: 'Unassigned Historical' })
   await expect(unassigned.locator('td[data-label="Courses"]')).toHaveText('None')
@@ -1409,7 +1496,7 @@ test('administrator no-course Students includes the complete inactive register',
   ).toHaveCount(2)
   await page.reload()
   await expect(detail.getByText('50.0%', { exact: true })).toBeVisible()
-  await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseA)
+  await selectCourse(page, 'Synthetic Course')
   await expect(
     detail.getByText('Recorded sessions', { exact: true }).locator('..').locator('dd'),
   ).toHaveText('1')
@@ -1453,18 +1540,18 @@ test('administrator no-course Students includes the complete inactive register',
   await page.getByRole('combobox', { name: 'Group', exact: true }).selectOption('')
   await page.reload()
   await expect(rows).toHaveCount(3)
-  const course = page.getByRole('combobox', { name: 'Course', exact: true })
-  await course.selectOption(courseA)
+  await selectCourse(page, 'Synthetic Course')
   await expect(rows).toHaveCount(1)
   await expect(count).toHaveText('1')
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(page.getByLabel('Attendance for Historical Student')).toHaveCount(0)
   await page.getByRole('button', { name: 'Students', exact: true }).click()
-  await expect(course).toHaveValue('')
+  await selectCourse(page, 'All students')
   await expect(rows).toHaveCount(3)
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await expect(count).toHaveText('1')
   await page.getByRole('button', { name: 'Students', exact: true }).click()
+  await selectCourse(page, 'All students')
   await expect(rows).toHaveCount(3)
   await clickAccountAction(page, 'العربية')
   await expect(
@@ -1512,7 +1599,7 @@ test('administrator no-course Students includes the complete inactive register',
   )
   await clickRecordAction(page.locator('li').filter({ hasText: 'Historical Student' }), 'تراجع')
   await expect(page.getByLabel('السبب', { exact: true })).toBeVisible()
-  await page.getByRole('combobox', { name: 'الدورة', exact: true }).selectOption(courseB)
+  await selectCourse(page, 'Closed Course')
   await expect(page.getByLabel('السبب', { exact: true })).toHaveCount(0)
   await expect(page.locator('li').filter({ hasText: 'Historical Student' })).toContainText(
     '2026-01-02',
@@ -1530,5 +1617,5 @@ test('administrator no-course Students includes the complete inactive register',
   await page.goto(`/?page=app&tab=history&course=${courseB}`)
   await expect(page.getByRole('heading', { name: 'السجل والتصحيحات' })).toBeVisible()
   await expect(page).toHaveURL(/view=history/)
-  await expect(page.getByRole('combobox', { name: 'الدورة', exact: true })).toHaveValue(courseB)
+  await expect(page).toHaveURL(new RegExp(`course=${courseB}`))
 })

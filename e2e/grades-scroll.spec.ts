@@ -121,7 +121,7 @@ test('long grades remain navigable in both languages', async ({ page }, testInfo
       const header = region.locator('thead th').first()
       const before = await header.boundingBox()
       const titleBefore = await page.locator('.grade-title-bar').boundingBox()
-      const thresholdsBefore = await page.locator('.grade-title-bar + form').boundingBox()
+      const thresholdsBefore = await page.locator('.course-sections + form').boundingBox()
       const windowBefore = await page.evaluate(() => window.scrollY)
       expect(before?.height).toBeGreaterThan(0)
       await page.keyboard.press('End')
@@ -133,7 +133,7 @@ test('long grades remain navigable in both languages', async ({ page }, testInfo
       expect(Math.abs(before.y - after.y)).toBeLessThan(1)
       expect(await page.evaluate(() => window.scrollY)).toBe(windowBefore)
       expect(await page.locator('.grade-title-bar').boundingBox()).toEqual(titleBefore)
-      expect(await page.locator('.grade-title-bar + form').boundingBox()).toEqual(thresholdsBefore)
+      expect(await page.locator('.course-sections + form').boundingBox()).toEqual(thresholdsBefore)
       expect(
         await header.evaluate((element) => getComputedStyle(element).backgroundColor),
       ).not.toBe('rgba(0, 0, 0, 0)')

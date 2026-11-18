@@ -348,7 +348,7 @@
 @media (max-width: 700px) {
   .workspace-rail nav {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     overflow: visible;
     position: fixed;
     inset-inline: 0;
@@ -373,7 +373,7 @@
     display: none;
   }
   .workspace-rail nav[data-courses='true'] {
-    grid-template-columns: repeat(5, minmax(44px, 1fr));
+    grid-template-columns: repeat(4, minmax(44px, 1fr));
     overflow-x: auto;
   }
   .workspace-tab-short {
@@ -817,6 +817,7 @@
 }
 
 .workspace-brand-name {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -833,4 +834,62 @@
   color: white;
   font-size: 20px;
   font-weight: 700;
+}
+
+.workspace-course-switcher {
+  position: static;
+  min-width: 0;
+}
+.workspace-course-switcher summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+.workspace-course-switcher summary span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workspace-course-switcher summary::after {
+  content: ' \25be';
+}
+.workspace-course-menu {
+  position: absolute;
+  z-index: 50;
+  inset-block-start: 100%;
+  inset-inline-start: 0;
+  width: min(20rem, calc(100vw - 2rem));
+  max-height: 60vh;
+  overflow: auto;
+  padding: 0.35rem;
+  border-radius: 0.5rem;
+  background: white;
+  color: #133f46;
+  box-shadow: 0 8px 24px #00383f33;
+}
+.workspace-course-menu button {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+.workspace-course-menu button[aria-pressed='true'] {
+  background: #d5eeee;
+  font-weight: 700;
+}
+
+:root[data-theme='dark'] .workspace-course-menu {
+  background: #173b40;
+  color: #e3f1f1;
+  border: 1px solid #568188;
+}
+:root[data-theme='dark'] .workspace-course-menu button[aria-pressed='true'] {
+  background: #315b60;
+  color: #e3f1f1;
 }

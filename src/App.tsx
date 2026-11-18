@@ -28,11 +28,12 @@ import { InstallApp } from './InstallApp'
 import { AppUpdate } from './AppUpdate'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
 import './workspace.css'
+import './attendance.css'
 import { useLedger } from './useLedger'
 import { NeonAuth, WorkspaceLoading } from './NeonAuth'
 import { AdminConsole } from './AdminConsole'
 import { StudentAttendance } from './StudentAttendance'
-import { Courses } from './Courses'
+import { CourseSections, Courses } from './Courses'
 import type { Profile } from './ProfileMenu'
 import { ProfileSettings } from './ProfileSettings'
 import { enrollmentSchema, type NeonTeacher } from '../shared/neon'
@@ -163,7 +164,6 @@ function Notebook({
   const canViewHistory = administrator || demo === 'editable'
   const history = query.view === 'history' && canViewHistory
   const tab = history ? 'history' : query.tab
-  const choosingDefaultCourse = query.view === 'notebook' && tab === 'attendance'
   useEffect(() => {
     if (query.view === 'history') {
       if (!canViewHistory) setQuery({ view: 'notebook', tab: '' })
@@ -171,6 +171,36 @@ function Notebook({
         setQuery({ view: 'history', tab: '' })
     }
   }, [canViewHistory, query.view])
+  const [sessionDrafts, setSessionDrafts] = useState<Record<string, Record<string, string>>>({})
+  const sessionKey = `${query.courseScope}:${query.date}`
+  const listOrigin = useRef<{ trigger: HTMLElement; top: number; search: string } | null>(null)
+  const previousView = useRef(query.view)
+  useEffect(() => {
+    const origin = listOrigin.current
+    if (origin && previousView.current === 'student' && query.view === 'notebook') {
+      requestAnimationFrame(() => {
+        if (origin.trigger.isConnected && window.location.search === origin.search) {
+          origin.trigger.focus({ preventScroll: true })
+          window.scrollTo(0, origin.top)
+        }
+      })
+    }
+    previousView.current = query.view
+  }, [query.view])
+  const openStudent = (studentId: string, trigger: HTMLElement) => {
+    listOrigin.current = { trigger, top: window.scrollY, search: window.location.search }
+    setQuery({ view: 'student', student: studentId }, true)
+    window.scrollTo(0, 0)
+  }
+  const returnToList = () => {
+    if (listOrigin.current) {
+      const search = listOrigin.current.search
+      window.history.replaceState(null, '', window.location.pathname + search)
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    } else {
+      setQuery({ view: 'notebook', tab: 'roster', student: '' }, true)
+    }
+  }
   const ledger = useLedger(demo !== null, demo === 'assigned', neon)
   const preference = useCoursePreference(neon?.userId, ledger.loaded, ledger.courses)
   const assigned = !!neon || demo === 'assigned'
@@ -264,6 +294,21 @@ function Notebook({
     <div className="workspace">
       <WorkspaceNavigation
         defaultCourse={preference.defaultCourse}
+        courses={
+          neon && (query.view === 'notebook' || query.view === 'student' || history)
+            ? ledger.courses.map((course) => ({
+                id: course.id,
+                name: course.name,
+                closed: !course.open,
+              }))
+            : undefined
+        }
+        currentCourse={query.courseScope}
+        chooseDefault={
+          neon && (query.view === 'notebook' || query.view === 'student' || history)
+            ? preference.chooseDefault
+            : undefined
+        }
         courseName={ledger.courses.find((course) => course.id === query.course)?.name}
         administrator={administrator}
         assigned={assigned}
@@ -275,7 +320,10 @@ function Notebook({
       />
       <main id="main-content" tabIndex={-1} className="workspace-main">
         {history && administrator && (
-          <button className="secondary mb-4" onClick={() => setQuery({ view: 'settings' }, true)}>
+          <button
+            className="secondary mb-4"
+            onClick={() => setQuery({ view: 'settings', student: '' }, true)}
+          >
             {t('Back to settings')}
           </button>
         )}
@@ -296,57 +344,6 @@ function Notebook({
             {t('Changes stay in memory and disappear when you leave. No server requests are made.')}
           </p>
         )}
-        {neon &&
-          (choosingDefaultCourse ||
-            ((query.view === 'notebook' || query.view === 'student') && tab === 'roster') ||
-            history) && (
-            <label className="mb-4">
-              {choosingDefaultCourse
-                ? language === 'ar'
-                  ? '\u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a\u0629'
-                  : 'Default course'
-                : language === 'ar'
-                  ? '\u0627\u0644\u062f\u0648\u0631\u0629'
-                  : 'Course'}
-              <select
-                value={choosingDefaultCourse ? preference.defaultCourse : query.course}
-                onChange={(event) => {
-                  if (choosingDefaultCourse) preference.chooseDefault(event.target.value)
-                  else
-                    setQuery(
-                      {
-                        course: event.target.value || 'all',
-                        ...(query.view === 'student' ? {} : { student: '' }),
-                      },
-                      true,
-                    )
-                }}
-              >
-                <option value="">
-                  {tab === 'roster'
-                    ? language === 'ar'
-                      ? '\u062c\u0645\u064a\u0639 \u0627\u0644\u0637\u0644\u0627\u0628'
-                      : 'All students'
-                    : language === 'ar'
-                      ? '\u0627\u0644\u0633\u062c\u0644 \u0627\u0644\u0633\u0627\u0628\u0642 / \u0628\u0644\u0627 \u062f\u0648\u0631\u0629'
-                      : 'Previous / no course'}
-                </option>
-                {ledger.courses
-                  .filter(
-                    (course) =>
-                      history ||
-                      course.open ||
-                      course.id === preference.defaultCourse ||
-                      course.id === query.course,
-                  )
-                  .map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          )}
         {neon && query.view !== 'courses' && query.course && closedCourse && (
           <p role="status">
             <strong dir="auto">{closedCourse.name}</strong>{' '}
@@ -505,6 +502,8 @@ function Notebook({
             refresh={neon ? ledger.refresh : undefined}
             busy={ledger.busy}
             canWrite={!disabled}
+            administrator={administrator}
+            onBack={returnToList}
           />
         )}
         <div
@@ -520,15 +519,47 @@ function Notebook({
                 projected={projected}
                 date={query.date}
                 canAdd={neon?.teacher.role === 'administrator' || demo === 'editable'}
-                onAttendance={() =>
-                  navigateNotebook('attendance', preference.defaultCourse, { q: '', group: '' })
+                onAttendance={(unmarked = false) =>
+                  navigateNotebook('attendance', query.courseScope || '', {
+                    q: '',
+                    group: '',
+                    unmarked: unmarked ? '1' : '',
+                  })
                 }
                 onAdd={() =>
                   neon
-                    ? setQuery({ view: 'add-student', courseView: '' }, true)
+                    ? setQuery({ view: 'add-student', courseView: '', student: '' }, true)
                     : setQuery({ tab: 'roster', q: '', group: '' }, true)
                 }
               />
+            )}
+            {(tab === 'attendance' || tab === 'summary') && (
+              <nav
+                className="attendance-siblings"
+                aria-label={
+                  language === 'ar'
+                    ? '\u0635\u0641\u062d\u0627\u062a \u0627\u0644\u062d\u0636\u0648\u0631'
+                    : 'Attendance pages'
+                }
+              >
+                <button
+                  type="button"
+                  aria-current={tab === 'attendance' ? 'page' : undefined}
+                  onClick={() => setQuery({ tab: 'attendance' }, true)}
+                >
+                  {language === 'ar' ? '\u0627\u0644\u062c\u0644\u0633\u0629' : 'Session'}
+                </button>
+                <button
+                  type="button"
+                  aria-label={t('Summary')}
+                  aria-current={tab === 'summary' ? 'page' : undefined}
+                  onClick={() => setQuery({ tab: 'summary' }, true)}
+                >
+                  {language === 'ar'
+                    ? '\u0645\u0644\u062e\u0635 \u0627\u0644\u062f\u0648\u0631\u0629'
+                    : 'Course summary'}
+                </button>
+              </nav>
             )}
             {tab === 'attendance' && neon && (!query.course || closedCourse) && (
               <section className="panel">
@@ -558,6 +589,10 @@ function Notebook({
             {tab === 'attendance' && (!neon || (query.course && !closedCourse)) && (
               <AttendanceView
                 key={`${query.date}:${query.course}`}
+                draft={sessionDrafts[sessionKey] ?? {}}
+                setDraft={(draft) =>
+                  setSessionDrafts((previous) => ({ ...previous, [sessionKey]: draft }))
+                }
                 enrollments={activeEnrollments}
                 courseSelected={!!query.course}
                 courseName={
@@ -592,6 +627,8 @@ function Notebook({
                 }
                 date={query.date}
                 save={ledger.save}
+                canCorrect={canViewHistory}
+                onOpenStudent={openStudent}
               />
             )}
             {tab === 'roster' && (
@@ -604,9 +641,13 @@ function Notebook({
                 courses={ledger.courses}
                 allEnrollments={ledger.enrollments}
                 attendance={(query.course ? scopedProjection : baseProjection).attendance}
+                onOpenStudent={openStudent}
               />
             )}
             {tab === 'summary' && <Summary students={projected.students} projected={projected} />}
+            {tab === 'history' && administrator && query.course && (
+              <CourseSections courseId={query.course} ar={language === 'ar'} current="history" />
+            )}
             {tab === 'history' && (
               <History
                 key={query.course}
@@ -661,7 +702,10 @@ function StudentDetails({
   refresh,
   busy,
   canWrite,
+  administrator,
+  onBack,
 }: {
+  onBack: () => void
   student: import('../shared/neon').NeonRosterStudent | undefined
   projected: Projection
   courses: import('../shared/neon').Course[]
@@ -671,6 +715,7 @@ function StudentDetails({
   refresh?: () => Promise<void>
   busy: boolean
   canWrite: boolean
+  administrator: boolean
 }) {
   const { t, language } = useLanguage()
   const ar = language === 'ar'
@@ -700,10 +745,7 @@ function StudentDetails({
     return (
       <section className="panel">
         <p>{ar ? 'الطالب غير متاح' : 'Student unavailable'}</p>
-        <button
-          className="secondary"
-          onClick={() => setQuery({ view: 'notebook', tab: 'roster', student: '' }, true)}
-        >
+        <button className="secondary" onClick={onBack}>
           {t('Students')}
         </button>
       </section>
@@ -721,11 +763,8 @@ function StudentDetails({
   return (
     <section className="panel student-details">
       <div className="student-details-actions">
-        <button
-          className="secondary"
-          onClick={() => setQuery({ view: 'notebook', tab: 'roster', student: '' }, true)}
-        >
-          {t('Students')}
+        <button className="secondary" onClick={onBack}>
+          {ar ? '\u0639\u0648\u062f\u0629' : 'Back'}
         </button>
         {refresh && (
           <button
@@ -740,6 +779,18 @@ function StudentDetails({
         )}
       </div>
       <h1 className="title">{ar ? 'معلومات الطالب' : 'Student information'}</h1>
+      {administrator && (
+        <button
+          className="secondary"
+          onClick={() =>
+            setQuery({ view: 'settings', student: student.studentId, account: '' }, true)
+          }
+        >
+          {ar
+            ? '\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0637\u0627\u0644\u0628'
+            : 'Edit student'}
+        </button>
+      )}
       <dl className="student-detail-fields">
         <div>
           <dt>{ar ? 'الاسم الأول' : 'First name'}</dt>
@@ -855,6 +906,8 @@ function studentLevel(
 }
 
 function AttendanceView({
+  draft,
+  setDraft,
   students,
   allStudents,
   projected,
@@ -865,7 +918,13 @@ function AttendanceView({
   courseName,
   disabled,
   saveError,
+  canCorrect,
+  onOpenStudent,
 }: {
+  draft: Record<string, string>
+  setDraft: (draft: Record<string, string>) => void
+  canCorrect: boolean
+  onOpenStudent: (studentId: string, element: HTMLElement) => void
   disabled: boolean
   saveError: string
   courseSelected: boolean
@@ -878,12 +937,15 @@ function AttendanceView({
   save: Save
 }) {
   const { t, language } = useLanguage()
-  const [draft, setDraft] = useState<Record<string, string>>({})
+  const query = useQueryState()
   const [noteStudent, setNoteStudent] = useState<Student | null>(null)
   const [noteText, setNoteText] = useState('')
   const [noteTags, setNoteTags] = useState('')
+  const [correction, setCorrection] = useState<{ id: string; name: string } | null>(null)
+  const [reason, setReason] = useState('')
   const [savingNote, setSavingNote] = useState(false)
   const [noteSaveFailed, setNoteSaveFailed] = useState(false)
+  const correctionDialog = useRef<HTMLDialogElement>(null)
   const noteDialog = useRef<HTMLDialogElement>(null)
   const current = new Map(
     projected.attendance
@@ -913,7 +975,12 @@ function AttendanceView({
       },
     },
   ])
-  const visible = attendanceTable.rows
+  const visible = query.unmarked
+    ? attendanceTable.rows.filter((student) => !current.has(student.studentId))
+    : attendanceTable.rows
+  const unmarked = visible.filter(
+    (student) => !current.has(student.studentId) && !draft[student.studentId],
+  )
   const rows = (items: Student[]) => (
     <div
       className="role-table-scroll"
@@ -931,9 +998,15 @@ function AttendanceView({
         <TableHeader model={attendanceTable} />
         <tbody>
           {items.map((student) => (
-            <tr key={student.studentId}>
+            <tr key={student.studentId} data-student-id={student.studentId}>
               <td className="record-title" data-label={t('Student')}>
-                <bdi>{student.name}</bdi>
+                <button
+                  type="button"
+                  className="student-name-link"
+                  onClick={(event) => onOpenStudent(student.studentId, event.currentTarget)}
+                >
+                  <bdi>{student.name}</bdi>
+                </button>
               </td>
               <td data-label={language === 'ar' ? 'المستوى' : 'Level'}>
                 <bdi>{level(student) || '—'}</bdi>
@@ -943,7 +1016,7 @@ function AttendanceView({
               >
                 <bdi>
                   {enrollments.find((entry) => entry.studentId === student.studentId)
-                    ?.teacherName || '?'}
+                    ?.teacherName || '\u2014'}
                 </bdi>
               </td>
               <td data-label={language === 'ar' ? 'الحضور' : 'Attendance'}>
@@ -952,9 +1025,19 @@ function AttendanceView({
                     aria-label={`${t('Attendance for')} ${student.name}`}
                     disabled={disabled}
                     value={draft[student.studentId] ?? current.get(student.studentId) ?? ''}
-                    onChange={(event) =>
-                      setDraft({ ...draft, [student.studentId]: event.target.value })
-                    }
+                    onChange={(event) => {
+                      const value = event.target.value
+                      if (value === 'correct') {
+                        const record = projected.attendance.find(
+                          ({ value }) =>
+                            value.date === date && value.studentId === student.studentId,
+                        )
+                        if (record) {
+                          setCorrection({ id: record.event.id, name: student.name })
+                          correctionDialog.current?.showModal()
+                        }
+                      } else setDraft({ ...draft, [student.studentId]: value })
+                    }}
                   >
                     <option value="" disabled={current.has(student.studentId)}>
                       {t('Not marked')}
@@ -964,6 +1047,13 @@ function AttendanceView({
                         {t(status)}
                       </option>
                     ))}
+                    {canCorrect && current.has(student.studentId) && (
+                      <optgroup label={language === 'ar' ? 'إجراءات' : 'Actions'}>
+                        <option value="correct">
+                          {language === 'ar' ? 'تصحيح العلامة…' : 'Correct this mark…'}
+                        </option>
+                      </optgroup>
+                    )}
                   </select>
                   <button
                     type="button"
@@ -990,7 +1080,59 @@ function AttendanceView({
       draft[student.studentId] && draft[student.studentId] !== current.get(student.studentId),
   )
   return (
-    <section className="panel">
+    <section className="panel attendance-session">
+      <dialog
+        ref={correctionDialog}
+        className="grade-dialog attendance-note-dialog rounded-xl"
+        aria-labelledby="correct-attendance-title"
+        onClose={() => {
+          setCorrection(null)
+          setReason('')
+        }}
+      >
+        {correction && (
+          <form
+            className="grid gap-3"
+            onSubmit={async (event) => {
+              event.preventDefault()
+              if (
+                await save([{ kind: 'reversal', targetId: correction.id, reason: reason.trim() }])
+              )
+                correctionDialog.current?.close()
+            }}
+          >
+            <h2 id="correct-attendance-title" className="title">
+              {language === 'ar' ? 'تصحيح العلامة' : 'Correct this mark'} ·{' '}
+              <bdi>{correction.name}</bdi>
+            </h2>
+            <p className="muted">
+              <bdi>{courseName}</bdi> · <time dateTime={date}>{date}</time>
+            </p>
+            <label>
+              {t('Reason')}
+              <input
+                required
+                maxLength={1000}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+              />
+            </label>
+            {saveError && <p role="alert">{saveError}</p>}
+            <div className="flex flex-wrap gap-2">
+              <button className="primary" disabled={disabled || !reason.trim()}>
+                {t('Append correction')}
+              </button>
+              <button
+                className="secondary"
+                type="button"
+                onClick={() => correctionDialog.current?.close()}
+              >
+                {t('Cancel')}
+              </button>
+            </div>
+          </form>
+        )}
+      </dialog>
       <dialog
         ref={noteDialog}
         className="grade-dialog attendance-note-dialog rounded-xl"
@@ -1034,7 +1176,8 @@ function AttendanceView({
           }}
         >
           <h2 id="attendance-note-title" className="title">
-            {t('Note for')} <bdi>{noteStudent?.name}</bdi>
+            {language === 'ar' ? 'ملاحظة الطالب' : 'Student note for'}{' '}
+            <bdi>{noteStudent?.name}</bdi>
           </h2>
           <p id="attendance-note-date" className="muted">
             {t('Session date')}{' '}
@@ -1113,7 +1256,6 @@ function AttendanceView({
         </h2>
       </TableToolbar>
       <div className="mb-6 mt-2 flex flex-wrap items-end justify-between gap-4">
-        <p className="muted">{t('Only marked students are saved.')}</p>
         <label>
           {t('Session date')}
           <input
@@ -1125,6 +1267,17 @@ function AttendanceView({
             }}
           />
         </label>
+        {candidates.length > 0 && (
+          <button
+            className="secondary unmarked-toggle"
+            aria-pressed={query.unmarked}
+            onClick={() => setQuery({ unmarked: query.unmarked ? '' : '1' }, true)}
+          >
+            {language === 'ar'
+              ? '\u0639\u0631\u0636 \u063a\u064a\u0631 \u0627\u0644\u0645\u0633\u062c\u0644\u064a\u0646'
+              : 'Show unmarked'}
+          </button>
+        )}
       </div>
       {!candidates.length ? (
         <Empty
@@ -1136,41 +1289,49 @@ function AttendanceView({
         />
       ) : (
         <>
-          <button
-            className="secondary mb-4"
-            disabled={disabled}
-            onClick={() =>
-              setDraft({
-                ...draft,
-                ...Object.fromEntries(visible.map((student) => [student.studentId, 'present'])),
-              })
-            }
-          >
-            {t('Mark displayed students present')}
-          </button>
+          {unmarked.length > 0 && (
+            <button
+              className="secondary mb-3"
+              disabled={disabled}
+              onClick={() =>
+                setDraft({
+                  ...draft,
+                  ...Object.fromEntries(unmarked.map((student) => [student.studentId, 'present'])),
+                })
+              }
+            >
+              {language === 'ar'
+                ? `\u062a\u0633\u062c\u064a\u0644 ${unmarked.length} \u063a\u064a\u0631 \u0645\u0633\u062c\u0644 \u062d\u0627\u0636\u0631\u064a\u0646`
+                : `Mark ${unmarked.length} unmarked present`}
+            </button>
+          )}
           {rows(visible)}
-          <button
-            className="primary mt-5"
-            disabled={disabled || !changed.length}
-            onClick={async () => {
-              const payloads: Payload[] = changed.map((student) => ({
-                kind: 'attendance',
-                studentId: student.studentId,
-                ...(enrollments.find((entry) => entry.studentId === student.studentId)
-                  ? {
-                      enrollmentId: enrollments.find(
-                        (entry) => entry.studentId === student.studentId,
-                      )?.id,
-                    }
-                  : {}),
-                date,
-                status: statusSchema.parse(draft[student.studentId]),
-              }))
-              if (await save(payloads)) setDraft({})
-            }}
-          >
-            {t('Save attendance')} ({changed.length})
-          </button>
+          {changed.length > 0 && (
+            <div className="attendance-save">
+              <button
+                className="primary"
+                disabled={disabled}
+                onClick={async () => {
+                  const payloads: Payload[] = changed.map((student) => ({
+                    kind: 'attendance',
+                    studentId: student.studentId,
+                    ...(enrollments.find((entry) => entry.studentId === student.studentId)
+                      ? {
+                          enrollmentId: enrollments.find(
+                            (entry) => entry.studentId === student.studentId,
+                          )?.id,
+                        }
+                      : {}),
+                    date,
+                    status: statusSchema.parse(draft[student.studentId]),
+                  }))
+                  if (await save(payloads)) setDraft({})
+                }}
+              >
+                {t('Save attendance')} ({changed.length})
+              </button>
+            </div>
+          )}
         </>
       )}
     </section>
@@ -1186,7 +1347,9 @@ function RosterView({
   courses,
   allEnrollments,
   attendance,
+  onOpenStudent,
 }: {
+  onOpenStudent: (studentId: string, element: HTMLElement) => void
   students: import('../shared/neon').NeonRosterStudent[]
   save: Save
   assigned: boolean
@@ -1314,15 +1477,19 @@ function RosterView({
                     className="roster-student-name"
                     data-label={ar ? 'الاسم الأول' : 'First name'}
                   >
-                    <bdi className="roster-first-name">{student.firstName ?? student.name}</bdi>
+                    <button
+                      type="button"
+                      className="roster-first-name student-name-link"
+                      onClick={(event) => onOpenStudent(student.studentId, event.currentTarget)}
+                    >
+                      <bdi>{student.firstName ?? student.name}</bdi>
+                    </button>
                     <button
                       type="button"
                       className="icon-button roster-mobile-open"
                       aria-label={`${t('Open student')}: ${student.name}`}
                       title={t('Open student')}
-                      onClick={() =>
-                        setQuery({ view: 'student', student: student.studentId }, true)
-                      }
+                      onClick={(event) => onOpenStudent(student.studentId, event.currentTarget)}
                     >
                       <bdi>{student.name}</bdi>
                       <ChevronRight
@@ -1431,9 +1598,7 @@ function RosterView({
                       className="icon-button"
                       aria-label={t('Open student')}
                       title={t('Open student')}
-                      onClick={() =>
-                        setQuery({ view: 'student', student: student.studentId }, true)
-                      }
+                      onClick={(event) => onOpenStudent(student.studentId, event.currentTarget)}
                     >
                       <UserRound size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
                     </button>

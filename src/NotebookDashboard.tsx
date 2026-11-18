@@ -14,7 +14,7 @@ export function NotebookDashboard({
   projected: { students: Student[]; attendance: ProjectedAttendance }
   date: string
   canAdd: boolean
-  onAttendance: () => void
+  onAttendance: (unmarked?: boolean) => void
   onAdd: () => void
 }) {
   const { language, t } = useLanguage()
@@ -44,8 +44,17 @@ export function NotebookDashboard({
           </p>
         </div>
         <div className="dashboard-buttons">
-          <button className="primary dashboard-primary" onClick={onAttendance}>
-            {ar ? 'تسجيل الحضور' : 'Take attendance'}
+          <button
+            className="primary dashboard-primary"
+            onClick={() => onAttendance(today.length > 0 && today.length < ids.size)}
+          >
+            {today.length > 0 && today.length < ids.size
+              ? ar
+                ? `\u0645\u062a\u0627\u0628\u0639\u0629 \u0627\u0644\u062d\u0636\u0648\u0631 (${ids.size - today.length})`
+                : `Continue attendance · ${ids.size - today.length} unmarked`
+              : ar
+                ? '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062d\u0636\u0648\u0631'
+                : 'Take attendance'}
           </button>
           {canAdd && (
             <button className="secondary" onClick={onAdd}>
