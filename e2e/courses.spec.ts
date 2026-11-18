@@ -265,7 +265,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     if (!panel || !content) throw new Error('Missing course list or workspace content')
     expect(panel.y - content.y).toBeGreaterThanOrEqual(32)
   }
-  await page.goto('/?page=app')
+  await page.goto('/?page=app&tab=attendance')
   await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseB)
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption('')
@@ -354,9 +354,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(attendanceRow.getByRole('cell').nth(1)).toHaveText('Advanced')
   await expect(attendanceRow.getByRole('cell').first()).toHaveText('Synthetic Student')
   await expectCompactLevel(page.getByRole('region', { name: 'Attendance list' }))
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
-  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseA)
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseA)
   await expect(attendanceRow.getByRole('cell').nth(1)).toHaveText('—')
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await clickAccountAction(page, 'العربية')
@@ -942,9 +941,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     fullPage: true,
   })
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseA)
-  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   const date = await page.getByLabel('Session date').inputValue()
   events.push({
     id: '50000000-0000-4000-8000-000000000001',
@@ -974,9 +971,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await clickRecordAction(legacyRecord, 'Record details')
   await expect(legacyRecord.locator('pre')).toBeHidden()
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseB)
-  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(
     page
       .getByRole('region', { name: 'Attendance list' })
@@ -988,9 +983,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByLabel('Attendance for Synthetic Student').selectOption('absent')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await expect.poll(() => events.length).toBe(2)
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseA)
-  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveValue('present')
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
   const courseRow = page.getByRole('row').filter({ hasText: 'Course A' })
@@ -1212,9 +1205,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await clickRecordAction(courseRow, 'Reopen course')
   await expect(courseRow).toContainText('Open')
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseA)
-  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await clickRecordAction(courseRow, 'Manage students')

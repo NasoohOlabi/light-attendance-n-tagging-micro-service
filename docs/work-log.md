@@ -1765,3 +1765,11 @@ Reproduced the button on the previous Railway deployment in Arabic at 390px and 
 **Main integration at 06:56 Asia/Damascus** Integrated `a58608d`, preserving the roster hiding and restoration checks alongside the bilingual navigation checks. The full release gate passed again with 119 browser cases and 34 local tests, with the same skips.
 
 **Main integration at 07:05 Asia/Damascus** Integrated `c1a90be`. Preserved the shared table toolbar checks in both languages and the narrower dark-mode selector for the role label. The full release gate passed with 120 browser cases and 34 local tests. Two phone-only cases skipped on desktop and four optional database suites skipped.
+
+## 2026-11-18 07:29 Asia/Damascus (UTC+03:00) - Remove the homepage course picker
+
+The Arabic phone screenshot highlighted the Default course picker on the dashboard. Moved the picker to Attendance so Teachers and Administrators can still change or clear their saved choice. The dashboard still opens on the saved course. Administrators can also use Make current from Courses.
+
+Reproduced the homepage picker on Railway `f588d77` with synthetic accounts on desktop and emulated phones. `bun run verify:release` passed with 120 browser cases, 34 local tests, and the build, formatting and security gates. Two phone-only cases skipped on desktop and four optional database suites skipped. The focused homepage and teacher sign-in checks passed in both browser projects. Browser checks use synthetic data and do not exercise real sign-in or physical devices. The branch review found no issues.
+
+Railway's trigger targets `main` with Wait for CI enabled. The PR delivery receipt records the exact-main deployment, health and shipped UI verification.

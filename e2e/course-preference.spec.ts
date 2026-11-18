@@ -68,21 +68,22 @@ test('remembers a validated course per account and keeps the header compact', as
       },
     })
   })
-  await page.setViewportSize({ width: 320, height: 800 })
   await page.goto('/?page=app')
   const defaultPicker = page.getByRole('combobox', { name: 'Default course', exact: true })
   const rosterPicker = page.getByRole('combobox', { name: 'Course', exact: true })
   const label = page.locator('.workspace-course-name')
+  await expect(page.getByRole('heading', { name: 'Attendance & notes' })).toBeVisible()
+  await expect(defaultPicker).toHaveCount(0)
+  await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(defaultPicker).toHaveValue('')
   await expect(defaultPicker.locator('option')).toHaveCount(5)
-  await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByText('Choose an open course to take attendance.')).toBeVisible()
   await page.getByRole('button', { name: 'Go to courses', exact: true }).click()
   const course = page.getByRole('row').filter({ hasText: branded })
   await clickRecordAction(course, 'Make current')
   await expect(course.getByText('Current course', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
-  await expect(defaultPicker).toHaveValue(first)
+  await expect(defaultPicker).toHaveCount(0)
   await expect(label).toHaveText('\u0665')
   await expect(label).toHaveAttribute('aria-label', branded)
   await page.locator('.profile-trigger').click()
@@ -105,7 +106,7 @@ test('remembers a validated course per account and keeps the header compact', as
   await expect(rosterPicker).toHaveValue('')
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(rosterPicker).toHaveCount(0)
-  await expect(defaultPicker).toHaveCount(0)
+  await expect(defaultPicker).toHaveValue(first)
   await expect(label).toHaveText('\u0665')
   await page.getByRole('button', { name: 'Summary', exact: true }).click()
   await expect(rosterPicker).toHaveCount(0)
@@ -115,7 +116,7 @@ test('remembers a validated course per account and keeps the header compact', as
   await clickRecordAction(page.getByRole('row').filter({ hasText: longName }), 'History')
   await expect(label).toHaveText(longName)
   await page.goto('/?page=app')
-  await expect(defaultPicker).toHaveValue(first)
+  await expect(label).toHaveText('\u0665')
   await page.goto(`/?page=app&tab=attendance&course=${second}`)
   await expect(label).toHaveText(longName)
   await page.goto('/?page=app&tab=roster')
@@ -123,12 +124,15 @@ test('remembers a validated course per account and keeps the header compact', as
   await page.goto('/?page=app&tab=roster&course=all')
   await expect(rosterPicker).toHaveValue('')
   await page.goto('/?page=app')
+  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await defaultPicker.selectOption(second)
   await page.goto('/?page=app')
+  await expect(label).toHaveText(longName)
+  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(defaultPicker).toHaveValue(second)
   await defaultPicker.selectOption('')
   await page.goto('/?page=app')
-  await expect(defaultPicker).toHaveValue('')
+  await expect(page.getByRole('button', { name: 'Take attendance' })).toBeVisible()
   await expect(label).toHaveCount(0)
   await page.evaluate(
     ({ account, missing }) =>
@@ -136,11 +140,16 @@ test('remembers a validated course per account and keeps the header compact', as
     { account, missing },
   )
   await page.goto('/?page=app')
+  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(defaultPicker).toHaveValue('')
   await defaultPicker.selectOption(first)
   await page.evaluate(() => localStorage.setItem('halaqa-language', 'ar'))
+  await page.setViewportSize({ width: 320, height: 800 })
   await page.goto('/?page=app')
   await expect(label).toHaveText('\u0665')
+  await expect(page.getByRole('combobox', { name: 'الدورة الافتراضية', exact: true })).toHaveCount(
+    0,
+  )
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   )
@@ -148,7 +157,8 @@ test('remembers a validated course per account and keeps the header compact', as
   await page.screenshot({
     path: `.artifacts/verification/default-course-ar-${test.info().project.name}.png`,
   })
-  await page.locator('.workspace-main select').first().selectOption(third)
+  await page.getByRole('button', { name: 'الحضور', exact: true }).click()
+  await page.getByRole('combobox', { name: 'الدورة الافتراضية', exact: true }).selectOption(third)
   await expect(label).toHaveText('5')
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto(`/?page=app&tab=attendance&course=${fourth}`)
@@ -174,13 +184,13 @@ test('remembers a validated course per account and keeps the header compact', as
   }
   await page.evaluate(() => localStorage.setItem('halaqa-language', 'en'))
   userId = otherAccount
-  await page.goto('/?page=app')
+  await page.goto('/?page=app&tab=attendance')
   await expect(defaultPicker).toHaveValue('')
   await page.evaluate(
     ({ otherAccount }) => localStorage.setItem(`halaqa-course:${otherAccount}`, '{invalid json'),
     { otherAccount },
   )
-  await page.goto('/?page=app')
+  await page.goto('/?page=app&tab=attendance')
   await expect(defaultPicker).toHaveValue('')
   await page.addInitScript(() => {
     const getItem = Storage.prototype.getItem
@@ -196,10 +206,10 @@ test('remembers a validated course per account and keeps the header compact', as
       return setItem.call(this, key, value)
     }
   })
-  await page.goto('/?page=app')
+  await page.goto('/?page=app&tab=attendance')
   await defaultPicker.selectOption(first)
-  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await expect(label).toHaveText('\u0665')
-  await page.goto('/?page=app')
+  await page.goto('/?page=app&tab=attendance')
   await expect(defaultPicker).toHaveValue('')
 })
