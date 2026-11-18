@@ -1828,8 +1828,16 @@ GitHub Verify caught the desktop account chooser test starting a refresh while t
 
 Integrated the attendance follow-up change from main at `e5fe629`. Preserved both work log histories and checked that both branches' stylesheet changes survived. The full release check passed with 42 unit and integration tests and 134 browser cases. Two optional database tests and two desktop instances of phone-only cases skipped.
 
+## 2026-11-18 11:58 Asia/Damascus (UTC+03:00) - Show course row icons when they fit
+
+The owner asked to show the course actions directly when there is room. At a course-list width of 48rem or more, the Actions column shows up to six icons in one row with localized names and tooltips. Narrower lists use the three-dot menu. Both layouts use the same actions and availability rules.
+
+`bun run verify` passed with 38 tests and six optional database skips. Formatting, file and history scans, and the dependency audit passed. The affected synthetic course scenario passed on desktop and on an emulated phone, including both languages, 320/390/430px widths, a constrained list on a wide viewport, and course action destinations. The full local browser run hit Windows memory and Chromium launch errors. GitHub Verify gates the merge, and the PR carries the production deployment receipt.
+
 ## 2026-11-18 11:58 Asia/Damascus (UTC+03:00) - Show course save confirmation as a toast
 
 The owner reported that the Arabic save confirmation took up space above Manage students. Courses now announces successful course, membership and grade saves in a fixed lower-corner toast that dismisses after four seconds. On compact screens it sits above navigation. Errors remain visible in the page.
 
-The course browser scenario passed in English and Arabic on desktop and emulated mobile, including the 320px toast position, a stable heading, auto-dismissal, and failure followed by successful retry. The first full run reached 133 passing browser cases and two expected skips, then reported a Chromium capture failure in the unrelated desktop role-administration scenario. That scenario passed in isolation. Local checks use synthetic data. The PR records final CI, Railway deployment and verification of the deployed interface.
+The course browser scenario passed in English and Arabic on desktop and emulated mobile, including the 320px toast position, a stable heading, auto-dismissal, and failure followed by successful retry. One Windows Chromium capture error in an unrelated role-administration test cleared on retry. The full release gate then passed with 38 unit and 134 browser tests, with six optional database tests and two phone-only cases on desktop skipped. The local browser checks use synthetic data.
+
+At 12:08 Asia/Damascus, integrated the responsive course row actions from main at `8ac18fb`. The combined course browser scenario passed on desktop and emulated mobile. The PR records final CI, Railway deployment and verification of the deployed interface.

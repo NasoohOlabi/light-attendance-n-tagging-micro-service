@@ -3,7 +3,18 @@ import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
 import { TableHeader, TableToolbar, useDataTable } from './DataTable'
 import { useEffect, useRef, useState } from 'react'
-import { Check, Download, Save } from 'lucide-react'
+import {
+  Check,
+  ClipboardList,
+  Download,
+  History,
+  Lock,
+  LockOpen,
+  Pencil,
+  Save,
+  Star,
+  UsersRound,
+} from 'lucide-react'
 import {
   accountProfileLabel,
   neonAdminBoardSchema,
@@ -198,7 +209,7 @@ export function Courses({
           {!courses.length && <p>{ar ? 'لا توجد دورات بعد.' : 'No courses yet.'}</p>}
           {courses.length > 0 && (
             <div
-              className="role-table-scroll"
+              className="role-table-scroll course-list-scroll"
               role="region"
               aria-label={ar ? 'قائمة الدورات' : 'Course list'}
               tabIndex={0}
@@ -223,26 +234,31 @@ export function Courses({
                         <RowActions
                           name={item.name}
                           ar={ar}
+                          inlineIcons
                           actions={[
                             ...(item.id === defaultCourse
                               ? []
                               : [
                                   {
                                     label: ar ? 'تعيين كدورة حالية' : 'Make current',
+                                    icon: Star,
                                     disabled: !item.open,
                                     onClick: () => chooseDefault(item.id),
                                   },
                                 ]),
                             {
                               label: ar ? 'إدارة الطلاب' : 'Manage students',
+                              icon: UsersRound,
                               onClick: () => go('students', item.id),
                             },
                             {
                               label: ar ? 'الدرجات' : 'Grades',
+                              icon: ClipboardList,
                               onClick: () => go('grades', item.id),
                             },
                             {
                               label: ar ? 'السجل' : 'History',
+                              icon: History,
                               onClick: () =>
                                 setQuery(
                                   {
@@ -257,7 +273,11 @@ export function Courses({
                                   true,
                                 ),
                             },
-                            { label: ar ? 'تعديل' : 'Edit', onClick: () => go('edit', item.id) },
+                            {
+                              label: ar ? 'تعديل' : 'Edit',
+                              icon: Pencil,
+                              onClick: () => go('edit', item.id),
+                            },
                             {
                               label: item.open
                                 ? ar
@@ -266,6 +286,7 @@ export function Courses({
                                 : ar
                                   ? 'إعادة فتح الدورة'
                                   : 'Reopen course',
+                              icon: item.open ? Lock : LockOpen,
                               disabled: busy,
                               onClick: () =>
                                 void submit('/api/admin/courses/status', {
