@@ -38,11 +38,7 @@ export function StudentAttendance({
       .catch((cause: unknown) => {
         if (!cancelled) {
           setData(null)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : 'The notebook request failed. Please try again.',
-          )
+          setError(cause instanceof Error ? cause.message : 'The request failed. Please try again.')
         }
       })
       .finally(() => {

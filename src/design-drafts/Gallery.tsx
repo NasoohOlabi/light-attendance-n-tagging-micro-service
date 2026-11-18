@@ -82,9 +82,7 @@ export function DraftGallery({ initialDesign }: { initialDesign: Design }) {
               English
             </button>
           </div>
-          <a href={window.location.pathname}>
-            {arabic ? 'العودة إلى الدفتر الحالي' : 'Return to current notebook'}
-          </a>
+          <a href={window.location.pathname}>{arabic ? 'العودة إلى وارتق' : 'Return to Wartaq'}</a>
         </div>
       </header>
       <div id="draft-content" tabIndex={-1}>

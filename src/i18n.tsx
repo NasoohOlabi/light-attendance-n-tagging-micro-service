@@ -6,21 +6,17 @@ const arabic = {
     'حسابك ينتظر الموافقة أو لم يعد لديه صلاحية. تواصل مع المسؤول.',
   'Explore with sample students': 'استكشف باستخدام طلاب تجريبيين',
   'Explore assigned teacher sample': 'استكشف نموذج المعلم المعيّن',
-  'Your halaqa, one shared notebook.': 'حلقتك، دفتر مشترك واحد.',
-  'Record attendance. Leave a note. Keep the next teacher in the loop.':
-    'سجّل الحضور واترك ملاحظة ليبقى المعلم التالي على اطلاع.',
   'الحضور والملاحظات · Arabic names, notes and tags are supported.':
     'الحضور والملاحظات · الأسماء والملاحظات والوسوم العربية مدعومة.',
-  'Halaqa notebook': 'دفتر الحلقة',
-  'Attendance & notes · الحضور والملاحظات': 'الحضور والملاحظات',
+  'Attendance & notes': 'الحضور والملاحظات',
   'Demo teacher': 'معلم تجريبي',
   'Sign out': 'تسجيل الخروج',
   'Close session': 'إغلاق الجلسة',
-  'Assigned teacher sample notebook.': 'دفتر تجريبي للمعلم المعيّن.',
-  'Sample notebook.': 'دفتر تجريبي.',
+  'Assigned teacher sample.': 'نموذج تجريبي للمعلم المعيّن.',
+  'Sample data.': 'بيانات تجريبية.',
   'Changes stay in memory and disappear when you leave. No server requests are made.':
     'تبقى التغييرات في الذاكرة وتختفي عند المغادرة. لا تُرسل طلبات إلى الخادم.',
-  Notebook: 'الدفتر',
+  'Main navigation': 'التنقل الرئيسي',
   Attendance: 'الحضور',
   Notes: 'الملاحظات',
   Students: 'الطلاب',
@@ -36,7 +32,7 @@ const arabic = {
   Refresh: 'تحديث',
   'Retry pending batch': 'إعادة محاولة الدفعة المعلّقة',
   'Discard pending retry': 'إلغاء إعادة المحاولة المعلّقة',
-  'Loading the shared notebook…': 'جارٍ تحميل الدفتر المشترك…',
+  'Loading records…': 'جارٍ تحميل السجلات…',
   'Who is here today?': 'من حاضر اليوم؟',
   'Only marked students are saved.': 'يُحفظ الحضور للطلاب الذين حُدّدت حالتهم فقط.',
   'Session date': 'تاريخ الجلسة',
@@ -92,9 +88,9 @@ const arabic = {
   'Could not check your session. Please try again.': 'تعذّر التحقق من جلستك. حاول مجدداً.',
   'Try again': 'حاول مجدداً',
   'Loading your session…': 'جارٍ تحميل جلستك…',
-  'Loading your notebook…': 'جارٍ تحميل دفترك…',
-  'Your account has write-only access. The notebook requires read access; contact your manager.':
-    'حسابك يسمح بالكتابة فقط. يتطلب الدفتر صلاحية القراءة؛ تواصل مع المسؤول.',
+  'Checking your access…': 'جارٍ التحقق من صلاحياتك…',
+  'Your account has write-only access. Contact your manager for permission to view records.':
+    'حسابك يسمح بالكتابة فقط. تواصل مع المسؤول للحصول على صلاحية عرض السجلات.',
   'Create an account': 'إنشاء حساب',
   Email: 'البريد الإلكتروني',
   Password: 'كلمة المرور',
@@ -102,8 +98,8 @@ const arabic = {
   'Create account': 'إنشاء حساب',
   'Update password': 'تحديث كلمة المرور',
   'Sign in': 'تسجيل الدخول',
-  'Your manager must approve your account before you can open the notebook.':
-    'يجب أن يوافق المسؤول على حسابك قبل فتح الدفتر.',
+  'Your manager must approve your account before you can use the app.':
+    'يجب أن يوافق المسؤول على حسابك قبل استخدام التطبيق.',
   'Password updated. Please sign in.': 'تم تحديث كلمة المرور. سجّل الدخول.',
   'Invalid email or password. Check your details and try again.':
     'البريد الإلكتروني أو كلمة المرور غير صحيحين. تحقق من بياناتك وحاول مجدداً.',
@@ -116,8 +112,8 @@ const arabic = {
   'Your account is awaiting teacher approval. Contact your manager.':
     'حسابك بانتظار موافقة المسؤول. تواصل معه.',
   'Your session has expired. Please sign in again.': 'انتهت جلستك. سجّل الدخول مجدداً.',
-  'The notebook request failed. Please try again.': 'فشل طلب الدفتر. حاول مجدداً.',
-  'Notebook configuration is unavailable.': 'إعدادات الدفتر غير متاحة.',
+  'The request failed. Please try again.': 'تعذّر إكمال الطلب. حاول مجدداً.',
+  'App configuration is unavailable.': 'إعدادات التطبيق غير متاحة.',
   'Your session changed. Please sign in again.': 'تغيرت جلستك. سجّل الدخول مجدداً.',
   'This record is outside your assigned active students.':
     'هذا السجل خارج قائمة طلابك النشطين المعيّنين.',
@@ -141,8 +137,8 @@ const arabic = {
     'تقوم علامة تبويب أخرى بالحفظ. انتظر انتهاءها قبل الإلغاء.',
   'The pending batch changed in another tab. Reload before discarding.':
     'تغيرت الدفعة المعلّقة في علامة تبويب أخرى. أعد التحميل قبل الإلغاء.',
-  'Stop retrying this batch? It may already exist on the server. Refresh and check the notebook before entering it again.':
-    'هل تريد إيقاف إعادة محاولة هذه الدفعة؟ قد تكون موجودة في الخادم. حدّث الدفتر وتحقق منه قبل إدخالها مجدداً.',
+  'Stop retrying this batch? It may already exist on the server. Refresh and check the saved records before entering it again.':
+    'هل تريد إيقاف إعادة محاولة هذه الدفعة؟ قد تكون موجودة في الخادم. حدّث الصفحة وتحقق من السجلات المحفوظة قبل إدخالها مجدداً.',
   'The save may already have reached the server. Retry the same pending batch to avoid counting it twice.':
     'قد يكون الحفظ وصل إلى الجدول بالفعل. أعد محاولة الدفعة نفسها لتجنب احتسابها مرتين.',
   'Skip to main content': 'انتقل إلى المحتوى الرئيسي',

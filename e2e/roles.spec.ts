@@ -371,17 +371,23 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await expect(page.getByRole('heading', { name: 'Students', level: 1 })).toBeVisible()
   await expect(page.locator('form.role-editor').getByLabel('First name')).toBeVisible()
   await expect(page.getByRole('table')).toHaveCount(0)
+  const navigation = page.getByRole('navigation', { name: 'Main navigation' })
+  await expect(navigation.getByRole('button', { name: 'Dashboard' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open notebook', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Sort options' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Filter options' })).toHaveCount(0)
   await clickAccountAction(page, 'العربية')
+  await expect(page.getByRole('button', { name: 'فتح الدفتر', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'حفظ الطالب' })).toBeVisible()
   await expect(page.getByRole('table')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'خيارات الفرز' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'خيارات التصفية' })).toHaveCount(0)
-  await clickAccountAction(page, 'English')
   await expect(
-    page.getByRole('navigation', { name: 'Notebook' }).getByRole('button', { name: 'Dashboard' }),
+    page
+      .getByRole('navigation', { name: 'التنقل الرئيسي' })
+      .getByRole('button', { name: 'الرئيسية' }),
   ).toBeVisible()
+  await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Accounts' })).toHaveCount(0)
   await expect(
@@ -414,7 +420,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   expect(posts[0].path).toBe('/api/admin/students')
   expect(posts[0].body).toMatchObject({ teacherId: null })
   posts.length = 0
-  await page.getByRole('button', { name: 'Open notebook', exact: true }).click()
+  await navigation.getByRole('button', { name: 'Dashboard' }).click()
   await page.reload()
   await expect(page.getByRole('button', { name: 'Take attendance' })).toBeVisible()
   await page.goto(`${origin}/?page=app&view=invalid`)
@@ -424,7 +430,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await clickAccountAction(page, 'Settings')
   await expect(page).toHaveURL(/view=settings/)
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
-  const navigation = page.getByRole('navigation', { name: 'Notebook' })
+  await expect(page.getByRole('button', { name: 'Open notebook', exact: true })).toHaveCount(0)
   await navigation.getByRole('button', { name: 'Dashboard' }).click()
   await expect(page.getByRole('button', { name: 'Take attendance' })).toBeVisible()
   await page.goBack()
@@ -435,8 +441,8 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await navigation.getByRole('button', { name: 'Courses' }).click()
   await expect(page).toHaveURL(/view=courses/)
   await page.goBack()
-  await page.getByRole('button', { name: 'Open notebook', exact: true }).click()
-  await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
+  await navigation.getByRole('button', { name: 'Students' }).click()
+  await expect(page.getByRole('heading', { name: 'Your students', exact: true })).toBeVisible()
   await page.goto(`${origin}/?page=app&view=settings&account=${teacherId}`)
   await expect(page.getByText('teacher@example.test')).toBeVisible()
   await expect(page.getByLabel('Role')).toBeVisible()
@@ -749,12 +755,13 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     await page.setViewportSize({ width, height: 844 })
     await compactHeader(page, '.role-header')
   }
+  await expect(page.getByRole('button', { name: 'فتح الدفتر', exact: true })).toHaveCount(0)
   await page.screenshot({
     path: '.artifacts/verification/compact-role-header-ar.png',
     fullPage: true,
   })
   await clickAccountAction(page, 'English')
-  await page.getByRole('button', { name: 'Open notebook', exact: true }).click()
+  await navigation.getByRole('button', { name: 'Dashboard' }).click()
   await expect(page.locator('.workspace')).toBeVisible()
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await openProfile(page)

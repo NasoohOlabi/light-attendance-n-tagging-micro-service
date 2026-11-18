@@ -1753,3 +1753,15 @@ The previous Railway deployment reproduced the table in English on desktop and A
 `bun run verify:release` passed with 119 browser cases, 34 local tests and all build, formatting and security gates. One phone-only case skipped on desktop, and four optional database tests skipped.
 
 **Table-toolbar integration at 06:55 Asia/Damascus** GitHub Verify passed on `fe56694` before main advanced to `a58608d`. Resolved the work-log conflict and tied the Administrator toolbar to the same visibility condition as the student table. Desktop and phone tests confirmed Sort and Filter stay hidden during creation and return with the list after save. The combined `bun run verify:release` passed with 120 browser cases and 34 local tests. Four optional database tests skipped.
+
+## 2026-11-18 06:51 Asia/Damascus (UTC+03:00) - Remove notebook wording from the interface
+
+The phone screenshot showed a confusing **فتح الدفتر** button on Add student. Removed it from Add student and Settings. Dashboard, Courses, Attendance and Students are available directly in the main navigation. Arabic and English page titles, sign-in, samples, loading messages, errors and retry guidance now use the names of the relevant actions and records. Existing links and API clients retain compatibility.
+
+Reproduced the button on the previous Railway deployment in Arabic at 390px and English at 1280px. The Administrator browser cases verify the button is gone, forms and refresh remain available, and the main navigation opens each destination. Railway's production trigger reports `main` with Wait for CI enabled. Browser checks use synthetic accounts and records and emulated phones. The PR records the deployed revision and shipped UI check.
+
+`bun run verify:release` passed with 119 browser cases and 34 local tests, including the build, artifact, formatting and security gates. The phone-only roster case skipped on desktop and four optional database suites skipped.
+
+**Main integration at 06:56 Asia/Damascus** Integrated `a58608d`, preserving the roster hiding and restoration checks alongside the bilingual navigation checks. The full release gate passed again with 119 browser cases and 34 local tests, with the same skips.
+
+**Main integration at 07:05 Asia/Damascus** Integrated `c1a90be`. Preserved the shared table toolbar checks in both languages and the narrower dark-mode selector for the role label. The full release gate passed with 120 browser cases and 34 local tests. Two phone-only cases skipped on desktop and four optional database suites skipped.
