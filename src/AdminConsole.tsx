@@ -1,3 +1,4 @@
+import { InviteAccounts } from './InviteAccounts'
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
 import { PhoneNumber } from './PhoneNumber'
@@ -44,6 +45,7 @@ export function AdminConsole({
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [inviting, setInviting] = useState(false)
   const [editing, setEditing] = useState<Student | null>(null)
   const [creating, setCreating] = useState(initialCreateStudent)
   const [revision, setRevision] = useState(0)
@@ -174,6 +176,7 @@ export function AdminConsole({
                   aria-pressed={section === 'students'}
                   onClick={() => {
                     setQuery({ account: '' })
+                    setInviting(false)
                     setSection('students')
                   }}
                 >
@@ -184,7 +187,16 @@ export function AdminConsole({
             {section === 'accounts' && !initialCreateStudent && (
               <section className="panel role-section">
                 <h2 className="title">{ar ? 'الحسابات' : 'Accounts'}</h2>
-                {query.account ? (
+                {inviting ? (
+                  <InviteAccounts
+                    userId={userId}
+                    ar={ar}
+                    done={() => {
+                      setInviting(false)
+                      setRevision((n) => n + 1)
+                    }}
+                  />
+                ) : query.account ? (
                   <>
                     <button className="secondary" onClick={() => setQuery({ account: '' }, true)}>
                       {ar ? 'العودة إلى الحسابات' : 'Back to accounts'}
@@ -198,7 +210,7 @@ export function AdminConsole({
                         return (
                           <div className="role-account">
                             <strong dir="auto">{accountProfileLabel(account)}</strong>
-                            <p dir="ltr">{account.email}</p>
+                            <p dir="ltr">{account.username || account.email}</p>
                           </div>
                         )
                       return (
@@ -216,6 +228,9 @@ export function AdminConsole({
                   </>
                 ) : (
                   <>
+                    <button className="primary mb-4" onClick={() => setInviting(true)}>
+                      {ar ? 'إنشاء حسابات' : 'Create accounts'}
+                    </button>
                     {board.accounts.filter((account) => account.authUserId !== userId).length ===
                       0 && <p>{ar ? 'لا توجد حسابات أخرى.' : 'No other accounts.'}</p>}
                     {board.accounts
@@ -388,7 +403,7 @@ function AccountForm({
       <summary>
         <span>
           <strong dir="auto">{account.name}</strong>
-          <span dir="ltr">{account.email}</span>
+          <span dir="ltr">{account.username || account.email}</span>
           <span>
             {account.role === 'administrator'
               ? ar

@@ -2,7 +2,7 @@
 import { Pool } from 'pg'
 import { z } from 'zod'
 import { createHandler } from '../functions/notebook-service'
-import { validProfileRequest, validSignupRequest } from './profile'
+import { readBoundedBody, validProfileRequest, validSignupRequest } from './profile'
 
 const config = z
   .object({
@@ -80,7 +80,7 @@ export async function handle(request: Request): Promise<Response> {
   if (url.pathname === '/health' && request.method === 'GET') {
     try {
       await pool.query(
-        'SELECT course_enrollments.teacher_id, course_enrollments.active, course_enrollments.handbook_received, course_enrollments.notes, course_enrollments.grade_decisions, students.whatsapp, students.location, students.birth_year, courses.open, courses.attendance_minimum, courses.practical_minimum, courses.theory_minimum FROM app_accounts, teachers, students, courses, course_enrollments, events, neon_auth."user", neon_auth.account, neon_auth.session, neon_auth.verification LIMIT 0',
+        'SELECT course_enrollments.teacher_id, course_enrollments.active, course_enrollments.handbook_received, course_enrollments.notes, course_enrollments.grade_decisions, app_accounts.invitation_request_id, app_accounts.invitation_username, app_accounts.invitation_phone, app_accounts.invitation_birth_date, app_accounts.invitation_requires_setup, students.whatsapp, students.location, students.birth_year, courses.open, courses.attendance_minimum, courses.practical_minimum, courses.theory_minimum FROM app_accounts, teachers, students, courses, course_enrollments, events, neon_auth."user", neon_auth.account, neon_auth.session, neon_auth.verification LIMIT 0',
       )
       const assignment = await pool.query(
         "SELECT is_nullable FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name = 'teacher_id'",
@@ -108,6 +108,41 @@ export async function handle(request: Request): Promise<Response> {
       if (body === null) return Response.json({ error: 'Invalid account data' }, { status: 400 })
       request = new Request(request.url, { method: request.method, headers: request.headers, body })
     }
+    if (
+      ['/api/auth/change-password', '/api/auth/set-password', '/api/auth/change-email'].includes(
+        authPath,
+      )
+    ) {
+      const session = await auth.api.getSession({ headers: request.headers })
+      if (session?.user.id) {
+        const invited = await pool.query(
+          'SELECT 1 FROM app_accounts WHERE auth_user_id = $1 AND invitation_username IS NOT NULL',
+          [session.user.id],
+        )
+        if (invited.rowCount) return Response.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
+    let usernameLogin: { username: string; password: string } | undefined
+    if (url.pathname === '/api/auth/sign-in/username' && request.method === 'POST') {
+      let input: { username: string; password: string }
+      try {
+        const body = await readBoundedBody(request, 8192)
+        if (body === null) throw new Error('Invalid request')
+        input = z
+          .strictObject({
+            username: z
+              .string()
+              .trim()
+              .toLowerCase()
+              .regex(/^[a-z0-9._-]{3,32}$/),
+            password: z.string().min(1).max(128),
+          })
+          .parse(JSON.parse(body))
+      } catch {
+        return Response.json({ error: 'Invalid credentials' }, { status: 400 })
+      }
+      usernameLogin = input
+    }
     let response: Response
     if (
       url.pathname.startsWith('/api/auth/') &&
@@ -119,6 +154,50 @@ export async function handle(request: Request): Promise<Response> {
       try {
         await db.query('BEGIN')
         await db.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
+        if (usernameLogin) {
+          const found = await db.query(
+            `SELECT u.email FROM app_accounts a JOIN neon_auth."user" u ON u.id::text = a.auth_user_id
+            WHERE a.invitation_username = $1 AND a.active AND (a.expires_at IS NULL OR a.expires_at > now())`,
+            [usernameLogin.username],
+          )
+          const email = z.string().safeParse(found.rows[0]?.email)
+          if (!email.success) {
+            await db.query('COMMIT')
+            return Response.json(
+              { error: 'Invalid credentials' },
+              { status: 401, headers: { 'Cache-Control': 'no-store' } },
+            )
+          }
+          request = new Request(new URL('/api/auth/sign-in/email', request.url), {
+            method: 'POST',
+            headers: request.headers,
+            body: JSON.stringify({ email: email.data, password: usernameLogin.password }),
+          })
+        } else if (authPath === '/api/auth/sign-in/email') {
+          const body = await readBoundedBody(request, 8192)
+          let email = ''
+          try {
+            email = request.headers
+              .get('content-type')
+              ?.startsWith('application/x-www-form-urlencoded')
+              ? (new URLSearchParams(body ?? '').get('email') ?? '')
+              : z.object({ email: z.string() }).parse(JSON.parse(body ?? '')).email
+          } catch {
+            /* Better Auth validates the request */
+          }
+          if (email.toLowerCase().endsWith('@invitation.invalid')) {
+            await db.query('COMMIT')
+            return Response.json(
+              { error: 'Invalid credentials' },
+              { status: 401, headers: { 'Cache-Control': 'no-store' } },
+            )
+          }
+          request = new Request(request.url, {
+            method: request.method,
+            headers: request.headers,
+            body,
+          })
+        }
         response = await auth.handler(request)
         await db.query('COMMIT')
       } catch (error) {

@@ -44,7 +44,14 @@ const courseTables = [
     columns: ['id', 'course_id', 'student_id', 'level', 'practical', 'theory'],
   },
 ] as const
-type Version = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
+const invitationColumns = [
+  'invitation_request_id',
+  'invitation_username',
+  'invitation_phone',
+  'invitation_birth_date',
+  'invitation_requires_setup',
+] as const
+type Version = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
 function tablesFor(version: Version) {
   if (version < 3) return [...baseTables]
   return [...baseTables.slice(0, -1), ...courseTables, baseTables[baseTables.length - 1]]
@@ -53,6 +60,8 @@ function columnsFor(
   table: ReturnType<typeof tablesFor>[number],
   version: Version,
 ): readonly string[] {
+  if (table.name === 'public.app_accounts' && version >= 12)
+    return [...table.columns, ...invitationColumns]
   if (table.name === 'public.students' && version >= 2)
     return [
       ...table.columns,
@@ -92,6 +101,7 @@ const backupSchema = z.strictObject({
     z.literal(9),
     z.literal(10),
     z.literal(11),
+    z.literal(12),
   ]),
   createdAt: z.iso.datetime(),
   tables: z.array(z.strictObject({ name: z.string(), rows: z.array(rowSchema) })),
@@ -178,7 +188,15 @@ function validateBackup(backup: Backup) {
     throw new Error('Unsupported credential provider or hash; migration stopped')
 }
 async function schemaVersion(db: PoolClient): Promise<Version> {
-  const result = await db.query(`SELECT
+  const result = await db.query(
+    `SELECT
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'app_accounts' AND column_name = ANY($1::text[])) AS invitation_columns,
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'app_accounts' AND (
+      (is_nullable = 'YES' AND ((column_name = 'invitation_request_id' AND data_type = 'uuid')
+       OR (column_name IN ('invitation_username', 'invitation_phone') AND data_type = 'text')
+       OR (column_name = 'invitation_birth_date' AND data_type = 'date')))
+      OR (column_name = 'invitation_requires_setup' AND data_type = 'boolean' AND is_nullable = 'NO' AND column_default = 'false')
+    )) AS invitation_fields,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'teacher_id') AS teacher_column,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'teacher_id' AND data_type = 'uuid' AND is_nullable = 'YES') AS enrollment_teacher,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'grade_decisions' AND data_type = 'jsonb' AND is_nullable = 'NO' AND column_default = '''[]''::jsonb') AS decisions,
@@ -199,8 +217,12 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'handbook_received' AND data_type = 'boolean' AND is_nullable = 'NO' AND column_default = 'false') AS handbook,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'course_enrollments' AND column_name = 'handbook_received') AS handbook_column,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name IN ('attendance_minimum', 'practical_minimum', 'theory_minimum') AND data_type = 'double precision' AND is_nullable = 'NO') AS grading,
-    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name IN ('attendance_minimum', 'practical_minimum', 'theory_minimum')) AS grading_columns`)
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'courses' AND column_name IN ('attendance_minimum', 'practical_minimum', 'theory_minimum')) AS grading_columns`,
+    [invitationColumns],
+  )
   const {
+    invitation_columns,
+    invitation_fields,
     teacher_column,
     enrollment_teacher,
     decisions,
@@ -224,6 +246,8 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     grading_columns,
   } = z
     .object({
+      invitation_columns: z.number(),
+      invitation_fields: z.number(),
       teacher_column: z.number(),
       enrollment_teacher: z.number(),
       decisions: z.number(),
@@ -276,6 +300,11 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     throw new Error('Student name migration required for course backup')
   if (enrollment_teacher !== teacher_column || (enrollment_teacher && !decisions))
     throw new Error('Incomplete enrollment teacher migration')
+  if (invitation_columns > 0) {
+    if (!enrollment_teacher || invitation_fields !== invitationColumns.length)
+      throw new Error('Incomplete account invitation migration')
+    return 12
+  }
   if (enrollment_teacher) return 11
   return courses === 2
     ? membership
@@ -415,6 +444,12 @@ async function main() {
           'SELECT 1 FROM course_enrollments WHERE teacher_id IS NOT NULL LIMIT 1',
         )
         if (assigned.rowCount) throw new Error('Legacy backup cannot represent enrollment teachers')
+      }
+      if (backup.version < 12 && targetVersion >= 12) {
+        const invited = await db.query(
+          'SELECT 1 FROM app_accounts WHERE invitation_request_id IS NOT NULL OR invitation_username IS NOT NULL OR invitation_phone IS NOT NULL OR invitation_birth_date IS NOT NULL OR invitation_requires_setup LIMIT 1',
+        )
+        if (invited.rowCount) throw new Error('Legacy backup cannot represent invited accounts')
       }
       const actual = await snapshot(db, backup.version)
       for (const [index, table] of backup.tables.entries()) {

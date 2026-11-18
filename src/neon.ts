@@ -51,11 +51,16 @@ export async function request(
   }
   return response.json() as Promise<unknown>
 }
+export type InvitationProfile = z.infer<
+  typeof import('../shared/invitations').invitationProfileSchema
+>
+
 export async function getAccount(userId: string) {
   return z
     .object({ account: neonAccountSchema })
     .parse(await request('/api/me', userId, undefined, false)).account
 }
+
 export async function getTeacher(userId: string) {
   try {
     return z.object({ teacher: neonTeacherSchema }).parse(await request('/api/me', userId)).teacher

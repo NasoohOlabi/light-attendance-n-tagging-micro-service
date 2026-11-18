@@ -14,7 +14,7 @@ integration(
     if (!url) throw new Error('Disposable database required')
     const admin = new Pool({ connectionString: url })
     const names = Array.from(
-      { length: 12 },
+      { length: 13 },
       () => `transfer_${crypto.randomUUID().replaceAll('-', '')}`,
     )
     const pools: Pool[] = []
@@ -27,7 +27,7 @@ integration(
       !localPath.startsWith('transfer-test-')
     )
       throw new Error('Refusing cleanup outside the disposable transfer directory')
-    const files = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((version) =>
+    const files = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((version) =>
       resolve(directory, `v${version}.json`),
     )
     const run = (command: string, file: string, dbUrl: string, succeeds = true) => {
@@ -194,6 +194,19 @@ integration(
       ])
       run('compare', files[9], urls[0], false)
       run('export', files[10], urls[0])
+      await source.query('ALTER TABLE app_accounts ADD COLUMN invitation_username text')
+      run('export', resolve(directory, 'partial-invitations.json'), urls[0], false)
+      await migrate(source, 'neon/013-invitations.sql')
+      await migrate(source, 'neon/013-invitations.sql')
+      run('compare', files[10], urls[0])
+      await source.query(
+        `INSERT INTO app_accounts (auth_user_id, role, teacher_id, invitation_request_id,
+          invitation_username, invitation_phone, invitation_birth_date)
+         VALUES ('synthetic', 'teacher', $1, $2, 'synthetic.teacher', '+12025550100', '2000-01-15')`,
+        [teacher, crypto.randomUUID()],
+      )
+      run('compare', files[10], urls[0], false)
+      run('export', files[11], urls[0])
       for (let index = 0; index < targets.length; index++) {
         await migrate(targets[index], 'neon/003-courses.sql')
         await migrate(targets[index], 'neon/004-student-names.sql')
@@ -213,9 +226,13 @@ integration(
           run('import', files[index], urls[index + 1], false)
           await migrate(targets[index], 'neon/011-grade-decisions.sql')
         }
-        if (index === 10) {
+        if (index >= 10) {
           run('import', files[index], urls[index + 1], false)
           await migrate(targets[index], 'neon/012-enrollment-teacher.sql')
+        }
+        if (index === 11) {
+          run('import', files[index], urls[index + 1], false)
+          await migrate(targets[index], 'neon/013-invitations.sql')
         }
         run('import', files[index], urls[index + 1])
         run('compare', files[index], urls[index + 1])
@@ -228,7 +245,7 @@ integration(
                 .version,
           ),
         ),
-      ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+      ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
       expect(
         (
           await targets[10].query('SELECT teacher_id FROM course_enrollments WHERE id = $1', [
