@@ -1828,6 +1828,14 @@ GitHub Verify caught the desktop account chooser test starting a refresh while t
 
 Integrated the attendance follow-up change from main at `e5fe629`. Preserved both work log histories and checked that both branches' stylesheet changes survived. The full release check passed with 42 unit and integration tests and 134 browser cases. Two optional database tests and two desktop instances of phone-only cases skipped.
 
+## 2026-11-18 11:54 Asia/Damascus (UTC+03:00) - Remove Back to courses from Manage students
+
+The screenshots showed a Back to courses button above Manage students. Removed it in both languages. The existing Courses sidebar control opens the saved course list. The course browser test now uses that control and checks that unsaved level drafts survive switching between courses within the Courses page.
+
+`bun run verify` passed with 38 tests. Six optional database tests skipped. Windows paging limits interrupted the parallel browser run. The one-worker rerun passed all 134 applicable desktop and emulated-phone cases, including the affected scenario with synthetic records. The file, history and dependency checks passed. The PR records CI and deployment verification. The Railway production trigger targets `main` with Wait for CI enabled.
+
+Integrated the course row action update from `8ac18fb`. The four course browser cases passed again on the combined revision.
+
 ## 2026-11-18 11:58 Asia/Damascus (UTC+03:00) - Show course row icons when they fit
 
 The owner asked to show the course actions directly when there is room. At a course-list width of 48rem or more, the Actions column shows up to six icons in one row with localized names and tooltips. Narrower lists use the three-dot menu. Both layouts use the same actions and availability rules.
