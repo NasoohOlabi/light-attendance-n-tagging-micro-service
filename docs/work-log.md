@@ -1827,3 +1827,9 @@ At 08:35 Asia/Damascus, merged the attendance chart change from main at `6b7e48e
 GitHub Verify caught the desktop account chooser test starting a refresh while the switch back to the administrator was still navigating. The test now waits for the workspace navigation and checks the active teacher and administrator in the profile menu. It also checks that the administrator stays active after refresh. The scenario passed six times each on desktop and emulated mobile.
 
 Integrated the attendance follow-up change from main at `e5fe629`. Preserved both work log histories and checked that both branches' stylesheet changes survived. The full release check passed with 42 unit and integration tests and 134 browser cases. Two optional database tests and two desktop instances of phone-only cases skipped.
+
+## 2026-11-18 11:54 Asia/Damascus (UTC+03:00) - Remove Back to courses from Manage students
+
+The screenshots showed a Back to courses button above Manage students. Removed it in both languages. The existing Courses sidebar control opens the saved course list. The course browser test now uses that control and checks that unsaved level drafts survive switching between courses within the Courses page.
+
+`bun run verify` passed with 38 tests. The affected Playwright scenario passed on desktop and emulated phones with synthetic records. Six optional database tests skipped. The parallel browser run hit Windows paging limits after the affected scenario passed in both projects. The PR records the serial browser run, CI and the exact Railway deployment receipt. The Railway production trigger targets `main` with Wait for CI enabled.
