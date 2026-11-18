@@ -163,10 +163,20 @@ test('the full roster, attendance, notes and phone edits survive a cold offline 
     .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
     .toBe(true)
   const openOffline = 'Open offline notebook'
+  await expect(page.getByRole('heading', { name: 'Attendance & notes' })).toBeVisible()
+  await expect(page.getByRole('button', { name: openOffline })).toHaveCount(0)
+  const dashboard = page.getByRole('button', { name: 'Dashboard' })
+  await dashboard.click()
+  await expect(dashboard).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('button', { name: openOffline })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Profile', exact: true }).click()
   await expect(page.getByRole('button', { name: openOffline })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: openOffline })).toHaveCount(0)
 
   networkAvailable = false
   await context.setOffline(true)
+  await expect(page.getByRole('heading', { name: 'Offline notebook' })).toBeVisible()
   const offlinePage = await context.newPage()
   await offlinePage.addInitScript(() => {
     const actual = Date.now
@@ -259,6 +269,9 @@ test('the full roster, attendance, notes and phone edits survive a cold offline 
   snapshot.students.shift()
   snapshot.enrollments.shift()
   await offlinePage.reload()
+  await expect(offlinePage.getByRole('heading', { name: 'Attendance & notes' })).toBeVisible()
+  await expect(offlinePage.getByRole('button', { name: openOffline })).toHaveCount(0)
+  await offlinePage.getByRole('button', { name: 'Profile', exact: true }).click()
   await offlinePage.getByRole('button', { name: openOffline }).click()
   await openAttendance.click()
   await selectCourse.selectOption(courseId)

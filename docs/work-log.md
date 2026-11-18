@@ -1989,3 +1989,9 @@ The browser regression reproduced the gray fill after a second mouse click with 
 The owner asked to fix the audit findings and support the full last-authorized assigned roster, attendance, notes, and phone updates after losing connectivity. The notebook caches its approved roster automatically. Teachers can reopen it across restarts and local session expiry. Notes and phone edits share the same local-save guarantees as attendance. Phone writes require the same teacher's current assignment and compare the previously seen number. Replay receipts preserve newer server values. A refreshed roster removes former students and blocked changes remain available to retry when access returns.
 
 Focused Chromium tests exercised the offline restart, notes and phone for an unenrolled student, contact and attendance conflicts, lost replies, rejected-mark recovery and reassignment. The PostgreSQL suite exercises exact receipt replay, note idempotency and Student response privacy. The PR records the release and Railway checks. Browser verification uses synthetic records and emulated phones.
+
+## 2026-11-18 22:58 Asia/Damascus (UTC+03:00) - Move the offline shortcut into Profile
+
+The owner asked to remove the prominent offline button from regular notebook pages. A teacher with a cached roster can open the offline notebook from Profile, and losing the connection still opens it automatically. Sign-in and notebook loading errors can still offer access to the saved roster.
+
+The browser regression checks the normal dashboard, Attendance, Profile shortcut and automatic offline entry. It also exercises the existing restart and sync scenario with synthetic data on desktop and an emulated phone. The PR records release and Railway verification.
