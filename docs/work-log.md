@@ -1962,6 +1962,12 @@ Chrome 157 and 158 reproduced the banner in fresh tabs after installing from the
 
 `bun run verify:release` passed with 38 Bun tests and 162 browser cases. Six optional database tests and two desktop instances of phone-only cases skipped. File and history scans and the dependency audit passed.
 
+## 2026-11-18 19:49 Asia/Damascus (UTC+03:00) - Match the attendance toggle reference
+
+The owner requested a pale gray pill with soft green, red and amber selected tiles, and approved the Arabic screenshot after the gray was lightened and the note moved right. The note button keeps its amber icon and 44px target with a transparent background and zero border. The note sits to the physical right in English and Arabic. Tab follows the row's reading direction.
+
+The local sample smoke verified three distinct selected fills, 44px targets and one-line right-side placement at 1440px and 320px, plus a transparent borderless note and dialog focus return in dark mode. Browser verification uses synthetic records and emulated phones. The PR records the release gate and production checks.
+
 ## 2026-11-18 20:08 Asia/Damascus (UTC+03:00) - Record teacher attendance offline
 
 The owner requested attendance that teachers can record during connectivity loss and sync on return. Teachers can prepare an open course and date, reopen its local roster and save marks in IndexedDB. Sync rechecks current access and attendance versions, retries the same event ID after a lost reply and lets the teacher resolve a differing mark. The existing student projection receives accepted marks.
