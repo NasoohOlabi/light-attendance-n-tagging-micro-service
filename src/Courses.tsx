@@ -334,16 +334,11 @@ export function Courses({
       {course && (query.courseView === 'students' || query.courseView === 'grades') && (
         <>
           {query.courseView === 'students' && (
-            <>
-              <button className="secondary" onClick={() => go('', '')}>
-                {ar ? 'العودة للدورات' : 'Back to courses'}
-              </button>
-              <TableToolbar model={membershipTable}>
-                <h1 className="title">
-                  {course.name} — {ar ? 'إدارة الطلاب' : 'Manage students'}
-                </h1>
-              </TableToolbar>
-            </>
+            <TableToolbar model={membershipTable}>
+              <h1 className="title">
+                {course.name} — {ar ? 'إدارة الطلاب' : 'Manage students'}
+              </h1>
+            </TableToolbar>
           )}
           {query.courseView === 'grades' && !board && (
             <h1 className="title">

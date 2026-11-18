@@ -1808,6 +1808,8 @@ The ordinary verification command omitted Prettier and accepted seven Oxlint war
 
 CI provisions disposable PostgreSQL databases for the five integration suites and runs the Python workbook test, Ruff lint and Ruff formatting checks. The workbook adapter and its test use four-space indentation and the configured single-quote style. The local lint, formatting, Python and 41 Bun tests passed. The hosted workflow runs on the PR.
 
+**Integration on 2026-11-18 at 12:20 Asia/Damascus.** Preserved multi-account sign-out identity checks and cross-tab notifications from main. Incorporated the wide course action icons and the updated Manage students navigation into the independent browser scenarios. All 44 Bun tests passed against disposable PostgreSQL, including the device-account suite. The account-switching release run passed 146 browser cases and had two mobile failures, a suspended browser network request and a workbook download timeout. The final PR records the release rerun, hosted checks and deployment evidence.
+
 **Main integration at 08:48 Asia/Damascus.** Integrated the customizable Excel downloads from `cf7c1a1`. The full release gate passed with all 42 Bun tests, including the five PostgreSQL suites, and 140 browser cases. Two mobile-only cases skipped on desktop. Both Python checks and the workbook test passed. An additional transfer check accepted safe numeric legacy sequences and rejected unsafe numeric values. Railway's production trigger targets main with Wait for CI enabled.
 
 ## 2026-11-18 08:13 Asia/Damascus (UTC+03:00) - Export teacher attendance charts
@@ -1851,6 +1853,14 @@ At 08:35 Asia/Damascus, merged the attendance chart change from main at `6b7e48e
 GitHub Verify caught the desktop account chooser test starting a refresh while the switch back to the administrator was still navigating. The test now waits for the workspace navigation and checks the active teacher and administrator in the profile menu. It also checks that the administrator stays active after refresh. The scenario passed six times each on desktop and emulated mobile.
 
 Integrated the attendance follow-up change from main at `e5fe629`. Preserved both work log histories and checked that both branches' stylesheet changes survived. The full release check passed with 42 unit and integration tests and 134 browser cases. Two optional database tests and two desktop instances of phone-only cases skipped.
+
+## 2026-11-18 11:54 Asia/Damascus (UTC+03:00) - Remove Back to courses from Manage students
+
+The screenshots showed a Back to courses button above Manage students. Removed it in both languages. The existing Courses sidebar control opens the saved course list. The course browser test now uses that control and checks that unsaved level drafts survive switching between courses within the Courses page.
+
+`bun run verify` passed with 38 tests. Six optional database tests skipped. Windows paging limits interrupted the parallel browser run. The one-worker rerun passed all 134 applicable desktop and emulated-phone cases, including the affected scenario with synthetic records. The file, history and dependency checks passed. The PR records CI and deployment verification. The Railway production trigger targets `main` with Wait for CI enabled.
+
+Integrated the course row action update from `8ac18fb`. The four course browser cases passed again on the combined revision.
 
 ## 2026-11-18 11:58 Asia/Damascus (UTC+03:00) - Show course row icons when they fit
 

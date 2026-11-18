@@ -605,6 +605,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     page.getByRole('row').filter({ hasText: 'Created course' }),
     'Manage students',
   )
+  await expect(page.getByRole('button', { name: 'Back to courses' })).toHaveCount(0)
   await page.getByRole('searchbox', { name: 'Find a student' }).fill('New')
   const newRow = page.getByRole('row').filter({ hasText: 'New' })
   await newRow.getByLabel('Course level: New Student').fill('Beginner')
@@ -644,6 +645,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
         name: '\u0637\u0644\u0627\u0628 \u0627\u0644\u062f\u0648\u0631\u0629',
       })
       await expect(table.locator('thead')).toBeHidden()
+      await expect(page.getByRole('button', { name: 'العودة للدورات' })).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'خيارات الفرز' })).toBeVisible()
       expect(await table.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
         true,
@@ -681,7 +683,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     location: 'Area',
     birthYear: 2000,
   })
-  await page.getByRole('button', { name: 'Back to courses' }).click()
+  const coursesNavigation = page.getByRole('button', { name: 'Courses', exact: true })
+  await coursesNavigation.click()
+  await expect(page.getByRole('heading', { name: 'Courses', exact: true })).toBeVisible()
   await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course A' }), 'Manage students')
   await expect(page.getByLabel('Handbook received: Synthetic Student')).not.toBeChecked()
   await page.getByLabel('Handbook received: Synthetic Student').click()
@@ -698,7 +702,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   })
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('')
   await page.getByLabel('Course level: Synthetic Student').fill('Draft A')
-  await page.getByRole('button', { name: 'Back to courses' }).click()
+  await coursesNavigation.click()
   await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course B' }), 'Manage students')
   await expect(page.getByLabel('Handbook received: Synthetic Student')).not.toBeChecked()
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('Advanced')
@@ -718,7 +722,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .click()
   await expect.poll(() => enrollments[1].level).toBe('Updated B')
   expect(enrollments[1].id).toBe(enrollB)
-  await page.getByRole('button', { name: 'Back to courses' }).click()
+  await coursesNavigation.click()
   await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course A' }), 'Manage students')
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('Draft A')
   await page.getByLabel('Course level: Synthetic Student').fill('Intermediate')
