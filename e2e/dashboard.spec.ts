@@ -67,7 +67,7 @@ test('dashboard charts and alphabetic fuzzy attendance preserve drafts', async (
   await expect(page.getByLabel('absent: 1')).toBeVisible()
   await expect(page.getByLabel(/^(early|late):/)).toHaveCount(0)
   await expect(page.getByText('2 marked, 0 unmarked')).toBeVisible()
-  await page.getByRole('button', { name: 'History & corrections', exact: true }).click()
+  await clickAccountAction(page, 'History & corrections')
   const snapshot = page
     .locator('li')
     .filter({ has: page.locator('dl').filter({ hasText: 'Omar' }) })

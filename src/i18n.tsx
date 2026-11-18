@@ -26,6 +26,7 @@ const arabic = {
   Students: 'الطلاب',
   Summary: 'الملخص',
   'History & corrections': 'السجل والتصحيحات',
+  'Back to settings': 'العودة إلى الإعدادات',
   'Find a student': 'ابحث عن طالب',
   'Name / اسم الطالب': 'اسم الطالب',
   Group: 'المجموعة',
@@ -36,11 +37,8 @@ const arabic = {
   'Retry pending batch': 'إعادة محاولة الدفعة المعلّقة',
   'Discard pending retry': 'إلغاء إعادة المحاولة المعلّقة',
   'Loading the shared notebook…': 'جارٍ تحميل الدفتر المشترك…',
-  'Every change leaves a record. Use History & corrections to undo a mistake.':
-    'يترك كل تغيير سجلاً. استخدم السجل والتصحيحات للتراجع عن خطأ.',
   'Who is here today?': 'من حاضر اليوم؟',
-  'Only marked students are saved. To remove an existing mark, use History & corrections; undoing the latest mark may reveal an earlier one.':
-    'يُحفظ الطلاب المحددون فقط. لإزالة علامة استخدم السجل والتصحيحات؛ قد يُظهر التراجع عن أحدث علامة علامة سابقة.',
+  'Only marked students are saved.': 'يُحفظ الحضور للطلاب الذين حُدّدت حالتهم فقط.',
   'Session date': 'تاريخ الجلسة',
   'Add your students in Students, or adjust the group filter.':
     'أضف طلابك في قسم الطلاب أو غيّر مرشح المجموعة.',
@@ -143,8 +141,8 @@ const arabic = {
     'تقوم علامة تبويب أخرى بالحفظ. انتظر انتهاءها قبل الإلغاء.',
   'The pending batch changed in another tab. Reload before discarding.':
     'تغيرت الدفعة المعلّقة في علامة تبويب أخرى. أعد التحميل قبل الإلغاء.',
-  'Stop retrying this batch? It may already exist on the server. Refresh and inspect history before entering it again.':
-    'هل تريد إيقاف إعادة محاولة هذه الدفعة؟ قد تكون موجودة في الجدول. حدّث وافحص السجل قبل إدخالها مجدداً.',
+  'Stop retrying this batch? It may already exist on the server. Refresh and check the notebook before entering it again.':
+    'هل تريد إيقاف إعادة محاولة هذه الدفعة؟ قد تكون موجودة في الخادم. حدّث الدفتر وتحقق منه قبل إدخالها مجدداً.',
   'The save may already have reached the server. Retry the same pending batch to avoid counting it twice.':
     'قد يكون الحفظ وصل إلى الجدول بالفعل. أعد محاولة الدفعة نفسها لتجنب احتسابها مرتين.',
   'Skip to main content': 'انتقل إلى المحتوى الرئيسي',

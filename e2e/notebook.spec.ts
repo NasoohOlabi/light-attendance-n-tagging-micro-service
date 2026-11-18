@@ -1,4 +1,5 @@
 import { clickRecordAction } from './recordActions'
+import { clickAccountAction } from './profileActions'
 import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 
@@ -84,7 +85,7 @@ test('sample notebook supports attendance, notes and corrections without network
   await addNote.click()
   await expect(dialog.getByText('Earlier session note')).toBeVisible()
   await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: 'History & corrections', exact: true }).click()
+  await clickAccountAction(page, 'History & corrections')
   const note = page.locator('li').filter({ hasText: 'راجعت السورة اليوم' })
   await clickRecordAction(note, 'Undo')
   await page.getByLabel('Reason').fill('تصحيح')

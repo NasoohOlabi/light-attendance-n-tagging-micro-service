@@ -239,11 +239,13 @@ export function Courses({
                               onClick: () =>
                                 setQuery(
                                   {
-                                    view: 'notebook',
-                                    tab: 'history',
+                                    view: 'history',
+                                    tab: '',
                                     course: item.id,
                                     courseView: '',
                                     q: '',
+                                    group: '',
+                                    student: '',
                                   },
                                   true,
                                 ),

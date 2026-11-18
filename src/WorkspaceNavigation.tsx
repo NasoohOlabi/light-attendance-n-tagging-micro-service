@@ -4,11 +4,10 @@ import { useLanguage, type TranslationKey } from './i18n'
 import { navigateNotebook, setQuery, useQueryState, type Tab } from './queryState'
 import { WartaqIcon, WartaqLogo } from './brand/components'
 
-export const tabs: { id: Exclude<Tab, 'dashboard'>; label: TranslationKey }[] = [
+const tabs: { id: Exclude<Tab, 'dashboard'>; label: TranslationKey }[] = [
   { id: 'attendance', label: 'Attendance' },
   { id: 'roster', label: 'Students' },
   { id: 'summary', label: 'Summary' },
-  { id: 'history', label: 'History & corrections' },
 ]
 
 export function WorkspaceNavigation({
@@ -19,6 +18,7 @@ export function WorkspaceNavigation({
   profile,
   leave,
   sample,
+  sampleHistory,
   disabled,
 }: {
   administrator: boolean
@@ -28,6 +28,7 @@ export function WorkspaceNavigation({
   profile?: Profile
   leave: () => void
   sample?: boolean
+  sampleHistory?: boolean
   disabled?: boolean
 }) {
   const { t, language } = useLanguage()
@@ -55,6 +56,7 @@ export function WorkspaceNavigation({
           administrator={administrator}
           leave={leave}
           sample={sample}
+          sampleHistory={sampleHistory}
           disabled={disabled}
         />
       </div>
@@ -102,22 +104,12 @@ export function WorkspaceNavigation({
             }
           >
             <WartaqIcon name={tab.id === 'roster' ? 'students' : tab.id} />
-            <span
-              className={
-                ['attendance', 'history'].includes(tab.id) ? 'workspace-tab-long' : undefined
-              }
-            >
+            <span className={tab.id === 'attendance' ? 'workspace-tab-long' : undefined}>
               {t(tab.label)}
             </span>
-            {['attendance', 'history'].includes(tab.id) && (
+            {tab.id === 'attendance' && (
               <span className="workspace-tab-short" aria-hidden="true">
-                {tab.id === 'attendance'
-                  ? language === 'ar'
-                    ? 'الحضور'
-                    : 'Attend'
-                  : language === 'ar'
-                    ? 'السجل'
-                    : 'History'}
+                {language === 'ar' ? 'الحضور' : 'Attend'}
               </span>
             )}
           </button>

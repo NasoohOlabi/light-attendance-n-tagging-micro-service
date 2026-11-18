@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Globe, LogOut, Settings, UserRound } from 'lucide-react'
+import { Globe, History, LogOut, Settings, UserRound } from 'lucide-react'
 import { ThemeChoices, useLanguage } from './i18n'
 import { setQuery } from './queryState'
 
@@ -14,12 +14,14 @@ export function ProfileMenu({
   administrator = false,
   leave,
   sample = false,
+  sampleHistory = false,
   disabled = false,
 }: {
   profile?: Profile
   administrator?: boolean
   leave: () => void
   sample?: boolean
+  sampleHistory?: boolean
   disabled?: boolean
 }) {
   const { language, setLanguage, t } = useLanguage()
@@ -125,6 +127,17 @@ export function ProfileMenu({
             >
               <Settings size={18} aria-hidden="true" />{' '}
               {language === 'ar' ? 'الإعدادات' : 'Settings'}
+            </button>
+          )}
+          {sampleHistory && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                setQuery({ view: 'history', tab: '' }, true)
+              }}
+            >
+              <History size={18} aria-hidden="true" /> {t('History & corrections')}
             </button>
           )}
           <button type="button" disabled={disabled} onClick={leave}>

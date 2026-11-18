@@ -55,10 +55,12 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.goto('/')
   await usableLayout(page)
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
-  for (const name of ['Attendance', 'Students', 'Summary', 'History & corrections']) {
+  for (const name of ['Attendance', 'Students', 'Summary']) {
     await page.getByRole('button', { name, exact: true }).click()
     await usableLayout(page)
   }
+  await clickAccountAction(page, 'History & corrections')
+  await usableLayout(page)
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   const longName = 'طالب'.repeat(45)
   await page.getByLabel('Student name').fill(longName)
@@ -91,10 +93,12 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.getByRole('row').filter({ hasText: longName }).getByRole('button').click()
   await expect(page.getByRole('dialog').getByText('مسودة مشتركة English draft')).toBeVisible()
   await page.keyboard.press('Escape')
-  for (const name of ['الحضور', 'الطلاب', 'الملخص', 'السجل والتصحيحات']) {
+  for (const name of ['الحضور', 'الطلاب', 'الملخص']) {
     await page.getByRole('button', { name, exact: true }).click()
     await usableLayout(page)
   }
+  await clickAccountAction(page, 'السجل والتصحيحات')
+  await usableLayout(page)
   await page.getByRole('button', { name: 'الحضور', exact: true }).click()
   await page.getByLabel(`الحضور للطالب ${longName}`).selectOption('absent')
   await page.getByRole('button', { name: 'حفظ الحضور (1)', exact: true }).click()
@@ -108,7 +112,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
     await usableLayout(page)
   }
   await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: 'السجل والتصحيحات', exact: true }).click()
+  await clickAccountAction(page, 'السجل والتصحيحات')
   const savedNote = page.locator('li').filter({ hasText: 'مسودة مشتركة English draft' })
   await clickRecordAction(savedNote, 'تراجع')
   await page.getByLabel('السبب', { exact: true }).fill('تصحيح تجريبي')

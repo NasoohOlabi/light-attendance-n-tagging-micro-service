@@ -155,6 +155,16 @@ export function AdminConsole({
             </button>
           </div>
         </div>
+        {!initialCreateStudent && (
+          <button
+            className="secondary mb-4"
+            onClick={() =>
+              setQuery({ view: 'history', tab: '', q: '', group: '', student: '' }, true)
+            }
+          >
+            {t('History & corrections')}
+          </button>
+        )}
         {error && <p role="alert">{errorMessage(error)}</p>}
         {message && <p role="status">{message}</p>}
         {!board && !error && <p role="status">{ar ? 'جارٍ التحميل…' : 'Loading…'}</p>}

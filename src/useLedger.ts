@@ -207,7 +207,7 @@ export function useLedger(
     if (
       !window.confirm(
         t(
-          'Stop retrying this batch? It may already exist on the server. Refresh and inspect history before entering it again.',
+          'Stop retrying this batch? It may already exist on the server. Refresh and check the notebook before entering it again.',
         ),
       )
     )
