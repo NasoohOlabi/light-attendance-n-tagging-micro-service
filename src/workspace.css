@@ -14,9 +14,12 @@
   color: white;
 }
 .workspace-brand {
+  position: relative;
   display: grid;
-  gap: 12px;
-  padding: 4px 12px 38px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 12px 20px;
   color: #b8d9dd;
   font-size: 13px;
 }
@@ -261,10 +264,7 @@
     padding: 12px max(16px, env(safe-area-inset-left)) 0;
   }
   .workspace-brand {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 0 10px;
+    margin: 0 0 10px;
   }
   .workspace-rail nav {
     display: flex;
@@ -681,12 +681,6 @@
   outline: 3px solid #55d4d7;
   outline-offset: 2px;
 }
-.workspace-brand {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
 .profile-trigger {
   min-width: 44px;
   min-height: 44px;
@@ -752,40 +746,28 @@
   }
 }
 
-.workspace-brand-name {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.workspace-brand-name .wartaq-logo {
-  flex-shrink: 0;
-}
 .workspace-course-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: white;
   font-size: 20px;
   font-weight: 700;
 }
 
 .workspace-course-switcher {
-  position: static;
-  min-width: 0;
+  grid-column: 1 / -1;
+  justify-self: start;
+  max-width: 100%;
 }
 .workspace-course-switcher summary {
   cursor: pointer;
   list-style: none;
   display: flex;
   align-items: center;
+  gap: 4px;
+  min-width: 44px;
   min-height: 44px;
 }
 .workspace-course-switcher summary span {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .workspace-course-switcher summary::after {
   content: ' \25be';
