@@ -50,7 +50,6 @@
 :root[data-theme='dark'] .workspace-context h2,
 :root[data-theme='dark'] .workspace-metrics strong,
 :root[data-theme='dark'] .dashboard-actions h2,
-:root[data-theme='dark'] .dashboard-chart h2,
 :root[data-theme='dark'] .attendance-group summary,
 :root[data-theme='dark'] .sort-toolbar-label {
   color: #e3f1f1;
@@ -205,18 +204,6 @@
 :root[data-theme='dark'] .update-notice {
   background: #554521;
   color: #ffe5a3;
-}
-:root[data-theme='dark'] .dashboard-statuses meter::-webkit-meter-bar,
-:root[data-theme='dark'] .dashboard-trend meter::-webkit-meter-bar {
-  background: #31565a;
-}
-:root[data-theme='dark'] .dashboard-statuses meter::-webkit-meter-optimum-value,
-:root[data-theme='dark'] .dashboard-trend meter::-webkit-meter-optimum-value {
-  background: #70d6d5;
-}
-:root[data-theme='dark'] .dashboard-statuses meter::-moz-meter-bar,
-:root[data-theme='dark'] .dashboard-trend meter::-moz-meter-bar {
-  background: #70d6d5;
 }
 :root[data-theme='dark'] input:not([type='checkbox']),
 :root[data-theme='dark'] select,

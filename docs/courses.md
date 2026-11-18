@@ -12,7 +12,11 @@ Select a course in the notebook to mark its enrolled students and see that cours
 
 **Summary** shows all recorded dates for the selected course and every student available in that course's authorized history, including inactive memberships. Course selection is its only filter; saved date ranges, student search, group and student filters from other pages do not narrow these totals. Student note counts cover all dates and remain student-scoped. **Previous / no course** summarizes unscoped attendance. Open a student's note dialog from their Attendance row or use History & corrections to review earlier records.
 
-The overview bars show Present, Absent and Excused as percentages of recorded student-sessions, rounded to one decimal place. Unmarked days are excluded; these are session shares rather than an average of individual student rates. With no recorded attendance, the overview shows an empty-state message. The student table retains exact counts.
+**Absences by session** ranks all recorded course dates by the number of explicit absences, newest first when tied. Each date shows recorded and excused counts for context. Expand a date to see each recorded student and mark. Five dates appear initially, with the rest available below. The table retains each student's exact totals.
+
+On **Dashboard**, the session date sets the end of a six-recorded-session window. **Students to follow up** lists current students with a recorded absence in that window, most absences first. The dated strip distinguishes Present, Absent, Excused and Unmarked. Open a name for contact details and attendance history. Take attendance opens the selected course and date. The marked and unmarked counts use the current roster.
+
+Administrators also see **Course result readiness** for the selected course. **Needs practice** lists current students whose saved practical or theory score falls below that course's corresponding minimum. **Missing evidence** identifies students missing either score or any recorded course attendance. These counts use all saved course data independently of the dashboard date. A zero score counts as recorded. A result override preserves the underlying scores. Open Grades to work on that course.
 
 From **Summary**, choose **Export attendance chart** to compare the students in the selected course across all recorded dates. The bars run from highest attendance to lowest. Each percentage includes the number present out of recorded sessions (Present, Absent and Excused). Students with no recorded sessions appear last with **No records**.
 

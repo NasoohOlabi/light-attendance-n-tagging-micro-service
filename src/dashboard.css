@@ -1,0 +1,82 @@
+﻿.dashboard {
+  display: grid;
+  gap: 1rem;
+}
+.dashboard-insight {
+  min-width: 0;
+}
+.dashboard-insight h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.dashboard-session {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 1rem;
+}
+.dashboard-session label {
+  display: grid;
+  gap: 0.25rem;
+}
+.dashboard-followups {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+.dashboard-followups > li {
+  border-block-start: 1px solid #abc3c5;
+  padding-block-start: 0.75rem;
+}
+.dashboard-show-all {
+  margin-block-start: 1rem;
+}
+.dashboard-followup-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+}
+.dashboard-student {
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  font-weight: 700;
+  text-align: start;
+}
+.dashboard-strip {
+  list-style: none;
+  padding: 0;
+  margin: 0.6rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+.dashboard-mark {
+  display: grid;
+  gap: 0.15rem;
+  border: 1px solid #abc3c5;
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+}
+.dashboard-mark-present {
+  border-block-start: 0.3rem solid #16803c;
+}
+.dashboard-mark-absent {
+  border-block-start: 0.3rem solid #dc2626;
+}
+.dashboard-mark-excused {
+  border-block-start: 0.3rem solid #a16207;
+}
+.dashboard-mark-unmarked {
+  border-block-start: 0.3rem dashed currentColor;
+}
+@media (max-width: 700px) {
+  .dashboard-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
