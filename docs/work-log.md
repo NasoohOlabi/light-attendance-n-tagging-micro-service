@@ -1977,3 +1977,9 @@ The focused desktop and mobile Chromium scenarios passed for offline reopen, per
 Mark entry waits for the local transaction only. A slow sync leaves the other attendance controls available and overlapping sync attempts are serialized.
 
 If live account verification confirms a role or permission change, the app closes prepared attendance access and keeps any queued marks for reconciliation.
+
+## 2026-11-18 21:27 Asia/Damascus (UTC+03:00) - Make the teacher notebook work offline
+
+The owner asked to fix the audit findings and support the full last-authorized assigned roster, attendance, notes, and phone updates after losing connectivity. The notebook caches its approved roster automatically. Teachers can reopen it across restarts and local session expiry. Notes and phone edits share the same local-save guarantees as attendance. Phone writes require the same teacher's current assignment and compare the previously seen number. Replay receipts preserve newer server values. A refreshed roster removes former students and blocked changes remain available to retry when access returns.
+
+Focused Chromium tests exercised the offline restart, notes and phone for an unenrolled student, contact and attendance conflicts, lost replies, rejected-mark recovery and reassignment. The PostgreSQL suite exercises exact receipt replay, note idempotency and Student response privacy. The PR records the release and Railway checks. Browser verification uses synthetic records and emulated phones.

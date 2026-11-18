@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { useLanguage } from './useLanguage'
 import { resetWorkspace } from './neon'
+import { clearOfflineAccess, offlineAccess } from './offlineAccess'
 
 const accountsSchema = z.object({
   accounts: z.array(z.object({ userId: z.string(), name: z.string(), identifier: z.string() })),
@@ -53,6 +54,7 @@ export function AccountChoices({
                   body: JSON.stringify({ userId: account.userId }),
                 })
                 if (!response.ok) throw new Error('Unable to switch accounts')
+                if (offlineAccess()?.userId !== account.userId) clearOfflineAccess()
                 resetWorkspace()
               } catch {
                 setError(true)
