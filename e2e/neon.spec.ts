@@ -2,6 +2,7 @@ import { clickAccountAction } from './profileActions'
 import { expect, test, type Page } from '@playwright/test'
 import { compactHeader } from './headerLayout'
 import { mkdir } from 'node:fs/promises'
+import { eventSchema, type LedgerEvent } from '../shared/ledger'
 
 test.use({ trace: 'off' })
 
@@ -104,7 +105,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   page,
 }) => {
   let current: (typeof users)[number] | undefined
-  const events: Record<string, unknown[]> = {}
+  const events: Record<string, LedgerEvent[]> = {}
   let writes = 0
   let releaseApproval = () => {}
   const approvalHeld = new Promise<void>((resolve) => {
@@ -184,7 +185,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
       id: selected.id,
       name: selected.name,
       canRead: true,
-      canWrite: true,
+      canWrite: selected === users[0],
       expiresAt: null,
     }
     if (request.url().endsWith('/api/me')) {
@@ -196,8 +197,11 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
     }
     if (request.method() === 'POST') {
       writes++
-      events[selected.id] = [...(events[selected.id] ?? []), ...request.postDataJSON().events]
-      if (writes === 1)
+      events[selected.id] = [
+        ...(events[selected.id] ?? []),
+        ...eventSchema.array().parse(request.postDataJSON().events),
+      ]
+      if (writes <= 2)
         return route.fulfill({ status: 503, json: { error: 'Synthetic response loss' }, headers })
     }
     return route.fulfill({
@@ -242,8 +246,38 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.getByRole('button', { name: 'Retry pending batch' }).click()
   await expect(page.getByText('1 record saved.')).toBeVisible()
   expect(writes).toBe(1)
+  const sessionDate = '2026-11-18'
+  await page.goto(`${origin}/?page=app&tab=notes&course=${courseId}&date=${sessionDate}&tag=legacy`)
+  await expect(page.getByLabel('Session date')).toHaveValue(sessionDate)
+  const addNote = page.getByRole('button', { name: 'Add note for Alpha Student' })
+  await addNote.click()
+  const dialog = page.getByRole('dialog', { name: 'Note for Alpha Student' })
+  await dialog.getByLabel('Note', { exact: true }).fill('Synthetic attendance note')
+  await dialog.getByRole('button', { name: 'Save note' }).click()
+  await expect(dialog.getByRole('alert')).toContainText(
+    'The save may already have reached the server',
+  )
+  await expect(dialog.getByRole('textbox', { name: 'Note', exact: true })).toHaveValue(
+    'Synthetic attendance note',
+  )
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await expect(dialog).toBeHidden()
+  await page.getByRole('button', { name: 'Retry pending batch' }).click()
+  await expect(page.getByText('1 record saved.')).toBeVisible()
+  expect(writes).toBe(2)
+  expect(events[users[0].id].map(({ payload }) => payload).slice(1)).toEqual([
+    {
+      kind: 'note',
+      studentId: users[0].studentId,
+      date: sessionDate,
+      tags: ['attendance'],
+      text: 'Synthetic attendance note',
+    },
+  ])
   await page.reload()
-  await expect(page.getByText('Alpha Student')).toBeVisible()
+  await addNote.click()
+  await expect(dialog.getByText('Synthetic attendance note')).toBeVisible()
+  await page.keyboard.press('Escape')
   await clickAccountAction(page, 'Sign out')
   await expect(page.locator('.wartaq-home h1')).toBeVisible()
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -254,6 +288,13 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByText('Beta Student')).toBeVisible()
   await expect(page.getByText('Alpha Student')).toHaveCount(0)
+  await expect(page.getByLabel('Attendance for Beta Student')).toBeDisabled()
+  await page.getByRole('button', { name: 'Add note for Beta Student' }).click()
+  const betaNote = page.getByRole('dialog', { name: 'Note for Beta Student' })
+  await expect(betaNote.getByLabel('Note', { exact: true })).toBeDisabled()
+  await expect(betaNote.getByRole('button', { name: 'Save note' })).toBeDisabled()
+  await expect(betaNote.getByText('Synthetic attendance note')).toHaveCount(0)
+  expect(writes).toBe(2)
 })
 
 test('session restoration shows a neutral placeholder until signed out', async ({ page }) => {

@@ -4,15 +4,15 @@ The public homepage, sign-in and notebook screens have no development-release ba
 
 Run the affected scenarios and the full UI suite as directed by the [verification skill](../SKILL.md). The synthetic same-origin fixtures exercise real browser controls and storage; they do not establish live Railway behavior.
 
-| Area                                    | Proof                                                       |
-| --------------------------------------- | ----------------------------------------------------------- |
-| [Attendance and summary](attendance.md) | Mark, filter, course-wide totals and correction projection. |
-| [Notes](notes.md)                       | Student notes, tags and feed filters.                       |
-| [Roster](roster.md)                     | Assigned students and sample roster editing.                |
-| [Corrections](corrections.md)           | Append reversal and retain original history.                |
-| [Access and delivery](access.md)        | Session, role scope, retries, storage and tabs.             |
-| [Courses](courses.md)                   | Course enrollment and independent attendance.               |
-| [Assignments](assigned.md)              | Teacher scope and reassignment.                             |
+| Area                                    | Proof                                                                 |
+| --------------------------------------- | --------------------------------------------------------------------- |
+| [Attendance and summary](attendance.md) | Mark, filter, course-wide totals and correction projection.           |
+| [Notes](notes.md)                       | Student and date from attendance rows, optional tags and corrections. |
+| [Roster](roster.md)                     | Assigned students and sample roster editing.                          |
+| [Corrections](corrections.md)           | Append reversal and retain original history.                          |
+| [Access and delivery](access.md)        | Session, role scope, retries, storage and tabs.                       |
+| [Courses](courses.md)                   | Course enrollment and independent attendance.                         |
+| [Assignments](assigned.md)              | Teacher scope and reassignment.                                       |
 
 `e2e/neon.spec.ts` covers sign-in, session restoration, account switching, failed and uncertain requests, retries, storage denial/corruption, competing tabs, malformed snapshots and reassignment. `e2e/roles.spec.ts` covers Student privacy and denial, Administrator approval, roster management, self-protection and reset validation. `tests/neon-api.test.ts` tests server authorization and projection; `tests/railway-integration.test.ts` exercises password reset against a disposable database. The historically named files exercise Railway-compatible same-origin boundaries.
 
@@ -24,7 +24,7 @@ Table controls: `e2e/table-controls.spec.ts` verifies filtered bulk attendance a
 
 At 320/390/430px in English and Arabic, verify roster, the attendance roster, summary, administrator register, course list, membership and grades, profile history, and student attendance history fit without horizontal table scrolling. Check labelled values and direct controls; retain desktop columns and confirm course levels and student privacy.
 
-Record actions use three-dot menus on Courses, Grades, and History & corrections. Review the menus alongside the direct actions in other views. Dashboard, Attendance, Notes, membership and form submissions keep their primary controls visible. On compact screens, tapping a name in Students opens Student information. The wide Students table has a dedicated Open student button, and the Administrator register has a direct Edit action. Account management keeps password reset beside its fields. Profile actions, overview filters, student portal refresh and public navigation use their existing controls.
+Record actions use three-dot menus on Courses, Grades, and History & corrections. Review the menus alongside the direct actions in other views. Dashboard, Attendance, membership and form submissions keep their primary controls visible. Attendance rows show Add note next to the attendance control. On compact screens, tapping a name in Students opens Student information. The wide Students table has a dedicated Open student button, and the Administrator register has a direct Edit action. Account management keeps password reset beside its fields. Profile actions, overview filters, student portal refresh and public navigation use their existing controls.
 
 Unsorted headings show Lucide chevrons on pointer hover or keyboard focus, with an 8px label gap and no size change on reveal. Active sort direction and priority remain visible; on devices without hover, all chevrons remain visible. `e2e/table-controls.spec.ts` checks idle/hover/focus, pointer cursor, ascending/descending/reset icons and spacing in English/Arabic; course geometry checks measure the label independently of its decorative icon.
 

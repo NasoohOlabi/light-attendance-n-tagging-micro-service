@@ -2,16 +2,16 @@
 
 ## Sub-features
 
-Student notes; general notes in the sample, Arabic text/tags, normalized comma-separated tags, date bounds, tag buttons and dropdown filtering.
+Student notes from attendance rows, saved notes for the selected day, Arabic text and optional normalized comma-separated tags.
 
 ## How to get to it (user POV)
 
-Open **Notes**. Choose a student (or **General note** in the sample), enter date, tags and text, then **Save note**. Read the shared feed beside the form.
+Open **Attendance**, choose the **Session date**, and use **Add note** on a student's row. Read the selected student and session date in the dialog. Enter the note and choose **Save note**. Blank tags use the default attendance tag. Reopen the row dialog to read saved notes for that day. Earlier notes can also be reviewed in **History & corrections**.
 
 ## Driving it with Playwright
 
-The `sample notebook` test selects ليلى, fills **Tags, separated by commas** with `مراجعة, قراءة` and **Note** with `راجعت السورة اليوم`, clicks **Save note**, filters **Filter tag** to `مراجعة`, and proves the Arabic note remains while the unrelated sample note disappears. It writes `.artifacts/verification/notebook.png`. For affected branches also drive General note, Arabic comma, duplicate/blank tags, a tag chip, date range and no-match state. Observe the appended note in History and the student's Summary note count.
+The sample notebook scenario opens the dialog for ليلى, tests Escape and focus return, saves Arabic text and tags, and reopens the row to read the note. It checks isolation by student and date and keeps the unsaved attendance mark while saving the note. It writes `.artifacts/verification/notebook.png`. The synthetic authenticated scenario verifies a legacy Notes bookmark redirects to Attendance and saves a note with the exact student and date, then reads it after reload. The phone scenario opens and saves the dialog in Arabic at 320px and checks its layout at 390px and in landscape.
 
 ## Gotchas
 
-Notes are data, including JSON/formula-looking strings; React renders text and the API validates payloads. Tags normalize to lowercase. No-tag/blank notes are rejected. Date range and roster filters combine; clear them before concluding a note was lost.
+Notes remain student-scoped across courses. React renders the note as text and the API validates the payload. Tags normalize to lowercase, blank notes are rejected, and corrections hide the effective note while preserving its original History record. Legacy Notes bookmarks open Attendance.

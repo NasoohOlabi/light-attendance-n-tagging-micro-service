@@ -473,7 +473,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
         return { top: box.top, width: box.width, height: box.height }
       }),
     )
-    expect(boxes).toHaveLength(7)
+    expect(boxes).toHaveLength(6)
     for (const box of boxes) {
       expect(box.width).toBeGreaterThanOrEqual(44)
       expect(box.height).toBeGreaterThanOrEqual(44)
@@ -496,7 +496,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
           return { top: box.top, width: box.width, height: box.height }
         }),
       )
-      expect(boxes).toHaveLength(7)
+      expect(boxes).toHaveLength(6)
       for (const box of boxes) {
         expect(box.width).toBeGreaterThanOrEqual(44)
         expect(box.height).toBeGreaterThanOrEqual(44)
