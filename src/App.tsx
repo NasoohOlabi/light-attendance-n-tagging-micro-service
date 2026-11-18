@@ -163,6 +163,7 @@ function Notebook({
   const canViewHistory = administrator || demo === 'editable'
   const history = query.view === 'history' && canViewHistory
   const tab = history ? 'history' : query.tab
+  const choosingDefaultCourse = query.view === 'notebook' && tab === 'attendance'
   useEffect(() => {
     if (query.view === 'history') {
       if (!canViewHistory) setQuery({ view: 'notebook', tab: '' })
@@ -296,11 +297,11 @@ function Notebook({
           </p>
         )}
         {neon &&
-          ((query.view === 'notebook' && (tab === 'dashboard' || tab === 'roster')) ||
-            (query.view === 'student' && tab === 'roster') ||
+          (choosingDefaultCourse ||
+            ((query.view === 'notebook' || query.view === 'student') && tab === 'roster') ||
             history) && (
             <label className="mb-4">
-              {tab === 'dashboard'
+              {choosingDefaultCourse
                 ? language === 'ar'
                   ? '\u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a\u0629'
                   : 'Default course'
@@ -308,9 +309,9 @@ function Notebook({
                   ? '\u0627\u0644\u062f\u0648\u0631\u0629'
                   : 'Course'}
               <select
-                value={tab === 'dashboard' ? preference.defaultCourse : query.course}
+                value={choosingDefaultCourse ? preference.defaultCourse : query.course}
                 onChange={(event) => {
-                  if (tab === 'dashboard') preference.chooseDefault(event.target.value)
+                  if (choosingDefaultCourse) preference.chooseDefault(event.target.value)
                   else
                     setQuery(
                       {

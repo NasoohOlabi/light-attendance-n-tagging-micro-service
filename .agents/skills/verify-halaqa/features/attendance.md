@@ -6,7 +6,7 @@ Present, Absent and Excused only; group marking of displayed active students, ca
 
 ## How to get to it (user POV)
 
-Sign in or choose **Explore with sample students**. The dashboard opens first. Choose a current open course and use **Take attendance** to mark its enrolled students in name order. Drafts survive table filter changes. The dashboard shows effective status counts for the selected date, including unmarked, and present-student counts for up to five recorded dates through that date, including dates with zero present. **Summary** shows all-date totals for the selected course's authorized roster, including inactive memberships, with course selection and per-column table filters. Notes remain student-scoped and count across all dates.
+Sign in or choose **Explore with sample students**. The dashboard opens first. For signed-in users, use **Take attendance** and choose an open course on Attendance to mark its enrolled students in name order. Drafts survive table filter changes. The dashboard shows effective status counts for the selected date, including unmarked, and present-student counts for up to five recorded dates through that date, including dates with zero present. **Summary** shows all-date totals for the selected course's authorized roster, including inactive memberships, with per-column table filters. Notes remain student-scoped and count across all dates.
 
 ## Driving it with Playwright
 
