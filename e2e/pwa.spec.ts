@@ -277,9 +277,36 @@ test('normal refresh upgrades a legacy worker without disturbing another tab', a
   }
 })
 
+test('install button uses the Web Install API without a deferred prompt and handles cancellation', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'install', {
+      value: () => {
+        const root = document.documentElement
+        root.dataset.installActivation = String(navigator.userActivation.isActive)
+        root.dataset.installCalls = String(Number(root.dataset.installCalls ?? 0) + 1)
+        if (root.dataset.installCalls === '1')
+          return Promise.reject(new DOMException('', 'AbortError'))
+        return Promise.resolve({})
+      },
+    })
+  })
+  await page.goto(origin + prefix)
+  await page.getByRole('button', { name: 'Install Wartaq', exact: true }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-install-calls', '1')
+  await expect(page.locator('html')).toHaveAttribute('data-install-activation', 'true')
+  await expect(page.getByRole('status')).toContainText('canceled or could not complete')
+  await expect(page.getByRole('button', { name: 'Close install help' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Install Wartaq', exact: true }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-install-calls', '2')
+  await expect(page.getByRole('status')).toContainText('installed or opened')
+})
+
 test('install button calls the deferred native prompt once and localizes dismissal feedback', async ({
   page,
 }) => {
+  await page.addInitScript(() => Object.defineProperty(navigator, 'install', { value: undefined }))
   await page.goto(origin + prefix)
   await page.evaluate(() => {
     const event = new Event('beforeinstallprompt', { cancelable: true })
@@ -312,6 +339,7 @@ test('phone install help preserves language and is hidden when already standalon
   page,
 }, testInfo) => {
   await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'install', { value: undefined })
     Object.defineProperty(navigator, 'platform', { value: 'MacIntel' })
     Object.defineProperty(navigator, 'maxTouchPoints', { value: 5 })
   })

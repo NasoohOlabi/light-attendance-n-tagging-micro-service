@@ -1,8 +1,8 @@
 # Installing Wartaq
 
-Use **Install Wartaq / تثبيت وارتق** at the top of the homepage or notebook. On supporting browsers, a click opens the browser's native installation prompt. If no prompt is available, the button shows installation instructions. On iPhone/iPad, open the site in Safari and use **Share → Add to Home Screen**. Installation availability is controlled by the browser; this app never declares installation complete merely because the button was clicked.
+Use **Install Wartaq / تثبيت وارتق** at the top of the homepage or notebook. A click calls `navigator.install()` where supported, including Chrome 158 on desktop. Other compatible browsers use their deferred installation prompt when available. The browser asks for your confirmation. If the browser offers neither path, the button shows installation instructions. On iPhone/iPad, open the site in Safari and use **Share → Add to Home Screen**.
 
-The install control disappears in standalone mode and after an `appinstalled` event. A dismissed native event is used only once; the instructions remain available for later installation. Feedback and instructions follow the selected language. The UI does not automatically interrupt the teacher or cover the phone navigation.
+The install control disappears in standalone mode and after an `appinstalled` event. You can retry a canceled Web Install API request. A deferred prompt event can be used once, and the instructions remain available after dismissal. Feedback and instructions follow the selected language. The UI does not automatically interrupt the teacher or cover the phone navigation.
 
 ## App identity and hosting
 
@@ -24,9 +24,9 @@ During the first upgrade from the previous cache-first worker, its download may 
 
 ## Verification
 
-`e2e/pwa.spec.ts` serves the actual built artifact below `/notebook/` on an isolated local HTTP listener. It verifies the manifest through Chromium, icon dimensions, worker scope, offline shell/sample, stalled-network clean navigation, excluded private/authenticated/query/POST requests, native prompt wiring and single use, localized dismissal, iPad-style instructions, standalone hiding and a legacy-worker upgrade by normal refresh while another tab has an unsaved note. The suite runs desktop and touch-emulated cases. Synthetic screenshots are retained under `.artifacts/pwa/`.
+`e2e/pwa.spec.ts` serves the actual built artifact below `/notebook/` on an isolated local HTTP listener. It verifies the manifest through Chromium, icon dimensions, worker scope, offline shell/sample, stalled-network clean navigation, excluded private/authenticated/query/POST requests, direct API invocation and retry after cancellation, deferred prompt single use, localized dismissal, iPad-style instructions, standalone hiding and a legacy-worker upgrade by normal refresh while another tab has an unsaved note. The suite runs desktop and touch-emulated cases. Synthetic screenshots are retained under `.artifacts/pwa/`.
 
-Native installation/OS launcher behavior on physical iOS/Android devices is not certified by these checks. The native prompt callback is simulated because headless browser verification cannot operate the OS installer; the manifest, service worker, cache and offline requests are real. No live provider writes are required or claimed.
+The automated suite simulates browser responses to both install APIs. It exercises the real manifest, service worker, cache and offline requests. Native installation and OS launcher behavior require verification in a browser with an installer.
 
 ## Appearance
 

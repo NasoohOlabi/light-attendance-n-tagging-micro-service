@@ -12,6 +12,8 @@ const copy = {
     other: 'Open your browser menu and choose Install app or Add to Home screen, if available.',
     dismissed: 'Installation was dismissed. You can use your browser menu to install later.',
     accepted: 'Follow your browser’s instructions to finish installing.',
+    completed: 'The app was installed or opened.',
+    aborted: 'Installation was canceled or could not complete.',
     error: 'The install prompt could not open. Use your browser menu to install.',
   },
   ar: {
@@ -23,6 +25,8 @@ const copy = {
       'افتح قائمة المتصفح واختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية، إن كان الخيار متاحًا.',
     dismissed: 'تم إغلاق طلب التثبيت. يمكنك استخدام قائمة المتصفح للتثبيت لاحقًا.',
     accepted: 'اتبع تعليمات المتصفح لإكمال التثبيت.',
+    completed: 'تم تثبيت التطبيق أو فتحه.',
+    aborted: 'تم إلغاء التثبيت أو تعذر إكماله.',
     error: 'تعذر فتح طلب التثبيت. استخدم قائمة المتصفح للتثبيت.',
   },
 }
@@ -39,13 +43,29 @@ export function InstallApp() {
   const text = copy[language]
   const availability = useSyncExternalStore(subscribeInstall, installAvailability)
   const [open, setOpen] = useState(false)
-  const [status, setStatus] = useState<'dismissed' | 'accepted' | 'error' | null>(null)
+  const [status, setStatus] = useState<
+    'dismissed' | 'accepted' | 'completed' | 'aborted' | 'error' | null
+  >(null)
   const [busy, setBusy] = useState(false)
 
   if (availability === 'installed') return null
 
   async function install(event: MouseEvent<HTMLButtonElement>) {
     if (!event.nativeEvent.isTrusted) return
+    if ('install' in navigator && typeof navigator.install === 'function') {
+      setBusy(true)
+      setStatus(null)
+      setOpen(false)
+      try {
+        await navigator.install()
+        setStatus('completed')
+      } catch (error) {
+        setStatus(error instanceof Error && error.name === 'AbortError' ? 'aborted' : 'error')
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
     const current = takeInstallPrompt()
     if (!current) {
       setOpen(true)

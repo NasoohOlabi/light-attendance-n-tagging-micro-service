@@ -1933,3 +1933,11 @@ The focused browser test reproduced the duplicate on desktop and emulated mobile
 The owner reported an awkward invitation confirmation and an unresponsive Arabic copy button. The button had changed to a past-tense label after a successful write, and browser-denied writes failed silently. The confirmation now shows a compact, direction-aware message with a persistent Copy message action. Feedback appears beside the actions. Denied or unavailable clipboard access selects the full message and explains how to copy it manually.
 
 The original browser flow reproduced both the changed action label and the missing feedback on denial. Six focused cases passed on desktop Chromium and a 320px emulated phone, covering repeat writes, actual clipboard contents in English and Arabic, denial, full selection, responsive layout and invitation setup. `bun run verify` passed with 38 tests and six optional database skips. Browser cases use synthetic API responses. Physical-device and real-session behavior require separate verification. The PR records the release gate, GitHub checks and Railway verification.
+
+## 2026-11-18 17:47 Asia/Damascus (UTC+03:00) - Request the browser install dialog directly
+
+The owner saw installation instructions after clicking Install Wartaq and asked if the button could start installation directly. The button now calls `navigator.install()` on a trusted click where the API is available. Older browsers use the captured installation event or show manual instructions. The browser handles confirmation, and users can retry a canceled direct request.
+
+A clean desktop Chrome 157 profile received the deferred prompt event on Railway. Chrome for Testing 158 reported no installability errors on the local build and reached the real Web Install API with active user input. Browser tests simulate installer responses for cancellation, retry, and the older paths. OS-level confirmation and launcher behavior were not exercised. The pull request records hosted checks and production verification.
+
+`bun run verify:release` passed with 38 Bun tests and 152 browser cases. Six optional database tests and two desktop instances of phone-only cases skipped. File and history scans and the dependency audit passed.
