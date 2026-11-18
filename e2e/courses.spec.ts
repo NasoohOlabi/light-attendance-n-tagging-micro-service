@@ -403,6 +403,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   }
   await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  const courseList = page.getByRole('region', { name: 'Course list' })
+  const wide = testInfo.project.name === 'chromium'
   const firstCourseRow = page.getByRole('row').filter({ hasText: 'Course A' })
   const firstCourseActions = recordActions(firstCourseRow)
   const firstCourseMenu = firstCourseRow.getByRole('group', { name: 'Actions for Course A' })
@@ -427,6 +429,36 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     )
   }
   await expectActionDivider('en')
+  if (wide) {
+    await expect(recordActions(courseList)).toHaveCount(0)
+    const courseBGroup = courseList.getByRole('group', { name: 'Actions for Course B' })
+    const icons = courseBGroup.getByRole('button')
+    await expect(icons).toHaveCount(6)
+    const bounds = await icons.evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const { left, right, top, width, height } = button.getBoundingClientRect()
+        return { left, right, top, width, height }
+      }),
+    )
+    const cell = await courseBGroup.locator('..').boundingBox()
+    if (!cell) throw new Error('Missing course action cell')
+    expect(
+      bounds.every(
+        ({ left, right, top, width, height }) =>
+          left >= cell.x &&
+          right <= cell.x + cell.width &&
+          top === bounds[0].top &&
+          width >= 44 &&
+          height >= 44,
+      ),
+    ).toBe(true)
+    await expect(icons.last()).toHaveAttribute('title', 'Close course')
+    await page.screenshot({
+      path: '.artifacts/verification/course-list-wide-en.png',
+      fullPage: true,
+    })
+    await courseList.evaluate((list) => (list.style.maxInlineSize = '40rem'))
+  }
   await expect(firstCourseActions).toBeVisible()
   await expect(firstCourseMenu).toBeHidden()
   const coursesBeforeOpening = structuredClone(courses)
@@ -445,6 +477,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.mouse.click(2, 2)
   await expect(secondCourseMenu).toBeHidden()
   expect(courses).toEqual(coursesBeforeOpening)
+  if (wide) await courseList.evaluate((list) => list.style.removeProperty('max-inline-size'))
   await clickRecordAction(firstCourseRow, 'Edit')
   await expect(page.getByRole('heading', { name: 'Edit course' })).toBeVisible()
   await expect(page.getByLabel('Course name')).toHaveValue('Course A')
@@ -995,7 +1028,15 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(courseRow).toContainText('Closed')
   await clickAccountAction(page, 'العربية')
   await expect(courseRow).toContainText('مغلقة')
-  await recordActions(courseRow).click()
+  if (wide) {
+    await expect(recordActions(courseRow)).toHaveCount(0)
+    await expect(courseRow.getByRole('button', { name: 'إعادة فتح الدورة' })).toHaveAttribute(
+      'title',
+      'إعادة فتح الدورة',
+    )
+  } else {
+    await recordActions(courseRow).click()
+  }
   await expect(courseRow.getByRole('button', { name: 'إعادة فتح الدورة' })).toBeVisible()
   await page.keyboard.press('Escape')
   await page.screenshot({

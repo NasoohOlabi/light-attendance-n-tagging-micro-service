@@ -1832,4 +1832,12 @@ Integrated the attendance follow-up change from main at `e5fe629`. Preserved bot
 
 The screenshots showed a Back to courses button above Manage students. Removed it in both languages. The existing Courses sidebar control opens the saved course list. The course browser test now uses that control and checks that unsaved level drafts survive switching between courses within the Courses page.
 
-`bun run verify` passed with 38 tests. The affected Playwright scenario passed on desktop and emulated phones with synthetic records. Six optional database tests skipped. The parallel browser run hit Windows paging limits after the affected scenario passed in both projects. The PR records the serial browser run, CI and the exact Railway deployment receipt. The Railway production trigger targets `main` with Wait for CI enabled.
+`bun run verify` passed with 38 tests. Six optional database tests skipped. Windows paging limits interrupted the parallel browser run. The one-worker rerun passed all 134 applicable desktop and emulated-phone cases, including the affected scenario with synthetic records. The file, history and dependency checks passed. The PR records CI and deployment verification. The Railway production trigger targets `main` with Wait for CI enabled.
+
+Integrated the course row action update from `8ac18fb`. The four course browser cases passed again on the combined revision.
+
+## 2026-11-18 11:58 Asia/Damascus (UTC+03:00) - Show course row icons when they fit
+
+The owner asked to show the course actions directly when there is room. At a course-list width of 48rem or more, the Actions column shows up to six icons in one row with localized names and tooltips. Narrower lists use the three-dot menu. Both layouts use the same actions and availability rules.
+
+`bun run verify` passed with 38 tests and six optional database skips. Formatting, file and history scans, and the dependency audit passed. The affected synthetic course scenario passed on desktop and on an emulated phone, including both languages, 320/390/430px widths, a constrained list on a wide viewport, and course action destinations. The full local browser run hit Windows memory and Chromium launch errors. GitHub Verify gates the merge, and the PR carries the production deployment receipt.

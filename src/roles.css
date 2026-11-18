@@ -133,6 +133,9 @@
   }
 }
 
+.course-list-scroll {
+  container: course-list / inline-size;
+}
 .course-list-table th:nth-child(2) {
   width: 20%;
 }
@@ -142,6 +145,22 @@
 .course-list-table th:nth-child(3),
 .course-list-table td:nth-child(3) {
   text-align: end;
+}
+.course-actions-inline {
+  display: none;
+}
+@container course-list (min-width: 48rem) {
+  .course-list-table th.table-actions-header {
+    width: 20rem;
+  }
+  .course-actions-inline {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.25rem;
+  }
+  .course-actions-overflow {
+    display: none;
+  }
 }
 
 @media (max-width: 40rem) {
