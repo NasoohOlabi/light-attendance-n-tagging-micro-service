@@ -43,7 +43,10 @@ test('sample notebook supports attendance, notes and corrections without network
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Notes', exact: true })).toHaveCount(0)
   const sessionDate = await page.getByLabel('Session date').inputValue()
-  await page.getByLabel('Attendance for ليلى').selectOption('absent')
+  await page
+    .getByLabel('Attendance for ليلى')
+    .getByRole('button', { name: 'absent', exact: true })
+    .click()
   const addNote = page.getByRole('button', { name: 'Add note for ليلى', exact: true })
   const dialog = page.getByRole('dialog', { name: 'Student note for ليلى' })
   await addNote.click()
@@ -59,7 +62,9 @@ test('sample notebook supports attendance, notes and corrections without network
   await dialog.getByLabel('Note', { exact: true }).fill('راجعت السورة اليوم')
   await dialog.getByRole('button', { name: 'Save note' }).click()
   await expect(dialog).toBeHidden()
-  await expect(page.getByLabel('Attendance for ليلى')).toHaveValue('absent')
+  await expect(
+    page.getByLabel('Attendance for ليلى').getByRole('button', { pressed: true }),
+  ).toHaveAccessibleName('absent')
   await addNote.click()
   await expect(dialog.getByText('راجعت السورة اليوم')).toBeVisible()
   await expect(dialog.getByText('Review the last two pages together next session.')).toHaveCount(0)
@@ -118,16 +123,27 @@ test('a teacher can finish a partial session without overwriting exceptions or l
   await expect(roster.getByLabel('Attendance for أحمد')).toHaveCount(0)
   await unmarked.click()
   const omar = roster.getByRole('button', { name: 'Omar', exact: true })
-  await page.getByLabel('Attendance for Omar').selectOption('excused')
+  await page
+    .getByLabel('Attendance for Omar')
+    .getByRole('button', { name: 'excused', exact: true })
+    .click()
   await omar.click()
   await expect(page.getByRole('heading', { name: 'Student information' })).toBeVisible()
   await page.goBack()
   await expect(omar).toBeFocused()
-  await expect(page.getByLabel('Attendance for Omar')).toHaveValue('excused')
+  await expect(
+    page.getByLabel('Attendance for Omar').getByRole('button', { pressed: true }),
+  ).toHaveAccessibleName('excused')
   await page.getByRole('button', { name: /Mark 1 unmarked present/i }).click()
-  await expect(page.getByLabel('Attendance for Lina')).toHaveValue('present')
-  await expect(page.getByLabel('Attendance for Omar')).toHaveValue('excused')
-  await expect(page.getByLabel('Attendance for أحمد')).toHaveValue('present')
+  await expect(
+    page.getByLabel('Attendance for Lina').getByRole('button', { pressed: true }),
+  ).toHaveAccessibleName('present')
+  await expect(
+    page.getByLabel('Attendance for Omar').getByRole('button', { pressed: true }),
+  ).toHaveAccessibleName('excused')
+  await expect(
+    page.getByLabel('Attendance for أحمد').getByRole('button', { pressed: true }),
+  ).toHaveAccessibleName('present')
   const save = page.getByRole('button', { name: 'Save attendance (2)' })
   if (testInfo.project.name === 'mobile') {
     const bounds = await save.boundingBox()
@@ -137,9 +153,11 @@ test('a teacher can finish a partial session without overwriting exceptions or l
   await save.click()
   await expect(page.getByRole('button', { name: /Save attendance/ })).toHaveCount(0)
   const lina = roster.getByRole('row').filter({ has: page.getByLabel('Attendance for Lina') })
-  await lina.getByRole('combobox').selectOption('correct')
+  await lina.getByRole('button', { name: 'Correct this mark: Lina', exact: true }).click()
   await page.getByLabel('Reason', { exact: true }).fill('Wrong student selected')
   await page.getByRole('button', { name: 'Append correction' }).click()
-  await expect(page.getByLabel('Attendance for Lina')).toHaveValue('')
-  await expect(page.getByLabel('Attendance for Omar')).toHaveValue('excused')
+  await expect(lina.getByRole('group').getByRole('button', { pressed: true })).toHaveCount(0)
+  await expect(
+    page.getByLabel('Attendance for Omar').getByRole('button', { pressed: true }),
+  ).toHaveAccessibleName('excused')
 })

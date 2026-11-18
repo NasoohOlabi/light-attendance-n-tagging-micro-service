@@ -29,12 +29,19 @@ test('dashboard charts and alphabetic fuzzy attendance preserve drafts', async (
       .getByRole('region', { name: 'Attendance list' })
       .locator('thead th > button.table-sort, thead th:not(:has(button.table-sort))'),
   ).toHaveText(['Student', 'Level', 'Teacher', 'Attendance'])
-  expect(
-    await page
-      .getByLabel('Attendance for Omar')
-      .locator('option')
-      .evaluateAll((options) => options.map((option) => option.getAttribute('value'))),
-  ).toEqual(['', 'present', 'absent', 'excused'])
+  const mark = page.getByRole('group', { name: 'Attendance for Omar' })
+  const absent = mark.getByRole('button', { name: 'absent', exact: true })
+  await expect(mark.getByRole('button')).toHaveCount(3)
+  for (const name of ['present', 'absent', 'excused']) {
+    await expect(mark.getByRole('button', { name, exact: true })).toBeVisible()
+  }
+  await expect(mark.getByRole('button', { pressed: true })).toHaveCount(0)
+  await absent.focus()
+  await absent.press('Space')
+  await expect(absent).toHaveAttribute('aria-pressed', 'true')
+  await absent.press('Space')
+  await expect(mark.getByRole('button', { pressed: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Save attendance/ })).toHaveCount(0)
   if (testInfo.project.name === 'mobile') {
     await mkdir('.artifacts/verification', { recursive: true })
     for (const language of ['en', 'ar']) {
@@ -59,9 +66,11 @@ test('dashboard charts and alphabetic fuzzy attendance preserve drafts', async (
     }
     await clickAccountAction(page, 'English')
   }
-  await page.getByLabel('Attendance for Omar').selectOption('absent')
-  await expect(page.getByLabel('Attendance for Omar')).toHaveValue('absent')
-  await expect(page.getByLabel('Attendance for Omar')).toHaveValue('absent')
+  await page
+    .getByLabel('Attendance for Omar')
+    .getByRole('button', { name: 'absent', exact: true })
+    .click()
+  await expect(absent).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Omar', exact: true })).toBeVisible()
@@ -103,10 +112,16 @@ test('follow-up uses recorded absences through the selected date', async ({ page
   const secondDate = nextDate.toISOString().slice(0, 10)
 
   await page.getByRole('button', { name: /Continue attendance/i }).click()
-  await page.getByLabel('Attendance for Omar').selectOption('absent')
+  await page
+    .getByLabel('Attendance for Omar')
+    .getByRole('button', { name: 'absent', exact: true })
+    .click()
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await page.getByLabel('Session date').fill(secondDate)
-  await page.getByLabel('Attendance for Omar').selectOption('excused')
+  await page
+    .getByLabel('Attendance for Omar')
+    .getByRole('button', { name: 'excused', exact: true })
+    .click()
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   const strip = page.getByRole('list', { name: 'Recent attendance for Omar' })
@@ -125,9 +140,12 @@ test('assigned sample saves attendance in its sample course', async ({ page }) =
   await page.getByRole('button', { name: 'Explore assigned teacher sample' }).click()
   await page.getByRole('button', { name: /Take attendance|Continue attendance/i }).click()
   await expect(page.getByRole('heading', { name: 'Attendance · Sample course' })).toBeVisible()
-  const mark = page.getByRole('region', { name: 'Attendance list' }).getByRole('combobox').first()
-  await mark.selectOption('absent')
+  const mark = page
+    .getByRole('region', { name: 'Attendance list' })
+    .getByRole('button', { name: 'absent', exact: true })
+    .first()
+  await mark.click()
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
-  await expect(mark).toHaveValue('absent')
+  await expect(mark).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('status').filter({ hasText: 'saved in this demo' })).toBeVisible()
 })
