@@ -1909,3 +1909,15 @@ The owner reported a cut-off title in the Arabic sidebar. The course selector sh
 The browser regression reproduced clipping at 320px. The updated scenario checks the full title, wordmark and avatar alignment, 44px controls and bounded dropdowns in English and Arabic at 320px, 390px, 701px and 1440px. `bun run verify:release` passed with 38 Bun tests and 150 browser cases. Six optional database tests and two phone-only cases on desktop skipped. Browser coverage uses synthetic records on desktop and emulated phones. The PR records hosted checks and the production verification.
 
 At 14:03 Asia/Damascus, merged `3d2c0f9` into the title branch. The work-log entries collided and both were preserved. The integrated stylesheet retains the checkbox styling and title layout. `bun run verify` passed on the combined tree.
+
+## 2026-11-18 13:55 Asia/Damascus (UTC+03:00) - Simplify the account creation form
+
+The owner reported an outline around Settings when interacting with account creation and asked to remove the spreadsheet textarea. The settings page no longer draws an outline when its main landmark gets focus. The skip link still focuses the landmark and keyboard focus stays visible on form controls. Account creation takes one name and role at a time. The spreadsheet import and preview are removed from the form. An uncertain response can be retried with the same person and request ID, and a successful invitation still produces a private copyable message.
+
+The old Railway build drew a solid outline when the skip link focused the Settings landmark. The local release gate passed with 38 Bun tests and 150 browser cases. Six optional database tests and two phone-only cases on desktop skipped. The invitation scenario covered English and Arabic on desktop and at 320px with synthetic sessions and verified safe retry and the private message. The PR records CI and Railway verification. Browser coverage used emulation and synthetic API responses.
+
+At 14:07 Asia/Damascus, integrated `3d2c0f9` from main and resolved the work-log conflict by keeping both entries. The combined `bun run verify:release` passed with 38 Bun tests and 150 browser cases, including the account creation regression in both browser projects. Six optional database tests and two phone-only cases on desktop skipped.
+
+At 14:10 Asia/Damascus, investigated GitHub Verify on `163f52c`. Its restored-batch test reloaded when the pending banner appeared, before the initial attendance POST. A delayed synthetic notebook read reproduced the zero-POST failure twice. Three related browser cases now wait for the write-failure alert before changing retry state. The delayed reproduction passed on desktop and mobile, then all 18 focused runs passed without the temporary delay. `bun run verify` passed with six optional database skips. The fix changes browser tests only.
+
+At 14:16 Asia/Damascus, integrated the full course title change from `87fedf4` and kept both work-log entries. The combined `bun run verify` passed with six optional database skips. All ten focused browser cases passed for account creation, attendance retry and the course title on desktop and emulated mobile.

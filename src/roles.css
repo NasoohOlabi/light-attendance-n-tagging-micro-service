@@ -5,6 +5,9 @@
   min-height: 100svh;
   overflow-wrap: anywhere;
 }
+.workspace main.role-page:focus {
+  outline: none;
+}
 .role-header,
 .role-heading,
 .role-row,
@@ -795,17 +798,13 @@
   opacity: 0.6;
   cursor: default;
 }
-.invite-accounts textarea {
+.invite-message textarea {
   display: block;
   width: 100%;
   max-width: 100%;
   resize: vertical;
 }
-.invite-accounts > label,
 .invite-message {
   display: block;
   margin-block: 1rem;
-}
-.invite-accounts li {
-  margin-block: 0.5rem;
 }

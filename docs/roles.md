@@ -10,9 +10,9 @@ Open **Profile** again and select a saved name to switch back. Each name include
 
 ### Invite a user
 
-Open **Settings → Accounts → Create accounts**. Enter a first name and last name, choose the role, and select **Create account**. Teacher is preselected. To import teachers, paste two spreadsheet columns (first name and last name, without headings), preview the names, and create up to 50 accounts at once.
+Open **Settings → Accounts → Create accounts**. Enter a first name and last name, choose the role, and select **Create account**. Teacher is preselected. Create one account at a time.
 
-Use **Copy message** for each recipient and send it privately. The message opens username sign-in and includes that person's initial username and temporary password. Leaving the screen clears the displayed messages. If the creation response is lost, **Retry safely** uses the same request. Check Accounts for the username and use its password reset if the account was created.
+Use **Copy message** and send the message privately to the recipient. It opens username sign-in and includes the recipient's initial username and temporary password. Leaving the screen clears the displayed message. If the creation response is lost, **Retry safely** uses the same request. Check Accounts for the username and use its password reset if the account was created.
 
 At first sign-in the recipient enters their phone number and date of birth, chooses a personal password, and can edit their username. They sign in again with the new credentials. **Profile settings** lets them change those details later. A student invitation creates a fresh, unassigned roster record. To connect someone to an existing student, use the existing signup and account-grant flow and select the correct roster record.
 
