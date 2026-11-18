@@ -1,12 +1,12 @@
 import { clickAccountAction } from './profileActions'
-import { expect, test } from '@playwright/test'
-import { mkdir } from 'node:fs/promises'
+import { expect, test, type Page } from '@playwright/test'
+import { mkdir, readFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { unzipSync } from 'fflate'
 
 test.use({ trace: 'off' })
 
-test('summary counts all dates for the selected course and ignores saved filters', async ({
-  page,
-}, testInfo) => {
+async function openSummary(page: Page, role: 'administrator' | 'teacher') {
   const teacherId = '10000000-0000-4000-8000-000000000001'
   const studentId = '20000000-0000-4000-8000-000000000001'
   const secondId = '20000000-0000-4000-8000-000000000002'
@@ -18,11 +18,11 @@ test('summary counts all dates for the selected course and ignores saved filters
   const enrollInactive = '40000000-0000-4000-8000-000000000003'
   const now = new Date().toISOString()
   const teacher = {
-    role: 'administrator',
+    role,
     id: teacherId,
     name: 'Admin',
     canRead: true,
-    canWrite: true,
+    canWrite: role === 'administrator',
     expiresAt: null,
   }
   const students = [
@@ -97,6 +97,34 @@ test('summary counts all dates for the selected course and ignores saved filters
       status: 'present',
     }),
   ]
+  if (role === 'teacher') {
+    for (let i = 3; i <= 24; i++) {
+      const suffix = String(i).padStart(12, '0')
+      const studentId = `20000000-0000-4000-8000-${suffix}`
+      students.push({
+        kind: 'student',
+        studentId,
+        name: `Peer ${suffix.slice(-2)}`,
+        group: 'A',
+        active: true,
+      })
+      enrollments.push({ ...enrollments[0], id: `41000000-0000-4000-8000-${suffix}`, studentId })
+      if (i <= 5) {
+        for (let day = 1; day <= 4; day++) {
+          events.push(
+            event(i * 10 + day, {
+              kind: 'attendance',
+              studentId,
+              enrollmentId: `41000000-0000-4000-8000-${suffix}`,
+              date: `2026-02-0${day}`,
+              status: day <= i - 2 ? 'present' : 'absent',
+            }),
+          )
+        }
+      }
+    }
+    students[1].active = true
+  }
   await page.route('**/api/auth/**', (route) =>
     route.fulfill({
       json: {
@@ -128,6 +156,16 @@ test('summary counts all dates for the selected course and ignores saved filters
   await page.goto(
     `/?page=app&view=notebook&tab=summary&course=${courseA}&from=2026-12-01&to=2020-01-01&date=2026-11-01&q=missing&group=missing&student=${secondId}&all=0`,
   )
+  return { courseA, courseB, courseEmpty }
+}
+
+test('summary counts all dates for the selected course and ignores saved filters', async ({
+  page,
+}, testInfo) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'canShare', { value: () => false })
+  })
+  const { courseB, courseEmpty } = await openSummary(page, 'administrator')
   const row = page.getByRole('row', { name: /Synthetic Student/ })
   await expect(row).toContainText('Synthetic Student')
   await expect(row.locator('td')).toHaveText(['2', '0', '0', '2'])
@@ -187,6 +225,16 @@ test('summary counts all dates for the selected course and ignores saved filters
     path: `.artifacts/verification/summary-percentages-${testInfo.project.name}-ar.png`,
     fullPage: true,
   })
+  await page.getByRole('button', { name: 'تصدير مخطط الحضور' }).click()
+  await expect(page.getByRole('img', { name: /مخطط الحضور/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /مشاركة الصورة/ })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  const arabicDownload = page.waitForEvent('download')
+  await page.getByRole('link', { name: /تنزيل.*PNG/ }).click()
+  await (
+    await arabicDownload
+  ).saveAs(`.artifacts/verification/group-attendance-${testInfo.project.name}-ar.png`)
+  await page.getByRole('button', { name: 'إغلاق', exact: true }).click()
   await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseB)
@@ -203,6 +251,7 @@ test('summary counts all dates for the selected course and ignores saved filters
     .selectOption(courseEmpty)
   await page.getByRole('button', { name: 'Summary', exact: true }).click()
   await expect(page.getByText('No attendance records yet.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Export attendance chart' })).toBeDisabled()
   await expect(page.getByRole('meter')).toHaveCount(0)
   await clickAccountAction(page, 'العربية')
   await expect(page.getByText('لا توجد سجلات حضور بعد.')).toBeVisible()
@@ -216,4 +265,88 @@ test('summary counts all dates for the selected course and ignores saved filters
   await expect(page.getByRole('combobox', { name: 'Group', exact: true })).toBeHidden()
   await expect(page.getByLabel('Session date')).toBeHidden()
   await expect(page.getByText('Choose an open course to take attendance.')).toBeVisible()
+})
+
+test('read-only teacher previews, downloads and shares the selected attendance chart', async ({
+  page,
+}, testInfo) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'canShare', {
+      value: (data: ShareData) => data.files?.[0]?.type === 'image/png',
+    })
+    Object.defineProperty(navigator, 'share', {
+      value: async (data: ShareData) => {
+        if (document.body.dataset.cancelShare) throw new DOMException('Cancelled', 'AbortError')
+        const file = data.files?.[0]
+        if (!file || !navigator.userActivation.isActive)
+          throw new Error('Expected an image and a user gesture')
+        const bytes = new Uint8Array(
+          await crypto.subtle.digest('SHA-256', await file.arrayBuffer()),
+        )
+        document.body.dataset.sharedImage = Array.from(bytes, (b) =>
+          b.toString(16).padStart(2, '0'),
+        ).join('')
+      },
+    })
+  })
+  await openSummary(page, 'teacher')
+  if (testInfo.project.name === 'mobile') await page.setViewportSize({ width: 320, height: 800 })
+  const open = page.getByRole('button', { name: 'Export attendance chart' })
+  await open.click()
+  const chart = page.getByRole('img', { name: /Attendance chart/i })
+  const data = page.getByRole('list', { name: 'Chart data' })
+  await expect(data).toContainText('100%')
+  await expect(data).toContainText('2/2')
+  await expect(data).toContainText('0/1')
+  await expect(data).toContainText('No records')
+  await expect(data).not.toContainText('Former Student')
+  await expect(data).not.toContainText('Synthetic Student')
+  await expect(chart).toBeVisible()
+  const highlight = page.getByLabel('Highlight one student by name')
+  await highlight.selectOption({ label: 'Peer 24' })
+  await expect(data).toContainText('Peer 24')
+  await expect(data).not.toContainText('Peer 23')
+  await expect(data).not.toContainText('Peer 22')
+  await page.getByRole('checkbox', { name: 'Show all names' }).check()
+  await expect(data).toContainText('Peer 23')
+  await page.getByRole('button', { name: 'Close', exact: true }).click()
+  await open.click()
+  await expect(page.getByRole('checkbox', { name: 'Show all names' })).not.toBeChecked()
+  await expect(highlight).toHaveValue('')
+  await highlight.selectOption({ label: 'Former Student' })
+  await expect(data).toContainText('Former Student')
+  await expect(data).not.toContainText('Synthetic Student')
+  const downloadEvent = page.waitForEvent('download')
+  await page.getByRole('link', { name: /Download.*PNG/i }).click()
+  const download = await downloadEvent
+  expect(download.suggestedFilename()).toMatch(/\.png$/)
+  const path = `.artifacts/verification/group-attendance-${testInfo.project.name}.png`
+  await mkdir('.artifacts/verification', { recursive: true })
+  await download.saveAs(path)
+  const png = await readFile(path)
+  expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a')
+  expect(png.readUInt32BE(16)).toBeGreaterThanOrEqual(800)
+  await expect(chart).toHaveAttribute('src', `data:image/png;base64,${png.toString('base64')}`)
+  const allPagesEvent = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download all images (ZIP)' }).click()
+  const archive = await allPagesEvent
+  const archivePath = await archive.path()
+  if (!archivePath) throw new Error('Missing ZIP download')
+  const images = Object.values(unzipSync(await readFile(archivePath)))
+  expect(images).toHaveLength(4)
+  expect(Buffer.from(images[0]).equals(png)).toBe(true)
+  for (const image of images)
+    expect(Buffer.from(image.subarray(0, 8)).toString('hex')).toBe('89504e470d0a1a0a')
+  const share = page.getByRole('button', { name: /Share.*image/i })
+  await share.click()
+  await expect(page.locator('body')).toHaveAttribute(
+    'data-shared-image',
+    createHash('sha256').update(png).digest('hex'),
+  )
+  await page.evaluate(() => {
+    document.body.dataset.cancelShare = 'true'
+  })
+  await share.click()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })

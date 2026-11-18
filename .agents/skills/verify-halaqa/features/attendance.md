@@ -20,6 +20,8 @@ For Summary, use historical and current attendance in two courses. Assert course
 
 Overview meters display each status's percentage of recorded student-sessions to one decimal place, with unmarked days excluded. In `e2e/summary.spec.ts`, verify mixed-status rounding, zero-share status, course switching, and no-records messaging without fabricated percentages. Check meter accessibility, flat brand styling, RTL fill direction and phone overflow; per-student table cells keep exact counts.
 
+Open **Export attendance chart** on Summary with a read-only teacher and a multi-page course. Verify that the sorted percentages and fractions reflect corrected marks in this course, students with no records appear last, and classmates keep anonymous labels when one student is highlighted. Check the downloaded PNG against the preview, the named export opt-in, navigation to the highlighted student's page, and privacy defaults after closing. Open the ZIP and check all page images. Exercise file sharing, cancellation, and download on a browser without file sharing. Check English and Arabic at phone and desktop widths. The simulated share target in `e2e/summary.spec.ts` verifies the file passed to the browser. Physical-device delivery is a separate check.
+
 ## Gotchas
 
 Same student/date uses last surviving event in database sequence, never device clock. Undoing newest attendance reveals the prior surviving status. Filtered-out/inactive students must not be saved by group marking. Summary ignores saved date ranges, including reversed bounds.
