@@ -975,6 +975,21 @@ function AttendanceView({
   const unmarked = visible.filter(
     (student) => !current.has(student.studentId) && !draft[student.studentId],
   )
+  const addNoteButton = (student: Student) => (
+    <button
+      type="button"
+      className="attendance-note-button"
+      aria-label={`${t('Add note for')} ${student.name}`}
+      title={t('Add note')}
+      aria-haspopup="dialog"
+      onClick={() => {
+        setNoteStudent(student)
+        noteDialog.current?.showModal()
+      }}
+    >
+      <StickyNote size={18} aria-hidden="true" />
+    </button>
+  )
   const rows = (items: Student[]) => (
     <div
       className="role-table-scroll"
@@ -1019,6 +1034,7 @@ function AttendanceView({
               </td>
               <td data-label={language === 'ar' ? 'الحضور' : 'Attendance'}>
                 <div className="attendance-row-controls">
+                  {language === 'ar' && addNoteButton(student)}
                   <ToggleGroup
                     className="attendance-segments"
                     aria-label={`${t('Attendance for')} ${student.name}`}
@@ -1047,19 +1063,7 @@ function AttendanceView({
                       )
                     })}
                   </ToggleGroup>
-                  <button
-                    type="button"
-                    className="attendance-note-button"
-                    aria-label={`${t('Add note for')} ${student.name}`}
-                    title={t('Add note')}
-                    aria-haspopup="dialog"
-                    onClick={() => {
-                      setNoteStudent(student)
-                      noteDialog.current?.showModal()
-                    }}
-                  >
-                    <StickyNote size={18} aria-hidden="true" />
-                  </button>
+                  {language === 'en' && addNoteButton(student)}
                   {canCorrect && current.has(student.studentId) && (
                     <button
                       type="button"
