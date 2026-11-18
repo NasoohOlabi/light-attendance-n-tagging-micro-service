@@ -28,7 +28,7 @@
   font-size: clamp(2rem, 5vw, 3rem);
   font-weight: 600;
 }
-.role-heading span {
+.role-heading > div > span {
   color: #007d8d;
   font-weight: 600;
 }
@@ -334,51 +334,19 @@
     max-width: 100%;
   }
   .mobile-record-table thead {
-    display: block;
-    width: 100%;
-    white-space: normal;
+    display: none;
   }
-  .mobile-record-table thead tr {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem 1rem;
-    padding-block: 0.75rem;
-  }
-  .mobile-record-table thead th,
-  .summary-table thead th:first-child {
-    display: block;
-    width: auto;
-    min-width: 0;
-    padding: 0;
-    border: 0;
-    text-align: start;
-    white-space: normal;
-  }
-  .mobile-record-table thead .table-actions-header {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .mobile-record-table .table-sort {
-    max-width: calc(100% - 1rem);
-    min-height: 44px;
-    overflow-wrap: anywhere;
-  }
-  .mobile-record-table .table-filter {
-    width: 100%;
-    min-width: 0;
-    min-height: 44px;
-  }
-  .mobile-record-table.roster-students-table thead,
   .role-table.roster-students-table tbody .roster-last-name,
   .role-table.roster-students-table tbody .roster-desktop-action,
   .mobile-record-table .roster-student-name::before,
+  .mobile-record-table .record-title::before,
   .roster-student-name .roster-first-name {
     display: none;
+  }
+  .record-title {
+    grid-column: 1 / -1;
+    font-size: 1.125rem;
+    font-weight: 600;
   }
   .roster-student-name {
     grid-column: 1 / -1;
@@ -406,39 +374,28 @@
   font-size: 0.75em;
   color: #007d8d;
 }
-.table-controls {
-  text-align: start;
-  padding: 0.5rem;
-  font-weight: normal;
-  white-space: normal;
-}
-.grade-title-bar {
+.table-toolbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
   min-width: 0;
 }
-.grade-title-bar h1 {
+.table-toolbar > :first-child {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.grade-title-bar .sort-toolbar {
+.table-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   flex: none;
-}
-@media (max-width: 64rem) {
-  .mobile-record-table .table-controls {
-    display: block;
-    width: 100%;
-  }
 }
 .sort-toolbar {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.3rem;
-}
-.table-controls {
-  padding: 0;
 }
 .table-control-trigger {
   position: relative;

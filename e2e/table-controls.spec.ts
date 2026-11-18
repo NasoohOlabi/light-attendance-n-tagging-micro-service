@@ -36,6 +36,7 @@ test('table filtering limits bulk attendance and preserves hidden drafts', async
   await page.getByRole('button', { name: 'Filter options' }).first().click()
   await page.getByRole('button', { name: 'Clear filters' }).click()
   await page.getByRole('button', { name: 'Close' }).click()
+  await page.setViewportSize({ width: 1280, height: 800 })
   await page.getByRole('button', { name: 'Summary', exact: true }).click()
   const hoverDevice = await page.evaluate(() => matchMedia('(hover: hover)').matches)
   for (const language of ['en', 'ar']) {

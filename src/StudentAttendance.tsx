@@ -1,5 +1,5 @@
 import { formatLevel } from './levelFormat'
-import { TableHeader, useDataTable } from './DataTable'
+import { TableHeader, TableToolbar, useDataTable } from './DataTable'
 import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
@@ -73,9 +73,27 @@ export function StudentAttendance({
         <ProfileMenu profile={profile} leave={signOut} />
       </header>
       <div className="role-heading">
-        <div>
+        <div className="min-w-0 grow">
           <span>{ar ? 'طالب' : 'Student'}</span>
-          <h1>{ar ? 'حضوري' : 'My attendance'}</h1>
+          <TableToolbar
+            model={!loading && data?.attendance.length ? attendanceTable : undefined}
+            actions={
+              <button
+                className="icon-button"
+                aria-label={t('Refresh')}
+                title={t('Refresh')}
+                disabled={loading}
+                onClick={() => {
+                  setLoading(true)
+                  setRevision((n) => n + 1)
+                }}
+              >
+                <RefreshCw size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
+              </button>
+            }
+          >
+            <h1>{ar ? 'حضوري' : 'My attendance'}</h1>
+          </TableToolbar>
           {data && (
             <dl className="grid grid-cols-2 gap-2 break-words">
               <div>
@@ -89,18 +107,6 @@ export function StudentAttendance({
             </dl>
           )}
         </div>
-        <button
-          className="icon-button"
-          aria-label={t('Refresh')}
-          title={t('Refresh')}
-          disabled={loading}
-          onClick={() => {
-            setLoading(true)
-            setRevision((n) => n + 1)
-          }}
-        >
-          <RefreshCw size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
-        </button>
       </div>
       {loading && <p role="status">{ar ? 'جارٍ التحميل…' : 'Loading…'}</p>}
       {error && <p role="alert">{errorMessage(error)}</p>}

@@ -585,7 +585,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       const table = page.getByRole('region', {
         name: '\u0637\u0644\u0627\u0628 \u0627\u0644\u062f\u0648\u0631\u0629',
       })
-      await expect(table.getByRole('columnheader')).toHaveCount(8)
+      await expect(table.locator('thead')).toBeHidden()
+      await expect(page.getByRole('button', { name: 'خيارات الفرز' })).toBeVisible()
       expect(await table.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
         true,
       )
@@ -1413,8 +1414,8 @@ test('administrator no-course Students includes the complete inactive register',
   await expect(detail.getByText('50.0%', { exact: true })).toBeVisible()
   await expect(detail.getByRole('button', { name: 'Take attendance' })).toHaveCount(0)
   await expect(
-    detail.getByRole('region', { name: 'Attendance history' }).getByRole('row'),
-  ).toHaveCount(3)
+    detail.getByRole('region', { name: 'Attendance history' }).locator('tbody tr'),
+  ).toHaveCount(2)
   await page.reload()
   await expect(detail.getByText('50.0%', { exact: true })).toBeVisible()
   await page.getByRole('combobox', { name: 'Course', exact: true }).selectOption(courseA)

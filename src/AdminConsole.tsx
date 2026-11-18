@@ -1,7 +1,7 @@
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
 import { PhoneNumber } from './PhoneNumber'
-import { TableHeader, useDataTable } from './DataTable'
+import { TableHeader, TableToolbar, useDataTable } from './DataTable'
 import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
@@ -246,20 +246,20 @@ export function AdminConsole({
             )}
             {section === 'students' && (
               <section className="panel role-section">
-                <div className="role-heading">
+                <TableToolbar model={courseId ? undefined : studentTable} className="mt-8 mb-4">
                   <h2 className="title">{ar ? 'الطلاب' : 'Students'}</h2>
-                  {!courseId && (
-                    <button
-                      className="secondary"
-                      onClick={() => {
-                        setEditing(null)
-                        setCreating(true)
-                      }}
-                    >
-                      {ar ? 'إضافة طالب' : 'Add student'}
-                    </button>
-                  )}
-                </div>
+                </TableToolbar>
+                {!courseId && (
+                  <button
+                    className="secondary mb-4"
+                    onClick={() => {
+                      setEditing(null)
+                      setCreating(true)
+                    }}
+                  >
+                    {ar ? 'إضافة طالب' : 'Add student'}
+                  </button>
+                )}
                 {(creating || editing) && (
                   <StudentForm
                     key={editing?.studentId ?? 'new'}

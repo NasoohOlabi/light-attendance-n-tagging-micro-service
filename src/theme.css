@@ -58,7 +58,7 @@
 }
 :root[data-theme='dark'] .home-kicker,
 :root[data-theme='dark'] .workspace-welcome p,
-:root[data-theme='dark'] .role-heading span,
+:root[data-theme='dark'] .role-heading > div > span,
 :root[data-theme='dark'] .role-manage,
 :root[data-theme='dark'] .sort-pill-number,
 :root[data-theme='dark'] .table-sort-priority {
