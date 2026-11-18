@@ -6,7 +6,7 @@ Inspect record details, undo note/attendance (and sample roster) with reason, re
 
 ## How to get to it (user POV)
 
-As an Administrator, open **Profile → Settings → History & corrections**. Use the Course picker to select open courses, closed courses, or records without a course. A course row's **History** action opens the same page for that course. In the editable sample, open History from the profile menu.
+As an Administrator, open **Profile → Settings → History & corrections**. Use the Course picker to select open courses, closed courses, or records without a course. Open the course name and choose History for that course. From a saved attendance mark, use Correct this mark, supply a reason, and verify the resulting history and projected mark. In the editable sample, open History from the profile menu.
 
 Open the three-dot menu for a record. Choose **Undo** on an ordinary record, enter **Reason**, then **Append correction**. Choose **Record details** to expand or collapse event JSON. Corrections and already-undone records offer details only.
 

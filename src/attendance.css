@@ -1,0 +1,46 @@
+.attendance-siblings {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.attendance-siblings button {
+  min-height: 44px;
+  padding: 0 0.25rem;
+  border-bottom: 3px solid transparent;
+}
+.attendance-siblings button[aria-current='page'] {
+  border-bottom-color: currentColor;
+  font-weight: 700;
+}
+.student-name-link {
+  min-width: 44px;
+  min-height: 44px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: start;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.unmarked-toggle[aria-pressed='true'] {
+  box-shadow: inset 0 -3px currentColor;
+}
+.attendance-save {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+@media (max-width: 700px) {
+  .attendance-save {
+    position: sticky;
+    bottom: calc(4.5rem + env(safe-area-inset-bottom));
+    z-index: 5;
+    pointer-events: none;
+  }
+  .attendance-save button {
+    width: 100%;
+    pointer-events: auto;
+  }
+  .attendance-session :is(button, select) {
+    scroll-margin-bottom: calc(8.5rem + env(safe-area-inset-bottom));
+  }
+}

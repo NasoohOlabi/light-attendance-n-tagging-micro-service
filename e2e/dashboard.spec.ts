@@ -8,16 +8,16 @@ test('dashboard charts and alphabetic fuzzy attendance preserve drafts', async (
 }, testInfo) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Explore with sample students' }).click()
-  await expect(page.getByRole('button', { name: 'Take attendance' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Continue attendance/i })).toBeVisible()
   await expect(page.getByText('No recorded absences to follow up in this window.')).toBeVisible()
   await expect(page.getByText('1 marked, 1 unmarked')).toBeVisible()
   await clickAccountAction(page, 'العربية')
-  await expect(page.getByRole('button', { name: 'تسجيل الحضور' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /متابعة/ })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
     true,
   )
   await clickAccountAction(page, 'English')
-  await page.getByRole('button', { name: 'Take attendance' }).click()
+  await page.getByRole('button', { name: /Continue attendance/i }).click()
   await expect(page.locator('details.attendance-group')).toHaveCount(0)
   const names = await page
     .getByRole('region', { name: 'Attendance list' })
@@ -101,7 +101,8 @@ test('follow-up uses recorded absences through the selected date', async ({ page
   const nextDate = new Date(`${firstDate}T00:00:00Z`)
   nextDate.setUTCDate(nextDate.getUTCDate() + 1)
   const secondDate = nextDate.toISOString().slice(0, 10)
-  await page.getByRole('button', { name: 'Take attendance' }).click()
+
+  await page.getByRole('button', { name: /Continue attendance/i }).click()
   await page.getByLabel('Attendance for Omar').selectOption('absent')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await page.getByLabel('Session date').fill(secondDate)
@@ -122,7 +123,7 @@ test('follow-up uses recorded absences through the selected date', async ({ page
 test('assigned sample saves attendance in its sample course', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Explore assigned teacher sample' }).click()
-  await page.getByRole('button', { name: 'Take attendance' }).click()
+  await page.getByRole('button', { name: /Take attendance|Continue attendance/i }).click()
   await expect(page.getByRole('heading', { name: 'Attendance · Sample course' })).toBeVisible()
   const mark = page.getByRole('region', { name: 'Attendance list' }).getByRole('combobox').first()
   await mark.selectOption('absent')

@@ -88,7 +88,13 @@ export function AdminConsole({
       cancelled = true
     }
   }, [userId, revision])
-  const showStudentTable = !courseId && !creating
+  const editingStudentId = initialCreateStudent || query.account ? '' : query.student
+  const linkedStudent = editingStudentId
+    ? board?.students.find((student) => student.studentId === editingStudentId)
+    : undefined
+  const selectedSection = editingStudentId ? 'students' : section
+  const activeEditing = editingStudentId ? linkedStudent : editing
+  const showStudentTable = !courseId && !creating && !editingStudentId
   const studentTable = useDataTable('admin-students', board?.students ?? [], [
     { id: 'first', label: ar ? 'الاسم الأول' : 'First name', value: (s) => s.firstName },
     { id: 'last', label: ar ? 'اسم العائلة' : 'Last name', value: (s) => s.lastName },
@@ -166,16 +172,19 @@ export function AdminConsole({
               <nav className="role-tabs" aria-label={ar ? 'أقسام الإعدادات' : 'Settings sections'}>
                 <button
                   className="secondary"
-                  aria-pressed={section === 'accounts'}
-                  onClick={() => setSection('accounts')}
+                  aria-pressed={selectedSection === 'accounts'}
+                  onClick={() => {
+                    setQuery({ student: '' })
+                    setSection('accounts')
+                  }}
                 >
                   {ar ? 'الحسابات' : 'Accounts'}
                 </button>
                 <button
                   className="secondary"
-                  aria-pressed={section === 'students'}
+                  aria-pressed={selectedSection === 'students'}
                   onClick={() => {
-                    setQuery({ account: '' })
+                    setQuery({ account: '', student: '' })
                     setInviting(false)
                     setSection('students')
                   }}
@@ -184,7 +193,7 @@ export function AdminConsole({
                 </button>
               </nav>
             )}
-            {section === 'accounts' && !initialCreateStudent && (
+            {selectedSection === 'accounts' && !initialCreateStudent && (
               <section className="panel role-section">
                 <h2 className="title">{ar ? 'الحسابات' : 'Accounts'}</h2>
                 {inviting ? (
@@ -249,7 +258,7 @@ export function AdminConsole({
                 )}
               </section>
             )}
-            {section === 'students' && (
+            {selectedSection === 'students' && (
               <section className="panel role-section">
                 <TableToolbar
                   model={showStudentTable ? studentTable : undefined}
@@ -257,7 +266,24 @@ export function AdminConsole({
                 >
                   <h2 className="title">{ar ? 'الطلاب' : 'Students'}</h2>
                 </TableToolbar>
-                {!courseId && (
+                {editingStudentId && (
+                  <button
+                    className="secondary mb-4"
+                    onClick={() => setQuery({ view: 'student' }, true)}
+                  >
+                    {ar
+                      ? '\u0627\u0644\u0639\u0648\u062f\u0629 \u0625\u0644\u0649 \u0627\u0644\u0637\u0627\u0644\u0628'
+                      : 'Back to student'}
+                  </button>
+                )}
+                {editingStudentId && !linkedStudent && (
+                  <p>
+                    {ar
+                      ? '\u0627\u0644\u0637\u0627\u0644\u0628 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d'
+                      : 'Student unavailable'}
+                  </p>
+                )}
+                {!courseId && !editingStudentId && (
                   <button
                     className="secondary mb-4"
                     onClick={() => {
@@ -268,10 +294,10 @@ export function AdminConsole({
                     {ar ? 'إضافة طالب' : 'Add student'}
                   </button>
                 )}
-                {(creating || editing) && (
+                {(creating || activeEditing) && (
                   <StudentForm
-                    key={editing?.studentId ?? 'new'}
-                    student={editing}
+                    key={activeEditing?.studentId ?? 'new'}
+                    student={activeEditing ?? null}
                     teachers={board.teachers}
                     busy={busy || (!!courseId && !courseName)}
                     ar={ar}
@@ -286,6 +312,10 @@ export function AdminConsole({
                           setQuery({ view: 'courses', courseView: 'students' }, true)
                           return
                         }
+                        if (editingStudentId) {
+                          setQuery({ view: 'student' }, true)
+                          return
+                        }
                         setEditing(null)
                         setCreating(false)
                       }
@@ -293,6 +323,10 @@ export function AdminConsole({
                     cancel={() => {
                       if (courseId) {
                         setQuery({ view: 'courses', courseView: 'students' }, true)
+                        return
+                      }
+                      if (editingStudentId) {
+                        setQuery({ view: 'student' }, true)
                         return
                       }
                       setEditing(null)

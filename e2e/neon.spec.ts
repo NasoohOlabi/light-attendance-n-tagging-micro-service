@@ -236,7 +236,8 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await expect(page.getByRole('button', { name: 'Add student', exact: true })).toHaveCount(0)
   await expect(page.getByRole('combobox', { name: 'Default course', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Take attendance' }).click()
-  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseId)
+  await page.getByLabel('Change course').click()
+  await page.getByRole('button', { name: 'Synthetic course', exact: true }).click()
   await expect(page.getByText('Alpha Student')).toBeVisible()
   await expect(page.getByText('Beta Student')).toHaveCount(0)
   await page.getByLabel('Attendance for Alpha Student').selectOption('present')
@@ -253,7 +254,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await expect(page.getByLabel('Session date')).toHaveValue(sessionDate)
   const addNote = page.getByRole('button', { name: 'Add note for Alpha Student' })
   await addNote.click()
-  const dialog = page.getByRole('dialog', { name: 'Note for Alpha Student' })
+  const dialog = page.getByRole('dialog', { name: 'Student note for Alpha Student' })
   await dialog.getByLabel('Note', { exact: true }).fill('Synthetic attendance note')
   await dialog.getByRole('button', { name: 'Save note' }).click()
   await expect(dialog.getByRole('alert')).toContainText(
@@ -304,7 +305,8 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.getByLabel('Password').fill('synthetic-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByRole('button', { name: 'Take attendance' }).click()
-  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseId)
+  await page.getByLabel('Change course').click()
+  await page.getByRole('button', { name: 'Synthetic course', exact: true }).click()
   const denied = page.waitForResponse(
     (response) => response.url() === `${api}/notebook` && response.status() === 403,
   )
@@ -314,7 +316,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await expect(page.getByText('Alpha Student')).toHaveCount(0)
   await expect(page.getByLabel('Attendance for Beta Student')).toBeDisabled()
   await page.getByRole('button', { name: 'Add note for Beta Student' }).click()
-  const betaNote = page.getByRole('dialog', { name: 'Note for Beta Student' })
+  const betaNote = page.getByRole('dialog', { name: 'Student note for Beta Student' })
   await expect(betaNote.getByLabel('Note', { exact: true })).toBeDisabled()
   await expect(betaNote.getByRole('button', { name: 'Save note' })).toBeDisabled()
   await expect(betaNote.getByText('Synthetic attendance note')).toHaveCount(0)
@@ -567,7 +569,8 @@ async function mockTeacher(page: Page, post: () => Promise<void>) {
   })
   await page.goto(`${origin}/?page=app`)
   await page.getByRole('button', { name: 'Take attendance' }).click()
-  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseId)
+  await page.getByLabel('Change course').click()
+  await page.getByRole('button', { name: 'Synthetic course', exact: true }).click()
   await expect(page.getByLabel('Attendance for Alpha Student')).toBeVisible()
 }
 
@@ -620,7 +623,7 @@ test('old pending batches block authenticated writes', async ({ page }) => {
   await expect(page.getByRole('alert').first()).toContainText(
     'Copy the pending batch from browser storage',
   )
-  await expect(page.getByRole('button', { name: 'Save attendance (0)' })).toBeDisabled()
+  await expect(page.getByLabel('Attendance for Alpha Student')).toBeDisabled()
   expect(posts).toBe(0)
 })
 

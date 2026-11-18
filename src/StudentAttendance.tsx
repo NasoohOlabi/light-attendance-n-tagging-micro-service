@@ -1,3 +1,4 @@
+import { today } from './queryState'
 import { formatLevel } from './levelFormat'
 import { TableHeader, TableToolbar } from './DataTable'
 import { useDataTable } from './useDataTable'
@@ -48,20 +49,24 @@ export function StudentAttendance({
       cancelled = true
     }
   }, [userId, revision])
-  const attendanceTable = useDataTable('portal-attendance', data?.attendance ?? [], [
-    {
-      id: 'course',
-      label: ar ? 'الدورة' : 'Course',
-      value: (item) => item.course ?? (ar ? 'سجل سابق' : 'Previous record'),
-    },
-    { id: 'date', label: t('Date'), value: (item) => item.date },
-    {
-      id: 'status',
-      choices: [t('present'), t('absent'), t('excused')],
-      label: ar ? 'الحالة' : 'Status',
-      value: (item) => t(item.status),
-    },
-  ])
+  const attendanceTable = useDataTable(
+    'portal-attendance',
+    [...(data?.attendance ?? [])].sort((a, b) => b.date.localeCompare(a.date)),
+    [
+      {
+        id: 'course',
+        label: ar ? 'الدورة' : 'Course',
+        value: (item) => item.course ?? (ar ? 'سجل سابق' : 'Previous record'),
+      },
+      { id: 'date', label: t('Date'), value: (item) => item.date },
+      {
+        id: 'status',
+        choices: [t('present'), t('absent'), t('excused')],
+        label: ar ? 'الحالة' : 'Status',
+        value: (item) => t(item.status),
+      },
+    ],
+  )
   return (
     <main id="main-content" className="role-page" tabIndex={-1}>
       <header className="role-header">
@@ -108,6 +113,13 @@ export function StudentAttendance({
       {error && <p role="alert">{errorMessage(error)}</p>}
       {data && !loading && (
         <section className="panel">
+          {!data.attendance.some((item) => item.date === today()) && (
+            <p>
+              {ar
+                ? '\u0644\u0627 \u064a\u0648\u062c\u062f \u0633\u062c\u0644 \u062d\u0636\u0648\u0631 \u0644\u0644\u064a\u0648\u0645.'
+                : 'No attendance recorded today.'}
+            </p>
+          )}
           {data.attendance.length ? (
             <table className="mobile-record-table role-table">
               <TableHeader model={attendanceTable} />

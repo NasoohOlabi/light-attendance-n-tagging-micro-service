@@ -1,7 +1,5 @@
 import { clickAccountAction, openProfile } from './profileActions'
 import { expect, test, type Page } from '@playwright/test'
-import { spawn, type ChildProcess } from 'node:child_process'
-import { availablePort } from './availablePort'
 import { mkdir } from 'node:fs/promises'
 import { compactHeader } from './headerLayout'
 
@@ -13,41 +11,13 @@ const teacherId = '10000000-0000-4000-8000-000000000002'
 const studentUserId = '10000000-0000-4000-8000-000000000003'
 const courseId = '40000000-0000-4000-8000-000000000001'
 const studentId = '20000000-0000-4000-8000-000000000001'
-let server: ChildProcess
 let origin = ''
-test.beforeAll(async ({ browserName }) => {
-  if (browserName !== 'chromium') throw new Error('Chromium required')
-  const port = await availablePort()
-  origin = `http://127.0.0.1:${port}`
+test.beforeEach(({ baseURL }) => {
+  if (!baseURL) throw new Error('Role tests require the suite preview baseURL')
+  origin = baseURL
   auth = `${origin}/api/auth`
   api = `${origin}/api`
-  server = spawn(
-    process.execPath,
-    [
-      'node_modules/vite/bin/vite.js',
-      '--host',
-      '127.0.0.1',
-      '--port',
-      String(port),
-      '--strictPort',
-    ],
-    {
-      env: { ...process.env, VITE_NEON_AUTH_URL: auth, VITE_NEON_API_URL: api },
-      stdio: 'ignore',
-    },
-  )
-  for (let i = 0; i < 100; i++) {
-    if (server.exitCode !== null) throw new Error('Synthetic Vite server exited')
-    try {
-      if ((await fetch(origin)).ok) return
-    } catch {
-      /* starting */
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100))
-  }
-  throw new Error('Synthetic Vite server did not start')
 })
-test.afterAll(() => server?.kill())
 
 async function mockAuth(page: Page, id: string, image: string | null = null) {
   await page.route(`${auth}/**`, async (route) => {
@@ -170,7 +140,10 @@ test('student sees only their attendance and loses it after access is denied', a
         headers,
         json: {
           student: { studentId, name: 'Synthetic Student', group: 'Synthetic Group' },
-          attendance: [{ date: '2026-11-12', status: 'present' }],
+          attendance: [
+            { date: '2026-11-12', status: 'present' },
+            { date: '2026-11-14', status: 'excused' },
+          ],
         },
       })
     return route.fulfill({ status: 403, headers, json: { error: 'Forbidden' } })
@@ -192,6 +165,9 @@ test('student sees only their attendance and loses it after access is denied', a
     ).toBe(true)
     await expect(page.locator('td[data-label]').first()).toBeVisible()
   }
+  await expect(page.getByText('No attendance recorded today.')).toBeVisible()
+  await expect(page.locator('tbody tr').first()).toContainText('2026-11-14')
+  await expect(page.locator('tbody tr').first()).toContainText('excused')
   await expect(page.getByText('2026-11-12')).toBeVisible()
   await expect(page.locator('tbody').getByText('present', { exact: true })).toBeVisible()
   await expect(page.locator('.profile-trigger img')).toBeVisible()
@@ -449,7 +425,10 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await expect(page.getByRole('button', { name: 'Take attendance' })).toBeVisible()
   await page.goto(`${origin}/?page=app&view=invalid`)
   await page.getByRole('button', { name: 'Take attendance' }).click()
-  await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseId)
+  await page.getByLabel(/Change course/).click()
+  await page.getByRole('button', { name: 'Synthetic course', exact: true }).click()
+  await page.getByLabel(/Change course/).click()
+  await page.getByRole('button', { name: 'Make default', exact: true }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
   await clickAccountAction(page, 'Settings')
   await expect(page).toHaveURL(/view=settings/)
@@ -516,7 +495,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
         return { top: box.top, width: box.width, height: box.height }
       }),
     )
-    expect(boxes).toHaveLength(5)
+    expect(boxes).toHaveLength(4)
     for (const box of boxes) {
       expect(box.width).toBeGreaterThanOrEqual(44)
       expect(box.height).toBeGreaterThanOrEqual(44)
@@ -539,7 +518,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
           return { top: box.top, width: box.width, height: box.height }
         }),
       )
-      expect(boxes).toHaveLength(5)
+      expect(boxes).toHaveLength(4)
       for (const box of boxes) {
         expect(box.width).toBeGreaterThanOrEqual(44)
         expect(box.height).toBeGreaterThanOrEqual(44)
@@ -821,6 +800,34 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await page.keyboard.press('Enter')
   await expect(page).toHaveURL(new RegExp(`student=${studentId}`))
   await expect(page.getByRole('heading', { name: 'Student information' })).toBeVisible()
+  await page.getByRole('button', { name: 'Edit student', exact: true }).click()
+  await expect(page).toHaveURL(/view=settings/)
+  await expect(page.locator('form.role-editor').getByLabel('First name')).toHaveValue(
+    'Synthetic Student',
+  )
+  await page.reload()
+  await expect(page.locator('form.role-editor').getByLabel('First name')).toHaveValue(
+    'Synthetic Student',
+  )
+  await page.locator('form.role-editor').getByLabel('Teacher').selectOption('')
+  const savedStudent = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/admin/students') && response.request().method() === 'POST',
+  )
+  await page.getByRole('button', { name: 'Save student' }).click()
+  await savedStudent
+  expect(posts.pop()).toMatchObject({
+    path: '/api/admin/students',
+    body: { studentId, teacherId: null },
+  })
+  await expect(page.getByRole('heading', { name: 'Student information' })).toBeVisible()
+  await page.getByRole('button', { name: 'Edit student', exact: true }).click()
+  await page.getByRole('button', { name: 'Back to student' }).click()
+  await expect(page.getByRole('heading', { name: 'Student information' })).toBeVisible()
+  await page.goto(`${origin}/?page=app&view=settings&student=missing`)
+  await expect(page.getByText('Student unavailable')).toBeVisible()
+  await expect(page.locator('form.role-editor')).toHaveCount(0)
+  await page.goto(`${origin}/?page=app&view=student&student=${studentId}&course=${courseId}`)
   await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
   await clickAccountAction(page, 'Settings')
