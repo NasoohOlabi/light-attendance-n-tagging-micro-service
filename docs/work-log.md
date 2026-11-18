@@ -1713,3 +1713,13 @@ The phone screenshot asked for note entry beside each student's attendance. The 
 Browser coverage exercises narrow Arabic and English layouts, keyboard focus, cancelled drafts, date and student isolation, corrections, read-only access, and recovery from an uncertain save with the same pending event. Railway confirms that the production trigger targets `main` with Wait for CI enabled. The PR records the production deployment and smoke results.
 
 `bun run verify:release` passed at 06:01 with 118 browser cases, 34 local tests and the build, formatting, artifact and security gates. Four optional database suites skipped. The browser checks used synthetic records on desktop and emulated phones. The production baseline reproduced the old Notes tab before deployment.
+
+## 2026-11-18 05:59 Asia/Damascus (UTC+03:00) - Mobile Students roster
+
+The phone screenshot showed seven sort headings above the first student. The Students roster now follows the name-first list pattern in [Apple's list guidance](https://developer.apple.com/design/human-interface-guidelines/lists-and-tables?changes=_5) and [Material list anatomy](https://github.com/material-components/material-components-android/blob/master/docs/components/List.md). Sort and Filter sit beside the title. Tap the student's name to open Student information. Labelled phone, attendance, level, course count and status stay in the record. The desktop table has separate name columns and sortable headings.
+
+The previous Railway deployment at `008ab8e` reproduced the detached headings and lacked the name action. The updated browser checks passed in English and Arabic at 320, 390 and 430 px, including the sort and filter menus, reload, clearing and Back, with zero writes. `bun run verify:release` passed with 119 browser cases and 33 local tests. The phone-only regression skipped on desktop and four optional database tests skipped. The synthetic screenshot and browser report are under `.artifacts`. The pre-PR review found no issues.
+
+Railway reported the production trigger on `main` with Wait for CI enabled. The PR delivery receipt records the exact main deployment, health and shipped layout check. Browser verification uses synthetic records and emulated phones.
+
+**Main integration at 06:12 Asia/Damascus** The required check passed on `6636855` before main advanced to `0893221` with notes in Attendance. Resolved the work-log and verification-guide conflicts, preserving both changes. `bun run verify:release` passed on the combined tree with 119 browser cases and 34 local tests. Four optional database suites skipped.
