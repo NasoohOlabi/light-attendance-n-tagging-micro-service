@@ -28,11 +28,15 @@ async function mockAuth(page: Page, id: string) {
     })
   })
 }
-test('administrator previews and creates invitations on a phone', async ({ page, baseURL }) => {
-  await page.setViewportSize({ width: 320, height: 800 })
+test('administrator creates one invitation and can safely retry it', async ({
+  page,
+  baseURL,
+}, testInfo) => {
+  if (testInfo.project.name === 'mobile') await page.setViewportSize({ width: 320, height: 800 })
   await mockAuth(page, adminId)
   let posts = 0
   let requestId = ''
+  const person = { firstName: 'Ava', lastName: 'Example', role: 'administrator' }
   await page.route('**/api/**', async (route) => {
     if (new URL(route.request().url()).pathname.startsWith('/api/auth/')) return route.fallback()
     const req = route.request()
@@ -53,24 +57,21 @@ test('administrator previews and creates invitations on a phone', async ({ page,
     if (path === '/api/admin/accounts/invite') {
       posts++
       const body = req.postDataJSON()
+      expect(body.people).toEqual([person])
       if (posts === 1) {
         requestId = body.requestId
         return route.abort()
       }
       expect(body.requestId).toBe(requestId)
-      expect(body.people).toEqual([
-        { firstName: 'Ava', lastName: 'Example', role: 'teacher' },
-        { firstName: 'Omar', lastName: 'Example', role: 'teacher' },
-      ])
       return route.fulfill({
         json: {
-          invitations: body.people.map(
-            (person: { firstName: string; lastName: string; role: string }, index: number) => ({
+          invitations: [
+            {
               ...person,
-              username: `sample${index}`,
+              username: 'sample0',
               temporaryPassword: 'Synthetic-password-1',
-            }),
-          ),
+            },
+          ],
         },
       })
     }
@@ -80,11 +81,34 @@ test('administrator previews and creates invitations on a phone', async ({ page,
   await expect(page.getByRole('button', { name: 'Take attendance' })).toBeVisible()
   await clickAccountAction(page, 'Settings')
   await page.getByRole('button', { name: 'Create accounts' }).click()
-  await page.getByLabel('Paste from spreadsheet').fill('Ava\tExample\nOmar\tExample')
-  await page.getByRole('button', { name: 'Preview rows' }).click()
-  await expect(page.getByText('Ava Example', { exact: false })).toBeVisible()
-  await expect(page.getByText('Omar Example', { exact: false })).toBeVisible()
-  await page.getByRole('button', { name: 'Create accounts' }).click()
+  const main = page.getByRole('main')
+  const firstName = page.getByLabel('First name')
+  const lastName = page.getByLabel('Last name')
+  const role = page.getByRole('combobox', { name: 'Role', exact: true })
+  const create = page.getByRole('button', { name: 'Create account', exact: true })
+  await page.locator('.skip-link').press('Enter')
+  await expect(main).toBeFocused()
+  await expect(main).toHaveCSS('outline-style', 'none')
+  await firstName.click()
+  await page.getByRole('heading', { name: 'Create accounts' }).click()
+  await expect(main).toHaveCSS('outline-style', 'none')
+  await expect(main.locator('textarea')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Preview rows' })).toHaveCount(0)
+  await clickAccountAction(page, 'العربية')
+  await page.getByRole('heading', { name: 'إنشاء حسابات' }).click()
+  await expect(main).toHaveCSS('outline-style', 'none')
+  await expect(main.locator('textarea')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'معاينة الصفوف' })).toHaveCount(0)
+  await clickAccountAction(page, 'English')
+  await expect(create).toBeDisabled()
+  await expect(role).toHaveValue('teacher')
+  await firstName.fill(person.firstName)
+  await page.keyboard.press('Tab')
+  await expect(lastName).toBeFocused()
+  await expect(lastName).toHaveCSS('outline-style', 'solid')
+  await lastName.fill(person.lastName)
+  await role.selectOption(person.role)
+  await create.click()
   await expect(page.getByRole('alert')).toContainText('could not be confirmed')
   await page.getByRole('button', { name: 'Retry safely' }).click()
   await expect(page.getByLabel('Ava Example')).toContainText('Synthetic-password-1')
