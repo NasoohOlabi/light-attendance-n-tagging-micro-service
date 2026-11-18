@@ -1851,3 +1851,9 @@ At 08:35 Asia/Damascus, merged the attendance chart change from main at `6b7e48e
 GitHub Verify caught the desktop account chooser test starting a refresh while the switch back to the administrator was still navigating. The test now waits for the workspace navigation and checks the active teacher and administrator in the profile menu. It also checks that the administrator stays active after refresh. The scenario passed six times each on desktop and emulated mobile.
 
 Integrated the attendance follow-up change from main at `e5fe629`. Preserved both work log histories and checked that both branches' stylesheet changes survived. The full release check passed with 42 unit and integration tests and 134 browser cases. Two optional database tests and two desktop instances of phone-only cases skipped.
+
+## 2026-11-18 11:58 Asia/Damascus (UTC+03:00) - Show course row icons when they fit
+
+The owner asked to show the course actions directly when there is room. At a course-list width of 48rem or more, the Actions column shows up to six icons in one row with localized names and tooltips. Narrower lists use the three-dot menu. Both layouts use the same actions and availability rules.
+
+`bun run verify` passed with 38 tests and six optional database skips. Formatting, file and history scans, and the dependency audit passed. The affected synthetic course scenario passed on desktop and on an emulated phone, including both languages, 320/390/430px widths, a constrained list on a wide viewport, and course action destinations. The full local browser run hit Windows memory and Chromium launch errors. GitHub Verify gates the merge, and the PR carries the production deployment receipt.
