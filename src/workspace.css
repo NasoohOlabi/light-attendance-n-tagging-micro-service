@@ -559,7 +559,6 @@
   background: var(--attendance-divider);
   content: '';
 }
-.attendance-segment:hover:not(:disabled):not([aria-pressed='true']),
 .attendance-correct-button:hover:not(:disabled) {
   background: #0000000d;
 }
@@ -606,7 +605,6 @@
 :root[data-theme='dark'] .attendance-row-controls button:focus-visible {
   outline-color: #f3f4f6;
 }
-:root[data-theme='dark'] .attendance-segment:hover:not(:disabled):not([aria-pressed='true']),
 :root[data-theme='dark'] .attendance-correct-button:hover:not(:disabled) {
   background: #ffffff1f;
 }
