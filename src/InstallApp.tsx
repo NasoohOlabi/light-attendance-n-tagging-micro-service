@@ -48,7 +48,7 @@ export function InstallApp() {
   >(null)
   const [busy, setBusy] = useState(false)
 
-  if (availability === 'installed') return null
+  if (availability === 'installed' || availability === 'checking') return null
 
   async function install(event: MouseEvent<HTMLButtonElement>) {
     if (!event.nativeEvent.isTrusted) return

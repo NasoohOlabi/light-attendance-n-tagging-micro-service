@@ -107,15 +107,24 @@ test('repository-scoped PWA installs its real manifest and opens the public shel
       id: z.string(),
       start_url: z.string(),
       display: z.string(),
+      related_applications: z.array(
+        z.object({ platform: z.string(), url: z.string(), id: z.string() }),
+      ),
       icons: z.array(z.object({ src: z.string(), sizes: z.string(), purpose: z.string() })),
     })
     .parse(await response.json())
   expect(manifest.name).toBe('وارتق')
+  expect(manifest.id).toBe('./')
   expect(new URL(manifest.start_url, origin + prefix + 'manifest.webmanifest').href).toBe(
     origin + prefix + '?page=app',
   )
   expect(new URL(manifest.scope, origin + prefix).href).toBe(origin + prefix)
   expect(manifest.display).toBe('standalone')
+  expect(manifest.related_applications).toContainEqual({
+    platform: 'webapp',
+    url: './manifest.webmanifest',
+    id: 'https://light-attendance-n-tagging-micro-service-production.up.railway.app/',
+  })
   for (const icon of manifest.icons) {
     const size = Number(icon.sizes.split('x')[0])
     const dimensions = await page.evaluate(
@@ -276,6 +285,59 @@ test('normal refresh upgrades a legacy worker without disturbing another tab', a
     htmlVersion = 'one'
   }
 })
+
+for (const field of ['id', 'url']) {
+  test(`installed web app with matching ${field} hides install on a fresh deep link`, async ({
+    page,
+  }) => {
+    await page.addInitScript((field) => {
+      Object.defineProperty(navigator, 'getInstalledRelatedApps', {
+        value: () =>
+          new Promise((resolve) => {
+            document.documentElement.dataset.lookupStarted = 'true'
+            const app =
+              field === 'id'
+                ? { platform: 'webapp', id: location.origin + '/' }
+                : { platform: 'webapp', url: new URL('./manifest.webmanifest', location.href).href }
+            window.addEventListener('resolve-related-apps', () => resolve([app]), { once: true })
+          }),
+      })
+    }, field)
+    const link = origin + prefix + '?page=app'
+    await page.goto(link)
+    await expect(page.locator('html')).toHaveAttribute('data-lookup-started', 'true')
+    await expect(page.locator('.install-strip')).toHaveCount(0)
+    await page.evaluate(async () => {
+      window.dispatchEvent(new Event('resolve-related-apps'))
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    })
+    await expect(page.locator('.install-strip')).toHaveCount(0)
+    await expect(page).toHaveURL(link)
+  })
+}
+
+for (const outcome of ['empty', 'rejected', 'unrelated']) {
+  test(`install help remains available after an ${outcome} installed-app lookup`, async ({
+    page,
+  }) => {
+    await page.addInitScript((result) => {
+      Object.defineProperty(navigator, 'install', { value: undefined })
+      Object.defineProperty(navigator, 'getInstalledRelatedApps', {
+        value: () =>
+          result === 'rejected'
+            ? Promise.reject(new Error('unavailable'))
+            : Promise.resolve(
+                result === 'unrelated'
+                  ? [{ platform: 'webapp', id: location.origin + '/other' }]
+                  : [],
+              ),
+      })
+    }, outcome)
+    await page.goto(origin + prefix)
+    await page.getByRole('button', { name: 'Install Wartaq', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Close install help' })).toBeVisible()
+  })
+}
 
 test('install button uses the Web Install API without a deferred prompt and handles cancellation', async ({
   page,

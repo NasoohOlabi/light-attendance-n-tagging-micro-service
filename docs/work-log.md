@@ -1953,3 +1953,11 @@ The owner requested one line per attendance cell. Three connected icon buttons m
 The owner requested the reference's rounded track and raised selected tile, with color reserved for the icons. Attendance uses the Base UI primitives behind shadcn's Toggle Group. Present, Absent, and Excused share the same neutral selected surface. Add note uses a neutral surface with an amber icon.
 
 The local browser smoke verified the three icon colors, common selected surface, RTL and LTR arrow keys, clearing a draft, saving a mark, one-line 44px controls with correction, and reopening a note in English light mode at 1440px and Arabic dark mode at 320px. The smoke used synthetic records and sent zero application writes. The pull request records the hosted checks and Railway smoke. Physical phones and live authenticated sessions were outside this verification.
+
+## 2026-11-18 19:13 Asia/Damascus (UTC+03:00) - Detect an existing Wartaq installation in a browser tab
+
+The owner opened Wartaq in a regular tab for testing after installing it and saw the install banner. The manifest now declares Wartaq as a related web app using its absolute Railway app ID. The page checks the current browser profile and hides the install banner when the browser confirms a matching installation. Links stay in their current browser tab, and empty or failed lookups leave the install actions available.
+
+Chrome 157 and 158 reproduced the banner in fresh tabs after installing from the old manifest in disposable profiles. With the updated manifest, both browsers found that installation on a fresh notebook link, hid the banner and stayed in browser mode at the same URL. Uninstalling the test app restored the banner on reload. The probes used localhost with the same app ID structure and cleaned up their app registrations. Physical Android and iOS devices were outside verification. The pull request records hosted checks and Railway verification.
+
+`bun run verify:release` passed with 38 Bun tests and 162 browser cases. Six optional database tests and two desktop instances of phone-only cases skipped. File and history scans and the dependency audit passed.
