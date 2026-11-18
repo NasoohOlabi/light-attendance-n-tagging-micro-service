@@ -161,14 +161,21 @@ async function syntheticTables(
   return { writes, snapshot }
 }
 
-async function everyColumn(
-  table: Locator,
-  count: number,
-  actions = false,
-  hasFilterCaption = true,
-) {
+async function everyColumn(table: Locator, count: number, actions = false, filters = true) {
   await expect(table).toBeVisible()
   const page = table.page()
+  const toolbar = page.locator('.table-toolbar')
+  const sort = toolbar.getByRole('button', { name: 'Sort options' })
+  const filter = toolbar.getByRole('button', { name: 'Filter options' })
+  const headers = table.locator('thead th[aria-sort]')
+  await expect(headers).toHaveCount(count)
+  await expect(table.locator('caption')).toHaveCount(0)
+  await expect(filter).toHaveCount(filters ? 1 : 0)
+  for (const trigger of await toolbar.locator('.table-control-trigger').all()) {
+    const bounds = await trigger.boundingBox()
+    expect(bounds?.width).toBeGreaterThanOrEqual(44)
+    expect(bounds?.height).toBeGreaterThanOrEqual(44)
+  }
   if ((page.viewportSize()?.width ?? 0) <= 1024) {
     for (const width of [320, 390, 430]) {
       await page.setViewportSize({ width, height: 844 })
@@ -199,21 +206,24 @@ async function everyColumn(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
       ).toBe(true)
     }
-  }
-  const headers = table.locator('thead th[aria-sort]')
-  await expect(headers).toHaveCount(count)
-  await expect(table.locator('thead .table-filter')).toHaveCount(0)
-  await expect(table.getByRole('button', { name: 'Filter options' })).toHaveCount(
-    hasFilterCaption ? 1 : 0,
-  )
-  const controls = table.locator('.table-controls')
-  if (hasFilterCaption) {
-    const controlSize = await controls.boundingBox()
-    expect(controlSize?.height).toBeLessThanOrEqual(60)
-    for (const trigger of await controls.getByRole('button').all()) {
-      const size = await trigger.boundingBox()
-      expect(size?.width).toBeGreaterThanOrEqual(44)
-      expect(size?.height).toBeGreaterThanOrEqual(44)
+    if (await table.evaluate((element) => element.classList.contains('mobile-record-table'))) {
+      await expect(table.locator('thead')).toBeHidden()
+      await sort.click()
+      const labels = await headers.evaluateAll((items) =>
+        items.map((item) => item.getAttribute('aria-label')),
+      )
+      await expect(page.getByLabel('Add column').locator('option:not([disabled])')).toHaveText(
+        labels.map((label) => label ?? ''),
+      )
+      await page.keyboard.press('Escape')
+      if (filters) {
+        await filter.click()
+        await expect(page.getByLabel('Add filter').locator('option:not([disabled])')).toHaveCount(
+          count,
+        )
+        await page.keyboard.press('Escape')
+      }
+      return
     }
   }
   for (const header of await headers.all()) {
@@ -229,6 +239,25 @@ async function everyColumn(
     await expect(header).toHaveAttribute('aria-sort', 'none')
   }
   if (actions) await expect(table.locator('thead th').last().getByRole('button')).toHaveCount(0)
+}
+
+async function sortFromToolbar(
+  page: Page,
+  {
+    column,
+    descending = false,
+    ar = false,
+  }: { column: string; descending?: boolean; ar?: boolean },
+) {
+  await page.getByRole('button', { name: ar ? 'خيارات الفرز' : 'Sort options' }).click()
+  if (descending) {
+    await page
+      .getByRole('button', { name: ar ? 'اتجاه الفرز 1: تصاعدي' : 'Sort direction 1: Ascending' })
+      .click()
+  } else {
+    await page.getByLabel(ar ? 'إضافة عمود' : 'Add column').selectOption(column)
+  }
+  await page.keyboard.press('Escape')
 }
 
 test('whole decimal levels display consistently and retain raw edit values', async ({ page }) => {
@@ -274,13 +303,12 @@ test('every staff table column sorts and filters without writes', async ({ page 
     [`tab=attendance&course=${courseId}&q=Alpha`, 4, false],
     [`tab=summary&course=${courseId}`, 5, false],
   ] satisfies [string, number, boolean][]) {
-    if (query === 'tab=roster' && testInfo.project.name === 'mobile') continue
     await page.goto(`/?page=app&${query}`)
     await everyColumn(
       page.locator('table').first(),
       columns,
       actions,
-      query !== 'view=courses' && query !== 'tab=roster' && !query.includes('courseView=grades'),
+      !query.includes('courseView=grades'),
     )
   }
   for (const raw of [
@@ -303,14 +331,14 @@ test('every staff table column sorts and filters without writes', async ({ page 
     .click()
   const table = page.locator('table')
   await everyColumn(table, 8, true)
-  await table.getByRole('button', { name: 'Filter options' }).click()
-  await expect(table.getByRole('dialog', { name: 'Filter options' })).toBeVisible()
-  await table.getByLabel('Add filter').selectOption({ label: 'Active' })
+  await page.getByRole('button', { name: 'Filter options' }).click()
+  await expect(page.getByRole('dialog', { name: 'Filter options' })).toBeVisible()
+  await page.getByLabel('Add filter').selectOption({ label: 'Active' })
   await page.getByLabel('Filter Active', { exact: true }).selectOption({ label: 'Active' })
   await expect(table.locator('tbody tr')).toHaveCount(5)
   await clickAccountAction(page, 'العربية')
   await expect(table.locator('tbody tr')).toHaveCount(5)
-  await table.getByRole('button', { name: 'خيارات التصفية' }).click()
+  await page.getByRole('button', { name: 'خيارات التصفية' }).click()
   await expect(page.getByLabel('تصفية الحالة', { exact: true })).toHaveValue('1')
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({
@@ -405,6 +433,57 @@ test('compact roster opens by student name and sorts from its toolbar', async ({
     await page.keyboard.press('Escape')
     await expect(rows).toHaveCount(6)
   }
+  expect(writes).toEqual([])
+})
+
+test('attendance shares the table toolbar and leads with student names on phones', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile')
+  const { writes } = await syntheticTables(page)
+  await page.goto(`/?page=app&tab=attendance&course=${courseId}`)
+  const table = page.getByRole('region', { name: /Attendance list|قائمة الحضور/ })
+  const row = table.locator('tbody tr').first()
+  const toolbar = page.locator('.table-toolbar')
+  for (const ar of [false, true]) {
+    if (ar) await clickAccountAction(page, 'العربية')
+    const heading = toolbar.getByRole('heading')
+    const title = row.locator('.record-title')
+    const level = row.locator('td').nth(1)
+    const select = row.getByRole('combobox')
+    const note = row.getByRole('button', { name: /Add note for|إضافة ملاحظة للطالب/ })
+    await expect(title).toHaveText('Alpha Family')
+    await expect(table.locator('thead')).toBeHidden()
+    for (const width of [320, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      const titleBox = await heading.boundingBox()
+      const nameBox = await title.boundingBox()
+      const levelBox = await level.boundingBox()
+      if (!titleBox || !nameBox || !levelBox)
+        throw new Error('Attendance heading or name is hidden')
+      expect(nameBox.y + nameBox.height).toBeLessThanOrEqual(levelBox.y)
+      for (const trigger of await toolbar.locator('.table-control-trigger').all()) {
+        const bounds = await trigger.boundingBox()
+        if (!bounds) throw new Error('Attendance table control is hidden')
+        expect(bounds.width).toBeGreaterThanOrEqual(44)
+        expect(bounds.height).toBeGreaterThanOrEqual(44)
+        expect(
+          Math.abs(bounds.y + bounds.height / 2 - titleBox.y - titleBox.height / 2),
+        ).toBeLessThan(2)
+        if (ar) expect(bounds.x + bounds.width).toBeLessThanOrEqual(titleBox.x)
+        else expect(bounds.x).toBeGreaterThanOrEqual(titleBox.x + titleBox.width)
+      }
+      await expect(select).toBeVisible()
+      await expect(note).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        width,
+      )
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await toolbar.evaluate((element) => element.closest('section')?.scrollIntoView())
+  await mkdir('.artifacts/verification', { recursive: true })
+  await page.screenshot({ path: '.artifacts/verification/attendance-table-toolbar-ar.png' })
   expect(writes).toEqual([])
 })
 
@@ -506,8 +585,7 @@ test('grade sorting is numeric, keeps drafts, and ignores stale filters', async 
   await sortTrigger.click()
   await page.mouse.click(2, 2)
   await expect(page.getByRole('button', { name: 'Sort help' })).toBeHidden()
-  const practical = page.getByRole('button', { name: 'Sort by Practical', exact: true })
-  await practical.click()
+  await sortFromToolbar(page, { column: 'practical' })
   await expect(names).toHaveText(['Delta', 'Zulu', 'Alpha', 'Charlie', 'Echo'])
   await expect(page.locator('.sort-pill').first()).toBeHidden()
   await header.scrollIntoViewIfNeeded()
@@ -521,7 +599,7 @@ test('grade sorting is numeric, keeps drafts, and ignores stale filters', async 
   })
   await page.keyboard.press('Escape')
   await expect(page.locator('.sort-pill').first()).toBeHidden()
-  await practical.click()
+  await sortFromToolbar(page, { column: 'practical', descending: true })
   await expect(names).toHaveText(['Charlie', 'Alpha', 'Zulu', 'Delta', 'Echo'])
   await page.getByLabel('Practical: Zulu Family', { exact: true }).fill('90')
   await expect(names).toHaveText(['Charlie', 'Zulu', 'Alpha', 'Delta', 'Echo'])
@@ -548,16 +626,9 @@ test('result sorting ranks status then average without writes', async ({ page })
     if (language === 'ar')
       await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
     await page.goto(`/?page=app&view=courses&course=${courseId}&courseView=grades`)
-    const sort = page.getByRole('button', {
-      name:
-        language === 'ar'
-          ? '\u062a\u0631\u062a\u064a\u0628 \u062d\u0633\u0628 \u0627\u0644\u0646\u062a\u064a\u062c\u0629'
-          : 'Sort by Result',
-      exact: true,
-    })
-    await sort.click()
+    await sortFromToolbar(page, { column: 'result', ar: language === 'ar' })
     await expect(names).toHaveText(['Echo', 'Foxtrot', 'Delta', 'Charlie', 'Alpha', 'Zulu'])
-    await sort.click()
+    await sortFromToolbar(page, { column: 'result', descending: true, ar: language === 'ar' })
     await expect(names).toHaveText(['Zulu', 'Alpha', 'Charlie', 'Delta', 'Foxtrot', 'Echo'])
     await page.reload()
     await expect(names).toHaveText(['Zulu', 'Alpha', 'Charlie', 'Delta', 'Foxtrot', 'Echo'])
@@ -634,27 +705,27 @@ test('student portal dates sort chronologically and combine course/status filter
   ).toHaveText('1')
   const table = page.locator('table')
   await everyColumn(table, 3)
-  await page.getByRole('button', { name: 'Sort by Date', exact: true }).click()
+  await sortFromToolbar(page, { column: 'date' })
   await expect(table.locator('tbody tr td:nth-child(2)')).toHaveText([
     '2026-11-12',
     '2026-11-13',
     '2026-11-14',
   ])
-  await table.getByRole('button', { name: 'Filter options' }).click()
-  await table.getByLabel('Add filter').selectOption({ label: 'Course' })
+  await page.getByRole('button', { name: 'Filter options' }).click()
+  await page.getByLabel('Add filter').selectOption({ label: 'Course' })
   await page.getByLabel('Filter Course', { exact: true }).fill('Alpha')
-  await table.getByLabel('Add filter').selectOption({ label: 'Status' })
+  await page.getByLabel('Add filter').selectOption({ label: 'Status' })
   await page.getByLabel('Filter Status', { exact: true }).selectOption({ label: 'present' })
-  await table.getByRole('button', { name: 'Remove filter Status' }).click()
-  await table.getByLabel('Add filter').selectOption({ label: 'Status' })
+  await page.getByRole('button', { name: 'Remove filter Status' }).click()
+  await page.getByLabel('Add filter').selectOption({ label: 'Status' })
   await page.getByLabel('Filter Status', { exact: true }).selectOption({ label: 'present' })
   await expect(table.locator('tbody tr')).toHaveCount(1)
   await expect(table.locator('tbody')).toContainText('2026-11-12')
   await page.reload()
   await expect(table.locator('tbody tr')).toHaveCount(1)
-  await table.getByRole('button', { name: 'Sort options' }).click()
+  await page.getByRole('button', { name: 'Sort options' }).click()
   await page.getByRole('button', { name: 'Reset sort', exact: true }).click()
-  await table.getByRole('button', { name: 'Filter options' }).click()
+  await page.getByRole('button', { name: 'Filter options' }).click()
   await expect(page.getByLabel('Filter Course', { exact: true })).toHaveValue('Alpha')
   await expect(
     page.getByLabel('Filter Status', { exact: true }).locator('option:checked'),
@@ -672,12 +743,21 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   const names = table.locator('tbody tr td:first-child')
   const last = table.getByRole('button', { name: 'Sort by Last name', exact: true })
   const first = table.getByRole('button', { name: 'Sort by First name', exact: true })
-  await last.click()
-  await expect(last).toHaveCSS('outline-style', 'none')
-  await page.keyboard.press('Tab')
-  await page.keyboard.press('Shift+Tab')
-  await expect(last).not.toHaveCSS('outline-style', 'none')
-  await first.click({ modifiers: ['Shift'] })
+  const desktop = testInfo.project.name === 'chromium'
+  const startMultiSort = async () => {
+    if (desktop) {
+      await last.click()
+      await expect(last).toHaveCSS('outline-style', 'none')
+      await page.keyboard.press('Tab')
+      await page.keyboard.press('Shift+Tab')
+      await expect(last).not.toHaveCSS('outline-style', 'none')
+      await first.click({ modifiers: ['Shift'] })
+    } else {
+      await sortFromToolbar(page, { column: 'last' })
+      await sortFromToolbar(page, { column: 'first' })
+    }
+  }
+  await startMultiSort()
   await expect(page.locator('.sort-pill').first()).toBeHidden()
   await page.getByRole('button', { name: 'Sort options' }).click()
   await expect(
@@ -688,9 +768,11 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await page.keyboard.press('Escape')
   await expect(page.getByText('Keyboard: Space to grab and drop', { exact: false })).toBeHidden()
   await expect(names).toHaveText(['Echo', 'Alpha', 'Charlie', 'Delta', 'Zulu'])
-  await expect(last.locator('.table-sort-priority')).toHaveText('1')
-  await expect(first.locator('.table-sort-priority')).toHaveText('2')
-  await expect(first.locator('..')).not.toHaveAttribute('aria-sort')
+  if (desktop) {
+    await expect(last.locator('.table-sort-priority')).toHaveText('1')
+    await expect(first.locator('.table-sort-priority')).toHaveText('2')
+    await expect(first.locator('..')).not.toHaveAttribute('aria-sort')
+  }
   await page.reload()
   await expect(names).toHaveText(['Echo', 'Alpha', 'Charlie', 'Delta', 'Zulu'])
   await page.getByRole('button', { name: 'Sort options' }).click()
@@ -719,8 +801,7 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await expect(page.locator('.sort-pill').first()).toContainText('First name')
   await page.getByRole('button', { name: 'Reset sort' }).click()
   await page.getByRole('button', { name: 'Close', exact: true }).click()
-  await last.click()
-  await first.click({ modifiers: ['Shift'] })
+  await startMultiSort()
   await page.getByRole('button', { name: 'Sort options' }).click()
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({
@@ -750,8 +831,9 @@ test('multi-sort priority, URL state, and reset', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'Remove sort 2' }).click()
   await page.getByLabel('Add column').selectOption('last')
   await page.getByRole('button', { name: 'Close', exact: true }).click()
-  await first.click()
+  if (desktop) await first.click()
   await page.getByRole('button', { name: 'Sort options' }).click()
+  if (!desktop) await page.getByRole('button', { name: 'Reset sort', exact: true }).click()
   await expect(page.locator('.sort-pill')).toHaveCount(0)
   await page.getByRole('button', { name: 'Reset sort', exact: true }).click()
   await expect(table.locator('.table-filter')).toHaveCount(0)
