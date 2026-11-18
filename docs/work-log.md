@@ -1736,6 +1736,14 @@ Railway reported the production trigger on `main` with Wait for CI enabled. The 
 
 **History integration at 06:22 Asia/Damascus** Merged `d746b66` after the name-first Students roster landed. Preserved both work-log entries and verified the combined History and Students paths. `bun run verify:release` passed 119 browser cases and 34 local tests. The phone-only regression skipped on desktop and four optional database suites skipped.
 
+## 2026-11-18 06:46 Asia/Damascus (UTC+03:00) - Hide the roster during student creation
+
+The phone screenshot showed the Students table below the new-student form. The Administrator register and its Sort and Filter controls now disappear while the creation form is open. Save and Cancel return to the list for standalone creation. Creating a student from a course still returns to that course's membership list.
+
+The previous Railway deployment reproduced the table in English on desktop and Arabic at 390px. The updated desktop and mobile Administrator tests verify the form without a table, plus list restoration after Save and Cancel. The browser checks use synthetic data and an emulated phone. Railway confirmed that the production trigger targets `main` with Wait for CI enabled. The PR records exact-main deployment and production smoke verification.
+
+`bun run verify:release` passed with 119 browser cases, 34 local tests and all build, formatting and security gates. One phone-only case skipped on desktop, and four optional database tests skipped.
+
 ## 2026-11-18 06:51 Asia/Damascus (UTC+03:00) - Remove notebook wording from the interface
 
 The phone screenshot showed a confusing **فتح الدفتر** button on Add student. Removed it from Add student and Settings. Dashboard, Courses, Attendance and Students are available directly in the main navigation. Arabic and English page titles, sign-in, samples, loading messages, errors and retry guidance now use the names of the relevant actions and records. Existing links and API clients retain compatibility.
@@ -1743,3 +1751,5 @@ The phone screenshot showed a confusing **فتح الدفتر** button on Add st
 Reproduced the button on the previous Railway deployment in Arabic at 390px and English at 1280px. The Administrator browser cases verify the button is gone, forms and refresh remain available, and the main navigation opens each destination. Railway's production trigger reports `main` with Wait for CI enabled. Browser checks use synthetic accounts and records and emulated phones. The PR records the deployed revision and shipped UI check.
 
 `bun run verify:release` passed with 119 browser cases and 34 local tests, including the build, artifact, formatting and security gates. The phone-only roster case skipped on desktop and four optional database suites skipped.
+
+**Main integration at 06:56 Asia/Damascus** Integrated `a58608d`, preserving the roster hiding and restoration checks alongside the bilingual navigation checks. The full release gate passed again with 119 browser cases and 34 local tests, with the same skips.

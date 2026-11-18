@@ -281,7 +281,7 @@ export function AdminConsole({
                     }}
                   />
                 )}
-                {!courseId && (
+                {!courseId && !creating && (
                   <div
                     className="role-table-scroll"
                     role="region"
