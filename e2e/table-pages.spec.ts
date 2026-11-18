@@ -274,12 +274,13 @@ test('every staff table column sorts and filters without writes', async ({ page 
     [`tab=attendance&course=${courseId}&q=Alpha`, 4, false],
     [`tab=summary&course=${courseId}`, 5, false],
   ] satisfies [string, number, boolean][]) {
+    if (query === 'tab=roster' && testInfo.project.name === 'mobile') continue
     await page.goto(`/?page=app&${query}`)
     await everyColumn(
       page.locator('table').first(),
       columns,
       actions,
-      query !== 'view=courses' && !query.includes('courseView=grades'),
+      query !== 'view=courses' && query !== 'tab=roster' && !query.includes('courseView=grades'),
     )
   }
   for (const raw of [
@@ -320,6 +321,89 @@ test('every staff table column sorts and filters without writes', async ({ page 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true,
     )
+  }
+  expect(writes).toEqual([])
+})
+
+test('compact roster opens by student name and sorts from its toolbar', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile')
+  const { writes } = await syntheticTables(page)
+  await page.goto('/?page=app&tab=roster')
+  const table = page.locator('.roster-students-table')
+  const rows = table.locator('tbody tr')
+  for (const ar of [false, true]) {
+    if (ar) await clickAccountAction(page, 'العربية')
+    const title = page.getByRole('heading', { name: ar ? 'طلابك' : 'Your students' })
+    const sort = page.getByRole('button', { name: ar ? 'خيارات الفرز' : 'Sort options' })
+    const filter = page.getByRole('button', { name: ar ? 'خيارات التصفية' : 'Filter options' })
+    await expect(table.locator('thead')).toBeHidden()
+    await expect(table.locator('caption')).toHaveCount(0)
+    const first = rows.first()
+    const open = first.getByRole('button', {
+      name: ar ? 'فتح الطالب: Zulu Family' : 'Open student: Zulu Family',
+    })
+    await expect(open).toHaveText('Zulu Family')
+    for (const width of [320, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      const heading = await title.boundingBox()
+      const name = await open.boundingBox()
+      const attendance = await first.locator('td[data-label]').nth(3).boundingBox()
+      if (!heading || !name || !attendance)
+        throw new Error('Roster title or student fields are hidden')
+      expect(name.height).toBeGreaterThanOrEqual(44)
+      expect(name.y + name.height).toBeLessThanOrEqual(attendance.y)
+      for (const control of [sort, filter]) {
+        const button = await control.boundingBox()
+        if (!button) throw new Error('Roster toolbar control is hidden')
+        expect(button.height).toBeGreaterThanOrEqual(44)
+        expect(button.width).toBeGreaterThanOrEqual(44)
+        expect(button.y).toBeLessThan(heading.y + heading.height)
+        if (ar) expect(button.x + button.width).toBeLessThanOrEqual(heading.x)
+        else expect(button.x).toBeGreaterThanOrEqual(heading.x + heading.width)
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        width,
+      )
+    }
+    if (ar) {
+      await page.setViewportSize({ width: 390, height: 844 })
+      await page.emulateMedia({ colorScheme: 'dark' })
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+      await title.evaluate((heading) => heading.closest('section')?.scrollIntoView())
+      await mkdir('.artifacts/verification', { recursive: true })
+      await page.screenshot({ path: '.artifacts/verification/compact-roster-ar.png' })
+    }
+    await open.click()
+    await expect(
+      page.getByRole('heading', { name: ar ? 'معلومات الطالب' : 'Student information' }),
+    ).toBeVisible()
+    await page.goBack()
+    await sort.click()
+    const columns = page.getByLabel(ar ? 'إضافة عمود' : 'Add column', { exact: true })
+    await expect(columns.locator('option:not([disabled])')).toHaveCount(7)
+    await columns.selectOption('first')
+    await page.keyboard.press('Escape')
+    await expect(rows.first().locator('.roster-mobile-open')).toHaveText('Alpha Family')
+    await page.reload()
+    await expect(rows.first().locator('.roster-mobile-open')).toHaveText('Alpha Family')
+    await filter.click()
+    const filters = page.getByLabel(ar ? 'إضافة تصفية' : 'Add filter', { exact: true })
+    await expect(filters.locator('option:not([disabled])')).toHaveCount(7)
+    await filters.selectOption('first')
+    await page
+      .getByRole('searchbox', { name: ar ? 'تصفية الاسم الأول' : 'Filter First name' })
+      .fill('Zulu')
+    await page.getByRole('button', { name: ar ? 'إغلاق' : 'Close', exact: true }).click()
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first().locator('.roster-mobile-open')).toHaveText('Zulu Family')
+    await sort.click()
+    await page
+      .getByRole('button', { name: ar ? 'مسح الفرز والتصفية' : 'Clear sort and filters' })
+      .click()
+    await page.keyboard.press('Escape')
+    await expect(rows).toHaveCount(6)
   }
   expect(writes).toEqual([])
 })

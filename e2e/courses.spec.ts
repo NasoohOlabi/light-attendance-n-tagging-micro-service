@@ -283,7 +283,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     'Active',
     'Actions',
   ])
-  await expect(row.getByRole('cell').nth(4)).toHaveText('Roster level')
+  const level = row.locator('td[data-label="Level"]')
+  await expect(level).toHaveText('Roster level')
   await expect(row.getByRole('img', { name: 'Active', exact: true })).toBeVisible()
   await expect(row.getByRole('img', { name: 'Active', exact: true })).toHaveAttribute(
     'title',
@@ -292,11 +293,11 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expectCompactLevel(list)
   const courseFilter = page.getByRole('combobox', { name: 'Course', exact: true })
   await courseFilter.selectOption(courseA)
-  await expect(row.getByRole('cell').nth(4)).toHaveText('—')
+  await expect(level).toHaveText('—')
   await courseFilter.selectOption(courseB)
-  await expect(row.getByRole('cell').nth(4)).toHaveText('Advanced')
+  await expect(level).toHaveText('Advanced')
   await page.reload()
-  await expect(row.getByRole('cell').nth(4)).toHaveText('Advanced')
+  await expect(level).toHaveText('Advanced')
   await mkdir('.artifacts/verification', { recursive: true })
   if (testInfo.project.name === 'chromium') await page.setViewportSize({ width: 1715, height: 993 })
   await expectCompactLevel(list)
@@ -305,7 +306,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       await page.setViewportSize({ width, height: width === 844 ? 390 : 844 })
       await expect(list).toHaveAttribute('tabindex', '0')
       const open = row.getByRole('button', { name: 'Open student' })
-      await expect(open.locator('.roster-open-label')).toBeVisible()
+      await expect(open).toHaveText('Synthetic Student')
       const openBounds = await open.boundingBox()
       expect(openBounds && openBounds.x >= 0 && openBounds.x + openBounds.width <= width).toBe(true)
       expect(await list.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
@@ -324,8 +325,10 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     path: `.artifacts/verification/student-levels-${testInfo.project.name}-en.png`,
     fullPage: true,
   })
-  await expect(row.getByRole('cell').nth(0)).toBeVisible()
-  await expect(row.getByRole('cell').nth(1)).toBeVisible()
+  if (testInfo.project.name === 'chromium') {
+    await expect(row.locator('.roster-first-name')).toBeVisible()
+    await expect(row.locator('.roster-last-name')).toBeVisible()
+  }
   const phone = row.getByRole('link', { name: '012 345' })
   await expect(phone).toHaveAttribute('dir', 'ltr')
   await expect(phone).toHaveAttribute('href', 'tel:012345')
@@ -363,7 +366,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     'title',
     'نشط',
   )
-  await expect(arabicList.getByRole('row').nth(1).getByRole('cell').nth(6)).toHaveText('')
+  await expect(
+    arabicList.locator('tbody tr').first().locator('td[data-label="الحالة"]'),
+  ).toHaveText('')
   await expectCompactLevel(arabicList)
   await page.screenshot({
     path: `.artifacts/verification/roster-layout-${testInfo.project.name}-ar.png`,
@@ -1393,10 +1398,12 @@ test('administrator no-course Students includes the complete inactive register',
   await expect(page.getByRole('option', { name: 'All students' })).toHaveCount(1)
   const historical = rows.filter({ hasText: 'Historical Student' })
   const unassigned = rows.filter({ hasText: 'Unassigned Historical' })
-  await expect(unassigned.getByRole('cell').nth(5)).toHaveText('None')
-  await expect(unassigned.getByRole('cell').nth(3)).toHaveText('Not recorded')
-  await expect(historical.getByRole('cell').nth(3)).toContainText('50.0%')
-  await expect(historical.getByRole('cell').nth(3)).toContainText('Recorded sessions: 2')
+  await expect(unassigned.locator('td[data-label="Courses"]')).toHaveText('None')
+  await expect(unassigned.locator('td[data-label="Attendance"]')).toHaveText('Not recorded')
+  await expect(historical.locator('td[data-label="Attendance"]')).toContainText('50.0%')
+  await expect(historical.locator('td[data-label="Attendance"]')).toContainText(
+    'Recorded sessions: 2',
+  )
   await historical.getByRole('button', { name: 'Open student' }).click()
   const detail = page.locator('.student-details')
   await expect(detail.getByText('Not provided')).toBeVisible()

@@ -108,11 +108,11 @@ async function utilityIcon(page: Page, name: string) {
     await page.keyboard.press('Escape')
     return action
   }
-  const button = page.getByRole('button', { name, exact: true })
+  const opensStudent = name === 'Open student' || name === 'فتح الطالب'
+  const button = page.getByRole('button', { name, exact: !opensStudent })
   await expect(button).toBeVisible()
-  if (name === 'Open student' || name === 'فتح الطالب') {
-    await expect(button).toHaveText(name)
-    await expect(button.locator('.roster-open-label')).toBeVisible()
+  if (opensStudent) {
+    await expect(button).toHaveText('Synthetic Student')
   } else await expect(button).toHaveText('')
   await expect(button).toHaveAttribute('title', /\S/)
   await expect(button.locator('svg[aria-hidden="true"]')).toHaveClass(/lucide/)
