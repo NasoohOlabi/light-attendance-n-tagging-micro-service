@@ -42,6 +42,7 @@ async function expectCompactLevel(list: Locator) {
 }
 
 test('course enrollment and same-day attendance stay separate', async ({ page }, testInfo) => {
+  await page.clock.install()
   const teacher = {
     role: 'administrator',
     id: teacherId,
@@ -529,11 +530,14 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByLabel('Course name').fill('Created course')
   await page.getByRole('button', { name: 'Save course' }).click()
   await expect(page.getByRole('alert')).toBeVisible()
+  const savedToast = page.getByRole('status').filter({ hasText: /^(Saved|تم الحفظ)$/ })
+  await expect(savedToast).toBeHidden()
   await page.getByRole('button', { name: 'Save course' }).click()
   await expect.poll(() => courses.length).toBe(3)
   await expect.poll(() => attemptedCourseIds.length).toBe(2)
   expect(attemptedCourseIds[0]).toBe(attemptedCourseIds[1])
   await expect(page.getByRole('row').filter({ hasText: 'Created course' })).toBeVisible()
+  await expect(savedToast).toHaveText('Saved')
   await page.reload()
   await expect(page.getByRole('row').filter({ hasText: 'Created course' })).toBeVisible()
   await page.getByRole('button', { name: 'Create course' }).click()
@@ -552,14 +556,37 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByRole('searchbox', { name: 'Find a student' }).fill('Synthetic')
   await page.getByRole('searchbox', { name: 'Find a student' }).fill('New')
   await expect(newRow.getByLabel('Course level: New Student')).toHaveValue('Beginner')
+  const membershipHeading = page.getByRole('heading', { name: /Manage students/ })
+  const headingTop = () =>
+    membershipHeading.evaluate((heading) => heading.getBoundingClientRect().top + window.scrollY)
+  const beforeSave = await headingTop()
   await newRow.getByRole('switch').click()
   await expect.poll(() => enrollments.length).toBe(3)
+  await expect(savedToast).toHaveText('Saved')
+  await expect(savedToast).toHaveCSS('position', 'fixed')
+  expect(await headingTop()).toBeCloseTo(beforeSave)
+  await page.clock.fastForward(4_000)
+  await expect(savedToast).toBeHidden()
   await page.reload()
   await expect(newRow.getByLabel('Course level: New Student')).toHaveValue('Beginner')
   await newRow.getByRole('switch').click()
   await expect.poll(() => enrollments[2].active).toBe(false)
+  await clickAccountAction(page, 'العربية')
+  if (testInfo.project.name === 'mobile') await page.setViewportSize({ width: 320, height: 844 })
   await newRow.getByRole('switch').click()
   await expect.poll(() => enrollments[2].active).toBe(true)
+  await expect(savedToast).toHaveText('تم الحفظ')
+  await expect(savedToast).toBeInViewport({ ratio: 1 })
+  if (testInfo.project.name === 'mobile') {
+    const toast = await savedToast.boundingBox()
+    const nav = await page.locator('.workspace-rail nav').boundingBox()
+    if (!toast || !nav) throw new Error('Missing save toast or phone navigation')
+    expect(toast.y + toast.height).toBeLessThan(nav.y)
+  }
+  await page.screenshot({
+    path: `.artifacts/verification/course-save-${testInfo.project.name}-ar.png`,
+  })
+  await clickAccountAction(page, 'English')
   if (testInfo.project.name === 'mobile') {
     for (const width of [320, 390, 430]) {
       await page.setViewportSize({ width, height: 844 })
