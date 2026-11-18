@@ -6,6 +6,29 @@ import type { LedgerEvent } from '../shared/ledger'
 export const apiUrl = window.location.origin
 export const authClient = createAuthClient()
 
+export const sessionChangeEvent = 'halaqa-session-change'
+export const sessionChangeSource = crypto.randomUUID()
+
+export function announceSessionChange() {
+  try {
+    localStorage.setItem(sessionChangeEvent, crypto.randomUUID())
+  } catch {
+    /* Storage can be disabled. */
+  }
+  try {
+    const channel = new BroadcastChannel(sessionChangeEvent)
+    channel.postMessage(sessionChangeSource)
+    channel.close()
+  } catch {
+    /* BroadcastChannel can be unavailable. */
+  }
+}
+
+export function resetWorkspace() {
+  announceSessionChange()
+  window.location.replace(window.location.pathname + '?page=app')
+}
+
 export class NeonRequestError extends Error {
   constructor(public status: number) {
     super(
