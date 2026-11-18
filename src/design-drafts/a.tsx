@@ -32,8 +32,8 @@ export function CourtyardDraft({ language }: DraftProps) {
   const noteTags: Tag[] = ['revision', 'follow-up']
   const feedback = {
     opened: t(
-      'فتحتَ الدفتر التجريبي. لا يتم تسجيل الدخول أو إرسال البيانات.',
-      'Sample notebook opened. No sign-in or data was sent.',
+      'فتحتَ النموذج التجريبي. لا يتم تسجيل الدخول أو إرسال البيانات.',
+      'Sample opened. No sign-in or data was sent.',
     ),
     attendance: t('حُفظ الحضور في المعاينة فقط.', 'Attendance saved in this preview only.'),
     note: t('حُفظت الملاحظة في المعاينة فقط.', 'Note saved in this preview only.'),
@@ -41,7 +41,7 @@ export function CourtyardDraft({ language }: DraftProps) {
   }
   const stages: { id: Stage; label: string }[] = [
     { id: 'welcome', label: t('البداية', 'Welcome') },
-    { id: 'notebook', label: t('الدفتر', 'Notebook') },
+    { id: 'notebook', label: t('الحضور والملاحظات', 'Attendance & notes') },
     { id: 'components', label: t('العناصر', 'Components') },
   ]
   const chooseStage = (next: Stage) => {
@@ -77,12 +77,11 @@ export function CourtyardDraft({ language }: DraftProps) {
       {stage === 'welcome' && (
         <main className="a-welcome">
           <div className="a-intro">
-            <span className="a-kicker">{t('دفتر المعلّم', 'The teacher’s notebook')}</span>
             <h1>{t('لحلقتك مكانٌ يجمعها', 'A place for your halaqa')}</h1>
             <p>
               {t(
-                'سجّل الحضور، واترك ملاحظة تنفع المعلّم القادم. كل ما تحتاجه للحلقة في دفتر واحد.',
-                'Record attendance and leave a useful note for the next teacher. Keep the essentials together in one notebook.',
+                'سجّل الحضور، واترك ملاحظة تنفع المعلّم القادم.',
+                'Record attendance and leave a useful note for the next teacher.',
               )}
             </p>
             <form
@@ -105,7 +104,7 @@ export function CourtyardDraft({ language }: DraftProps) {
                 />
               </label>
               <button className="a-button" type="submit">
-                {t('استكشف الدفتر التجريبي', 'Explore the sample notebook')}{' '}
+                {t('استكشف النموذج التجريبي', 'Explore the sample')}{' '}
                 <span aria-hidden="true">{ar ? '←' : '→'}</span>
               </button>
               <small>
@@ -132,8 +131,7 @@ export function CourtyardDraft({ language }: DraftProps) {
         <main className="a-workspace">
           <div className="a-workspace-head">
             <div>
-              <span className="a-kicker">{t('دفتر الحلقة', 'Halaqa notebook')}</span>
-              <h1>{t('أهلاً بك في دفترك', 'Welcome to your notebook')}</h1>
+              <h1>{t('الحضور والملاحظات', 'Attendance & notes')}</h1>
               <p>
                 {t(
                   'مساحة هادئة لما يهم في كل لقاء.',
@@ -328,12 +326,11 @@ export function CourtyardDraft({ language }: DraftProps) {
 
       {stage === 'components' && (
         <main className="a-components">
-          <span className="a-kicker">{t('تفاصيل الدفتر', 'Notebook details')}</span>
           <h1>{t('عناصر بسيطة لخدمة الحلقة', 'Simple elements for the halaqa')}</h1>
           <p>
             {t(
-              'نفس الأدوات التي يستخدمها المعلّم في الدفتر، بحالات واضحة ومريحة للقراءة.',
-              'The same tools a teacher uses in the notebook, with clear, readable states.',
+              'أدوات تسجيل الحضور والملاحظات بحالات واضحة وسهلة القراءة.',
+              'Attendance and note controls with clear, readable states.',
             )}
           </p>
           <div className="a-component-sample">
@@ -371,12 +368,12 @@ export function CourtyardDraft({ language }: DraftProps) {
             </div>
           </div>
           <button className="a-text-button" onClick={() => chooseStage('notebook')}>
-            {t('انتقل إلى الدفتر', 'Go to the notebook')} {ar ? '←' : '→'}
+            {t('انتقل إلى الحضور والملاحظات', 'Go to attendance & notes')} {ar ? '←' : '→'}
           </button>
         </main>
       )}
       <footer className="a-footer">
-        <span>{t('وَارْتَق · دفتر الحلقة', 'Wartaq · Halaqa notebook')}</span>
+        <span>{t('وَارْتَق', 'Wartaq')}</span>
         <span>{t('تصميم تجريبي ببيانات غير حقيقية', 'Design preview with sample data')}</span>
       </footer>
     </div>

@@ -1735,3 +1735,11 @@ Railway reported the production trigger on `main` with Wait for CI enabled. The 
 **History integration at 06:14 Asia/Damascus** Integrated `0893221`, retaining the Attendance row note dialog, historical note dates and legacy Notes bookmarks. Updated the mobile checks for the combined navigation and verified that switching courses clears an open correction form. After correcting stale Arabic test navigation, `bun run verify:release` passed 118 browser cases and 34 local tests with 139 assertions. Four optional database suites skipped.
 
 **History integration at 06:22 Asia/Damascus** Merged `d746b66` after the name-first Students roster landed. Preserved both work-log entries and verified the combined History and Students paths. `bun run verify:release` passed 119 browser cases and 34 local tests. The phone-only regression skipped on desktop and four optional database suites skipped.
+
+## 2026-11-18 06:51 Asia/Damascus (UTC+03:00) - Remove notebook wording from the interface
+
+The phone screenshot showed a confusing **فتح الدفتر** button on Add student. Removed it from Add student and Settings. Dashboard, Courses, Attendance and Students are available directly in the main navigation. Arabic and English page titles, sign-in, samples, loading messages, errors and retry guidance now use the names of the relevant actions and records. Existing links and API clients retain compatibility.
+
+Reproduced the button on the previous Railway deployment in Arabic at 390px and English at 1280px. The Administrator browser cases verify the button is gone, forms and refresh remain available, and the main navigation opens each destination. Railway's production trigger reports `main` with Wait for CI enabled. Browser checks use synthetic accounts and records and emulated phones. The PR records the deployed revision and shipped UI check.
+
+`bun run verify:release` passed with 119 browser cases and 34 local tests, including the build, artifact, formatting and security gates. The phone-only roster case skipped on desktop and four optional database suites skipped.

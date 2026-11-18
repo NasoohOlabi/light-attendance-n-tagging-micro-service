@@ -147,7 +147,9 @@ try {
     await unlink(teacherFile)
     await unlink(studentFile)
     await page.reload()
-    await expect(page.getByRole('heading', { name: 'Halaqa notebook', exact: true })).toBeVisible({
+    await expect(
+      page.getByRole('heading', { name: 'Attendance & notes', exact: true }),
+    ).toBeVisible({
       timeout: 30000,
     })
     const tokenResponse = await context.request.get(`${settings.NEON_AUTH_BASE_URL}/token`, {
@@ -259,7 +261,9 @@ try {
   check('signup requires approval, administrator bootstrap, self-management denial and role grant')
 
   await a.page.reload()
-  await expect(a.page.getByRole('heading', { name: 'Halaqa notebook', exact: true })).toBeVisible({
+  await expect(
+    a.page.getByRole('heading', { name: 'Attendance & notes', exact: true }),
+  ).toBeVisible({
     timeout: 30000,
   })
   check('authenticated session restoration after reload')
@@ -455,7 +459,9 @@ try {
   await expect(a.page.getByRole('alert')).toContainText(/invalid|check/i, { timeout: 30000 })
   await a.page.getByLabel('Password', { exact: true }).fill(a.password)
   await a.page.getByRole('button', { name: 'Sign in', exact: true }).first().click()
-  await expect(a.page.getByRole('heading', { name: 'Halaqa notebook', exact: true })).toBeVisible({
+  await expect(
+    a.page.getByRole('heading', { name: 'Attendance & notes', exact: true }),
+  ).toBeVisible({
     timeout: 30000,
   })
   check('real sign-out, invalid-password error and email/password sign-in')

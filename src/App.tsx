@@ -66,8 +66,8 @@ function AppContent() {
           ? 'وارتق · دورة تلاوة القرآن'
           : 'Wartaq · Quran recitation course'
         : language === 'ar'
-          ? 'وارتق · دفتر الحلقة'
-          : 'Wartaq · Halaqa notebook'
+          ? 'وارتق'
+          : 'Wartaq'
   }, [language, query.page])
   const openDemo = (kind: 'editable' | 'assigned') => {
     setDemo(kind)
@@ -129,7 +129,6 @@ function AppContent() {
                     ? query.course
                     : ''
                 }
-                openNotebook={() => setQuery({ view: 'notebook', course: '' }, true)}
               />
             ) : (
               <Notebook
@@ -258,7 +257,7 @@ function Notebook({
         </button>
       </main>
     ) : (
-      <WorkspaceLoading message={t('Loading the shared notebook…')} />
+      <WorkspaceLoading message={t('Loading records…')} />
     )
   return (
     <div className="workspace">
@@ -282,10 +281,7 @@ function Notebook({
         {!history && query.view !== 'courses' && query.view !== 'student' && (
           <header className="workspace-welcome">
             <div>
-              <h1>{t('Halaqa notebook')}</h1>
-              <span>
-                {t('Record attendance. Leave a note. Keep the next teacher in the loop.')}
-              </span>
+              <h1>{t('Attendance & notes')}</h1>
             </div>
             <div className="workspace-count">
               <strong>{projected.students.length}</strong>
@@ -295,7 +291,7 @@ function Notebook({
         )}
         {demo && (
           <p className="mb-5 rounded-lg bg-amber-100 p-3 text-amber-900">
-            {demo === 'assigned' ? t('Assigned teacher sample notebook.') : t('Sample notebook.')}{' '}
+            {demo === 'assigned' ? t('Assigned teacher sample.') : t('Sample data.')}{' '}
             {t('Changes stay in memory and disappear when you leave. No server requests are made.')}
           </p>
         )}

@@ -32,7 +32,6 @@
   color: #c4dada;
 }
 :root[data-theme='dark'] .muted,
-:root[data-theme='dark'] .workspace-welcome span,
 :root[data-theme='dark'] .workspace-metrics span,
 :root[data-theme='dark'] .workspace-recent small,
 :root[data-theme='dark'] .dashboard-actions p,
@@ -57,7 +56,6 @@
   color: #e3f1f1;
 }
 :root[data-theme='dark'] .home-kicker,
-:root[data-theme='dark'] .workspace-welcome p,
 :root[data-theme='dark'] .role-heading span,
 :root[data-theme='dark'] .role-manage,
 :root[data-theme='dark'] .sort-pill-number,

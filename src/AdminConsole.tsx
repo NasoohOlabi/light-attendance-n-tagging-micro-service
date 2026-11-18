@@ -28,14 +28,12 @@ export function AdminConsole({
   userId,
   signOut,
   profile,
-  openNotebook,
   initialCreateStudent = false,
   courseId = '',
 }: {
   userId: string
   signOut: () => void
   profile: Profile
-  openNotebook: () => void
   initialCreateStudent?: boolean
   courseId?: string
 }) {
@@ -81,11 +79,7 @@ export function AdminConsole({
       .catch((cause: unknown) => {
         if (!cancelled) {
           setBoard(null)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : 'The notebook request failed. Please try again.',
-          )
+          setError(cause instanceof Error ? cause.message : 'The request failed. Please try again.')
         }
       })
     return () => {
@@ -122,9 +116,7 @@ export function AdminConsole({
       setMessage(ar ? 'تم الحفظ.' : 'Saved.')
       return true
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : 'The notebook request failed. Please try again.',
-      )
+      setError(cause instanceof Error ? cause.message : 'The request failed. Please try again.')
       return false
     } finally {
       setBusy(false)
@@ -149,9 +141,6 @@ export function AdminConsole({
               onClick={() => setRevision((n) => n + 1)}
             >
               <RefreshCw size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
-            </button>
-            <button className="primary" onClick={openNotebook}>
-              {ar ? 'فتح الدفتر' : 'Open notebook'}
             </button>
           </div>
         </div>

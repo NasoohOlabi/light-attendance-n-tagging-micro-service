@@ -60,7 +60,7 @@ export function WorkspaceNavigation({
           disabled={disabled}
         />
       </div>
-      <nav aria-label={t('Notebook')} data-courses={administrator}>
+      <nav aria-label={t('Main navigation')} data-courses={administrator}>
         <button
           className={query.view === 'notebook' && query.tab === 'dashboard' ? 'active' : ''}
           aria-label={language === 'ar' ? 'الرئيسية' : 'Dashboard'}
@@ -116,7 +116,7 @@ export function WorkspaceNavigation({
         ))}
       </nav>
       <div className="workspace-identity">
-        <span>{t('Attendance & notes · الحضور والملاحظات')}</span>
+        <span>{t('Attendance & notes')}</span>
       </div>
     </aside>
   )

@@ -18,7 +18,7 @@ export class NeonRequestError extends Error {
         ? 'Your account is awaiting approval or no longer has access. Contact your manager.'
         : status === 401
           ? 'Your session has expired. Please sign in again.'
-          : 'The notebook request failed. Please try again.',
+          : 'The request failed. Please try again.',
     )
   }
 }
@@ -29,7 +29,7 @@ export async function request(
   body?: unknown,
   reportDenial = true,
 ): Promise<unknown> {
-  if (!authClient || !apiUrl) throw new Error('Notebook configuration is unavailable.')
+  if (!authClient || !apiUrl) throw new Error('App configuration is unavailable.')
   const session = await authClient.getSession({
     fetchOptions: { signal: AbortSignal.timeout(15000) },
   })
@@ -61,7 +61,7 @@ export async function getTeacher(userId: string) {
     return z.object({ teacher: neonTeacherSchema }).parse(await request('/api/me', userId)).teacher
   } catch (cause) {
     if (cause instanceof NeonRequestError) throw cause
-    throw new Error('The notebook request failed. Please try again.')
+    throw new Error('The request failed. Please try again.')
   }
 }
 export async function getNotebook(userId: string) {
@@ -69,7 +69,7 @@ export async function getNotebook(userId: string) {
     return neonSnapshotSchema.parse(await request('/api/notebook', userId))
   } catch (cause) {
     if (cause instanceof NeonRequestError) throw cause
-    throw new Error('The notebook request failed. Please try again.')
+    throw new Error('The request failed. Please try again.')
   }
 }
 export async function postEvents(userId: string, events: LedgerEvent[]) {
@@ -79,6 +79,6 @@ export async function postEvents(userId: string, events: LedgerEvent[]) {
     )
   } catch (cause) {
     if (cause instanceof NeonRequestError) throw cause
-    throw new Error('The notebook request failed. Please try again.')
+    throw new Error('The request failed. Please try again.')
   }
 }

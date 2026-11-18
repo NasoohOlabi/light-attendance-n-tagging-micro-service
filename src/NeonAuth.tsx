@@ -112,7 +112,7 @@ function ConfiguredAuth({
               message:
                 cause instanceof NeonRequestError
                   ? cause.message
-                  : 'The notebook request failed. Please try again.',
+                  : 'The request failed. Please try again.',
             })
         })
     return () => {
@@ -187,14 +187,14 @@ function ConfiguredAuth({
         </main>
       )
     if (!account || account.userId !== userId || account.kind !== 'ready')
-      return <WorkspaceLoading message={t('Loading your notebook…')} />
+      return <WorkspaceLoading message={t('Checking your access…')} />
     if (!account.value.canRead)
       return (
         <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
           <AuthHeader />
           <p>
             {t(
-              'Your account has write-only access. The notebook requires read access; contact your manager.',
+              'Your account has write-only access. Contact your manager for permission to view records.',
             )}
           </p>
           <button className="secondary" onClick={signOut}>
@@ -215,12 +215,6 @@ function ConfiguredAuth({
   return (
     <main id="main-content" tabIndex={-1} className="workspace-auth">
       <AuthHeader />
-      <h1 className="text-4xl font-semibold tracking-tight">
-        {t('Your halaqa, one shared notebook.')}
-      </h1>
-      <p className="text-lg leading-relaxed text-slate-600">
-        {t('Record attendance. Leave a note. Keep the next teacher in the loop.')}
-      </p>
       <form
         aria-busy={busy}
         className="panel space-y-3"
@@ -252,7 +246,7 @@ function ConfiguredAuth({
           }
         }}
       >
-        <h2 className="title">{mode === 'sign-up' ? t('Create an account') : t('Sign in')}</h2>
+        <h1 className="title">{mode === 'sign-up' ? t('Create an account') : t('Sign in')}</h1>
         {mode === 'sign-up' && (
           <label>
             {t('Name')}
@@ -318,7 +312,7 @@ function ConfiguredAuth({
         )}
         {mode === 'sign-up' && (
           <p className="muted">
-            {t('Your manager must approve your account before you can open the notebook.')}
+            {t('Your manager must approve your account before you can use the app.')}
           </p>
         )}
       </form>
