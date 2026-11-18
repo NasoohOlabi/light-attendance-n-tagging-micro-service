@@ -50,7 +50,10 @@ test('recipient signs in, completes setup, and edits personal details', async ({
     username = body.username
     phone = body.phone
     birthDate = body.birthDate
-    if (body.newPassword) setup = false
+    if (body.newPassword) {
+      setup = false
+      signedIn = false
+    }
     return route.fulfill({ json: { success: true } })
   })
   await page.route('**/api/me', (route) =>

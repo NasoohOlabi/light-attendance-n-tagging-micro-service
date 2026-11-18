@@ -76,8 +76,8 @@ export function InvitationProfileForm({
       {setup && (
         <p>
           {ar
-            ? 'أدخل كلمة المرور المؤقتة واختر كلمة مرور شخصية. ستحتاج إلى تسجيل الدخول مجدداً.'
-            : 'Enter your temporary password and choose a personal password. You will need to sign in again.'}
+            ? 'أدخل كلمة المرور المؤقتة واختر كلمة مرورك الشخصية لاستخدامها في مرات الدخول القادمة.'
+            : 'Enter your temporary password and choose a personal password for future sign-ins.'}
         </p>
       )}
       <label>

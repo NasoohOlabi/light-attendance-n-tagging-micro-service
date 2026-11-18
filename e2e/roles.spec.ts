@@ -138,6 +138,19 @@ test('student sees only their attendance and loses it after access is denied', a
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
     const path = new URL(req.url()).pathname
     paths.push(path)
+    if (path === '/api/device-accounts')
+      return route.fulfill({
+        headers,
+        json: {
+          accounts: [
+            {
+              userId: studentUserId,
+              name: 'Synthetic Student',
+              identifier: 'student@example.test',
+            },
+          ],
+        },
+      })
     if (path === '/api/me')
       return route.fulfill({
         headers,
@@ -220,7 +233,9 @@ test('student sees only their attendance and loses it after access is denied', a
   expect(paths.filter((path) => path === '/api/student/attendance').length).toBeGreaterThanOrEqual(
     2,
   )
-  expect(new Set(paths)).toEqual(new Set(['/api/me', '/api/student/attendance']))
+  expect(new Set(paths)).toEqual(
+    new Set(['/api/me', '/api/student/attendance', '/api/device-accounts']),
+  )
 })
 
 test('administrator assigns roles and creates an assigned student', async ({ page }, testInfo) => {
@@ -347,6 +362,15 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
             canWrite: true,
             expiresAt: null,
           },
+        },
+      })
+    if (path === '/api/device-accounts')
+      return route.fulfill({
+        headers,
+        json: {
+          accounts: [
+            { userId: adminId, name: 'Synthetic Admin', identifier: 'admin@example.test' },
+          ],
         },
       })
     if (req.method() === 'POST') {

@@ -2,6 +2,12 @@
 
 Better Auth establishes identity; `app_accounts` grants a server-owned role. Signup alone grants no data access. Each request checks the account's active state and expiry.
 
+### Switch between signed-in accounts
+
+Open **Profile → Sign in to another account**. Enter the invited user's username and password, or choose **Sign in with email** for an email account. Cancel returns to the current workspace. For a new invitation, finish the first-login form to open that person's workspace.
+
+Open **Profile** again and select a saved name to switch back. Each name includes its username or email, and **Current account** marks the identity in use. This browser can keep up to five signed-in accounts. Switching opens the selected account's default workspace and updates other open app tabs. **Sign out** removes the current account. Other valid accounts remain available on the sign-in screen.
+
 ### Invite a user
 
 Open **Settings → Accounts → Create accounts**. Enter a first name and last name, choose the role, and select **Create account**. Teacher is preselected. To import teachers, paste two spreadsheet columns (first name and last name, without headings), preview the names, and create up to 50 accounts at once.
