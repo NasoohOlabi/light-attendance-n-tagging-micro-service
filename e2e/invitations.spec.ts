@@ -111,10 +111,56 @@ test('administrator creates one invitation and can safely retry it', async ({
   await create.click()
   await expect(page.getByRole('alert')).toContainText('could not be confirmed')
   await page.getByRole('button', { name: 'Retry safely' }).click()
-  await expect(page.getByLabel('Ava Example')).toContainText('Synthetic-password-1')
-  await expect(page.getByLabel('Ava Example')).toContainText(`${baseURL}/?page=app&login=username`)
-  expect(posts).toBe(2)
+  const invitation = page.getByRole('textbox', { name: 'Ava Example' })
+  const copy = page.getByRole('button', { name: 'Copy message' })
+  const feedback = page.getByRole('status').filter({ hasText: 'Message copied' })
+  await page.evaluate(() => {
+    Object.defineProperty(navigator.clipboard, 'writeText', {
+      configurable: true,
+      value: () => Promise.reject(new DOMException('Clipboard denied', 'NotAllowedError')),
+    })
+  })
+  await clickAccountAction(page, 'العربية')
+  const arabicCopy = page.getByRole('button', { name: 'نسخ الرسالة' })
+  await arabicCopy.click()
+  await expect(page.getByRole('status').filter({ hasText: 'انسخها يدوياً' })).toBeVisible()
+  await expect(invitation).toBeFocused()
+  await expect(invitation).toHaveCSS('direction', 'rtl')
+  expect(
+    await invitation.evaluate(
+      (element) =>
+        element.scrollWidth <= element.clientWidth && element.scrollHeight <= element.clientHeight,
+    ),
+  ).toBe(true)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  await page.getByRole('button', { name: 'Back to accounts' }).click()
-  await expect(page.getByText('Synthetic-password-1')).toHaveCount(0)
+  const selection = await invitation.evaluate((element) =>
+    element instanceof HTMLTextAreaElement
+      ? element.value.slice(element.selectionStart, element.selectionEnd)
+      : '',
+  )
+  expect(selection).toBe(await invitation.inputValue())
+  await page.evaluate(() => Reflect.deleteProperty(navigator.clipboard, 'writeText'))
+  await clickAccountAction(page, 'English')
+  const message = await invitation.inputValue()
+  expect(message).toContain('Synthetic-password-1')
+  expect(message).toContain(`${baseURL}/?page=app&login=username`)
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  const readClipboard = () =>
+    page.evaluate(async () => (await navigator.clipboard.readText()).replaceAll('\r\n', '\n'))
+  for (const context of ['first copy', 'repeat copy']) {
+    await test.step(context, async () => {
+      await page.evaluate(() => navigator.clipboard.writeText('Previous clipboard contents'))
+      await copy.click()
+      await expect(feedback).toBeInViewport()
+      await expect.poll(readClipboard).toBe(message)
+      await expect(copy).toBeEnabled()
+    })
+  }
+  await clickAccountAction(page, 'العربية')
+  await arabicCopy.click()
+  await expect(page.getByRole('status').filter({ hasText: 'تم نسخ الرسالة' })).toBeInViewport()
+  await expect.poll(readClipboard).toBe(await invitation.inputValue())
+  expect(posts).toBe(2)
+  await page.getByRole('button', { name: 'العودة إلى الحسابات' }).click()
+  await expect(invitation).toHaveCount(0)
 })

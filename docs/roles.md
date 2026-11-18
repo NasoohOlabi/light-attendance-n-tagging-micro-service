@@ -12,7 +12,7 @@ Open **Profile** again and select a saved name to switch back. Each name include
 
 Open **Settings → Accounts → Create accounts**. Enter a first name and last name, choose the role, and select **Create account**. Teacher is preselected. Create one account at a time.
 
-Use **Copy message** and send the message privately to the recipient. It opens username sign-in and includes the recipient's initial username and temporary password. Leaving the screen clears the displayed message. If the creation response is lost, **Retry safely** uses the same request. Check Accounts for the username and use its password reset if the account was created.
+Use **Copy message** and send the message privately to the recipient. The screen confirms when it was copied. If the browser blocks clipboard access, copy the selected message manually. The message opens username sign-in and includes the recipient's initial username and temporary password. Leaving the screen clears the displayed message. If the creation response is lost, **Retry safely** uses the same request. Check Accounts for the username and use its password reset if the account was created.
 
 At first sign-in the recipient enters their phone number and date of birth, chooses a personal password, and can edit their username. They sign in again with the new credentials. **Profile settings** lets them change those details later. A student invitation creates a fresh, unassigned roster record. To connect someone to an existing student, use the existing signup and account-grant flow and select the correct roster record.
 
