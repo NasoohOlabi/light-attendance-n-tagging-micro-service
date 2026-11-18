@@ -1808,8 +1808,22 @@ The release gate passed with 40 unit/integration tests and 128 desktop/mobile br
 
 Integrated the concurrent course export change from main at `cf7c1a1`. Both delivery entries are retained.
 
+## 2026-11-18 08:25 Asia/Damascus (UTC+03:00) - Replace aggregate charts with student follow-up
+
+The owner requested charts that guide daily teaching and course review. Dashboard now ranks current students by explicit absences over the last six recorded sessions through the chosen date. Each timeline opens the student's contact information and history. Summary ranks all course dates by absence count and expands to the recorded names and marks. Administrators can also identify students below the course's theory or practical minimum, inspect missing evidence, and open that course in Grades. An unmarked session creates no absence. A zero score remains a recorded assessment.
+
+The local release gate passed with 38 unit tests and 130 desktop and emulated-phone browser cases. Five optional database suites and two phone-only cases on desktop skipped. The focused checks exercised English and Arabic, a 320px timeline, date cutoffs, reversals, grade overrides, enrollment scope, empty states and the student and Grades destinations. These synthetic checks cover the client using the existing role-scoped records. The PR carries CI and the exact-main Railway deployment receipt.
+
+At 08:35 Asia/Damascus, integrated main commit 6b7e48e after PR #114 passed its required check and conflicted with the teacher chart export. Both the session drill-down and the image export use the same course-scoped records. The combined release gate passed with 38 unit tests and 132 browser cases, including read-only teacher sharing and downloads. Five optional database suites and two phone-only cases on desktop skipped.
+
 ## 2026-11-18 08:30 Asia/Damascus (UTC+03:00) - Fix the profile test after sign-out
 
 PR 113's Verify job timed out on desktop and mobile when sign-out removed the profile button between two Playwright calls. The helper now checks the menu's expanded state and visibility in one lookup. The same teacher sign-in, reload, sign-out and data isolation scenario passed three times on each viewport. The full release gate passed with 41 unit and integration tests against disposable PostgreSQL and 128 browser cases. Two optional database tests and two desktop cases for phone-only behavior skipped. Mobile coverage used Chromium emulation.
 
 At 08:35 Asia/Damascus, merged the attendance chart change from main at `6b7e48e` to resolve PR 113's work log conflict. Both branches' entries were preserved, and the nine other incoming files matched main exactly. The combined release gate passed with 41 unit and integration tests and 130 desktop and emulated mobile browser cases. Two optional database tests and two desktop instances of phone-only cases skipped.
+
+## 2026-11-18 08:45 Asia/Damascus (UTC+03:00) - Verify the active account before refreshing
+
+GitHub Verify caught the desktop account chooser test starting a refresh while the switch back to the administrator was still navigating. The test now waits for the workspace navigation and checks the active teacher and administrator in the profile menu. It also checks that the administrator stays active after refresh. The scenario passed six times each on desktop and emulated mobile.
+
+Integrated the attendance follow-up change from main at `e5fe629`. Preserved both work log histories and checked that both branches' stylesheet changes survived. The full release check passed with 42 unit and integration tests and 134 browser cases. Two optional database tests and two desktop instances of phone-only cases skipped.

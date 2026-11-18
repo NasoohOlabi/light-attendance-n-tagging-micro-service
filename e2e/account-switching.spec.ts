@@ -109,14 +109,19 @@ test('account chooser preserves the current session on failed login and cancel',
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.locator('.profile-trigger')).toBeVisible()
   await page.locator('.profile-trigger').click()
-  await page.getByRole('button', { name: /Synthetic Admin/ }).click()
-  await expect.poll(() => current.userId).toBe(admin.userId)
-  await expect(page.locator('.profile-trigger')).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: /Synthetic Teacher.*Current account/ }),
+  ).toBeDisabled()
+  await Promise.all([
+    page.waitForEvent('framenavigated', (frame) => frame === page.mainFrame()),
+    page.getByRole('button', { name: /Synthetic Admin/ }).click(),
+  ])
+  const activeAdmin = page.getByRole('button', { name: /Synthetic Admin.*Current account/ })
+  await page.locator('.profile-trigger').click()
+  await expect(activeAdmin).toBeDisabled()
   await page.reload()
   await page.locator('.profile-trigger').click()
-  await expect(
-    page.getByRole('button', { name: /Synthetic Admin.*Current account/ }),
-  ).toBeDisabled()
+  await expect(activeAdmin).toBeDisabled()
   await page.getByRole('button', { name: 'العربية', exact: true }).click()
   await expect(page.getByRole('button', { name: 'تسجيل الدخول إلى حساب آخر' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Synthetic Admin.*الحساب الحالي/ })).toBeDisabled()
