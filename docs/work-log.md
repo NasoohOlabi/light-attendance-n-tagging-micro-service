@@ -1788,6 +1788,14 @@ The owner requested simple downloads for grades, student information, attendance
 
 The full release gate passed with 37 unit tests and 126 browser cases. Five optional database tests skipped without a disposable database, and two phone-only scenarios skipped on desktop. Downloaded and inspected all five workbook formats through synthetic administrator sessions in English and Arabic on desktop and emulated phones. Checked zero grades, withdrawn enrollments, corrections, selected columns, empty matches, date validation and keyboard focus return. The post-merge Railway deployment and shipped UI checks are recorded in the PR delivery receipt.
 
+## 2026-11-18 08:13 Asia/Damascus (UTC+03:00) - Export teacher attendance charts
+
+Teachers requested an image they could share when discussing one student's attendance in the context of the group. Summary now creates ranked PNG charts from the selected course's effective attendance across all recorded dates. Percentages show the present and recorded counts. Students with no records appear separately at the end. Names are hidden by default. A teacher can highlight one student or include all names, share the current PNG, or download every page in a ZIP. Read-only teachers can use the Summary controls.
+
+`bun run verify:release` passed with 36 unit tests and 128 browser cases. Five optional database suites and two desktop instances of phone-only tests skipped. Verified English and Arabic PNGs on desktop and emulated phones, the downloaded ZIP's four pages, preview/download equality and the PNG passed to a simulated share target. A focused browser check first exposed the disabled controls for read-only teachers and passed after the fix. Physical social-app delivery was not exercised. Railway's production trigger targets main with Wait for CI enabled. The PR delivery receipt tracks the resulting main revision, health and shipped sample export.
+
+At 08:24 Asia/Damascus, integrated main commit `cf7c1a1` for PR #112 and kept both export entries in date order. The combined release gate passed with 37 unit tests and 128 browser cases, including the chart and Excel downloads. Five optional database suites and two phone-only cases on desktop skipped.
+
 ## 2026-11-18 08:14 Asia/Damascus (UTC+03:00) - Switch signed-in accounts in one browser
 
 The owner wanted to create invitations as an administrator, try the teacher or student experience, and return to the administrator without another browser or a manual sign-out. The profile menu now adds email or username sign-ins and switches between saved identities. Switching resets the workspace, and other open tabs follow the new identity. Sign-out removes only the current session. Added invitees can complete setup and enter their workspace using the new password they just chose.
@@ -1803,3 +1811,5 @@ Integrated the concurrent course export change from main at `cf7c1a1`. Both deli
 ## 2026-11-18 08:30 Asia/Damascus (UTC+03:00) - Fix the profile test after sign-out
 
 PR 113's Verify job timed out on desktop and mobile when sign-out removed the profile button between two Playwright calls. The helper now checks the menu's expanded state and visibility in one lookup. The same teacher sign-in, reload, sign-out and data isolation scenario passed three times on each viewport. The full release gate passed with 41 unit and integration tests against disposable PostgreSQL and 128 browser cases. Two optional database tests and two desktop cases for phone-only behavior skipped. Mobile coverage used Chromium emulation.
+
+At 08:35 Asia/Damascus, merged the attendance chart change from main at `6b7e48e` to resolve PR 113's work log conflict. Both branches' entries were preserved, and the nine other incoming files matched main exactly. The combined release gate passed with 41 unit and integration tests and 130 desktop and emulated mobile browser cases. Two optional database tests and two desktop instances of phone-only cases skipped.
