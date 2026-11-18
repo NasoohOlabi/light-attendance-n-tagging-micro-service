@@ -8,6 +8,7 @@ const second = '30000000-0000-4000-8000-000000000002'
 const third = '30000000-0000-4000-8000-000000000004'
 const arabicCourse = '30000000-0000-4000-8000-000000000006'
 const branded = '\u0648\u0627\u0631\u062a\u0642 \u0665'
+const brandedNumber = '\u0665'
 const longName = 'A very long course name that should fit safely on a narrow phone screen'
 const arabicName = 'دورة تلاوة القرآن الكريم وحفظه'
 
@@ -72,7 +73,8 @@ test('remembers a validated course per account and keeps the header compact', as
   const label = page.locator('.workspace-course-name')
   await switcher.click()
   await page.getByRole('button', { name: branded, exact: true }).click()
-  await expect(label).toHaveText(branded)
+  await expect(label).toHaveText(brandedNumber)
+  await expect(switcher).toHaveAccessibleDescription(branded)
   await expect(page).toHaveURL(new RegExp(`course=${first}`))
   await switcher.click()
   await page.getByRole('button', { name: 'Make default', exact: true }).click()
@@ -90,7 +92,7 @@ test('remembers a validated course per account and keeps the header compact', as
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await expect(page).toHaveURL(/course=none/)
   await page.goto('/?page=app')
-  await expect(label).toHaveText(branded)
+  await expect(label).toHaveText(brandedNumber)
   await page.goto(`/?page=app&tab=roster&course=all`)
   await switcher.click()
   await expect(page.getByRole('button', { name: 'All students', exact: true })).toBeVisible()
@@ -112,10 +114,10 @@ test('remembers a validated course per account and keeps the header compact', as
   await page.goto('/?page=app&tab=attendance&course=30000000-0000-4000-8000-000000000003')
   await expect(label).toHaveText('Choose course')
   await page.goto('/?page=app')
-  await expect(label).toHaveText(branded)
+  await expect(label).toHaveText(brandedNumber)
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
-  await expect(label).toHaveText(branded)
+  await expect(label).toHaveText(brandedNumber)
   for (const language of ['en', 'ar']) {
     await page.evaluate((value) => localStorage.setItem('halaqa-language', value), language)
     for (const width of [320, 390, 701, 1440]) {
@@ -153,6 +155,26 @@ test('remembers a validated course per account and keeps the header compact', as
         expect(background).toBe(theme === 'dark' ? 'rgb(23, 59, 64)' : 'rgb(255, 255, 255)')
       }
       await page.keyboard.press('Escape')
+
+      await page.goto(`/?page=app&tab=attendance&course=${language === 'ar' ? third : first}`)
+      await expect(courseTitle).toHaveText(language === 'ar' ? '5' : brandedNumber)
+      await expect(courseTitle).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+      const logo = await page.locator('.workspace-brand .wartaq-logo').boundingBox()
+      const badge = await courseTitle.boundingBox()
+      if (!logo || !badge) throw new Error('Missing wordmark or course number badge')
+      expect(Math.abs(badge.y + badge.height / 2 - logo.y - logo.height / 2)).toBeLessThanOrEqual(1)
+      const gap = language === 'ar' ? logo.x - badge.x - badge.width : badge.x - logo.x - logo.width
+      expect(gap).toBeGreaterThanOrEqual(0)
+      expect(gap).toBeLessThanOrEqual(12)
+      await compactHeader(page, '.workspace-brand')
+      const badgeTrigger = await trigger.boundingBox()
+      const avatar = await page.locator('.workspace-brand .profile-trigger').boundingBox()
+      if (!badgeTrigger || !avatar) throw new Error('Missing course selector or profile control')
+      expect(badgeTrigger.width).toBeGreaterThanOrEqual(44)
+      expect(badgeTrigger.height).toBeGreaterThanOrEqual(44)
+      expect(
+        language === 'ar' ? avatar.x + avatar.width : badgeTrigger.x + badgeTrigger.width,
+      ).toBeLessThanOrEqual(language === 'ar' ? badgeTrigger.x : avatar.x)
     }
   }
   for (const role of ['administrator', 'teacher']) {

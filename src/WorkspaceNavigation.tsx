@@ -46,6 +46,7 @@ export function WorkspaceNavigation({
         : query.courseScope || defaultCourse
       : defaultCourse
   const roster = query.view === 'notebook' && query.tab === 'roster'
+  const courseNumber = courseName?.match(/^وارتق\s+([0-9\u0660-\u0669\u06f0-\u06f9]+)$/u)?.[1]
   const switcher = useRef<HTMLDetailsElement>(null)
   useEffect(() => {
     function dismiss(event: MouseEvent | KeyboardEvent) {
@@ -82,7 +83,11 @@ export function WorkspaceNavigation({
           disabled={disabled}
         />
         {courses && chooseDefault && (
-          <details ref={switcher} className="workspace-course-switcher">
+          <details
+            ref={switcher}
+            className="workspace-course-switcher"
+            data-numbered={courseNumber !== undefined}
+          >
             <summary
               className="workspace-course-name"
               aria-label={language === 'ar' ? 'تغيير الدورة' : 'Change course'}
@@ -90,7 +95,8 @@ export function WorkspaceNavigation({
               title={courseName}
             >
               <span dir="auto">
-                {courseName ??
+                {courseNumber ??
+                  courseName ??
                   (roster
                     ? language === 'ar'
                       ? 'جميع الطلاب'

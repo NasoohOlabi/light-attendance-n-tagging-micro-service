@@ -16,15 +16,22 @@
 .workspace-brand {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   margin: 4px 12px 20px;
   color: #b8d9dd;
   font-size: 13px;
 }
+.workspace-brand:where(:has(.workspace-course-switcher[data-numbered='true'])) {
+  margin-inline: 4px;
+}
 .wartaq-site .workspace-brand .wartaq-logo {
   color: white;
+}
+.workspace-brand > .profile-menu {
+  grid-column: 3;
+  grid-row: 1;
 }
 .workspace-rail nav {
   display: grid;
@@ -757,6 +764,10 @@
   justify-self: start;
   max-width: 100%;
 }
+.workspace-course-switcher[data-numbered='true'] {
+  grid-column: 2;
+  grid-row: 1;
+}
 .workspace-course-switcher summary {
   cursor: pointer;
   list-style: none;
@@ -768,6 +779,13 @@
 }
 .workspace-course-switcher summary span {
   overflow-wrap: anywhere;
+}
+.workspace-course-switcher[data-numbered='true'] summary span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #d5eeee;
+  color: #004d57;
+  font-size: 16px;
 }
 .workspace-course-switcher summary::after {
   content: ' \25be';
