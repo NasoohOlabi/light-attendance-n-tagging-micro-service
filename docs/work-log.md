@@ -1977,3 +1977,9 @@ The focused desktop and mobile Chromium scenarios passed for offline reopen, per
 Mark entry waits for the local transaction only. A slow sync leaves the other attendance controls available and overlapping sync attempts are serialized.
 
 If live account verification confirms a role or permission change, the app closes prepared attendance access and keeps any queued marks for reconciliation.
+
+## 2026-11-18 21:06 Asia/Damascus (UTC+03:00) - Clear the attendance tile highlight on deselection
+
+The owner reported a gray tile that lingered after clearing Absent. Attendance tiles now use their selected tints only while pressed. Keyboard navigation retains its visible focus outline.
+
+The browser regression reproduced the gray fill after a second mouse click with `aria-pressed` already false. The updated sample notebook test passed in desktop and touch-emulated Chromium, covering the neutral fill after clearing, keyboard focus and the selected colors. The checks use synthetic records. Physical-device behavior remains unverified. The PR tracks the release gate and Railway verification.
