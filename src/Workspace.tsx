@@ -365,7 +365,11 @@ function Notebook({
         courseName={ledger.courses.find((course) => course.id === query.course)?.name}
         administrator={administrator}
         assigned={assigned}
-        profile={profile}
+        profile={
+          profile && offlineReady
+            ? { ...profile, openOffline: () => setOfflineView(true) }
+            : profile
+        }
         leave={leave}
         sample={!neon}
         sampleHistory={demo === 'editable'}
@@ -390,11 +394,6 @@ function Notebook({
               <span>{t('Students')}</span>
             </div>
           </header>
-        )}
-        {offlineReady && (
-          <button className="secondary mb-4" onClick={() => setOfflineView(true)}>
-            {openOfflineLabel}
-          </button>
         )}
         {demo && (
           <p className="mb-5 rounded-lg bg-amber-100 p-3 text-amber-900">

@@ -14,6 +14,8 @@ HTTPS is required outside localhost. The native prompt is not available in every
 
 ## Offline and updates
 
+Wartaq opens the offline notebook automatically when it detects a lost connection. On normal notebook pages, the manual shortcut lives in the **Profile** menu so teachers can review pending changes after reconnecting. The sign-in and loading screens offer the shortcut when offline access is available and the normal notebook cannot open.
+
 Production/verification builds generate a versioned `sw.js` from the exact built static assets. Development does not register a worker. It precaches the public HTML shell, compiled code, styles, local fonts, images and manifest. Allowlisted homepage and notebook navigation tries the network first and falls back to the public shell when the network is slow or offline. Open the notebook once online to save the full assigned roster on that device. Reopen Wartaq offline to browse students, record course attendance, add notes and change phone numbers. The offline notebook saves on the device and syncs while open when connectivity and the same account's sign-in are available.
 
 The worker does not cache Auth/API responses, cross-origin traffic, non-GET requests, authorization-bearing requests, query URLs or notebook data. Allowlisted clean navigation uses the network first, falling back to the canonical cached HTML after one second or when offline. Each worker keeps its precached HTML and assets together for offline use. It never saves the incoming navigation URL or capability query into the cache.

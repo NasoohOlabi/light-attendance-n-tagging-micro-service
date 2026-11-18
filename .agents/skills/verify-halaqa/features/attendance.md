@@ -34,4 +34,6 @@ Keep a legacy raw mark in projection/API tests, reverse a newer mark to reveal i
 
 ## Offline attendance
 
+Check that the dashboard and Attendance page have no offline shortcut in their content. Find **Open offline notebook** in the Profile menu, then close the menu and disconnect. The offline notebook should open automatically.
+
 Open the notebook once online as an approved read/write teacher. Reopen Wartaq offline after its online session would have expired and inspect every assigned student. Pick an open course and date, mark students, add two notes and change the phone for an unenrolled student. Reload and verify all five changes plus the full roster remain available. Reconnect with competing attendance and phone values, a lost successful reply, and a temporarily rejected mark. Verify that notes remain independent, retries preserve IDs, **Sync now** retries the blocked mark after eligibility returns, and an authorized refresh prunes a student reassigned away. Exercise the scenario on desktop and a touch-emulated phone with `e2e/offline-attendance.spec.ts`.
