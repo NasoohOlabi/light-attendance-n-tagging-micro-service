@@ -1967,3 +1967,13 @@ Chrome 157 and 158 reproduced the banner in fresh tabs after installing from the
 The owner requested a pale gray pill with soft green, red and amber selected tiles, and approved the Arabic screenshot after the gray was lightened and the note moved right. The note button keeps its amber icon and 44px target with a transparent background and zero border. The note sits to the physical right in English and Arabic. Tab follows the row's reading direction.
 
 The local sample smoke verified three distinct selected fills, 44px targets and one-line right-side placement at 1440px and 320px, plus a transparent borderless note and dialog focus return in dark mode. Browser verification uses synthetic records and emulated phones. The PR records the release gate and production checks.
+
+## 2026-11-18 20:08 Asia/Damascus (UTC+03:00) - Record teacher attendance offline
+
+The owner requested attendance that teachers can record during connectivity loss and sync on return. Teachers can prepare an open course and date, reopen its local roster and save marks in IndexedDB. Sync rechecks current access and attendance versions, retries the same event ID after a lost reply and lets the teacher resolve a differing mark. The existing student projection receives accepted marks.
+
+The focused desktop and mobile Chromium scenarios passed for offline reopen, persisted marks, lost replies and conflict resolution. The API tests passed for conflicts and exact retries. A disposable Postgres scenario checks competing teachers and the student projection in CI. Physical phones are outside the automated suite. The PR records release and Railway evidence.
+
+Mark entry waits for the local transaction only. A slow sync leaves the other attendance controls available and overlapping sync attempts are serialized.
+
+If live account verification confirms a role or permission change, the app closes prepared attendance access and keeps any queued marks for reconciliation.

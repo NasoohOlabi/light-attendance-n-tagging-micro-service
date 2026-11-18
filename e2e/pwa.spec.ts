@@ -182,6 +182,11 @@ test('repository-scoped PWA installs its real manifest and opens the public shel
   await expect(page.getByRole('combobox', { name: 'Color theme' })).toHaveValue('dark')
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
   await expect(page.locator('.workspace')).toBeVisible()
+  await page.goto(origin + prefix + '?page=app&tab=attendance&date=2026-11-18')
+  await expect(page.locator('.workspace-loading, .workspace-auth, .workspace')).toBeVisible()
+  await expect(
+    page.goto(origin + prefix + '?page=app&token=synthetic-private-token'),
+  ).rejects.toThrow()
   await context.setOffline(false)
 })
 

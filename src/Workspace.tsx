@@ -44,6 +44,10 @@ import { CourseSections, Courses } from './Courses'
 import type { Profile } from './ProfileMenu'
 import { ProfileSettings } from './ProfileSettings'
 import { enrollmentSchema, type NeonTeacher } from '../shared/neon'
+import { allowOfflineAccess, offlineAccess } from './offlineAccess'
+import { savePreparedRoster } from './offlineAttendanceStore'
+import { OfflineAttendance } from './OfflineAttendance'
+import { syncOfflineAttendance } from './offlineAttendanceSync'
 
 type Projection = ReturnType<typeof projectEvents>
 type Save = (payloads: Payload[]) => Promise<boolean>
@@ -76,7 +80,7 @@ export default function Workspace({
           </>
         }
       >
-        {(userId, account, signOut, profile) =>
+        {(userId, account, signOut, profile, sessionExpires) =>
           query.view === 'profile' ? (
             <ProfileSettings key={userId} profile={profile} signOut={signOut} role={account.role} />
           ) : account.role === 'student' ? (
@@ -102,6 +106,7 @@ export default function Workspace({
               neon={{ userId, teacher: account }}
               leave={signOut}
               profile={profile}
+              sessionExpires={sessionExpires}
             />
           )
         }
@@ -115,13 +120,17 @@ function Notebook({
   leave,
   neon,
   profile,
+  sessionExpires = 0,
 }: {
+  sessionExpires?: number
   neon?: { userId: string; teacher: NeonTeacher }
   demo: 'editable' | 'assigned' | null
   leave: () => void
   profile?: Profile
 }) {
   const { t, language, errorMessage } = useLanguage()
+  const [offlineView, setOfflineView] = useState(false)
+  const [offlineMessage, setOfflineMessage] = useState('')
   const query = useQueryState()
   const administrator = neon?.teacher.role === 'administrator'
   const canViewHistory = administrator || demo === 'editable'
@@ -165,6 +174,31 @@ function Notebook({
     }
   }
   const ledger = useLedger(demo !== null, demo === 'assigned', neon)
+  useEffect(() => {
+    if (!neon) return
+    const reconnect = () => {
+      if (navigator.onLine)
+        void syncOfflineAttendance(neon.userId)
+          .then((outcomes) => {
+            if (outcomes.some((item) => item.kind === 'saved' || item.kind === 'unchanged'))
+              void ledger.refresh()
+          })
+          .catch(() => {})
+    }
+    const disconnect = () => {
+      if (offlineAccess()?.userId === neon.userId) setOfflineView(true)
+    }
+    window.addEventListener('online', reconnect)
+    window.addEventListener('offline', disconnect)
+    window.addEventListener('focus', reconnect)
+    reconnect()
+    return () => {
+      window.removeEventListener('online', reconnect)
+      window.removeEventListener('offline', disconnect)
+      window.removeEventListener('focus', reconnect)
+    }
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [neon?.userId, neon?.teacher.id, ledger.refresh])
   const preference = useCoursePreference(neon?.userId, ledger.loaded, ledger.courses)
   const assigned = !!neon || demo === 'assigned'
   const fullRegister =
@@ -243,6 +277,17 @@ function Notebook({
     !!ledger.storageBlocked ||
     !ledger.loaded ||
     !!(neon && !neon.teacher.canWrite)
+  if (offlineView && neon)
+    return (
+      <OfflineAttendance
+        userId={neon.userId}
+        actor={neon.teacher.name}
+        close={() => {
+          setOfflineView(false)
+          if (navigator.onLine) void ledger.refresh()
+        }}
+      />
+    )
   if (!ledger.loaded || !preference.ready)
     return ledger.error ? (
       <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
@@ -564,6 +609,83 @@ function Notebook({
                 </button>
               </section>
             )}
+            {tab === 'attendance' &&
+              neon &&
+              query.course &&
+              selectedCourse?.open &&
+              neon.teacher.canWrite && (
+                <div className="panel mb-4 space-y-3">
+                  <button
+                    className="secondary"
+                    disabled={disabled}
+                    onClick={async () => {
+                      try {
+                        if (!navigator.serviceWorker?.controller || !navigator.locks)
+                          throw new Error('Offline app is not ready')
+                        await navigator.serviceWorker.ready
+                        const expires = Math.min(
+                          Date.now() + 24 * 60 * 60 * 1000,
+                          sessionExpires,
+                          neon.teacher.expiresAt ? Date.parse(neon.teacher.expiresAt) : Infinity,
+                        )
+                        if (!Number.isFinite(expires) || expires <= Date.now())
+                          throw new Error('Session expired')
+                        await savePreparedRoster(neon.userId, {
+                          courseId: selectedCourse.id,
+                          courseName: selectedCourse.name,
+                          date: query.date,
+                          students: students.flatMap((student) => {
+                            const enrollment = activeEnrollments.find(
+                              (item) => item.studentId === student.studentId,
+                            )
+                            if (!enrollment) return []
+                            const record = projected.attendance.find(
+                              ({ value }) =>
+                                value.date === query.date && value.studentId === student.studentId,
+                            )
+                            return [
+                              {
+                                studentId: student.studentId,
+                                enrollmentId: enrollment.id,
+                                name: student.name,
+                                group: student.group,
+                                level: enrollment.level,
+                                revision: {
+                                  kind: 'confirmed' as const,
+                                  eventId: record?.event.id ?? null,
+                                  status: record?.value.status ?? null,
+                                },
+                              },
+                            ]
+                          }),
+                        })
+                        allowOfflineAccess(neon.userId, neon.teacher.name, expires)
+                        setOfflineMessage(
+                          language === 'ar'
+                            ? 'الجلسة جاهزة على هذا الجهاز.'
+                            : 'Session prepared on this device.',
+                        )
+                      } catch {
+                        setOfflineMessage(
+                          language === 'ar'
+                            ? 'تعذر تحضير الجلسة.'
+                            : 'Could not prepare this session on this device.',
+                        )
+                      }
+                    }}
+                  >
+                    {language === 'ar' ? 'تحضير الحضور دون اتصال' : 'Prepare offline attendance'}
+                  </button>{' '}
+                  <button
+                    className="secondary"
+                    disabled={!neon.teacher.canRead || !neon.teacher.canWrite}
+                    onClick={() => setOfflineView(true)}
+                  >
+                    {language === 'ar' ? 'فتح الحضور دون اتصال' : 'Open offline attendance'}
+                  </button>
+                  {offlineMessage && <p role="status">{offlineMessage}</p>}
+                </div>
+              )}
             {tab === 'attendance' && (!neon || (query.course && !closedCourse)) && (
               <AttendanceView
                 key={`${query.date}:${query.course}`}

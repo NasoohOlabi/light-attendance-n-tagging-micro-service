@@ -19,6 +19,8 @@ import { WorkspaceLoading } from './WorkspaceLoading'
 import type { Profile } from './ProfileMenu'
 import { WartaqLogo } from './brand/components'
 import { AccountChoices } from './AccountChoices'
+import { offlineAccess, clearOfflineAccess } from './offlineAccess'
+import { OfflineAttendance } from './OfflineAttendance'
 
 const deviceLimitMessage = 'Five accounts are signed in. Sign out of one to add another.'
 
@@ -49,21 +51,35 @@ export function NeonAuth({
     teacher: NeonAccount,
     signOut: () => void,
     profile: Profile,
+    sessionExpires: number,
   ) => React.ReactNode
 }) {
   const { t, errorMessage, language } = useLanguage()
   const session = authClient.useSession()
   const userId = session.data?.user.id
+  const [offlineSession, setOfflineSession] = useState(() =>
+    !navigator.onLine ? offlineAccess() : null,
+  )
   const [account, setAccount] = useState<
     | { kind: 'ready'; userId: string; value: NeonAccount }
     | { kind: 'denied' | 'error'; userId: string; message: string }
     | null
   >(null)
+  useEffect(() => {
+    if (session.isPending || session.error || !navigator.onLine) return
+    const cached = offlineAccess()
+    if (cached && cached.userId !== userId) {
+      clearOfflineAccess()
+      // oxlint-disable-next-line react/set-state-in-effect
+      setOfflineSession(null)
+    }
+  }, [session.isPending, session.error, userId])
   const [logout, setLogout] = useState<'idle' | 'pending' | 'failed'>('idle')
   const [accountAttempt, setAccountAttempt] = useState(0)
   const [addingAccount, setAddingAccount] = useState(false)
   const [choosingAccount, setChoosingAccount] = useState(false)
   const addAccount = () => {
+    clearOfflineAccess()
     setMode('sign-in')
     setUsernameSignIn(true)
     setError('')
@@ -79,6 +95,7 @@ export function NeonAuth({
     const refreshWorkspace = () => {
       if (leaving) return
       leaving = true
+      clearOfflineAccess()
       window.location.replace(window.location.pathname + '?page=app')
     }
     const changed = (event: StorageEvent) => {
@@ -137,22 +154,31 @@ export function NeonAuth({
       ])
         .then((value) => {
           window.clearTimeout(timer)
-          if (!cancelled) setAccount({ kind: 'ready', userId, value })
+          if (cancelled) return
+          if (value.role === 'student' || !value.canRead || !value.canWrite) {
+            clearOfflineAccess()
+            setOfflineSession(null)
+          }
+          setAccount({ kind: 'ready', userId, value })
         })
         .catch((cause: unknown) => {
           window.clearTimeout(timer)
-          if (!cancelled)
-            setAccount({
-              userId,
-              kind:
-                cause instanceof NeonRequestError && (cause.status === 401 || cause.status === 403)
-                  ? 'denied'
-                  : 'error',
-              message:
-                cause instanceof NeonRequestError
-                  ? cause.message
-                  : 'The request failed. Please try again.',
-            })
+          if (cancelled) return
+          if (cause instanceof NeonRequestError && (cause.status === 401 || cause.status === 403)) {
+            clearOfflineAccess()
+            setOfflineSession(null)
+          }
+          setAccount({
+            userId,
+            kind:
+              cause instanceof NeonRequestError && (cause.status === 401 || cause.status === 403)
+                ? 'denied'
+                : 'error',
+            message:
+              cause instanceof NeonRequestError
+                ? cause.message
+                : 'The request failed. Please try again.',
+          })
         })
     return () => {
       cancelled = true
@@ -162,6 +188,7 @@ export function NeonAuth({
   useEffect(() => {
     const denied = (event: Event) => {
       if (event instanceof AccessDeniedEvent && event.userId === userId) {
+        clearOfflineAccess()
         setAccount({
           userId,
           kind: 'denied',
@@ -173,6 +200,7 @@ export function NeonAuth({
     return () => window.removeEventListener(AccessDeniedEvent.eventName, denied)
   }, [userId])
   const signOut = async () => {
+    clearOfflineAccess()
     setLogout('pending')
     try {
       const result = await authClient.signOut({
@@ -191,6 +219,19 @@ export function NeonAuth({
       setLogout('failed')
     }
   }
+  const offline = offlineSession ?? (!navigator.onLine ? offlineAccess() : null)
+  if (offline)
+    return (
+      <OfflineAttendance
+        userId={offline.userId}
+        requireLease
+        actor={offline.actor}
+        close={() => {
+          setOfflineSession(null)
+          if (!navigator.onLine) window.location.href = window.location.pathname
+        }}
+      />
+    )
   if (logout === 'pending') return <WorkspaceLoading message={t('Signing out…')} />
   if (logout === 'failed')
     return (
@@ -208,6 +249,13 @@ export function NeonAuth({
       <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
         <AuthHeader />
         <p role="alert">{t('Could not check your session. Please try again.')}</p>
+        {(session.error || stalled) && offlineAccess() && (
+          <button className="secondary" onClick={() => setOfflineSession(offlineAccess())}>
+            {language === 'ar'
+              ? '\u0641\u062a\u062d \u0627\u0644\u062d\u0636\u0648\u0631 \u062f\u0648\u0646 \u0627\u062a\u0635\u0627\u0644'
+              : 'Open offline attendance'}
+          </button>
+        )}
         <button
           className="secondary"
           onClick={() => {
@@ -243,6 +291,13 @@ export function NeonAuth({
         <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
           <AuthHeader />
           <p role="alert">{errorMessage(account.message)}</p>
+          {account.kind === 'error' && offlineAccess()?.userId === userId && (
+            <button className="secondary" onClick={() => setOfflineSession(offlineAccess())}>
+              {language === 'ar'
+                ? '\u0641\u062a\u062d \u0627\u0644\u062d\u0636\u0648\u0631 \u062f\u0648\u0646 \u0627\u062a\u0635\u0627\u0644'
+                : 'Open offline attendance'}
+            </button>
+          )}
           {account.kind === 'error' && (
             <button
               className="secondary"
@@ -339,21 +394,27 @@ export function NeonAuth({
           </button>
         </main>
       )
-    return children(userId, account.value, signOut, {
-      invitation,
-      accounts: { currentUserId: userId, add: addAccount },
-      updateInvitation: invitation ? updateInvitation : undefined,
-      name: session.data?.user.name ?? '',
-      image: session.data?.user.image ?? null,
-      update: async (name, image) => {
-        const result = await authClient.updateUser(
-          { name, ...(image === undefined ? {} : { image }) },
-          { headers: { 'X-User-Id': userId } },
-        )
-        if (result.error) throw new Error('Could not save profile')
-        await session.refetch()
+    return children(
+      userId,
+      account.value,
+      signOut,
+      {
+        invitation,
+        accounts: { currentUserId: userId, add: addAccount },
+        updateInvitation: invitation ? updateInvitation : undefined,
+        name: session.data?.user.name ?? '',
+        image: session.data?.user.image ?? null,
+        update: async (name, image) => {
+          const result = await authClient.updateUser(
+            { name, ...(image === undefined ? {} : { image }) },
+            { headers: { 'X-User-Id': userId } },
+          )
+          if (result.error) throw new Error('Could not save profile')
+          await session.refetch()
+        },
       },
-    })
+      new Date(session.data?.session.expiresAt ?? 0).getTime(),
+    )
   }
   return (
     <main id="main-content" tabIndex={-1} className="workspace-auth">
