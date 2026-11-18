@@ -1896,8 +1896,16 @@ The older role suite served mutable source from a second Vite process. During in
 
 At 12:35 Asia/Damascus, the combined release gate passed with 150 browser cases, including both role scenarios on desktop and mobile. Two phone-only cases skipped on desktop. The local Bun run passed 38 tests and skipped six optional database suites. The earlier database-enabled run passed all 44 tests. The production dependency audit found no vulnerabilities. PR 119 tracks final CI and the Railway deployment.
 
+## 2026-11-18 13:51 Asia/Damascus (UTC+03:00) - Standardize checkbox sizing and cursor
+
+The owner reported oversized checkboxes in course membership and inconsistent sizing across the site. Plain checkboxes now use a shared 20px native control with a teal checkmark. Enabled controls and their labels show a pointer. Handbook received keeps a 44px clickable label, and the course enrollment switch retains its own sizing.
+
+The new assertions reproduced the original 44px Handbook and 13px Excel-export checkbox widths before the fix. `bun run verify`, file and history scans, and the dependency audit passed on the updated main base. The full local release run hit Windows browser-process memory limits. Focused browser checks verify the rendered size, cursor, disabled enrollment state, click outside the square and persistence with synthetic data. GitHub Verify gates the merge. The PR records the Railway deployment and shipped UI checks. Physical phones were not used.
+
 ## 2026-11-18 13:55 Asia/Damascus (UTC+03:00) - Simplify the account creation form
 
 The owner reported an outline around Settings when interacting with account creation and asked to remove the spreadsheet textarea. The settings page no longer draws an outline when its main landmark gets focus. The skip link still focuses the landmark and keyboard focus stays visible on form controls. Account creation takes one name and role at a time. The spreadsheet import and preview are removed from the form. An uncertain response can be retried with the same person and request ID, and a successful invitation still produces a private copyable message.
 
 The old Railway build drew a solid outline when the skip link focused the Settings landmark. The local release gate passed with 38 Bun tests and 150 browser cases. Six optional database tests and two phone-only cases on desktop skipped. The invitation scenario covered English and Arabic on desktop and at 320px with synthetic sessions and verified safe retry and the private message. The PR records CI and Railway verification. Browser coverage used emulation and synthetic API responses.
+
+At 14:07 Asia/Damascus, integrated `3d2c0f9` from main and resolved the work-log conflict by keeping both entries. The combined `bun run verify:release` passed with 38 Bun tests and 150 browser cases, including the account creation regression in both browser projects. Six optional database tests and two phone-only cases on desktop skipped.
