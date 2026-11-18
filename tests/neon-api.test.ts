@@ -29,7 +29,7 @@ function setup(
     actor: string
     client_time: Date
     received_at: Date
-    payload: LedgerEvent['payload']
+    payload: unknown
   }> = []
   let whatsapp: string | null = null
   const client = {
@@ -240,7 +240,10 @@ describe('Neon API boundary', () => {
       kind: 'conflict',
       currentWhatsapp: '456',
     })
-    expect(JSON.stringify(rows)).not.toContain('123')
+    expect(rows.slice(1).map(({ payload }) => payload)).toEqual([
+      { kind: 'contact_receipt', fingerprint: expect.stringMatching(/^[0-9a-f]{64}$/) },
+      { kind: 'contact_receipt', fingerprint: expect.stringMatching(/^[0-9a-f]{64}$/) },
+    ])
     expect(
       await (
         await setup({ assigned: false }).call('/api/student/sync', 'valid', {

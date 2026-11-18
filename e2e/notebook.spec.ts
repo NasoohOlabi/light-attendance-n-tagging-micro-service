@@ -26,6 +26,7 @@ test.afterEach(async ({ context }, testInfo) => {
 })
 
 test('sample notebook supports attendance, notes and corrections without network writes', async ({
+  hasTouch,
   page,
 }, testInfo) => {
   await page.route('**/api/auth/**', (route) => route.fulfill({ json: null }))
@@ -66,6 +67,14 @@ test('sample notebook supports attendance, notes and corrections without network
   expect(iconColors.size).toBe(3)
   await absent.press('Space')
   await expect(selected).toHaveCount(0)
+  await expect(absent).toBeFocused()
+  await expect(absent).toHaveCSS('outline-style', 'solid')
+  const activateAbsent = () => (hasTouch ? absent.tap() : absent.click())
+  await activateAbsent()
+  await expect(absent).toHaveAttribute('aria-pressed', 'true')
+  await activateAbsent()
+  await expect(selected).toHaveCount(0)
+  await expect(absent).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   await absent.press('Space')
   const addNote = page.getByRole('button', { name: 'Add note for ليلى', exact: true })
   await expect(addNote).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
