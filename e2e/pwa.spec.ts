@@ -219,7 +219,8 @@ test('normal refresh upgrades a legacy worker without disturbing another tab', a
     await secondPage
       .getByRole('button', { name: 'Explore with sample students', exact: true })
       .click()
-    await secondPage.getByRole('button', { name: 'Notes', exact: true }).click()
+    await secondPage.getByRole('button', { name: 'Attendance', exact: true }).click()
+    await secondPage.getByRole('button', { name: 'Add note for Omar', exact: true }).click()
     await secondPage.getByLabel('Note', { exact: true }).fill('Unsaved synthetic note')
     await page.evaluate(async () => {
       await caches.open('other-project-sentinel')

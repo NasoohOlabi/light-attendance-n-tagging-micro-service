@@ -6,7 +6,6 @@ import { WartaqIcon, WartaqLogo } from './brand/components'
 
 export const tabs: { id: Exclude<Tab, 'dashboard'>; label: TranslationKey }[] = [
   { id: 'attendance', label: 'Attendance' },
-  { id: 'notes', label: 'Notes' },
   { id: 'roster', label: 'Students' },
   { id: 'summary', label: 'Summary' },
   { id: 'history', label: 'History & corrections' },
@@ -99,7 +98,6 @@ export function WorkspaceNavigation({
             onClick={() =>
               navigateNotebook(tab.id, defaultCourse, {
                 ...(tab.id === 'roster' || !assigned ? { student: '' } : {}),
-                tag: '',
               })
             }
           >
