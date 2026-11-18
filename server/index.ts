@@ -1,4 +1,5 @@
-﻿import { betterAuth } from 'better-auth'
+import { createHash } from 'node:crypto'
+import { betterAuth } from 'better-auth'
 import { Pool } from 'pg'
 import { z } from 'zod'
 import { createHandler } from '../functions/notebook-service'
@@ -50,6 +51,123 @@ const auth = betterAuth({
   advanced: { database: { generateId: 'uuid' } },
   emailAndPassword: { enabled: true },
 })
+const secureCookies = baseUrl.protocol === 'https:'
+const sessionCookie = `${secureCookies ? '__Secure-' : ''}better-auth.session_token`
+const markerCookie = `${secureCookies ? '__Secure-' : ''}better-auth.dont_remember`
+const slotPrefix = `${secureCookies ? '__Secure-' : ''}device-session-`
+const slotCount = 5
+const slotPattern = new RegExp(`^${slotPrefix}[a-f0-9]{64}=`)
+const maxSlotCandidates = 32
+
+type RememberedSession = {
+  value: string
+  userId: string
+  name: string
+  identifier: string
+  expiresAt: Date
+  marker: string | undefined
+}
+
+function cookieValue(headers: Headers, name: string): string | undefined {
+  return headers
+    .get('cookie')
+    ?.split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`))
+    ?.slice(name.length + 1)
+}
+
+async function remembered(
+  value: string | undefined,
+  marker?: string,
+): Promise<RememberedSession | undefined> {
+  if (!value) return undefined
+  const headers = new Headers({ cookie: `${sessionCookie}=${value}` })
+  const session = await auth.api.getSession({ headers, query: { disableRefresh: true } })
+  if (!session?.user.id) return undefined
+  const result = await pool.query(
+    'SELECT invitation_username FROM app_accounts WHERE auth_user_id = $1',
+    [session.user.id],
+  )
+  const username = z.string().nullable().optional().parse(result.rows[0]?.invitation_username)
+  return {
+    value,
+    userId: session.user.id,
+    name: session.user.name,
+    identifier: username ?? session.user.email,
+    expiresAt: session.session.expiresAt,
+    marker,
+  }
+}
+
+function slotCookies(request: Request) {
+  return (request.headers.get('cookie') ?? '')
+    .split(';')
+    .map((part) => part.trim())
+    .filter((part) => slotPattern.test(part))
+}
+
+function slotName(userId: string) {
+  return `${slotPrefix}${createHash('sha256').update(userId).digest('hex')}`
+}
+
+async function activeAccount(request: Request) {
+  return remembered(
+    cookieValue(request.headers, sessionCookie),
+    cookieValue(request.headers, markerCookie),
+  )
+}
+
+async function rememberedAccounts(
+  request: Request,
+  active: RememberedSession | undefined,
+): Promise<RememberedSession[]> {
+  const slots = slotCookies(request).slice(0, maxSlotCandidates)
+  const accounts = await Promise.all([
+    active,
+    ...slots.map(async (slot) => {
+      const [name, value] = slot.split('=', 2)
+      const separator = value?.indexOf('~') ?? -1
+      if (!value || separator < 0) return undefined
+      if (active && name === slotName(active.userId) && value.slice(separator + 1) === active.value)
+        return active
+      const account = await remembered(
+        value.slice(separator + 1),
+        value.slice(0, separator) || undefined,
+      )
+      return account && slotName(account.userId) === name ? account : undefined
+    }),
+  ])
+  return accounts.filter(
+    (account, index): account is RememberedSession =>
+      Boolean(account) &&
+      accounts.findIndex((other) => other?.userId === account?.userId) === index,
+  )
+}
+
+function setCookie(
+  headers: Headers,
+  name: string,
+  value: string,
+  expiresAt?: Date,
+  remove = false,
+) {
+  const lifetime = remove ? '; Max-Age=0' : expiresAt ? `; Expires=${expiresAt.toUTCString()}` : ''
+  headers.append(
+    'Set-Cookie',
+    `${name}=${value}; Path=/; HttpOnly; SameSite=Lax${lifetime}${secureCookies ? '; Secure' : ''}`,
+  )
+}
+
+function saveAccount(headers: Headers, account: RememberedSession) {
+  setCookie(
+    headers,
+    slotName(account.userId),
+    `${account.marker ?? ''}~${account.value}`,
+    account.marker ? undefined : account.expiresAt,
+  )
+}
+
 const notebook = createHandler(
   pool,
   async () => {
@@ -73,7 +191,13 @@ export async function handle(request: Request): Promise<Response> {
     return new Response('Not found', { status: 404 })
   }
   if (
-    (authPath === '/api/auth/update-user' || authPath === '/api/auth/sign-up/email') &&
+    [
+      '/api/auth/update-user',
+      '/api/auth/sign-up/email',
+      '/api/auth/sign-in/email',
+      '/api/auth/sign-in/username',
+      '/api/auth/sign-out',
+    ].includes(authPath) &&
     url.pathname !== authPath
   )
     return new Response('Not found', { status: 404 })
@@ -98,6 +222,65 @@ export async function handle(request: Request): Promise<Response> {
       request.headers.get('origin') !== origin
     )
       return Response.json({ error: 'Forbidden' }, { status: 403 })
+    if (url.pathname === '/api/device-accounts' && request.method === 'GET') {
+      const accounts = await rememberedAccounts(request, await activeAccount(request))
+      const headers = new Headers({ 'Cache-Control': 'no-store' })
+      return Response.json(
+        {
+          accounts: accounts.map(({ userId, name, identifier }) => ({ userId, name, identifier })),
+        },
+        { headers },
+      )
+    }
+    if (url.pathname === '/api/device-accounts/switch' && request.method === 'POST') {
+      const body = await readBoundedBody(request, 4096)
+      let userId: string
+      try {
+        userId = z
+          .strictObject({ userId: z.string().min(1).max(128) })
+          .parse(JSON.parse(body ?? '')).userId
+      } catch {
+        return Response.json({ error: 'Invalid account' }, { status: 400 })
+      }
+      const active = await activeAccount(request)
+      const accounts = await rememberedAccounts(request, active)
+      const selected = accounts.find((account) => account.userId === userId)
+      const headers = new Headers({ 'Cache-Control': 'no-store' })
+      if (!selected)
+        return Response.json({ error: 'Account session expired' }, { status: 404, headers })
+      if (
+        active &&
+        active.userId !== selected.userId &&
+        cookieValue(request.headers, slotName(active.userId)) !==
+          `${active.marker ?? ''}~${active.value}`
+      ) {
+        if (accounts.length > slotCount)
+          return Response.json({ error: 'Device account limit reached' }, { status: 409, headers })
+        saveAccount(headers, active)
+      }
+      setCookie(
+        headers,
+        sessionCookie,
+        selected.value,
+        selected.marker ? undefined : selected.expiresAt,
+      )
+      setCookie(headers, markerCookie, selected.marker ?? '', undefined, !selected.marker)
+      return Response.json({ ok: true }, { headers })
+    }
+    if (
+      authPath === '/api/auth/sign-out' &&
+      request.method === 'POST' &&
+      request.headers.has('x-user-id')
+    ) {
+      const session = await auth.api.getSession({ headers: request.headers })
+      if (!session?.user.id || request.headers.get('x-user-id') !== session.user.id)
+        return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (url.pathname === '/api/auth/update-user' && request.method === 'POST') {
+      const session = await auth.api.getSession({ headers: request.headers })
+      if (!session?.user.id || request.headers.get('x-user-id') !== session.user.id)
+        return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (
       request.method === 'POST' &&
       (url.pathname === '/api/auth/update-user' || url.pathname === '/api/auth/sign-up/email')
@@ -143,6 +326,16 @@ export async function handle(request: Request): Promise<Response> {
       }
       usernameLogin = input
     }
+    const isLogin =
+      request.method === 'POST' &&
+      ['/api/auth/sign-in/email', '/api/auth/sign-in/username', '/api/auth/sign-up/email'].includes(
+        url.pathname,
+      )
+    const isSignout = request.method === 'POST' && url.pathname === '/api/auth/sign-out'
+    const activeBefore = isLogin || isSignout ? await activeAccount(request) : undefined
+    const before = isLogin ? await rememberedAccounts(request, activeBefore) : []
+    if (isLogin && url.pathname === '/api/auth/sign-up/email' && before.length >= slotCount)
+      return Response.json({ error: 'Device account limit reached' }, { status: 409 })
     let response: Response
     if (
       url.pathname.startsWith('/api/auth/') &&
@@ -210,6 +403,45 @@ export async function handle(request: Request): Promise<Response> {
       response = url.pathname.startsWith('/api/auth/')
         ? await auth.handler(request)
         : await notebook(request)
+    }
+    if (response.ok && isLogin) {
+      const cookie = response.headers
+        .getSetCookie()
+        .find((item) => item.startsWith(`${sessionCookie}=`))
+      const value = cookie?.slice(sessionCookie.length + 1).split(';')[0]
+      const markerHeader = response.headers
+        .getSetCookie()
+        .find((item) => item.startsWith(`${markerCookie}=`))
+      const markerValue = markerHeader?.slice(markerCookie.length + 1).split(';')[0]
+      const current = await remembered(value, markerValue || undefined)
+      if (current) {
+        const accounts = [current, ...before.filter((account) => account.userId !== current.userId)]
+        if (accounts.length > slotCount) {
+          await auth.api.signOut({
+            headers: new Headers({ cookie: `${sessionCookie}=${current.value}`, origin }),
+          })
+          return Response.json(
+            { error: 'Device account limit reached' },
+            { status: 409, headers: { 'Cache-Control': 'no-store' } },
+          )
+        }
+        if (
+          activeBefore &&
+          activeBefore.userId !== current.userId &&
+          cookieValue(request.headers, slotName(activeBefore.userId)) !==
+            `${activeBefore.marker ?? ''}~${activeBefore.value}`
+        )
+          saveAccount(response.headers, activeBefore)
+        saveAccount(response.headers, current)
+        // Discard cookies left behind by expired or password-revoked sessions.
+        const keep = new Set(accounts.map((account) => slotName(account.userId)))
+        for (const slot of slotCookies(request).slice(0, maxSlotCandidates)) {
+          const name = slot.slice(0, slot.indexOf('='))
+          if (!keep.has(name)) setCookie(response.headers, name, '', undefined, true)
+        }
+      }
+    } else if (response.ok && isSignout && activeBefore) {
+      setCookie(response.headers, slotName(activeBefore.userId), '', undefined, true)
     }
     response.headers.set('Cache-Control', 'no-store')
     return response

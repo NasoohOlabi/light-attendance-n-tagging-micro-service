@@ -415,6 +415,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   }
   await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  const courseList = page.getByRole('region', { name: 'Course list' })
+  const wide = testInfo.project.name === 'chromium'
   const firstCourseRow = page.getByRole('row').filter({ hasText: 'Course A' })
   const firstCourseActions = recordActions(firstCourseRow)
   const firstCourseMenu = firstCourseRow.getByRole('group', { name: 'Actions for Course A' })
@@ -439,6 +441,36 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     )
   }
   await expectActionDivider('en')
+  if (wide) {
+    await expect(recordActions(courseList)).toHaveCount(0)
+    const courseBGroup = courseList.getByRole('group', { name: 'Actions for Course B' })
+    const icons = courseBGroup.getByRole('button')
+    await expect(icons).toHaveCount(6)
+    const bounds = await icons.evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const { left, right, top, width, height } = button.getBoundingClientRect()
+        return { left, right, top, width, height }
+      }),
+    )
+    const cell = await courseBGroup.locator('..').boundingBox()
+    if (!cell) throw new Error('Missing course action cell')
+    expect(
+      bounds.every(
+        ({ left, right, top, width, height }) =>
+          left >= cell.x &&
+          right <= cell.x + cell.width &&
+          top === bounds[0].top &&
+          width >= 44 &&
+          height >= 44,
+      ),
+    ).toBe(true)
+    await expect(icons.last()).toHaveAttribute('title', 'Close course')
+    await page.screenshot({
+      path: '.artifacts/verification/course-list-wide-en.png',
+      fullPage: true,
+    })
+    await courseList.evaluate((list) => (list.style.maxInlineSize = '40rem'))
+  }
   await expect(firstCourseActions).toBeVisible()
   await expect(firstCourseMenu).toBeHidden()
   await firstCourseRow.getByRole('cell').nth(1).click({ button: 'right' })
@@ -482,6 +514,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.mouse.click(2, 2)
   await expect(secondCourseMenu).toBeHidden()
   expect(courses).toEqual(coursesBeforeOpening)
+  if (wide) await courseList.evaluate((list) => list.style.removeProperty('max-inline-size'))
   await clickRecordAction(firstCourseRow, 'Edit')
   await expect(page.getByRole('heading', { name: 'Edit course' })).toBeVisible()
   await expect(page.getByLabel('Course name')).toHaveValue('Course A')
@@ -583,6 +616,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     page.getByRole('row').filter({ hasText: 'Created course' }),
     'Manage students',
   )
+  await expect(page.getByRole('button', { name: 'Back to courses' })).toHaveCount(0)
   await page.getByRole('searchbox', { name: 'Find a student' }).fill('New')
   const newRow = page.getByRole('row').filter({ hasText: 'New' })
   await newRow.getByLabel('Course level: New Student').fill('Beginner')
@@ -622,6 +656,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
         name: '\u0637\u0644\u0627\u0628 \u0627\u0644\u062f\u0648\u0631\u0629',
       })
       await expect(table.locator('thead')).toBeHidden()
+      await expect(page.getByRole('button', { name: 'العودة للدورات' })).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'خيارات الفرز' })).toBeVisible()
       expect(await table.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
         true,
@@ -659,7 +694,9 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     location: 'Area',
     birthYear: 2000,
   })
-  await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  const coursesNavigation = page.getByRole('button', { name: 'Courses', exact: true })
+  await coursesNavigation.click()
+  await expect(page.getByRole('heading', { name: 'Courses', exact: true })).toBeVisible()
   await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course A' }), 'Manage students')
   if (testInfo.project.name === 'mobile') {
     await page.setViewportSize({ width: 320, height: 844 })
@@ -694,7 +731,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   })
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('')
   await page.getByLabel('Course level: Synthetic Student').fill('Draft A')
-  await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  await coursesNavigation.click()
   await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course B' }), 'Manage students')
   await expect(page.getByLabel('Handbook received: Synthetic Student')).not.toBeChecked()
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('Advanced')
@@ -714,7 +751,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .click()
   await expect.poll(() => enrollments[1].level).toBe('Updated B')
   expect(enrollments[1].id).toBe(enrollB)
-  await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  await coursesNavigation.click()
   await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course A' }), 'Manage students')
   await expect(page.getByLabel('Course level: Synthetic Student')).toHaveValue('Draft A')
   await page.getByLabel('Course level: Synthetic Student').fill('Intermediate')
@@ -724,7 +761,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .getByRole('button', { name: 'Save level' })
     .click()
   await expect.poll(() => enrollments[0].level).toBe('Intermediate')
-  await page.getByRole('button', { name: 'Courses', exact: true }).click()
+  await coursesNavigation.click()
   await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course A' }), 'Grades')
   enrollments.push({
     ...enrollments[0],
@@ -1072,7 +1109,15 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(courseRow).toContainText('Closed')
   await clickAccountAction(page, 'العربية')
   await expect(courseRow).toContainText('مغلقة')
-  await recordActions(courseRow).click()
+  if (wide) {
+    await expect(recordActions(courseRow)).toHaveCount(0)
+    await expect(courseRow.getByRole('button', { name: 'إعادة فتح الدورة' })).toHaveAttribute(
+      'title',
+      'إعادة فتح الدورة',
+    )
+  } else {
+    await recordActions(courseRow).click()
+  }
   await expect(courseRow.getByRole('button', { name: 'إعادة فتح الدورة' })).toBeVisible()
   await page.keyboard.press('Escape')
   await page.screenshot({

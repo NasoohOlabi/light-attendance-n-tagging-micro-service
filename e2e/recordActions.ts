@@ -1,10 +1,12 @@
-import type { Locator } from '@playwright/test'
+import { expect, type Locator } from '@playwright/test'
 
 export function recordActions(record: Locator) {
   return record.getByRole('button', { name: /^(Actions for |إجراءات )/ })
 }
 
 export async function clickRecordAction(record: Locator, name: string) {
+  const direct = record.getByRole('button', { name, exact: true })
+  if (await direct.isVisible()) return direct.click()
   const courseLink = record.locator('a[href*="courseView=students"]')
   if (
     ['Manage students', 'Grades', 'History', 'إدارة الطلاب', 'الدرجات', 'السجل'].includes(name) &&
@@ -29,6 +31,9 @@ export async function clickRecordAction(record: Locator, name: string) {
         .click()
     return
   }
-  await recordActions(record).click()
-  await record.getByRole('button', { name, exact: true }).click()
+  const action = record.getByRole('button', { name, exact: true })
+  const trigger = recordActions(record)
+  await expect(action.or(trigger).first()).toBeVisible()
+  if (!(await action.isVisible())) await trigger.click()
+  await action.click()
 }

@@ -42,7 +42,7 @@ Apply `bun run db:migrate` through `neon/006-closed-courses.sql` before deployme
 
 Manage students records **Handbook received** independently for each existing enrollment. It defaults to false and survives withdrawal, re-enrollment, level and grade changes.
 
-Open a course name to manage its students. Within a course, switch between Students, Grades, and History. The three-dot menu beside the course offers Make default, Edit, and Close course or Reopen course as applicable. A right-click or long press on the course row background opens the same menu. Select an action explicitly to apply it. Scrolling cancels a long press.
+Open a course name to manage its students. Within a course, switch between Students, Grades, and History. Course row actions appear as named icons on wide lists and in the three-dot menu on narrow lists. A right-click or long press on the course row background opens the same menu. Select an action explicitly to apply it. Scrolling cancels a long press.
 
 On Grades, each course has independent minimum attendance (default 70%), practical passing grade (default 80), and theory passing grade (default 80). Both saved scores must meet their own threshold and attendance must meet its threshold. Attendance is Present divided by Present + Absent + Excused; unmarked days are excluded, and no records yield an unavailable attendance and pending result. Corrections and legacy early/late marks follow the normal event projection. Save thresholds and each row separately. The Grades page enables Close course only after every active enrollment has both grades saved and all grade and threshold drafts are saved. Inactive memberships remain visible and do not prevent closure. Manual close/reopen on the course list remains independent of grading.
 

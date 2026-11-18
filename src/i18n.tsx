@@ -101,6 +101,11 @@ const arabic = {
   'Your manager must approve your account before you can use the app.':
     'يجب أن يوافق المسؤول على حسابك قبل استخدام التطبيق.',
   'Password updated. Please sign in.': 'تم تحديث كلمة المرور. سجّل الدخول.',
+  'Invalid username or password.': 'اسم المستخدم أو كلمة المرور غير صحيحة.',
+  'Five accounts are signed in. Sign out of one to add another.':
+    'تم تسجيل الدخول إلى خمسة حسابات. سجّل الخروج من أحدها لإضافة حساب آخر.',
+  'Sign in to another account': 'تسجيل الدخول إلى حساب آخر',
+  'Could not sign out. Please try again.': 'تعذر تسجيل الخروج. حاول مرة أخرى.',
   'Invalid email or password. Check your details and try again.':
     'البريد الإلكتروني أو كلمة المرور غير صحيحين. تحقق من بياناتك وحاول مجدداً.',
   'Unable to create the account. Check your details and try again.':
