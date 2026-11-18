@@ -1,8 +1,10 @@
-import { LanguageSwitch, useLanguage } from './i18n'
+import { LanguageSwitch } from './i18n'
+import { useLanguage } from './useLanguage'
 import { useEffect, useRef, useState } from 'react'
 import type { NeonAccount } from '../shared/neon'
 import { z } from 'zod'
 import {
+  AccessDeniedEvent,
   authClient,
   getAccount,
   NeonRequestError,
@@ -13,6 +15,7 @@ import {
   sessionChangeSource,
 } from './neon'
 import { InvitationProfileForm } from './InvitationProfile'
+import { WorkspaceLoading } from './WorkspaceLoading'
 import type { Profile } from './ProfileMenu'
 import { WartaqLogo } from './brand/components'
 import { AccountChoices } from './AccountChoices'
@@ -48,38 +51,15 @@ export function NeonAuth({
     profile: Profile,
   ) => React.ReactNode
 }) {
-  if (!authClient) return null
-  return (
-    <ConfiguredAuth samples={samples} onSignOut={onSignOut}>
-      {children}
-    </ConfiguredAuth>
-  )
-}
-
-function ConfiguredAuth({
-  children,
-  samples,
-  onSignOut,
-}: {
-  onSignOut: () => void
-  samples: React.ReactNode
-  children: (
-    userId: string,
-    teacher: NeonAccount,
-    signOut: () => void,
-    profile: Profile,
-  ) => React.ReactNode
-}) {
   const { t, errorMessage, language } = useLanguage()
-  // The parent only renders this component when the client exists.
-  const client = authClient!
-  const session = client.useSession()
+  const session = authClient.useSession()
   const userId = session.data?.user.id
   const [account, setAccount] = useState<
     | { kind: 'ready'; userId: string; value: NeonAccount }
     | { kind: 'denied' | 'error'; userId: string; message: string }
     | null
   >(null)
+  const [logout, setLogout] = useState<'idle' | 'pending' | 'failed'>('idle')
   const [accountAttempt, setAccountAttempt] = useState(0)
   const [addingAccount, setAddingAccount] = useState(false)
   const [choosingAccount, setChoosingAccount] = useState(false)
@@ -144,9 +124,7 @@ function ConfiguredAuth({
     const timer = window.setTimeout(() => setStalled(true), 10000)
     return () => window.clearTimeout(timer)
   }, [session.isPending, retrying, attempt])
-  useEffect(() => {
-    if (!session.isPending && !retrying) setStalled(false)
-  }, [session.isPending, retrying])
+  if (stalled && !session.isPending && !retrying) setStalled(false)
   useEffect(() => {
     let cancelled = false
     let timer = 0
@@ -183,28 +161,46 @@ function ConfiguredAuth({
   }, [userId, accountAttempt])
   useEffect(() => {
     const denied = (event: Event) => {
-      if (userId && event instanceof CustomEvent) {
+      if (event instanceof AccessDeniedEvent && event.userId === userId) {
         setAccount({
           userId,
           kind: 'denied',
-          message: new NeonRequestError(event.detail === 401 ? 401 : 403).message,
+          message: new NeonRequestError(event.status).message,
         })
       }
     }
-    window.addEventListener('neon-access-denied', denied)
-    return () => window.removeEventListener('neon-access-denied', denied)
+    window.addEventListener(AccessDeniedEvent.eventName, denied)
+    return () => window.removeEventListener(AccessDeniedEvent.eventName, denied)
   }, [userId])
-  const signOut = () => {
-    void client
-      .signOut({ fetchOptions: { headers: { 'X-User-Id': userId ?? '' } } })
-      .then((result) => {
-        if (!result.error) {
-          announceSessionChange()
-          onSignOut()
-        } else window.alert(t('Could not sign out. Please try again.'))
+  const signOut = async () => {
+    setLogout('pending')
+    try {
+      const result = await authClient.signOut({
+        fetchOptions: {
+          signal: AbortSignal.timeout(15000),
+          headers: { 'X-User-Id': userId ?? '' },
+        },
       })
-      .catch(() => window.alert(t('Could not sign out. Please try again.')))
+      if (result.error) {
+        setLogout('failed')
+        return
+      }
+      announceSessionChange()
+      onSignOut()
+    } catch {
+      setLogout('failed')
+    }
   }
+  if (logout === 'pending') return <WorkspaceLoading message={t('Signing out…')} />
+  if (logout === 'failed')
+    return (
+      <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
+        <p role="alert">{t('Could not confirm sign-out. Please try again.')}</p>
+        <button className="secondary" onClick={signOut}>
+          {t('Sign out')}
+        </button>
+      </main>
+    )
   if ((session.isPending || retrying) && !stalled)
     return <WorkspaceLoading message={t('Loading your session…')} />
   if (session.error || stalled)
@@ -273,7 +269,7 @@ function ConfiguredAuth({
       await request('/api/me/invitation-profile', userId, details, false)
       if (details.newPassword) {
         // Password rotation already revoked this session. Never sign out a newer identity.
-        const fresh = await client.getSession()
+        const fresh = await authClient.getSession()
         if (fresh.data?.user.id) {
           resetWorkspace()
           return
@@ -350,7 +346,7 @@ function ConfiguredAuth({
       name: session.data?.user.name ?? '',
       image: session.data?.user.image ?? null,
       update: async (name, image) => {
-        const result = await client.updateUser(
+        const result = await authClient.updateUser(
           { name, ...(image === undefined ? {} : { image }) },
           { headers: { 'X-User-Id': userId } },
         )
@@ -401,8 +397,8 @@ function ConfiguredAuth({
             } else {
               const result =
                 mode === 'sign-in'
-                  ? await client.signIn.email({ email, password })
-                  : await client.signUp.email({ name, email, password })
+                  ? await authClient.signIn.email({ email, password })
+                  : await authClient.signUp.email({ name, email, password })
               if (result.error) {
                 setError(
                   result.error.status === 409
@@ -416,7 +412,7 @@ function ConfiguredAuth({
             }
             if (addingAccount) {
               try {
-                const fresh = await client.getSession()
+                const fresh = await authClient.getSession()
                 if (fresh.data?.user.id)
                   sessionStorage.setItem('halaqa-added-account', fresh.data.user.id)
               } catch {
@@ -558,35 +554,5 @@ function ConfiguredAuth({
       </form>
       {!addingAccount && samples}
     </main>
-  )
-}
-
-export function WorkspaceLoading({ message }: { message: string }) {
-  return (
-    <div className="workspace-loading" aria-busy="true">
-      <aside aria-hidden="true">
-        <div className="loading-brand">
-          <WartaqLogo />
-        </div>
-        <div />
-        <div />
-        <div />
-        <div />
-      </aside>
-      <main id="main-content" tabIndex={-1}>
-        <div className="loading-mobile-brand" aria-hidden="true">
-          <WartaqLogo />
-        </div>
-        <p role="status">{message}</p>
-        <div className="loading-line" aria-hidden="true" />
-        <div className="loading-cards" aria-hidden="true">
-          <div />
-          <div />
-          <div />
-        </div>
-        <div className="loading-panel" aria-hidden="true" />
-        <div className="loading-mobile-nav" aria-hidden="true" />
-      </main>
-    </div>
   )
 }

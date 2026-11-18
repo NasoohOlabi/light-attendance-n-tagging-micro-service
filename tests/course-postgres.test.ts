@@ -378,6 +378,19 @@ integration(
         date: '2026-11-16',
         status: 'absent',
       })
+      first.clientTime = '2026-11-16T10:00:00Z'
+      second.clientTime = '2026-11-16T10:00:00.000001Z'
+      const conflicting = { ...first, id: crypto.randomUUID() }
+      expect(
+        (
+          await call('/api/events', subjects.teacher, {
+            events: [conflicting, { ...conflicting, clientTime: '2026-11-16T10:00:01Z' }],
+          })
+        ).status,
+      ).toBe(409)
+      expect(
+        (await pool.query('SELECT id FROM events WHERE id = $1', [conflicting.id])).rowCount,
+      ).toBe(0)
       const saved = await call('/api/events', subjects.teacher, { events: [first, second] })
       expect(saved.status, await saved.clone().text()).toBe(200)
       expect(
@@ -386,6 +399,16 @@ integration(
       expect(
         (await call('/api/events', subjects.teacher, { events: [first, second] })).status,
       ).toBe(200)
+      expect((await call('/api/events', subjects.teacher, { events: [first, first] })).status).toBe(
+        200,
+      )
+      expect(
+        (
+          await call('/api/events', subjects.teacher, {
+            events: [second, { ...second, clientTime: '2026-11-16T10:00:00.000002Z' }],
+          })
+        ).status,
+      ).toBe(409)
       expect(
         (
           await call('/api/admin/enrollments/grades', subjects.admin, {

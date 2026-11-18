@@ -7,7 +7,7 @@ import {
   labelChartRows,
   studentsPerChart,
 } from './attendanceChart'
-import { useLanguage } from './i18n'
+import { useLanguage } from './useLanguage'
 
 type ChartSource = {
   students: Student[]

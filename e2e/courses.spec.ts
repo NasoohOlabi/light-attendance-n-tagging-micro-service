@@ -46,9 +46,16 @@ async function expectCompactLevel(list: Locator) {
   expect(geometry.levelAlignment).toBeLessThanOrEqual(2)
 }
 
-test('course enrollment and same-day attendance stay separate', async ({ page }, testInfo) => {
-  test.setTimeout(60_000)
-  await page.clock.install()
+async function makeCurrent(page: Page, name: string) {
+  await page.getByLabel('Change course').click()
+  await page.locator('.workspace-course-menu').getByRole('button', { name, exact: true }).click()
+  await page.getByLabel('Change course').click()
+  const makeDefault = page.getByRole('button', { name: 'Make default' })
+  if (await makeDefault.isVisible()) await makeDefault.click()
+  else await page.getByLabel('Change course').click()
+}
+
+async function setupCourses(page: Page) {
   const teacher = {
     role: 'administrator',
     id: teacherId,
@@ -261,6 +268,56 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     if (path === '/api/events') events.push(...route.request().postDataJSON().events)
     return route.fulfill({ json: { teacher, students, courses, enrollments, events } })
   })
+  const savedToast = page.getByRole('status').filter({ hasText: /^(Saved|تم الحفظ)$/ })
+  return { board, courses, enrollments, events, attemptedCourseIds, savedToast }
+}
+
+test('course creation keeps retry and navigation identities separate', async ({ page }) => {
+  const { courses, attemptedCourseIds, savedToast } = await setupCourses(page)
+  await page.goto('/?page=app&view=courses')
+  await page.getByRole('button', { name: 'Create course' }).click()
+  await expect(page.getByRole('region', { name: 'Course list' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create course')
+  await expect(
+    page.getByLabel('Course name').locator('xpath=ancestor::section[1]').getByRole('heading'),
+  ).toHaveCount(1)
+  await page.getByLabel('Course name').fill('Created course')
+  await page.getByRole('button', { name: 'Save course' }).click()
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(savedToast).toBeHidden()
+  await page.getByRole('button', { name: 'Save course' }).click()
+  await expect.poll(() => courses.length).toBe(3)
+  await expect.poll(() => attemptedCourseIds.length).toBe(2)
+  expect(attemptedCourseIds[0]).toBe(attemptedCourseIds[1])
+  await expect(savedToast).toHaveText('Saved')
+  await expect(page.getByRole('row').filter({ hasText: 'Created course' })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('row').filter({ hasText: 'Created course' })).toBeVisible()
+  await page.getByRole('button', { name: 'Create course' }).click()
+  await page.getByLabel('Course name').fill('Another course')
+  await page.getByRole('button', { name: 'Save course' }).click()
+  await expect.poll(() => courses.length).toBe(4)
+  expect(courses[2].id).not.toBe(courses[3].id)
+  await expect(page.getByRole('row').filter({ hasText: 'Created course' })).toBeVisible()
+  await page.goto(`/?page=app&view=courses&courseView=create&course=${courseA}`)
+  await expect(page.getByLabel('Course name')).toHaveValue('')
+  await page.getByLabel('Course name').fill('Direct link course')
+  await page.getByRole('button', { name: 'Save course' }).click()
+  await expect.poll(() => courses.length).toBe(5)
+  expect(courses.find((course) => course.id === courseA)?.name).toBe('Course A')
+  expect(attemptedCourseIds.at(-1)).not.toBe(courseA)
+  const directCourseId = attemptedCourseIds.at(-1)
+  await page.goBack()
+  await expect(page.getByLabel('Course name')).toHaveValue('')
+  await page.getByLabel('Course name').fill('Back navigation course')
+  await page.getByRole('button', { name: 'Save course' }).click()
+  await expect.poll(() => courses.length).toBe(6)
+  expect(attemptedCourseIds.at(-1)).not.toBe(directCourseId)
+})
+
+test('course enrollment and same-day attendance stay separate', async ({ page }, testInfo) => {
+  await page.clock.install()
+  const { board, courses, enrollments, savedToast } = await setupCourses(page)
   const coursePanel = page
     .locator('section.panel')
     .filter({ has: page.locator('.course-list-table') })
@@ -272,16 +329,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     if (!panel || !content) throw new Error('Missing course list or workspace content')
     expect(panel.y - content.y).toBeGreaterThanOrEqual(32)
   }
-  const makeCurrent = async (name: string) => {
-    await page.getByLabel('Change course').click()
-    await page.locator('.workspace-course-menu').getByRole('button', { name, exact: true }).click()
-    await page.getByLabel('Change course').click()
-    const makeDefault = page.getByRole('button', { name: 'Make default' })
-    if (await makeDefault.isVisible()) await makeDefault.click()
-    else await page.getByLabel('Change course').click()
-  }
   await page.goto('/?page=app&tab=attendance')
-  await makeCurrent('Course B')
+  await makeCurrent(page, 'Course B')
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await selectCourse(page, 'All students')
   const list = page.getByRole('region', { name: 'Student list' })
@@ -369,7 +418,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(attendanceRow.getByRole('cell').first()).toHaveText('Synthetic Student')
   await expectCompactLevel(page.getByRole('region', { name: 'Attendance list' }))
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
-  await makeCurrent('Course A')
+  await makeCurrent(page, 'Course A')
   await expect(attendanceRow.getByRole('cell').nth(1)).toHaveText('—')
   await page.getByRole('button', { name: 'Students', exact: true }).click()
   await clickAccountAction(page, 'العربية')
@@ -592,31 +641,8 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     await clickAccountAction(page, 'English')
     await clickAccountAction(page, 'Device')
   }
-  await page.getByRole('button', { name: 'Create course' }).click()
-  await expect(page.getByRole('region', { name: 'Course list' })).toHaveCount(0)
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create course')
-  await expect(
-    page.getByLabel('Course name').locator('xpath=ancestor::section[1]').getByRole('heading'),
-  ).toHaveCount(1)
-  await page.getByLabel('Course name').fill('Created course')
-  await page.getByRole('button', { name: 'Save course' }).click()
-  await expect(page.getByRole('alert')).toBeVisible()
-  const savedToast = page.getByRole('status').filter({ hasText: /^(Saved|تم الحفظ)$/ })
-  await expect(savedToast).toBeHidden()
-  await page.getByRole('button', { name: 'Save course' }).click()
-  await expect.poll(() => courses.length).toBe(3)
-  await expect.poll(() => attemptedCourseIds.length).toBe(2)
-  expect(attemptedCourseIds[0]).toBe(attemptedCourseIds[1])
-  await expect(page.getByRole('row').filter({ hasText: 'Created course' })).toBeVisible()
-  await expect(savedToast).toHaveText('Saved')
+  courses.push({ id: '30000000-0000-4000-8000-000000000003', name: 'Created course', open: true })
   await page.reload()
-  await expect(page.getByRole('row').filter({ hasText: 'Created course' })).toBeVisible()
-  await page.getByRole('button', { name: 'Create course' }).click()
-  await page.getByLabel('Course name').fill('Another course')
-  await page.getByRole('button', { name: 'Save course' }).click()
-  await expect.poll(() => courses.length).toBe(4)
-  expect(courses[2].id).not.toBe(courses[3].id)
-  await expect(page.getByRole('row').filter({ hasText: 'Created course' })).toBeVisible()
   await clickRecordAction(
     page.getByRole('row').filter({ hasText: 'Created course' }),
     'Manage students',
@@ -789,8 +815,15 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     .getByRole('button', { name: 'Save level' })
     .click()
   await expect.poll(() => enrollments[0].level).toBe('Intermediate')
-  await coursesNavigation.click()
-  await clickRecordAction(page.getByRole('row').filter({ hasText: 'Course A' }), 'Grades')
+})
+
+test('grades, attendance, and withdrawal preserve course history', async ({ page }, testInfo) => {
+  const { board, enrollments, events } = await setupCourses(page)
+  enrollments[0].level = 'Intermediate'
+  enrollments[1].level = 'Updated B'
+  enrollments[1].teacherId = teacherId
+  enrollments[1].teacherName = 'Admin'
+  await page.goto(`/?page=app&view=courses&courseView=grades&course=${courseA}`)
   enrollments.push({
     ...enrollments[0],
     id: '40000000-0000-4000-8000-000000000099',
@@ -1087,7 +1120,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     fullPage: true,
   })
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
-  await makeCurrent('Course A')
+  await makeCurrent(page, 'Course A')
   const date = await page.getByLabel('Session date').inputValue()
   events.push({
     id: '50000000-0000-4000-8000-000000000001',
@@ -1117,7 +1150,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await clickRecordAction(legacyRecord, 'Record details')
   await expect(legacyRecord.locator('pre')).toBeHidden()
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
-  await makeCurrent('Course B')
+  await makeCurrent(page, 'Course B')
   await expect(
     page
       .getByRole('region', { name: 'Attendance list' })
@@ -1129,7 +1162,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await page.getByLabel('Attendance for Synthetic Student').selectOption('absent')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await expect.poll(() => events.length).toBe(2)
-  await makeCurrent('Course A')
+  await makeCurrent(page, 'Course A')
   await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveValue('present')
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
   const courseRow = page.getByRole('row').filter({ hasText: 'Course A' })
@@ -1137,7 +1170,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect(courseRow).toContainText('Closed')
   await clickAccountAction(page, 'العربية')
   await expect(courseRow).toContainText('مغلقة')
-  if (wide) {
+  if (testInfo.project.name === 'chromium') {
     await expect(recordActions(courseRow)).toHaveCount(0)
     await expect(courseRow.getByRole('button', { name: 'إعادة فتح الدورة' })).toHaveAttribute(
       'title',
@@ -1359,7 +1392,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await clickRecordAction(courseRow, 'Reopen course')
   await expect(courseRow).toContainText('Open')
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
-  await makeCurrent('Course A')
+  await makeCurrent(page, 'Course A')
   await expect(page.getByLabel('Attendance for Synthetic Student')).toBeVisible()
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
   await clickRecordAction(courseRow, 'Manage students')

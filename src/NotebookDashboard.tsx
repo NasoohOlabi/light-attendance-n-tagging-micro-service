@@ -1,7 +1,7 @@
-﻿import type { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useState } from 'react'
 import type { Attendance, Student } from '../shared/ledger'
-import { useLanguage } from './i18n'
+import { useLanguage } from './useLanguage'
 import { setQuery } from './queryState'
 import './dashboard.css'
 

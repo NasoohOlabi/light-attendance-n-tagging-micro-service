@@ -1,8 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ApplicationEntry } from './Entry'
-import { initializeInstallPrompt } from './InstallApp'
+import { initializeInstallPrompt } from './installPrompt'
 import { registerPwa } from './pwa'
+import './workspace.css'
+import './attendance.css'
+import './roles.css'
 import './index.css'
 import './theme.css'
 

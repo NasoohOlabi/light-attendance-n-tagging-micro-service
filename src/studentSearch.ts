@@ -1,5 +1,3 @@
-import type { Student } from '../shared/ledger'
-
 function normalize(value: string) {
   return value.normalize('NFKD').replace(/\p{M}/gu, '').toLocaleLowerCase().trim()
 }
@@ -12,7 +10,7 @@ function score(name: string, query: string) {
   return position === query.length ? 100 + name.length : Infinity
 }
 
-export function rankStudents(students: Student[], query: string) {
+export function rankStudents<T extends { name: string }>(students: T[], query: string): T[] {
   const term = normalize(query)
   if (!term) return students
   return students

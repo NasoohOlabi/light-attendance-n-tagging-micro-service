@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Globe, History, LogOut, Settings, UserRound } from 'lucide-react'
-import { ThemeChoices, useLanguage } from './i18n'
+import { ThemeChoices } from './i18n'
+import { useLanguage } from './useLanguage'
 import { setQuery } from './queryState'
 import type { InvitationProfile } from './neon'
 import { AccountChoices } from './AccountChoices'

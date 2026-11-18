@@ -1,7 +1,7 @@
-﻿import type { projectEvents } from '../shared/ledger'
+import type { projectEvents } from '../shared/ledger'
 import type { Course, Enrollment, NeonRosterStudent } from '../shared/neon'
 import { courseReadiness } from './readinessCounts'
-import { useLanguage } from './i18n'
+import { useLanguage } from './useLanguage'
 import './course-readiness.css'
 
 export function CourseReadiness({

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
-import { useLanguage } from './i18n'
+import { useLanguage } from './useLanguage'
 import { resetWorkspace } from './neon'
 
 const accountsSchema = z.object({

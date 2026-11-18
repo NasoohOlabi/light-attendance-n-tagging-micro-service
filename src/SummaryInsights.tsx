@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { type Attendance, type Student } from '../shared/ledger'
-import { useLanguage } from './i18n'
+import { useLanguage } from './useLanguage'
 import './SummaryInsights.css'
 
 type Record = { value: Attendance }

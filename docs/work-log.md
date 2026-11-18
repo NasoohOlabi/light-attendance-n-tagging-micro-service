@@ -1788,6 +1788,30 @@ The owner requested simple downloads for grades, student information, attendance
 
 The full release gate passed with 37 unit tests and 126 browser cases. Five optional database tests skipped without a disposable database, and two phone-only scenarios skipped on desktop. Downloaded and inspected all five workbook formats through synthetic administrator sessions in English and Arabic on desktop and emulated phones. Checked zero grades, withdrawn enrollments, corrections, selected columns, empty matches, date validation and keyboard focus return. The post-merge Railway deployment and shipped UI checks are recorded in the PR delivery receipt.
 
+## 2026-11-18 08:12 Asia/Damascus (UTC+03:00) - Audit event retries and backup fidelity
+
+The repository audit found two conversions through JavaScript that could lose PostgreSQL precision. The events API now checks retry identity against the stored timestamp and JSONB payload. Transfer exports event sequence numbers as decimal strings, accepts safe legacy numbers and locks all destination tables before checking emptiness. The import advances the identity sequence after row comparison.
+
+All 41 Bun tests passed with the five integration suites enabled against disposable local PostgreSQL. Cases cover equivalent timestamp formats, distinct microseconds, conflicting duplicate IDs rolling back a batch, and backup versions 1–12. A restored sequence of 9007199254740993 retained its exact value. Production data and migrations were outside these checks.
+
+## 2026-11-18 08:17 Asia/Damascus (UTC+03:00) - Audit notebook sessions, pending delivery and course forms
+
+The audit found that a tab could resend a cleared batch, foreign pending storage could appear between loading the notebook and saving, and a create-course link could reuse an existing course ID. Pending operations now recheck storage under both the browser-wide and older per-account locks. Course creation keeps one ID per form and starts fresh on a new visit. A failed sign-out now hides the notebook and offers a retry. A delayed denial applies only to the account that issued the request.
+
+The public shell now loads the workspace on demand. The initial minified JavaScript entry fell from 685 kB to 353 kB. Component modules, table state, the install prompt and language state have separate owners. Course search ranks the original roster rows directly.
+
+Focused desktop and emulated-phone checks passed for sign-out failure, stale responses after switching accounts and empty corrupt storage. The first full browser run reached the 30-second deadline in the mobile course scenario. Its creation, membership and grades/history paths now use independent fixtures and all four mobile course tests passed with their original time limits. These checks used synthetic accounts.
+
+## 2026-11-18 08:17 Asia/Damascus (UTC+03:00) - Enforce audit checks in CI
+
+The ordinary verification command omitted Prettier and accepted seven Oxlint warnings. A separate formatting check caught an in-progress edit to App.tsx. The file at the starting commit matched Prettier. It now includes formatting and runs Oxlint across repository JavaScript and TypeScript with warnings and unused suppression directives treated as failures. The TanStack Table adapter documents its local React Compiler compatibility exception.
+
+CI provisions disposable PostgreSQL databases for the five integration suites and runs the Python workbook test, Ruff lint and Ruff formatting checks. The workbook adapter and its test use four-space indentation and the configured single-quote style. The local lint, formatting, Python and 41 Bun tests passed. The hosted workflow runs on the PR.
+
+**Integration on 2026-11-18 at 12:20 Asia/Damascus.** Preserved multi-account sign-out identity checks and cross-tab notifications from main. Incorporated the wide course action icons and the updated Manage students navigation into the independent browser scenarios. All 44 Bun tests passed against disposable PostgreSQL, including the device-account suite. The account-switching release run passed 146 browser cases and had two mobile failures, a suspended browser network request and a workbook download timeout. The final PR records the release rerun, hosted checks and deployment evidence.
+
+**Main integration at 08:48 Asia/Damascus.** Integrated the customizable Excel downloads from `cf7c1a1`. The full release gate passed with all 42 Bun tests, including the five PostgreSQL suites, and 140 browser cases. Two mobile-only cases skipped on desktop. Both Python checks and the workbook test passed. An additional transfer check accepted safe numeric legacy sequences and rejected unsafe numeric values. Railway's production trigger targets main with Wait for CI enabled.
+
 ## 2026-11-18 08:13 Asia/Damascus (UTC+03:00) - Export teacher attendance charts
 
 Teachers requested an image they could share when discussing one student's attendance in the context of the group. Summary now creates ranked PNG charts from the selected course's effective attendance across all recorded dates. Percentages show the present and recorded counts. Students with no records appear separately at the end. Names are hidden by default. A teacher can highlight one student or include all names, share the current PNG, or download every page in a ZIP. Read-only teachers can use the Summary controls.
@@ -1815,6 +1839,8 @@ The owner requested charts that guide daily teaching and course review. Dashboar
 The local release gate passed with 38 unit tests and 130 desktop and emulated-phone browser cases. Five optional database suites and two phone-only cases on desktop skipped. The focused checks exercised English and Arabic, a 320px timeline, date cutoffs, reversals, grade overrides, enrollment scope, empty states and the student and Grades destinations. These synthetic checks cover the client using the existing role-scoped records. The PR carries CI and the exact-main Railway deployment receipt.
 
 At 08:35 Asia/Damascus, integrated main commit 6b7e48e after PR #114 passed its required check and conflicted with the teacher chart export. Both the session drill-down and the image export use the same course-scoped records. The combined release gate passed with 38 unit tests and 132 browser cases, including read-only teacher sharing and downloads. Five optional database suites and two phone-only cases on desktop skipped.
+
+**Audit integration with the attendance charts and course-readiness work.** The audit branch integrated `e5fe629`. The release gate passed with 146 desktop and mobile browser cases. Two phone-only cases skipped on desktop. A separate disposable PostgreSQL run passed all 43 Bun tests with 521 assertions.
 
 ## 2026-11-18 08:30 Asia/Damascus (UTC+03:00) - Fix the profile test after sign-out
 
@@ -1861,3 +1887,11 @@ Visually compared the original and changed attendance screen with synthetic reco
 Integrated main through `e5fe629`, retaining the latest absence follow-up dashboard, course readiness, attendance charts and customizable workbook exports. Rechecked the changed attendance screen with synthetic data. At 390px the pending Save occupied 44px directly above navigation. English desktop and Arabic 320px screenshots also showed the intended controls within the viewport. Course membership uses three text tabs in one row at 320px. The authenticated production workflow and physical devices require separate verification.
 
 At 12:25 Asia/Damascus (UTC+03:00), integrated the course save toast from main. GitHub Verify passed on the prior head. The local desktop course case passed on an isolated rerun, while the mobile scenario exhausted its 30-second budget during a language switch. Extended the budget for that multi-screen scenario and retained all its assertions.
+
+## 2026-11-18 12:33 Asia/Damascus (UTC+03:00) - Integrate the audit with course navigation
+
+Integrated main commit `c197bf5` into the audit. Course navigation, grading filters and attendance quick actions now load inside the split workspace. The independent course scenarios cover the combined navigation and retry behavior.
+
+The older role suite served mutable source from a second Vite process. During integration its failure snapshot showed a source conflict marker. Both role tests now exercise the built preview with the same synthetic API handlers. The shared preview also removes the separate server, port allocation and startup polling.
+
+At 12:35 Asia/Damascus, the combined release gate passed with 150 browser cases, including both role scenarios on desktop and mobile. Two phone-only cases skipped on desktop. The local Bun run passed 38 tests and skipped six optional database suites. The earlier database-enabled run passed all 44 tests. The production dependency audit found no vulnerabilities. PR 119 tracks final CI and the Railway deployment.

@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react'
-import { useLanguage } from './i18n'
+import { useLanguage } from './useLanguage'
 import type { Profile } from './ProfileMenu'
 import { NeonRequestError, type InvitationProfile } from './neon'
 import { phoneNumber } from './phoneFormat'
@@ -19,6 +19,7 @@ export function InvitationProfileForm({
   const ar = language === 'ar'
   const [username, setUsername] = useState(invitation.username)
   const [phone, setPhone] = useState(invitation.phone ?? '')
+  const [latestBirthDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [birthDate, setBirthDate] = useState(invitation.birthDate ?? '')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -111,7 +112,7 @@ export function InvitationProfileForm({
         <input
           required
           type="date"
-          max={new Date().toLocaleDateString('en-CA')}
+          max={latestBirthDate}
           autoComplete="bday"
           value={birthDate}
           onChange={(event) => setBirthDate(event.target.value)}

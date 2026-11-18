@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { useLanguage } from './i18n'
+import { useLanguage } from './useLanguage'
 import { hasWaitingPwaUpdate, subscribeToPwaUpdate } from './pwa'
 import './update.css'
 

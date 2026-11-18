@@ -139,9 +139,13 @@ async function snapshot(db: PoolClient, version: Version): Promise<Backup> {
     tables: [],
   }
   for (const table of tablesFor(version)) {
-    const columns = columnsFor(table, version)
+    const columns = columnsFor(table, version).map((column) =>
+      table.name === 'public.events' && column === 'sequence'
+        ? '"sequence"::text AS "sequence"'
+        : quote(column),
+    )
     const result = await db.query(
-      `SELECT row_to_json(item) AS row FROM (SELECT ${columns.map(quote).join(',')} FROM ${sqlTable(table.name)}) item`,
+      `SELECT row_to_json(item) AS row FROM (SELECT ${columns.join(',')} FROM ${sqlTable(table.name)}) item`,
     )
     data.tables.push({
       name: table.name,
@@ -168,6 +172,17 @@ function validateBackup(backup: Backup) {
       })
     )
       throw new Error('Unexpected backup columns')
+  }
+  for (const row of backup.tables.find((table) => table.name === 'public.events')?.rows ?? []) {
+    const sequence = row.sequence
+    if (typeof sequence === 'number' && Number.isSafeInteger(sequence) && sequence > 0)
+      row.sequence = String(sequence)
+    else if (
+      typeof sequence !== 'string' ||
+      !/^[1-9]\d*$/.test(sequence) ||
+      BigInt(sequence) > 9223372036854775807n
+    )
+      throw new Error('Invalid event sequence in backup')
   }
   if (
     backup.version < 8 &&
@@ -371,6 +386,9 @@ async function main() {
       const targetTables = tablesFor(targetVersion)
       if (command === 'import') {
         await db.query("SELECT pg_advisory_xact_lock(hashtextextended('railway-transfer', 0))")
+        await db.query(
+          `LOCK TABLE ${targetTables.map((table) => sqlTable(table.name)).join(',')} IN ACCESS EXCLUSIVE MODE`,
+        )
         for (const table of targetTables) {
           const result = await db.query(
             `SELECT count(*)::int AS count FROM ${sqlTable(table.name)}`,
@@ -389,9 +407,6 @@ async function main() {
             )
           }
         }
-        await db.query(
-          "SELECT setval(pg_get_serial_sequence('events', 'sequence'), GREATEST(COALESCE((SELECT max(sequence) FROM events), 1), 1), EXISTS(SELECT 1 FROM events))",
-        )
       }
       if (backup.version < 3 && targetVersion >= 3) {
         for (const table of courseTables) {
@@ -457,6 +472,10 @@ async function main() {
         if (!other || digest(table.rows) !== digest(other.rows))
           throw new Error('Backup comparison failed for ' + table.name)
       }
+      if (command === 'import')
+        await db.query(
+          "SELECT setval(pg_get_serial_sequence('events', 'sequence'), GREATEST(COALESCE((SELECT max(sequence) FROM events), 1), 1), EXISTS(SELECT 1 FROM events))",
+        )
       console.log(
         JSON.stringify({
           verified: backup.tables.map((table) => ({

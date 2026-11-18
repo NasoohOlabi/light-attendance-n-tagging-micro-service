@@ -1,7 +1,5 @@
 import { clickAccountAction, openProfile } from './profileActions'
 import { expect, test, type Page } from '@playwright/test'
-import { spawn, type ChildProcess } from 'node:child_process'
-import { availablePort } from './availablePort'
 import { mkdir } from 'node:fs/promises'
 import { compactHeader } from './headerLayout'
 
@@ -13,41 +11,13 @@ const teacherId = '10000000-0000-4000-8000-000000000002'
 const studentUserId = '10000000-0000-4000-8000-000000000003'
 const courseId = '40000000-0000-4000-8000-000000000001'
 const studentId = '20000000-0000-4000-8000-000000000001'
-let server: ChildProcess
 let origin = ''
-test.beforeAll(async ({ browserName }) => {
-  if (browserName !== 'chromium') throw new Error('Chromium required')
-  const port = await availablePort()
-  origin = `http://127.0.0.1:${port}`
+test.beforeEach(({ baseURL }) => {
+  if (!baseURL) throw new Error('Role tests require the suite preview baseURL')
+  origin = baseURL
   auth = `${origin}/api/auth`
   api = `${origin}/api`
-  server = spawn(
-    process.execPath,
-    [
-      'node_modules/vite/bin/vite.js',
-      '--host',
-      '127.0.0.1',
-      '--port',
-      String(port),
-      '--strictPort',
-    ],
-    {
-      env: { ...process.env, VITE_NEON_AUTH_URL: auth, VITE_NEON_API_URL: api },
-      stdio: 'ignore',
-    },
-  )
-  for (let i = 0; i < 100; i++) {
-    if (server.exitCode !== null) throw new Error('Synthetic Vite server exited')
-    try {
-      if ((await fetch(origin)).ok) return
-    } catch {
-      /* starting */
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100))
-  }
-  throw new Error('Synthetic Vite server did not start')
 })
-test.afterAll(() => server?.kill())
 
 async function mockAuth(page: Page, id: string, image: string | null = null) {
   await page.route(`${auth}/**`, async (route) => {
