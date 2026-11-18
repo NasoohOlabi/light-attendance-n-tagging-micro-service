@@ -196,7 +196,11 @@ for (const width of [320, 390, 1280]) {
         await button.click()
         await report.selectOption('students')
         await dialog.getByText(ar ? 'خيارات متقدمة' : 'Advanced options', { exact: true }).click()
-        await dialog.getByRole('checkbox', { name: ar ? 'الموقع' : 'Location' }).check()
+        const location = dialog.getByRole('checkbox', { name: ar ? 'الموقع' : 'Location' })
+        await expect(location).toHaveCSS('width', '20px')
+        await expect(location).toHaveCSS('height', '20px')
+        await expect(location.locator('..')).toHaveCSS('cursor', 'pointer')
+        await location.check()
         await dialog
           .getByRole('combobox', { name: ar ? 'التسجيل' : 'Enrollment', exact: true })
           .selectOption('active')

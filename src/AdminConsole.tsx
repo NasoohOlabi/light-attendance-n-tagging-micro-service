@@ -761,7 +761,7 @@ function StudentForm({
               ))}
           </select>
         </label>
-        <label>
+        <label className="min-h-11 flex-row items-center self-end">
           <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />{' '}
           {ar ? 'نشط' : 'Active'}
         </label>
