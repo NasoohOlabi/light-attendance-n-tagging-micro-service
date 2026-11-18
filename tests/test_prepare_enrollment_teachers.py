@@ -1,9 +1,12 @@
-﻿import importlib.util
+import importlib.util
 import unittest
 from pathlib import Path
+
 from openpyxl import Workbook
 
-spec = importlib.util.spec_from_file_location('prepare', Path(__file__).parents[1] / 'scripts/prepare-enrollment-teachers.py')
+spec = importlib.util.spec_from_file_location(
+    'prepare', Path(__file__).parents[1] / 'scripts/prepare-enrollment-teachers.py'
+)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
@@ -15,8 +18,15 @@ class PreparationTest(unittest.TestCase):
         book.active.cell(3, 1, 'Student')
         book.active.cell(3, 8, 'Teacher')
         book.active.cell(4, 1, 'No teacher')
-        plan = {'courseId': 'course', 'rows': [{'enrollmentId': 'enrollment', 'student': {
-            'id': 'student', 'name': 'Student', 'teacherId': 'teacher'}}]}
+        plan = {
+            'courseId': 'course',
+            'rows': [
+                {
+                    'enrollmentId': 'enrollment',
+                    'student': {'id': 'student', 'name': 'Student', 'teacherId': 'teacher'},
+                }
+            ],
+        }
         snapshot = {'backup': {'teachers': [{'name': 'Teacher', 'id': 'teacher'}]}}
         self.assertEqual(len(module.prepare(book, plan, snapshot)['rows']), 1)
         book.active.cell(3, 8, 'Unknown')

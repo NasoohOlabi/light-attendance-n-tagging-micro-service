@@ -15,6 +15,19 @@ jobs:
     name: Verify
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: notebook_test
+        ports:
+          - 127.0.0.1:5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -27,8 +40,25 @@ jobs:
       - run: bun run setup:security
       - run: bun run security:history
       - run: bun run security:audit
-      - run: bun run format:check
+      - name: Prepare disposable databases
+        env:
+          DATABASE_URL_UNPOOLED: postgres://postgres@127.0.0.1:5432/notebook_test
+        run: |
+          psql "$DATABASE_URL_UNPOOLED" -v ON_ERROR_STOP=1 -f railway/001-auth.sql
+          bun run db:migrate
+          psql "$DATABASE_URL_UNPOOLED" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE student_names_test'
       - run: bun run verify
+        env:
+          TEST_RAILWAY_DATABASE_URL: postgres://postgres@127.0.0.1:5432/notebook_test
+          TEST_STUDENT_NAMES_DATABASE_URL: postgres://postgres@127.0.0.1:5432/student_names_test
+          TEST_STUDENT_TRANSFER_DATABASE_URL: postgres://postgres@127.0.0.1:5432/postgres
+      - name: Test workbook preparation
+        run: |
+          python3 -m venv "$RUNNER_TEMP/workbook-tests"
+          "$RUNNER_TEMP/workbook-tests/bin/pip" install openpyxl==3.1.5 ruff==0.15.12
+          "$RUNNER_TEMP/workbook-tests/bin/ruff" check .
+          "$RUNNER_TEMP/workbook-tests/bin/ruff" format --check .
+          "$RUNNER_TEMP/workbook-tests/bin/python" -m unittest discover -s tests -p 'test_*.py'
       - run: bun run security:files
       - run: bunx playwright install --with-deps chromium
       - run: bun run verify:ui

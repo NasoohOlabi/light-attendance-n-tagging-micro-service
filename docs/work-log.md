@@ -1795,3 +1795,9 @@ The audit found that a tab could resend a cleared batch, foreign pending storage
 The public shell now loads the workspace on demand. The initial minified JavaScript entry fell from 685 kB to 353 kB. Component modules, table state, the install prompt and language state have separate owners. Course search ranks the original roster rows directly.
 
 Focused desktop and emulated-phone checks passed for sign-out failure, stale responses after switching accounts and empty corrupt storage. The first full browser run reached the 30-second deadline in the mobile course scenario. Its creation, membership and grades/history paths now use independent fixtures and all four mobile course tests passed with their original time limits. These checks used synthetic accounts.
+
+## 2026-11-18 08:17 Asia/Damascus (UTC+03:00) - Enforce audit checks in CI
+
+The ordinary verification command previously passed while Prettier flagged App.tsx and Oxlint reported seven warnings. It now includes formatting and runs Oxlint across repository JavaScript and TypeScript with warnings and unused suppression directives treated as failures. The TanStack Table adapter documents its local React Compiler compatibility exception.
+
+CI provisions disposable PostgreSQL databases for the five integration suites and runs the Python workbook test, Ruff lint and Ruff formatting checks. The workbook adapter and its test use four-space indentation and the configured single-quote style. The local lint, formatting, Python and 41 Bun tests passed. The hosted workflow runs on the PR.

@@ -9,7 +9,7 @@ bunx playwright install chromium
 bun run verify:release
 ```
 
-`bun install` enables Husky hooks. The secret scanner bootstrap downloads pinned Gitleaks 8.30.1 and checks its release SHA-256. Pre-commit formats staged files, scans staged changes, typechecks, tests and lints. Pre-push verifies the build and scans all local Git history. Missing scanners fail closed. CI independently repeats checks; local hooks are convenience gates, not a security boundary. Keep the `source-map-js` override until its parents resolve a patched version without it.
+`bun install` enables Husky hooks. The secret scanner bootstrap downloads pinned Gitleaks 8.30.1 and checks its release SHA-256. Pre-commit formats staged files, scans staged changes, typechecks, tests and lints. Pre-push verifies the build and scans all local Git history. Missing scanners fail closed. CI also runs Ruff formatting, Python lint, the workbook preparation tests and all five database integration suites on disposable PostgreSQL databases. The lint gate covers repository JavaScript and TypeScript and fails on warnings and obsolete suppressions. CI independently repeats checks; local hooks are convenience gates, not a security boundary. Keep the `source-map-js` override until its parents resolve a patched version without it.
 
 ## Atomic Git work
 

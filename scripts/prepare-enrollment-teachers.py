@@ -1,4 +1,5 @@
-﻿"""Privately validate a workbook against its historical import plan and roster snapshot."""
+"""Privately validate a workbook against its historical import plan and roster snapshot."""
+
 import json
 import sys
 from pathlib import Path
@@ -35,19 +36,31 @@ def prepare(workbook, plan, snapshot):
     for row in rows:
         if source[row['student']['name']] != row['student']['teacherId']:
             raise ValueError('Workbook and plan teachers differ')
-    return {'courseId': plan['courseId'], 'rows': [
-        {'enrollmentId': row['enrollmentId'], 'student': {
-            'id': row['student']['id'], 'teacherId': row['student']['teacherId'], 'name': row['student']['name']
-        }} for row in rows
-    ]}
+    return {
+        'courseId': plan['courseId'],
+        'rows': [
+            {
+                'enrollmentId': row['enrollmentId'],
+                'student': {
+                    'id': row['student']['id'],
+                    'teacherId': row['student']['teacherId'],
+                    'name': row['student']['name'],
+                },
+            }
+            for row in rows
+        ],
+    }
 
 
 def main():
     if len(sys.argv) != 5:
         raise ValueError('Expected workbook, historical plan, roster snapshot and output path')
     workbook, plan, snapshot, output = map(Path, sys.argv[1:])
-    result = prepare(load_workbook(workbook, data_only=True), json.loads(plan.read_text(encoding='utf-8')),
-                     json.loads(snapshot.read_text(encoding='utf-8')))
+    result = prepare(
+        load_workbook(workbook, data_only=True),
+        json.loads(plan.read_text(encoding='utf-8')),
+        json.loads(snapshot.read_text(encoding='utf-8')),
+    )
     with output.open('x', encoding='utf-8') as target:
         json.dump(result, target, ensure_ascii=False)
     print(json.dumps({'matched': len(result['rows'])}))

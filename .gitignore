@@ -1,3 +1,6 @@
+# Python bytecode
+__pycache__/
+
 # Logs
 logs
 *.log
