@@ -1736,6 +1736,14 @@ Railway reported the production trigger on `main` with Wait for CI enabled. The 
 
 **History integration at 06:22 Asia/Damascus** Merged `d746b66` after the name-first Students roster landed. Preserved both work-log entries and verified the combined History and Students paths. `bun run verify:release` passed 119 browser cases and 34 local tests. The phone-only regression skipped on desktop and four optional database suites skipped.
 
+## 2026-11-18 06:42 Asia/Damascus (UTC+03:00) - Shared responsive table headers
+
+The Attendance screenshot showed detached column headings after the Students roster switched to a name-first phone layout. Attendance, Students, Summary, course membership, Grades, the administrator register, and both student attendance views now use the shared title toolbar. Sort and Filter sit beside the title. Stacked records display their labelled fields below it. Attendance starts each phone record with the student's name and keeps the mark selector and Add note together. Desktop retains sortable columns, including sticky Grades headings. The compact Courses table retains its aligned columns and uses the shared toolbar.
+
+The synthetic test reproduced the detached Attendance headings in Railway deployment `125bd67`. The focused local run passed 30 browser cases with two desktop skips for phone-only regressions. It covered narrow Arabic and English layouts, all table sort fields, keyboard and touch sorting, filter persistence, and attendance draft preservation. The PR receipt records the exact-main deployment, health and shipped UI check. Phone evidence uses emulation and synthetic records.
+
+`bun run verify:release` passed at 06:45 with 120 browser cases and 34 local tests. The two phone-only cases skipped on desktop and four optional database tests skipped. The pre-PR review found no issues. Railway confirmed the production trigger targets `main` with Wait for CI enabled.
+
 ## 2026-11-18 06:46 Asia/Damascus (UTC+03:00) - Hide the roster during student creation
 
 The phone screenshot showed the Students table below the new-student form. The Administrator register and its Sort and Filter controls now disappear while the creation form is open. Save and Cancel return to the list for standalone creation. Creating a student from a course still returns to that course's membership list.
@@ -1743,3 +1751,5 @@ The phone screenshot showed the Students table below the new-student form. The A
 The previous Railway deployment reproduced the table in English on desktop and Arabic at 390px. The updated desktop and mobile Administrator tests verify the form without a table, plus list restoration after Save and Cancel. The browser checks use synthetic data and an emulated phone. Railway confirmed that the production trigger targets `main` with Wait for CI enabled. The PR records exact-main deployment and production smoke verification.
 
 `bun run verify:release` passed with 119 browser cases, 34 local tests and all build, formatting and security gates. One phone-only case skipped on desktop, and four optional database tests skipped.
+
+**Table-toolbar integration at 06:55 Asia/Damascus** GitHub Verify passed on `fe56694` before main advanced to `a58608d`. Resolved the work-log conflict and tied the Administrator toolbar to the same visibility condition as the student table. Desktop and phone tests confirmed Sort and Filter stay hidden during creation and return with the list after save. The combined `bun run verify:release` passed with 120 browser cases and 34 local tests. Four optional database tests skipped.

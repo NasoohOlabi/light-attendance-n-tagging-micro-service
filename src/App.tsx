@@ -2,7 +2,7 @@ import { RowActions } from './RowActions'
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
 import { PhoneNumber } from './PhoneNumber'
-import { TableControls, TableHeader, useDataTable } from './DataTable'
+import { TableHeader, TableToolbar, useDataTable } from './DataTable'
 import { ChevronRight, CircleCheck, CircleMinus, RefreshCw, UserRound } from 'lucide-react'
 import { LanguageProvider, useLanguage, type TranslationKey } from './i18n'
 import { useEffect, useRef, useState } from 'react'
@@ -811,7 +811,9 @@ function StudentDetails({
           .map((course) => course.name)
           .join(', ') || (ar ? 'لا يوجد' : 'None')}
       </p>
-      <h3>{ar ? 'سجل الحضور' : 'Attendance history'}</h3>
+      <TableToolbar model={records.length ? detailTable : undefined} className="mt-6 mb-2">
+        <h3 className="m-0!">{ar ? 'سجل الحضور' : 'Attendance history'}</h3>
+      </TableToolbar>
       {records.length ? (
         <div
           className="role-table-scroll"
@@ -933,7 +935,7 @@ function AttendanceView({
         <tbody>
           {items.map((student) => (
             <tr key={student.studentId}>
-              <td data-label={t('Student')}>
+              <td className="record-title" data-label={t('Student')}>
                 <bdi>{student.name}</bdi>
               </td>
               <td data-label={language === 'ar' ? 'المستوى' : 'Level'}>
@@ -1102,13 +1104,19 @@ function AttendanceView({
             </article>
           ))}
       </dialog>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="title">
-            {courseName ? `${t('Attendance')} · ${courseName}` : t('Who is here today?')}
-          </h2>
-          <p className="muted mt-2">{t('Only marked students are saved.')}</p>
-        </div>
+      <TableToolbar model={candidates.length ? attendanceTable : undefined}>
+        <h2 className="title">
+          {courseName ? (
+            <>
+              {t('Attendance')} · <bdi>{courseName}</bdi>
+            </>
+          ) : (
+            t('Who is here today?')
+          )}
+        </h2>
+      </TableToolbar>
+      <div className="mb-6 mt-2 flex flex-wrap items-end justify-between gap-4">
+        <p className="muted">{t('Only marked students are saved.')}</p>
         <label>
           {t('Session date')}
           <input
@@ -1245,14 +1253,9 @@ function RosterView({
   ])
   return (
     <section className="panel">
-      <header className="mb-3 flex items-center justify-between gap-2">
+      <TableToolbar model={assigned ? rosterTable : undefined} className="mb-3">
         <h2 className="title">{t('Your students')}</h2>
-        {assigned && (
-          <div className="flex shrink-0 items-center gap-2">
-            <TableControls model={rosterTable} />
-          </div>
-        )}
-      </header>
+      </TableToolbar>
       {!assigned && (
         <form
           className="mb-6 flex flex-wrap items-end gap-3"
@@ -1306,7 +1309,7 @@ function RosterView({
               <col className="roster-active-column" />
               <col className="roster-actions-column" />
             </colgroup>
-            <TableHeader model={rosterTable} actions showControls={false} />
+            <TableHeader model={rosterTable} actions />
             <tbody>
               {rosterTable.rows.map((student) => (
                 <tr key={student.studentId} data-student-id={student.studentId}>
@@ -1534,9 +1537,9 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
   ])
   return (
     <section className="panel">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <TableToolbar model={summaryTable} className="mb-6">
         <h2 className="title">{t('Attendance overview')}</h2>
-      </div>
+      </TableToolbar>
       <p className="muted mb-5">
         {language === 'ar'
           ? 'النسب من جلسات الطلاب المسجلة؛ لا تُحتسب الأيام غير المحددة.'
@@ -1596,7 +1599,7 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
           <tbody>
             {summaryTable.rows.map((student) => (
               <tr key={student.studentId} className="border-t border-slate-100">
-                <th scope="row" dir="auto" className="p-3 text-start font-medium">
+                <th scope="row" dir="auto" className="record-title p-3 text-start font-medium">
                   {student.name}
                 </th>
                 {statuses.map((status) => (

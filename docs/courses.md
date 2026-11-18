@@ -54,7 +54,7 @@ Administrators choose **Override result** from the student's three-dot menu. Cho
 
 Decision history resolves saved author IDs to their current profile names, so existing decisions reflect profile name changes. Apply migration `neon/011-grade-decisions.sql` before deployment. Version 10 backups preserve decision history; older backups cannot compare against a target with decisions.
 
-Grades uses a bounded scrolling table on desktop, with opaque sticky column headings. The title, Sort control and grading thresholds stay outside the table scroll area. Focus the Course grades region to scroll it with the keyboard. On phones and other stacked layouts, records continue to use normal page scrolling without a nested vertical scroller.
+The Courses and Manage students titles share the Sort and Filter toolbar used throughout the notebook. Grades shows Sort beside its title and Excel export. Grades uses a bounded scrolling table on desktop, with opaque sticky column headings. Focus the Course grades region to scroll it with the keyboard. On phones, Manage students and Grades show labelled records and use normal page scrolling. The compact Courses list shows aligned column headings.
 
 Stacked grade records have consistent inset padding and separation. Theory and Practical inputs fill their paired columns; Notes, Result and Actions each span the record width. Labels and touch-sized controls remain inside the record in both languages and palettes.
 

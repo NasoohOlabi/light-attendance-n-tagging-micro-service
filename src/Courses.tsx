@@ -1,7 +1,7 @@
 import { RowActions } from './RowActions'
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
-import { TableControls, TableHeader, useDataTable } from './DataTable'
+import { TableHeader, TableToolbar, useDataTable } from './DataTable'
 import { useEffect, useRef, useState } from 'react'
 import { Download, Save } from 'lucide-react'
 import {
@@ -166,14 +166,9 @@ export function Courses({
   return (
     <section className="panel space-y-5">
       {!query.courseView && (
-        <header className="flex items-center justify-between gap-2">
+        <TableToolbar model={courses.length ? courseTable : undefined}>
           <h1 className="title">{ar ? 'الدورات' : 'Courses'}</h1>
-          {courses.length > 0 && (
-            <div className="flex shrink-0 items-center gap-2">
-              <TableControls model={courseTable} />
-            </div>
-          )}
-        </header>
+        </TableToolbar>
       )}
       {error && <p role="alert">{error}</p>}
       {saved && <p role="status">{ar ? 'تم الحفظ' : 'Saved'}</p>}
@@ -197,7 +192,7 @@ export function Courses({
               tabIndex={0}
             >
               <table className="role-table course-list-table w-full table-fixed" role="table">
-                <TableHeader model={courseTable} actions showControls={false} />
+                <TableHeader model={courseTable} actions />
                 <tbody role="rowgroup">
                   {courseTable.rows.map((item) => (
                     <tr key={item.id} role="row">
@@ -324,9 +319,11 @@ export function Courses({
               <button className="secondary" onClick={() => go('', '')}>
                 {ar ? 'العودة للدورات' : 'Back to courses'}
               </button>
-              <h1 className="title">
-                {course.name} — {ar ? 'إدارة الطلاب' : 'Manage students'}
-              </h1>
+              <TableToolbar model={membershipTable}>
+                <h1 className="title">
+                  {course.name} — {ar ? 'إدارة الطلاب' : 'Manage students'}
+                </h1>
+              </TableToolbar>
             </>
           )}
           {query.courseView === 'grades' && !board && (
@@ -638,11 +635,10 @@ function GradePage({
   )
   return (
     <>
-      <div className="grade-title-bar">
-        <h1 className="title">
-          {course.name} — {ar ? 'الدرجات' : 'Grades'}
-        </h1>
-        <div className="flex shrink-0 items-center gap-2">
+      <TableToolbar
+        model={gradeTable}
+        className="grade-title-bar"
+        actions={
           <button
             className="secondary flex items-center gap-2"
             aria-label={ar ? 'تصدير Excel' : 'Export Excel'}
@@ -665,9 +661,12 @@ function GradePage({
             <Download size={20} aria-hidden="true" />
             <span className="hidden sm:inline">{ar ? 'تصدير Excel' : 'Export Excel'}</span>
           </button>
-          <TableControls model={gradeTable} />
-        </div>
-      </div>
+        }
+      >
+        <h1 className="title">
+          {course.name} — {ar ? 'الدرجات' : 'Grades'}
+        </h1>
+      </TableToolbar>
       {exportError && <p role="alert">{ar ? 'تعذر تصدير الملف' : 'Could not export file'}</p>}
       <form
         className="flex flex-wrap items-end justify-end gap-3"
@@ -721,7 +720,7 @@ function GradePage({
         tabIndex={0}
       >
         <table className="mobile-record-table role-table min-w-[68rem] [&_th]:whitespace-nowrap [&_input]:w-24 [&_td]:align-top">
-          <TableHeader model={gradeTable} actions showControls={false} />
+          <TableHeader model={gradeTable} actions />
           <tbody>
             {gradeTable.rows.map((entry) => {
               const student = students.find((item) => item.studentId === entry.studentId)
