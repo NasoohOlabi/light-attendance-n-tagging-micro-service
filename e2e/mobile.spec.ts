@@ -85,11 +85,13 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   expect(
     Math.abs(markBounds.y + markBounds.height / 2 - noteBounds.y - noteBounds.height / 2),
   ).toBeLessThanOrEqual(2)
-  expect(noteBounds.x).toBeLessThan(markBounds.x)
+  expect(noteBounds.x).toBeGreaterThanOrEqual(markBounds.x + markBounds.width)
   const marks = row.getByRole('group')
   const present = marks.getByRole('button', { name: 'حاضر', exact: true })
   const absent = marks.getByRole('button', { name: 'غائب', exact: true })
-  await present.focus()
+  await rowNote.focus()
+  await page.keyboard.press('Tab')
+  await expect(present).toBeFocused()
   await page.keyboard.press('ArrowLeft')
   await expect(absent).toBeFocused()
   await expect(marks.getByRole('button', { pressed: true })).toHaveCount(0)

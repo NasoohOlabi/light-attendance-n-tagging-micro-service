@@ -1961,3 +1961,9 @@ The owner opened Wartaq in a regular tab for testing after installing it and saw
 Chrome 157 and 158 reproduced the banner in fresh tabs after installing from the old manifest in disposable profiles. With the updated manifest, both browsers found that installation on a fresh notebook link, hid the banner and stayed in browser mode at the same URL. Uninstalling the test app restored the banner on reload. The probes used localhost with the same app ID structure and cleaned up their app registrations. Physical Android and iOS devices were outside verification. The pull request records hosted checks and Railway verification.
 
 `bun run verify:release` passed with 38 Bun tests and 162 browser cases. Six optional database tests and two desktop instances of phone-only cases skipped. File and history scans and the dependency audit passed.
+
+## 2026-11-18 19:49 Asia/Damascus (UTC+03:00) - Match the attendance toggle reference
+
+The owner requested a pale gray pill with soft green, red and amber selected tiles, and approved the Arabic screenshot after the gray was lightened and the note moved right. The note button keeps its amber icon and 44px target with a transparent background and zero border. The note sits to the physical right in English and Arabic. Tab follows the row's reading direction.
+
+The local sample smoke verified three distinct selected fills, 44px targets and one-line right-side placement at 1440px and 320px, plus a transparent borderless note and dialog focus return in dark mode. Browser verification uses synthetic records and emulated phones. The PR records the release gate and production checks.
