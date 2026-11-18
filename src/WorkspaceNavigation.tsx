@@ -142,13 +142,10 @@ export function WorkspaceNavigation({
                     {course.name}
                   </button>
                 ))}
-                {!(
-                  roster &&
-                  (!currentCourse || currentCourse === 'none' || currentCourse === 'all')
-                ) &&
-                  currentCourse !== 'all' &&
-                  (currentCourse === 'none' ? '' : currentCourse || '') !==
-                    (defaultCourse || '') && (
+                {currentCourse !== 'all' &&
+                  (!roster || !!query.course) &&
+                  !courses.find((course) => course.id === currentCourse)?.closed &&
+                  query.course !== (defaultCourse || '') && (
                     <button
                       type="button"
                       onClick={(event) => {

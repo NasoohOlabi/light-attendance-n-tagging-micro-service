@@ -9,7 +9,7 @@ test('dashboard charts and alphabetic fuzzy attendance preserve drafts', async (
   await page.goto('/')
   await page.getByRole('button', { name: 'Explore with sample students' }).click()
   await expect(page.getByRole('button', { name: /Continue attendance/i })).toBeVisible()
-  await expect(page.getByLabel('present: 1')).toBeVisible()
+  await expect(page.getByText('No recorded absences to follow up in this window.')).toBeVisible()
   await expect(page.getByText('1 marked, 1 unmarked')).toBeVisible()
   await clickAccountAction(page, 'العربية')
   await expect(page.getByRole('button', { name: /متابعة/ })).toBeVisible()
@@ -64,8 +64,7 @@ test('dashboard charts and alphabetic fuzzy attendance preserve drafts', async (
   await expect(page.getByLabel('Attendance for Omar')).toHaveValue('absent')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
-  await expect(page.getByLabel('absent: 1')).toBeVisible()
-  await expect(page.getByLabel(/^(early|late):/)).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Omar', exact: true })).toBeVisible()
   await expect(page.getByText('2 marked, 0 unmarked')).toBeVisible()
   await clickAccountAction(page, 'History & corrections')
   const snapshot = page
@@ -90,13 +89,11 @@ test('dashboard charts and alphabetic fuzzy attendance preserve drafts', async (
   await page.getByLabel('Reason').fill('Correction')
   await page.getByRole('button', { name: 'Append correction' }).click()
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
-  await expect(page.getByLabel('absent: 0')).toBeVisible()
+  await expect(page.getByText('No recorded absences to follow up in this window.')).toBeVisible()
   await expect(page.getByText('1 marked, 1 unmarked')).toBeVisible()
 })
 
-test('recent sessions count present students, including zero-present dates', async ({
-  page,
-}, testInfo) => {
+test('follow-up uses recorded absences through the selected date', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Explore with sample students' }).click()
   const dateInput = page.getByLabel('Session date')
@@ -112,28 +109,15 @@ test('recent sessions count present students, including zero-present dates', asy
   await page.getByLabel('Attendance for Omar').selectOption('excused')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
-
-  await expect(page.getByText('Present per date')).toBeVisible()
-  await expect(page.getByLabel(`${firstDate}: 1`)).toHaveAttribute('value', '1')
-  await expect(page.getByLabel(`${secondDate}: 0`)).toHaveAttribute('value', '0')
-  await expect(page.getByLabel('excused: 1')).toBeVisible()
-  await expect(page.getByText('1 marked, 1 unmarked')).toBeVisible()
+  const strip = page.getByRole('list', { name: 'Recent attendance for Omar' })
+  await expect(strip.locator('li')).toHaveCount(2)
+  await expect(strip.locator('li').nth(0)).toContainText('absent')
+  await expect(strip.locator('li').nth(1)).toContainText('excused')
+  await expect(page.getByText('1 absence', { exact: true })).toBeVisible()
   await page.getByLabel('Session date').fill(firstDate)
-  await expect(page.getByLabel(`${secondDate}: 0`)).toHaveCount(0)
-  await expect(page.getByLabel('absent: 1')).toBeVisible()
-  await page.getByLabel('Session date').fill(secondDate)
-  await clickAccountAction(page, 'العربية')
-  await expect(page.getByText('عدد الحاضرين في كل يوم')).toBeVisible()
-  await expect(page.getByLabel(`${firstDate}: 1`)).toBeVisible()
-  await expect(page.getByLabel(`${secondDate}: 0`)).toBeVisible()
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
-    true,
-  )
-  await mkdir('.artifacts/verification', { recursive: true })
-  await page.screenshot({
-    path: `.artifacts/verification/dashboard-present-${testInfo.project.name}-ar.png`,
-    fullPage: true,
-  })
+  await expect(strip.locator('li')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Omar', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Student information' })).toBeVisible()
 })
 
 test('assigned sample saves attendance in its sample course', async ({ page }) => {

@@ -1,4 +1,5 @@
 import { RowActions } from './RowActions'
+import { AttendanceChartExport } from './AttendanceChartExport'
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
 import { PhoneNumber } from './PhoneNumber'
@@ -24,6 +25,8 @@ import {
 } from './queryState'
 import { HomePage } from './HomePage'
 import { NotebookDashboard } from './NotebookDashboard'
+import { SummaryInsights } from './SummaryInsights'
+import { CourseReadiness } from './CourseReadiness'
 import { InstallApp } from './InstallApp'
 import { AppUpdate } from './AppUpdate'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
@@ -211,7 +214,8 @@ function Notebook({
     !query.course
   const includeInactive = fullRegister || (history && administrator)
   const baseProjection = projectEvents(ledger.events)
-  const closedCourse = ledger.courses.find((course) => course.id === query.course && !course.open)
+  const selectedCourse = ledger.courses.find((course) => course.id === query.course)
+  const closedCourse = selectedCourse?.open === false ? selectedCourse : undefined
   const selectedEnrollments =
     demo === 'assigned'
       ? ledger.roster.map((student) =>
@@ -498,7 +502,6 @@ function Notebook({
             courses={ledger.courses}
             enrollments={ledger.enrollments}
             courseId={query.course}
-            defaultCourse={preference.defaultCourse}
             refresh={neon ? ledger.refresh : undefined}
             busy={ledger.busy}
             canWrite={!disabled}
@@ -511,16 +514,19 @@ function Notebook({
           className={tab === 'attendance' ? 'workspace-content' : ''}
         >
           <fieldset
-            disabled={disabled && tab !== 'dashboard' && tab !== 'attendance'}
+            disabled={disabled && (tab === 'roster' || tab === 'history')}
             className="min-w-0"
           >
-            {tab === 'dashboard' && (
+            {tab === 'dashboard' && query.view === 'notebook' && (
               <NotebookDashboard
                 projected={projected}
                 date={query.date}
-                canAdd={neon?.teacher.role === 'administrator' || demo === 'editable'}
+                canAdd={administrator || demo === 'editable'}
+                canRecord={!disabled && (!!demo || selectedCourse?.open === true)}
+                onStudent={openStudent}
                 onAttendance={(unmarked = false) =>
                   navigateNotebook('attendance', query.courseScope || '', {
+                    student: '',
                     q: '',
                     group: '',
                     unmarked: unmarked ? '1' : '',
@@ -531,7 +537,17 @@ function Notebook({
                     ? setQuery({ view: 'add-student', courseView: '', student: '' }, true)
                     : setQuery({ tab: 'roster', q: '', group: '' }, true)
                 }
-              />
+              >
+                {administrator && selectedCourse && (
+                  <CourseReadiness
+                    course={selectedCourse}
+                    enrollments={selectedEnrollments}
+                    students={ledger.roster}
+                    attendance={scopedProjection.attendance}
+                    onGrades={() => setQuery({ view: 'courses', courseView: 'grades' }, true)}
+                  />
+                )}
+              </NotebookDashboard>
             )}
             {(tab === 'attendance' || tab === 'summary') && (
               <nav
@@ -644,7 +660,23 @@ function Notebook({
                 onOpenStudent={openStudent}
               />
             )}
-            {tab === 'summary' && <Summary students={projected.students} projected={projected} />}
+            {tab === 'summary' && (
+              <Summary
+                key={query.course}
+                students={projected.students}
+                projected={projected}
+                scope={
+                  demo
+                    ? language === 'ar'
+                      ? 'دورة تجريبية'
+                      : 'Sample course'
+                    : ledger.courses.find((course) => course.id === query.course)?.name ||
+                      (language === 'ar'
+                        ? '\u0627\u0644\u0633\u062c\u0644 \u0627\u0644\u0633\u0627\u0628\u0642 / \u0628\u0644\u0627 \u062f\u0648\u0631\u0629'
+                        : 'Previous / no course')
+                }
+              />
+            )}
             {tab === 'history' && administrator && query.course && (
               <CourseSections courseId={query.course} ar={language === 'ar'} current="history" />
             )}
@@ -698,7 +730,6 @@ function StudentDetails({
   courses,
   enrollments,
   courseId,
-  defaultCourse,
   refresh,
   busy,
   canWrite,
@@ -711,7 +742,6 @@ function StudentDetails({
   courses: import('../shared/neon').Course[]
   enrollments: import('../shared/neon').Enrollment[]
   courseId: string
-  defaultCourse: string
   refresh?: () => Promise<void>
   busy: boolean
   canWrite: boolean
@@ -845,7 +875,9 @@ function StudentDetails({
       {eligible && canWrite && (
         <button
           className="primary"
-          onClick={() => navigateNotebook('attendance', defaultCourse, { q: '', group: '' })}
+          onClick={() =>
+            navigateNotebook('attendance', courseId, { q: '', group: '', student: '' })
+          }
         >
           {ar ? 'تسجيل الحضور' : 'Take attendance'}
         </button>
@@ -1676,25 +1708,39 @@ function StudentEditor({ student, save }: { student: Student; save: Save }) {
   )
 }
 
-function Summary({ students, projected }: { students: Student[]; projected: Projection }) {
-  const { t, language } = useLanguage()
-  const ids = new Set(students.map((student) => student.studentId))
-  const records = projected.attendance.filter(({ value }) => ids.has(value.studentId))
+function Summary({
+  students,
+  projected,
+  scope,
+}: {
+  students: Student[]
+  projected: Projection
+  scope: string
+}) {
+  const { t } = useLanguage()
+  const totals = new Map(
+    students.map((student) => [student.studentId, { present: 0, absent: 0, excused: 0, notes: 0 }]),
+  )
+  const records = projected.attendance.filter(({ value }) => totals.has(value.studentId))
+  for (const { value } of records) {
+    const counts = totals.get(value.studentId)
+    if (counts) counts[value.status]++
+  }
+  for (const { value } of projected.notes) {
+    const counts = totals.get(value.studentId)
+    if (counts) counts.notes++
+  }
   const summaryTable = useDataTable('summary', students, [
     { id: 'student', label: t('Student'), value: (student) => student.name },
     ...statuses.map((status) => ({
       id: status,
       label: t(status),
-      value: (student: Student) =>
-        records.filter(
-          ({ value }) => value.studentId === student.studentId && value.status === status,
-        ).length,
+      value: (student: Student) => totals.get(student.studentId)?.[status] ?? 0,
     })),
     {
       id: 'notes',
       label: t('Notes'),
-      value: (student) =>
-        projected.notes.filter(({ value }) => value.studentId === student.studentId).length,
+      value: (student) => totals.get(student.studentId)?.notes ?? 0,
     },
   ])
   return (
@@ -1702,53 +1748,8 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
       <TableToolbar model={summaryTable} className="mb-6">
         <h2 className="title">{t('Attendance overview')}</h2>
       </TableToolbar>
-      <p className="muted mb-5">
-        {language === 'ar'
-          ? 'النسب من جلسات الطلاب المسجلة؛ لا تُحتسب الأيام غير المحددة.'
-          : 'Percentages of recorded student-sessions; unmarked days are excluded.'}
-      </p>
-      {records.length === 0 ? (
-        <p className="muted mb-8">
-          {language === 'ar' ? 'لا توجد سجلات حضور بعد.' : 'No attendance records yet.'}
-        </p>
-      ) : (
-        <div className="mb-8 space-y-3" aria-label={t('Attendance totals')}>
-          {statuses.map((status) => {
-            const count = records.filter(({ value }) => value.status === status).length
-            const percentage = (count / records.length) * 100
-            const formatted = new Intl.NumberFormat(language, {
-              style: 'percent',
-              minimumFractionDigits: 1,
-              maximumFractionDigits: 1,
-            }).format(count / records.length)
-            return (
-              <div
-                key={status}
-                className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(5ch,auto)] items-center gap-3"
-              >
-                <span>{t(status)}</span>
-                <div
-                  role="meter"
-                  aria-label={t(status)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Number(percentage.toFixed(1))}
-                  aria-valuetext={formatted}
-                  className="h-3 overflow-hidden rounded-full bg-teal-100"
-                >
-                  <div
-                    className="h-full rounded-full bg-[#007d8d]"
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
-                <strong className="text-end" dir="auto">
-                  {formatted}
-                </strong>
-              </div>
-            )
-          })}
-        </div>
-      )}
+      <AttendanceChartExport students={students} attendance={records} scope={scope} />
+      <SummaryInsights students={students} records={records} />
 
       <div
         className="overflow-x-auto"
@@ -1766,19 +1767,11 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
                 </th>
                 {statuses.map((status) => (
                   <td data-label={t(status)} key={status} className="p-3 text-center">
-                    {
-                      records.filter(
-                        ({ value }) =>
-                          value.studentId === student.studentId && value.status === status,
-                      ).length
-                    }
+                    {totals.get(student.studentId)?.[status] ?? 0}
                   </td>
                 ))}
                 <td data-label={t('Notes')} className="p-3 text-center">
-                  {
-                    projected.notes.filter(({ value }) => value.studentId === student.studentId)
-                      .length
-                  }
+                  {totals.get(student.studentId)?.notes ?? 0}
                 </td>
               </tr>
             ))}

@@ -1,0 +1,32 @@
+.summary-insights-meter {
+  appearance: none;
+  height: 0.75rem;
+}
+
+.summary-insights-meter::-webkit-meter-bar {
+  background: #cbe8e8;
+  border: 0;
+  border-radius: 999px;
+}
+
+.summary-insights-meter::-webkit-meter-optimum-value {
+  background: #007d8d;
+  border-radius: 999px;
+}
+
+.summary-insights-meter::-moz-meter-bar {
+  background: #007d8d;
+  border-radius: 999px;
+}
+
+:root[data-theme='dark'] .summary-insights-meter::-webkit-meter-bar {
+  background: #254d51;
+}
+
+:root[data-theme='dark'] .summary-insights-meter::-webkit-meter-optimum-value {
+  background: #5dd2d2;
+}
+
+:root[data-theme='dark'] .summary-insights-meter::-moz-meter-bar {
+  background: #5dd2d2;
+}

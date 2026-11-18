@@ -149,7 +149,9 @@ export function useCoursePreference(
   function chooseDefault(course: string) {
     if (accountId) saveCoursePreference(accountId, course)
     setDefaultCourse(course)
-    setQuery({ course: course || 'none', student: '' }, true)
+    const scope = course || 'none'
+    if (new URLSearchParams(window.location.search).get('course') !== scope)
+      setQuery({ course: scope, student: '' }, true)
   }
   return { ready, defaultCourse, chooseDefault }
 }
