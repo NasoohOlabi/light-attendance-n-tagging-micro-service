@@ -58,7 +58,19 @@ The Courses and Manage students titles share the Sort and Filter toolbar used th
 
 Stacked grade records have consistent inset padding and separation. Theory and Practical inputs fill their paired columns; Notes, Result and Actions each span the record width. Labels and touch-sized controls remain inside the record in both languages and palettes.
 
-Administrators can export an Excel workbook from Grades. On phones, use the download icon labelled Export Excel. It includes saved course status and thresholds, every enrollment including withdrawn memberships and inactive roster students, saved scores and projected course attendance for all dates. Inactive roster students are exported even though they are not shown on Grades. Zero scores remain numeric and missing scores and attendance rates remain blank. Result follows the latest saved administrator decision, or the calculated result when no override applies. The export excludes notes and decision history and is disabled while grade or threshold edits are unsaved. Sort and other page filters do not change its rows.
+From **Grades**, administrators can open **Export Excel**, choose a report and select **Download Excel**. On phones the download icon opens the same options.
+
+| Report                   | Default contents                                                                                |
+| ------------------------ | ----------------------------------------------------------------------------------------------- |
+| Full workbook            | Course status and thresholds, all memberships, saved exam scores, attendance totals and results |
+| Grades                   | Student names, saved theory and practical scores, and effective results                         |
+| Student details          | Names, course level and enrollment status                                                       |
+| Daily attendance records | One row per recorded student and date, showing the effective mark after corrections             |
+| Exam participants        | Students with a saved theory or practical score, including a score of zero                      |
+
+Open **Advanced options** to pick columns and filter by student, course level, enrollment status, recorded exam scores or saved result. Daily attendance also supports inclusive dates and attendance status. For example, choose **Daily attendance records**, select **Absent**, then set the date range to download absences for that period. The matching-row count updates before downloading. Contact fields are available by explicit column selection.
+
+Course downloads include withdrawn memberships and inactive roster students by default. Grade results reflect saved administrator decisions and full-course attendance. Missing scores stay blank. Exam participation is inferred from saved scores because the course has no separate exam attendance register. Notes and decision history are excluded. Save any grade or threshold edits before exporting. Grades page sorting and filters do not change export selections.
 
 Light and dark appearance use matching readable red/green grade indicators and row tints. Color meanings are the same in both palettes.
 

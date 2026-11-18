@@ -1,0 +1,57 @@
+﻿.course-export-dialog {
+  width: min(40rem, calc(100% - 2rem));
+  padding: 1.25rem;
+}
+.course-export-dialog h2 {
+  margin: 0 0 1rem;
+}
+.course-export-dialog form {
+  gap: 1rem;
+}
+.course-export-dialog p {
+  margin: 0;
+}
+.course-export-dialog summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.course-export-dialog summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-inline-end: 0.5rem;
+}
+.course-export-dialog details[open] summary::before {
+  content: '▾';
+}
+.course-export-dialog select,
+.course-export-dialog input[type='date'],
+.course-export-dialog button {
+  min-height: 44px;
+  max-width: 100%;
+}
+.export-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 1rem;
+  padding-block: 0.5rem;
+}
+.export-columns {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: 0;
+}
+.course-export-dialog .export-column {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+.export-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
