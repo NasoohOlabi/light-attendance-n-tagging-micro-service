@@ -1,54 +1,7 @@
 import { useState, useSyncExternalStore, type MouseEvent } from 'react'
-import { useLanguage } from './i18n'
+import { useLanguage } from './useLanguage'
+import { installAvailability, subscribeInstall, takeInstallPrompt } from './installPrompt'
 import './install.css'
-
-type InstallPrompt = Event & { prompt: () => unknown; userChoice: unknown }
-let promptEvent: InstallPrompt | null = null
-let installed = false
-let initialized = false
-const listeners = new Set<() => void>()
-
-function notify() {
-  listeners.forEach((listener) => listener())
-}
-
-function isInstallPrompt(event: Event): event is InstallPrompt {
-  return 'prompt' in event && typeof event.prompt === 'function' && 'userChoice' in event
-}
-
-function isStandalone() {
-  return (
-    installed ||
-    window.matchMedia('(display-mode: standalone)').matches ||
-    ('standalone' in navigator && navigator.standalone === true)
-  )
-}
-
-export function initializeInstallPrompt() {
-  if (initialized) return
-  initialized = true
-  window.addEventListener('beforeinstallprompt', (event) => {
-    if (!isInstallPrompt(event)) return
-    event.preventDefault()
-    promptEvent = event
-    notify()
-  })
-  window.addEventListener('appinstalled', () => {
-    installed = true
-    promptEvent = null
-    notify()
-  })
-  window.matchMedia('(display-mode: standalone)').addEventListener('change', notify)
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener)
-  return () => listeners.delete(listener)
-}
-
-function snapshot() {
-  return isStandalone() ? 'installed' : promptEvent ? 'ready' : 'instructions'
-}
 
 const copy = {
   en: {
@@ -84,7 +37,7 @@ function isAppleMobile() {
 export function InstallApp() {
   const { language } = useLanguage()
   const text = copy[language]
-  const availability = useSyncExternalStore(subscribe, snapshot)
+  const availability = useSyncExternalStore(subscribeInstall, installAvailability)
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<'dismissed' | 'accepted' | 'error' | null>(null)
   const [busy, setBusy] = useState(false)
@@ -93,18 +46,16 @@ export function InstallApp() {
 
   async function install(event: MouseEvent<HTMLButtonElement>) {
     if (!event.nativeEvent.isTrusted) return
-    const current = promptEvent
+    const current = takeInstallPrompt()
     if (!current) {
       setOpen(true)
       return
     }
-    promptEvent = null
     setBusy(true)
     setStatus(null)
     try {
       // Invoke the native prompt within the click before awaiting anything.
       const result = current.prompt()
-      notify()
       await result
       const choice = await current.userChoice
       if (typeof choice === 'object' && choice !== null && 'outcome' in choice) {
@@ -112,7 +63,6 @@ export function InstallApp() {
         else if (choice.outcome === 'dismissed') setStatus('dismissed')
       }
     } catch {
-      notify()
       setStatus('error')
     } finally {
       setBusy(false)

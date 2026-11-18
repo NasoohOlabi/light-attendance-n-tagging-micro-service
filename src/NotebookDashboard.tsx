@@ -1,5 +1,5 @@
 import { statuses, type Attendance, type Student } from '../shared/ledger'
-import { useLanguage } from './i18n'
+import { useLanguage } from './useLanguage'
 import { setQuery } from './queryState'
 
 type ProjectedAttendance = { value: Attendance }[]

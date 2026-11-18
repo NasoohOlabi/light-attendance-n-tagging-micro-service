@@ -280,6 +280,23 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await addNote.click()
   await expect(dialog.getByText('Synthetic attendance note')).toBeVisible()
   await page.keyboard.press('Escape')
+  let releasePreviousRequest = () => {}
+  const previousRequest = new Promise<void>((resolve) => {
+    releasePreviousRequest = resolve
+  })
+  await page.route(
+    `${api}/notebook`,
+    async (route) => {
+      await previousRequest
+      await route.fulfill({ status: 403, json: { error: 'Previous account is no longer active' } })
+    },
+    { times: 1 },
+  )
+  await page.getByRole('navigation').getByRole('button', { name: 'Students' }).click()
+  const refreshing = page.waitForRequest(`${api}/notebook`)
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click()
+  await refreshing
+  await clickAccountAction(page, 'Profile settings')
   await clickAccountAction(page, 'Sign out')
   await expect(page.locator('.wartaq-home h1')).toBeVisible()
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -288,6 +305,11 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByRole('button', { name: 'Take attendance' }).click()
   await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseId)
+  const denied = page.waitForResponse(
+    (response) => response.url() === `${api}/notebook` && response.status() === 403,
+  )
+  releasePreviousRequest()
+  await denied
   await expect(page.getByText('Beta Student')).toBeVisible()
   await expect(page.getByText('Alpha Student')).toHaveCount(0)
   await expect(page.getByLabel('Attendance for Beta Student')).toBeDisabled()
@@ -549,6 +571,24 @@ async function mockTeacher(page: Page, post: () => Promise<void>) {
   await expect(page.getByLabel('Attendance for Alpha Student')).toBeVisible()
 }
 
+test('unconfirmed sign-out hides private records and offers a retry', async ({ page }) => {
+  await mockTeacher(page, async () => {})
+  let attempts = 0
+  await page.route(`${auth}/sign-out`, (route) => {
+    attempts++
+    return attempts === 1
+      ? route.fulfill({ status: 503, json: { message: 'Service unavailable' } })
+      : route.fulfill({ json: { success: true } })
+  })
+  await clickAccountAction(page, 'Sign out')
+  await expect(page.getByRole('alert')).toContainText('Could not confirm sign-out')
+  await expect(page.getByText('Alpha Student')).toHaveCount(0)
+  await expect(page.locator('.wartaq-home')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await expect(page.locator('.wartaq-home h1')).toBeVisible()
+  expect(attempts).toBe(2)
+})
+
 async function saveAttendance(page: Page) {
   await page.getByLabel('Attendance for Alpha Student').selectOption('present')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
@@ -584,10 +624,37 @@ test('old pending batches block authenticated writes', async ({ page }) => {
   expect(posts).toBe(0)
 })
 
+test('foreign pending storage also blocks retry of a restored batch', async ({ page }) => {
+  let posts = 0
+  await mockTeacher(page, async () => {})
+  await page.route(`${api}/events`, (route) => {
+    posts++
+    return route.fulfill({ status: 503, json: { error: 'Synthetic response loss' } })
+  })
+  await saveAttendance(page)
+  await expect(page.getByText('1 records awaiting confirmation')).toBeVisible()
+  await page.evaluate(() => localStorage.setItem('halaqa-pending-v1:old', 'pending'))
+  await page.reload()
+  await expect(page.getByRole('alert').first()).toContainText('Copy the pending batch')
+  await expect(page.getByRole('button', { name: 'Retry pending batch' })).toBeDisabled()
+  expect(posts).toBe(1)
+})
+
+test('a foreign batch appearing after load blocks a new save', async ({ page }) => {
+  let posts = 0
+  await mockTeacher(page, async () => {
+    posts++
+  })
+  await page.evaluate(() => localStorage.setItem('halaqa-pending-v1:old', 'pending'))
+  await saveAttendance(page)
+  await expect(page.getByRole('alert').first()).toContainText('Copy the pending batch')
+  expect(posts).toBe(0)
+})
+
 test('corrupted pending storage blocks authenticated writes', async ({ page }) => {
   let posts = 0
   await page.addInitScript(
-    (id) => localStorage.setItem(`halaqa-pending-neon:${location.origin}:${id}`, 'invalid'),
+    (id) => localStorage.setItem(`halaqa-pending-neon:${location.origin}:${id}`, ''),
     users[0].id,
   )
   await mockTeacher(page, async () => {
@@ -619,6 +686,57 @@ test('a second tab cannot send while a save is in flight', async ({ context, pag
   } finally {
     release()
   }
+})
+
+test('a legacy account lock prevents a new client from sending', async ({ context, page }) => {
+  let posts = 0
+  const oldTab = await context.newPage()
+  try {
+    await mockTeacher(page, async () => {
+      posts++
+    })
+    await oldTab.goto(origin)
+    await oldTab.evaluate(async (id) => {
+      await new Promise<void>((acquired) => {
+        void navigator.locks.request(`halaqa-pending-neon:${location.origin}:${id}`, async () => {
+          acquired()
+          await new Promise<void>((release) =>
+            window.addEventListener('release-test-lock', () => release(), { once: true }),
+          )
+        })
+      })
+    }, users[0].id)
+    await saveAttendance(page)
+    await expect(page.getByRole('alert')).toContainText('Another tab is saving')
+    expect(posts).toBe(0)
+  } finally {
+    await oldTab.evaluate(() => window.dispatchEvent(new Event('release-test-lock')))
+    await oldTab.close()
+  }
+})
+
+test('a stale retry cannot recreate a batch cleared in another tab', async ({ page }) => {
+  let posts = 0
+  await mockTeacher(page, async () => {})
+  await page.route(`${api}/events`, (route) => {
+    posts++
+    return route.fulfill({ status: 503, json: { error: 'Synthetic response loss' } })
+  })
+  await saveAttendance(page)
+  await expect(page.getByText('1 records awaiting confirmation')).toBeVisible()
+  await page.evaluate(
+    (id) => localStorage.removeItem(`halaqa-pending-neon:${location.origin}:${id}`),
+    users[0].id,
+  )
+  await page.getByRole('button', { name: 'Retry pending batch' }).click()
+  await expect(page.getByRole('alert').first()).toContainText('Reload before retrying')
+  expect(posts).toBe(1)
+  expect(
+    await page.evaluate(
+      (id) => localStorage.getItem(`halaqa-pending-neon:${location.origin}:${id}`),
+      users[0].id,
+    ),
+  ).toBeNull()
 })
 
 test('malformed notebook snapshots block saving', async ({ page }) => {

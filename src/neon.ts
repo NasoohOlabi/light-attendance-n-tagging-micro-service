@@ -1,11 +1,6 @@
 ﻿import { createAuthClient } from 'better-auth/react'
 import { z } from 'zod'
-import {
-  neonAccountSchema,
-  neonBatchSchema,
-  neonSnapshotSchema,
-  neonTeacherSchema,
-} from '../shared/neon'
+import { neonAccountSchema, neonBatchSchema, neonSnapshotSchema } from '../shared/neon'
 import type { LedgerEvent } from '../shared/ledger'
 
 export const apiUrl = window.location.origin
@@ -23,13 +18,23 @@ export class NeonRequestError extends Error {
   }
 }
 
+export class AccessDeniedEvent extends Event {
+  static readonly eventName = 'neon-access-denied'
+
+  constructor(
+    readonly userId: string,
+    readonly status: 401 | 403,
+  ) {
+    super(AccessDeniedEvent.eventName)
+  }
+}
+
 export async function request(
   path: string,
   userId: string,
   body?: unknown,
   reportDenial = true,
 ): Promise<unknown> {
-  if (!authClient || !apiUrl) throw new Error('App configuration is unavailable.')
   const session = await authClient.getSession({
     fetchOptions: { signal: AbortSignal.timeout(15000) },
   })
@@ -46,10 +51,10 @@ export async function request(
   })
   if (!response.ok) {
     if (reportDenial && (response.status === 401 || response.status === 403))
-      window.dispatchEvent(new CustomEvent('neon-access-denied', { detail: response.status }))
+      window.dispatchEvent(new AccessDeniedEvent(userId, response.status))
     throw new NeonRequestError(response.status)
   }
-  return response.json() as Promise<unknown>
+  return response.json()
 }
 export type InvitationProfile = z.infer<
   typeof import('../shared/invitations').invitationProfileSchema
@@ -61,14 +66,6 @@ export async function getAccount(userId: string) {
     .parse(await request('/api/me', userId, undefined, false)).account
 }
 
-export async function getTeacher(userId: string) {
-  try {
-    return z.object({ teacher: neonTeacherSchema }).parse(await request('/api/me', userId)).teacher
-  } catch (cause) {
-    if (cause instanceof NeonRequestError) throw cause
-    throw new Error('The request failed. Please try again.')
-  }
-}
 export async function getNotebook(userId: string) {
   try {
     return neonSnapshotSchema.parse(await request('/api/notebook', userId))

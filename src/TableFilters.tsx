@@ -1,6 +1,6 @@
 import { Filter, Plus, RotateCcw, X } from 'lucide-react'
 import { useId, useState } from 'react'
-import type { useDataTable } from './DataTable'
+import type { useDataTable } from './useDataTable'
 
 export function TableFilters<T>({
   model,

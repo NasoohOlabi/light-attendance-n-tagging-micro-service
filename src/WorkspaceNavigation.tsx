@@ -1,6 +1,6 @@
 import { ProfileMenu, type Profile } from './ProfileMenu'
 import { BookOpen, House } from 'lucide-react'
-import { useLanguage, type TranslationKey } from './i18n'
+import { useLanguage, type TranslationKey } from './useLanguage'
 import { navigateNotebook, setQuery, useQueryState, type Tab } from './queryState'
 import { WartaqIcon, WartaqLogo } from './brand/components'
 

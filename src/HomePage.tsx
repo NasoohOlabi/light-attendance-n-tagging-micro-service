@@ -1,5 +1,6 @@
 ﻿import { WartaqLogo } from './brand/components'
-import { LanguageSwitch, useLanguage } from './i18n'
+import { LanguageSwitch } from './i18n'
+import { useLanguage } from './useLanguage'
 import './home.css'
 
 const copy = {

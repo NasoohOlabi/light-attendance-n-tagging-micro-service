@@ -1787,3 +1787,11 @@ The full release gate passed at the original base with 126 browser cases and 36 
 The repository audit found two conversions through JavaScript that could lose PostgreSQL precision. The events API now checks retry identity against the stored timestamp and JSONB payload. Transfer exports event sequence numbers as decimal strings, accepts safe legacy numbers and locks all destination tables before checking emptiness. The import advances the identity sequence after row comparison.
 
 All 41 Bun tests passed with the five integration suites enabled against disposable local PostgreSQL. Cases cover equivalent timestamp formats, distinct microseconds, conflicting duplicate IDs rolling back a batch, and backup versions 1–12. A restored sequence of 9007199254740993 retained its exact value. Production data and migrations were outside these checks.
+
+## 2026-11-18 08:17 Asia/Damascus (UTC+03:00) - Audit notebook sessions, pending delivery and course forms
+
+The audit found that a tab could resend a cleared batch, foreign pending storage could appear between loading the notebook and saving, and a create-course link could reuse an existing course ID. Pending operations now recheck storage under both the browser-wide and older per-account locks. Course creation keeps one ID per form and starts fresh on a new visit. A failed sign-out now hides the notebook and offers a retry. A delayed denial applies only to the account that issued the request.
+
+The public shell now loads the workspace on demand. The initial minified JavaScript entry fell from 685 kB to 353 kB. Component modules, table state, the install prompt and language state have separate owners. Course search ranks the original roster rows directly.
+
+Focused desktop and emulated-phone checks passed for sign-out failure, stale responses after switching accounts and empty corrupt storage. The first full browser run reached the 30-second deadline in the mobile course scenario. Its creation, membership and grades/history paths now use independent fixtures and all four mobile course tests passed with their original time limits. These checks used synthetic accounts.

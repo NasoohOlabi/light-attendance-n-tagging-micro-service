@@ -1,7 +1,8 @@
 import { RowActions } from './RowActions'
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
-import { TableHeader, TableToolbar, useDataTable } from './DataTable'
+import { TableHeader, TableToolbar } from './DataTable'
+import { useDataTable } from './useDataTable'
 import { useEffect, useRef, useState } from 'react'
 import { Download, Save } from 'lucide-react'
 import {
@@ -14,13 +15,45 @@ import { projectEvents, type LedgerEvent } from '../shared/ledger'
 import { courseAttendance, savedGradeResult } from '../shared/courseGrading'
 import { downloadCourseWorkbook } from './courseExport'
 import { request } from './neon'
-import { useLanguage } from './i18n'
+import { useLanguage } from './useLanguage'
 import { setQuery, useQueryState } from './queryState'
 import { rankStudents } from './studentSearch'
 
 type Board = ReturnType<typeof neonAdminBoardSchema.parse>
 
 type Draft = { id: string; level: string; teacherId: string }
+
+function CourseForm({
+  course,
+  ar,
+  busy,
+  submit,
+}: {
+  course?: Course
+  ar: boolean
+  busy: boolean
+  submit: (id: string, name: string) => Promise<void>
+}) {
+  const [id] = useState(() => course?.id ?? crypto.randomUUID())
+  return (
+    <form
+      className="flex flex-wrap items-end gap-3"
+      onSubmit={(event) => {
+        event.preventDefault()
+        const name = new FormData(event.currentTarget).get('name')
+        if (typeof name === 'string') void submit(id, name)
+      }}
+    >
+      <label>
+        {ar ? 'اسم الدورة' : 'Course name'}
+        <input name="name" required maxLength={200} defaultValue={course?.name ?? ''} />
+      </label>
+      <button className="primary" disabled={busy}>
+        {ar ? 'حفظ الدورة' : 'Save course'}
+      </button>
+    </form>
+  )
+}
 
 export function Courses({
   userId,
@@ -47,8 +80,6 @@ export function Courses({
   const course = courses.find((item) => item.id === query.course)
   const [board, setBoard] = useState<Board | null>(null)
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
-  const [newCourseId, setNewCourseId] = useState(() => crypto.randomUUID())
-  const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -65,9 +96,6 @@ export function Courses({
       cancelled = true
     }
   }, [userId])
-  useEffect(() => {
-    setName(course?.name ?? '')
-  }, [course?.id, course?.name, query.courseView])
   async function submit(path: string, body: unknown) {
     setBusy(true)
     setError('')
@@ -90,15 +118,7 @@ export function Courses({
   const go = (courseView: string, courseId = query.course) =>
     setQuery({ courseView, course: courseId, q: '' }, true)
   const courseEntries = enrollments.filter((item) => item.courseId === query.course)
-  const rankedIds = board
-    ? rankStudents(
-        board.students.map((student) => ({ ...student, kind: 'student' })),
-        query.q,
-      ).map((student) => student.studentId)
-    : []
-  const matching = rankedIds.flatMap(
-    (id) => board?.students.filter((student) => student.studentId === id) ?? [],
-  )
+  const matching = board ? rankStudents(board.students, query.q) : []
   const courseTable = useDataTable('courses', courses, [
     { id: 'name', label: ar ? 'الدورة' : 'Course', value: (item) => item.name },
     {
@@ -174,13 +194,7 @@ export function Courses({
       {saved && <p role="status">{ar ? 'تم الحفظ' : 'Saved'}</p>}
       {!query.courseView && (
         <>
-          <button
-            className="primary"
-            onClick={() => {
-              setNewCourseId(crypto.randomUUID())
-              go('create', '')
-            }}
-          >
+          <button className="primary" onClick={() => go('create', '')}>
             {ar ? 'إنشاء دورة' : 'Create course'}
           </button>
           {!courses.length && <p>{ar ? 'لا توجد دورات بعد.' : 'No courses yet.'}</p>}
@@ -286,30 +300,15 @@ export function Courses({
                 ? 'تعديل الدورة'
                 : 'Edit course'}
           </h1>
-          <form
-            className="flex flex-wrap items-end gap-3"
-            onSubmit={(event) => {
-              event.preventDefault()
-              void submit('/api/admin/courses', { id: course?.id ?? newCourseId, name }).then(
-                (ok) => {
-                  if (ok) go('', '')
-                },
-              )
+          <CourseForm
+            key={query.courseView === 'create' ? 'create' : course?.id}
+            course={query.courseView === 'edit' ? course : undefined}
+            ar={ar}
+            busy={busy}
+            submit={async (id, name) => {
+              if (await submit('/api/admin/courses', { id, name })) go('', '')
             }}
-          >
-            <label>
-              {ar ? 'اسم الدورة' : 'Course name'}
-              <input
-                required
-                maxLength={200}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </label>
-            <button className="primary" disabled={busy}>
-              {ar ? 'حفظ الدورة' : 'Save course'}
-            </button>
-          </form>
+          />
         </>
       )}
       {course && (query.courseView === 'students' || query.courseView === 'grades') && (

@@ -1,9 +1,11 @@
-import { LanguageSwitch, useLanguage } from './i18n'
+import { LanguageSwitch } from './i18n'
+import { useLanguage } from './useLanguage'
 import { useEffect, useRef, useState } from 'react'
 import type { NeonAccount } from '../shared/neon'
 import { z } from 'zod'
-import { authClient, getAccount, NeonRequestError, request } from './neon'
+import { AccessDeniedEvent, authClient, getAccount, NeonRequestError, request } from './neon'
 import { InvitationProfileForm } from './InvitationProfile'
+import { WorkspaceLoading } from './WorkspaceLoading'
 import type { Profile } from './ProfileMenu'
 import { WartaqLogo } from './brand/components'
 
@@ -36,38 +38,15 @@ export function NeonAuth({
     profile: Profile,
   ) => React.ReactNode
 }) {
-  if (!authClient) return null
-  return (
-    <ConfiguredAuth samples={samples} onSignOut={onSignOut}>
-      {children}
-    </ConfiguredAuth>
-  )
-}
-
-function ConfiguredAuth({
-  children,
-  samples,
-  onSignOut,
-}: {
-  onSignOut: () => void
-  samples: React.ReactNode
-  children: (
-    userId: string,
-    teacher: NeonAccount,
-    signOut: () => void,
-    profile: Profile,
-  ) => React.ReactNode
-}) {
   const { t, errorMessage, language } = useLanguage()
-  // The parent only renders this component when the client exists.
-  const client = authClient!
-  const session = client.useSession()
+  const session = authClient.useSession()
   const userId = session.data?.user.id
   const [account, setAccount] = useState<
     | { kind: 'ready'; userId: string; value: NeonAccount }
     | { kind: 'denied' | 'error'; userId: string; message: string }
     | null
   >(null)
+  const [logout, setLogout] = useState<'idle' | 'pending' | 'failed'>('idle')
   const [accountAttempt, setAccountAttempt] = useState(0)
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
   const [usernameSignIn, setUsernameSignIn] = useState(
@@ -89,9 +68,7 @@ function ConfiguredAuth({
     const timer = window.setTimeout(() => setStalled(true), 10000)
     return () => window.clearTimeout(timer)
   }, [session.isPending, retrying, attempt])
-  useEffect(() => {
-    if (!session.isPending && !retrying) setStalled(false)
-  }, [session.isPending, retrying])
+  if (stalled && !session.isPending && !retrying) setStalled(false)
   useEffect(() => {
     let cancelled = false
     let timer = 0
@@ -128,22 +105,42 @@ function ConfiguredAuth({
   }, [userId, accountAttempt])
   useEffect(() => {
     const denied = (event: Event) => {
-      if (userId && event instanceof CustomEvent) {
+      if (event instanceof AccessDeniedEvent && event.userId === userId) {
         setAccount({
           userId,
           kind: 'denied',
-          message: new NeonRequestError(event.detail === 401 ? 401 : 403).message,
+          message: new NeonRequestError(event.status).message,
         })
       }
     }
-    window.addEventListener('neon-access-denied', denied)
-    return () => window.removeEventListener('neon-access-denied', denied)
+    window.addEventListener(AccessDeniedEvent.eventName, denied)
+    return () => window.removeEventListener(AccessDeniedEvent.eventName, denied)
   }, [userId])
-  const signOut = () => {
-    setAccount(null)
-    void client.signOut()
-    onSignOut()
+  const signOut = async () => {
+    setLogout('pending')
+    try {
+      const result = await authClient.signOut({
+        fetchOptions: { signal: AbortSignal.timeout(15000) },
+      })
+      if (result.error) {
+        setLogout('failed')
+        return
+      }
+      onSignOut()
+    } catch {
+      setLogout('failed')
+    }
   }
+  if (logout === 'pending') return <WorkspaceLoading message={t('Signing out…')} />
+  if (logout === 'failed')
+    return (
+      <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
+        <p role="alert">{t('Could not confirm sign-out. Please try again.')}</p>
+        <button className="secondary" onClick={signOut}>
+          {t('Sign out')}
+        </button>
+      </main>
+    )
   if ((session.isPending || retrying) && !stalled)
     return <WorkspaceLoading message={t('Loading your session…')} />
   if (session.error || stalled)
@@ -199,7 +196,7 @@ function ConfiguredAuth({
       await request('/api/me/invitation-profile', userId, details, false)
       if (details.newPassword) {
         setAccount(null)
-        await client.signOut()
+        await authClient.signOut()
         setUsername(details.username)
         setPassword('')
         setUsernameSignIn(true)
@@ -241,7 +238,10 @@ function ConfiguredAuth({
       name: session.data?.user.name ?? '',
       image: session.data?.user.image ?? null,
       update: async (name, image) => {
-        const result = await client.updateUser({ name, ...(image === undefined ? {} : { image }) })
+        const result = await authClient.updateUser({
+          name,
+          ...(image === undefined ? {} : { image }),
+        })
         if (result.error) throw new Error('Could not save profile')
         await session.refetch()
       },
@@ -278,8 +278,8 @@ function ConfiguredAuth({
             }
             const result =
               mode === 'sign-in'
-                ? await client.signIn.email({ email, password })
-                : await client.signUp.email({ name, email, password })
+                ? await authClient.signIn.email({ email, password })
+                : await authClient.signUp.email({ name, email, password })
             if (result.error)
               setError(
                 mode === 'sign-in'
@@ -409,35 +409,5 @@ function ConfiguredAuth({
       </form>
       {samples}
     </main>
-  )
-}
-
-export function WorkspaceLoading({ message }: { message: string }) {
-  return (
-    <div className="workspace-loading" aria-busy="true">
-      <aside aria-hidden="true">
-        <div className="loading-brand">
-          <WartaqLogo />
-        </div>
-        <div />
-        <div />
-        <div />
-        <div />
-      </aside>
-      <main id="main-content" tabIndex={-1}>
-        <div className="loading-mobile-brand" aria-hidden="true">
-          <WartaqLogo />
-        </div>
-        <p role="status">{message}</p>
-        <div className="loading-line" aria-hidden="true" />
-        <div className="loading-cards" aria-hidden="true">
-          <div />
-          <div />
-          <div />
-        </div>
-        <div className="loading-panel" aria-hidden="true" />
-        <div className="loading-mobile-nav" aria-hidden="true" />
-      </main>
-    </div>
   )
 }

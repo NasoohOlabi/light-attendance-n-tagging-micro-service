@@ -1,4 +1,4 @@
-import { useLanguage } from './i18n'
+import { useLanguage } from './useLanguage'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 import {
@@ -12,6 +12,28 @@ import { assignedEvents, validateAssignedPayloads } from '../shared/roster'
 import { demoEvents } from './demo'
 import { apiUrl, getNotebook, postEvents } from './neon'
 import type { Course, Enrollment, NeonTeacher, NeonRosterStudent } from '../shared/neon'
+
+const foreignPendingMessage =
+  'A pending batch belongs to another account or an old link. Copy the pending batch from browser storage and contact your administrator to reconcile it before saving.'
+const pendingLock = 'halaqa-pending'
+
+function hasForeignPending(key: string) {
+  return Object.keys(localStorage).some(
+    (item) =>
+      (item.startsWith('halaqa-pending-v1:') || item.startsWith('halaqa-pending-neon:')) &&
+      item !== key,
+  )
+}
+
+async function withPendingLocks<T>(key: string, run: () => Promise<T> | T): Promise<T> {
+  return navigator.locks.request(pendingLock, { ifAvailable: true }, async (globalLock) => {
+    if (!globalLock) throw new Error('Another tab is saving this account. Wait and try again.')
+    return navigator.locks.request(key, { ifAvailable: true }, async (accountLock) => {
+      if (!accountLock) throw new Error('Another tab is saving this account. Wait and try again.')
+      return run()
+    })
+  })
+}
 
 export function useLedger(
   demo: boolean,
@@ -42,19 +64,13 @@ export function useLedger(
   useEffect(() => {
     if (!neonUserId) return
     try {
-      const otherKey = Object.keys(localStorage).find(
-        (item) =>
-          (item.startsWith('halaqa-pending-v1:') || item.startsWith('halaqa-pending-neon:')) &&
-          item !== key,
-      )
+      const otherKey = hasForeignPending(key)
       const stored = localStorage.getItem(key)
       // Restore the external pending batch when this access session mounts.
       // oxlint-disable-next-line react/set-state-in-effect
-      if (stored) setPending(z.array(eventSchema).min(1).parse(JSON.parse(stored)))
+      if (stored !== null) setPending(z.array(eventSchema).min(1).parse(JSON.parse(stored)))
       if (otherKey) {
-        setStorageBlocked(
-          'A pending batch belongs to another account or an old link. Copy the pending batch from browser storage and contact your administrator to reconcile it before saving.',
-        )
+        setStorageBlocked(foreignPendingMessage)
       }
     } catch {
       setStorageBlocked(
@@ -100,7 +116,7 @@ export function useLedger(
     }
   }, [neonUserId])
 
-  async function send(batch: LedgerEvent[]): Promise<boolean> {
+  async function send(batch: LedgerEvent[], retry = false): Promise<boolean> {
     if (locked.current || !batch.length) return false
     locked.current = true
     setBusy(true)
@@ -115,26 +131,37 @@ export function useLedger(
           )
           return false
         }
-        const saved = await navigator.locks.request(key, { ifAvailable: true }, async (lock) => {
-          if (!lock)
-            throw new Error(
-              'Another tab is saving this account. Wait for it to finish, then refresh and try again. No write was sent from this tab.',
-            )
+        const saved = await withPendingLocks(key, async () => {
+          let foreign: boolean
+          let existing: string | null
           try {
-            const existing = localStorage.getItem(key)
-            if (existing && existing !== JSON.stringify(batch)) {
-              const reason =
-                'Another pending batch exists for this account. Reload and reconcile it before saving.'
-              setStorageBlocked(reason)
-              throw new Error(reason)
-            }
-            localStorage.setItem(key, JSON.stringify(batch))
-          } catch (cause) {
-            if (cause instanceof Error && cause.message.startsWith('Another pending')) throw cause
+            foreign = hasForeignPending(key)
+            existing = localStorage.getItem(key)
+          } catch {
             const reason =
               'Could not persist the pending batch. No write was sent; restore browser storage before saving.'
             setStorageBlocked(reason)
             throw new Error(reason)
+          }
+          if (foreign) {
+            setStorageBlocked(foreignPendingMessage)
+            throw new Error(foreignPendingMessage)
+          }
+          const serialized = JSON.stringify(batch)
+          if (retry ? existing !== serialized : existing !== null) {
+            const reason = 'The pending batch changed in another tab. Reload before retrying.'
+            setStorageBlocked(reason)
+            throw new Error(reason)
+          }
+          if (!retry) {
+            try {
+              localStorage.setItem(key, serialized)
+            } catch {
+              const reason =
+                'Could not persist the pending batch. No write was sent; restore browser storage before saving.'
+              setStorageBlocked(reason)
+              throw new Error(reason)
+            }
           }
           setPending(batch)
           if (!neon.teacher.canWrite) throw new Error('Your account has read-only access.')
@@ -156,9 +183,11 @@ export function useLedger(
             current.enrollments,
             current.courses,
           )
-          const snapshot = remaining.length
-            ? ((writeStarted = true), await postEvents(neon.userId, remaining))
-            : current
+          let snapshot = current
+          if (remaining.length) {
+            writeStarted = true
+            snapshot = await postEvents(neon.userId, remaining)
+          }
           setEvents(snapshot.events)
           setRoster(snapshot.students)
           setCourses(snapshot.courses)
@@ -219,11 +248,7 @@ export function useLedger(
       return
     }
     try {
-      await navigator.locks.request(key, { ifAvailable: true }, (lock) => {
-        if (!lock)
-          throw new Error(
-            'Another tab is saving this account. Wait for it to finish before discarding.',
-          )
+      await withPendingLocks(key, () => {
         if (localStorage.getItem(key) !== JSON.stringify(pending))
           throw new Error('The pending batch changed in another tab. Reload before discarding.')
         localStorage.removeItem(key)
@@ -249,7 +274,7 @@ export function useLedger(
     invalid,
     refresh,
     save,
-    retry: () => send(pending),
+    retry: () => (storageBlocked ? Promise.resolve(false) : send(pending, true)),
     discard,
   }
 }

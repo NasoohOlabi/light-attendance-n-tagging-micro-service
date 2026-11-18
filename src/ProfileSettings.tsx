@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { UserRound } from 'lucide-react'
-import { useLanguage } from './i18n'
+import { useLanguage } from './useLanguage'
 import { setQuery } from './queryState'
 import { ProfileMenu, type Profile } from './ProfileMenu'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
