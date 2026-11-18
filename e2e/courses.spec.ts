@@ -1511,7 +1511,10 @@ test('administrator no-course Students includes the complete inactive register',
   await expect(page.locator('li').filter({ hasText: 'Historical Student' })).toContainText(
     '2026-01-03',
   )
+  await clickRecordAction(page.locator('li').filter({ hasText: 'Historical Student' }), 'تراجع')
+  await expect(page.getByLabel('السبب', { exact: true })).toBeVisible()
   await page.getByRole('combobox', { name: 'الدورة', exact: true }).selectOption(courseB)
+  await expect(page.getByLabel('السبب', { exact: true })).toHaveCount(0)
   await expect(page.locator('li').filter({ hasText: 'Historical Student' })).toContainText(
     '2026-01-02',
   )

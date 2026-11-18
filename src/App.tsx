@@ -5,7 +5,7 @@ import { PhoneNumber } from './PhoneNumber'
 import { TableHeader, useDataTable } from './DataTable'
 import { CircleCheck, CircleMinus, RefreshCw, UserRound } from 'lucide-react'
 import { LanguageProvider, useLanguage, type TranslationKey } from './i18n'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   projectEvents,
   normalizeStatus,
@@ -514,7 +514,10 @@ function Notebook({
           hidden={query.view === 'courses' || query.view === 'student'}
           className={tab === 'attendance' ? 'workspace-content' : ''}
         >
-          <fieldset disabled={disabled && tab !== 'dashboard'} className="min-w-0">
+          <fieldset
+            disabled={disabled && tab !== 'dashboard' && tab !== 'attendance'}
+            className="min-w-0"
+          >
             {tab === 'dashboard' && (
               <NotebookDashboard
                 projected={projected}
@@ -584,16 +587,14 @@ function Notebook({
                       !ledger.enrollments.some((entry) => entry.studentId === student.studentId)),
                 )}
                 projected={projected}
+                disabled={disabled}
+                saveError={
+                  ledger.error || ledger.storageBlocked
+                    ? errorMessage(ledger.error || ledger.storageBlocked)
+                    : ''
+                }
                 date={query.date}
                 save={ledger.save}
-              />
-            )}
-            {tab === 'notes' && (
-              <NotesView
-                students={students}
-                projected={projected}
-                save={ledger.save}
-                assigned={assigned}
               />
             )}
             {tab === 'roster' && (
@@ -611,6 +612,7 @@ function Notebook({
             {tab === 'summary' && <Summary students={projected.students} projected={projected} />}
             {tab === 'history' && (
               <History
+                key={query.course}
                 projected={projected}
                 students={students}
                 save={ledger.save}
@@ -862,7 +864,11 @@ function AttendanceView({
   enrollments,
   courseSelected,
   courseName,
+  disabled,
+  saveError,
 }: {
+  disabled: boolean
+  saveError: string
   courseSelected: boolean
   courseName?: string
   enrollments: import('../shared/neon').Enrollment[]
@@ -874,6 +880,12 @@ function AttendanceView({
 }) {
   const { t, language } = useLanguage()
   const [draft, setDraft] = useState<Record<string, string>>({})
+  const [noteStudent, setNoteStudent] = useState<Student | null>(null)
+  const [noteText, setNoteText] = useState('')
+  const [noteTags, setNoteTags] = useState('')
+  const [savingNote, setSavingNote] = useState(false)
+  const [noteSaveFailed, setNoteSaveFailed] = useState(false)
+  const noteDialog = useRef<HTMLDialogElement>(null)
   const current = new Map(
     projected.attendance
       .filter(({ value }) => value.date === date)
@@ -936,22 +948,37 @@ function AttendanceView({
                 </bdi>
               </td>
               <td data-label={language === 'ar' ? 'الحضور' : 'Attendance'}>
-                <select
-                  aria-label={`${t('Attendance for')} ${student.name}`}
-                  value={draft[student.studentId] ?? current.get(student.studentId) ?? ''}
-                  onChange={(event) =>
-                    setDraft({ ...draft, [student.studentId]: event.target.value })
-                  }
-                >
-                  <option value="" disabled={current.has(student.studentId)}>
-                    {t('Not marked')}
-                  </option>
-                  {statuses.map((status) => (
-                    <option key={status} value={status}>
-                      {t(status)}
+                <div className="attendance-row-controls">
+                  <select
+                    aria-label={`${t('Attendance for')} ${student.name}`}
+                    disabled={disabled}
+                    value={draft[student.studentId] ?? current.get(student.studentId) ?? ''}
+                    onChange={(event) =>
+                      setDraft({ ...draft, [student.studentId]: event.target.value })
+                    }
+                  >
+                    <option value="" disabled={current.has(student.studentId)}>
+                      {t('Not marked')}
                     </option>
-                  ))}
-                </select>
+                    {statuses.map((status) => (
+                      <option key={status} value={status}>
+                        {t(status)}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="secondary"
+                    aria-label={`${t('Add note for')} ${student.name}`}
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      setNoteStudent(student)
+                      noteDialog.current?.showModal()
+                    }}
+                  >
+                    {t('Add note')}
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
@@ -965,6 +992,116 @@ function AttendanceView({
   )
   return (
     <section className="panel">
+      <dialog
+        ref={noteDialog}
+        className="grade-dialog attendance-note-dialog rounded-xl"
+        aria-labelledby="attendance-note-title"
+        aria-describedby="attendance-note-date"
+        onCancel={(event) => {
+          if (savingNote) event.preventDefault()
+        }}
+        onClose={() => {
+          setNoteStudent(null)
+          setNoteText('')
+          setNoteTags('')
+          setNoteSaveFailed(false)
+        }}
+      >
+        <form
+          onSubmit={async (event) => {
+            event.preventDefault()
+            if (!noteStudent || disabled || savingNote) return
+            const tags = [
+              ...new Set(
+                noteTags
+                  .split(/[,\u060c]/)
+                  .map((tag) => tag.trim().replace(/^#/, '').toLocaleLowerCase())
+                  .filter(Boolean),
+              ),
+            ]
+            setSavingNote(true)
+            const saved = await save([
+              {
+                kind: 'note',
+                studentId: noteStudent.studentId,
+                date,
+                tags: tags.length ? tags : ['attendance'],
+                text: noteText,
+              },
+            ])
+            setSavingNote(false)
+            if (saved) noteDialog.current?.close()
+            else setNoteSaveFailed(true)
+          }}
+        >
+          <h2 id="attendance-note-title" className="title">
+            {t('Note for')} <bdi>{noteStudent?.name}</bdi>
+          </h2>
+          <p id="attendance-note-date" className="muted">
+            {t('Session date')}{' '}
+            <time dateTime={date} dir="ltr">
+              {date}
+            </time>
+          </p>
+          <label>
+            <span id="attendance-note-label">{t('Note')}</span>
+            <textarea
+              aria-labelledby="attendance-note-label"
+              dir="auto"
+              rows={4}
+              disabled={disabled || savingNote}
+              required
+              maxLength={10000}
+              value={noteText}
+              onChange={(event) => setNoteText(event.target.value)}
+            />
+          </label>
+          <label>
+            <span className="flex flex-wrap items-baseline gap-x-2">
+              <span id="attendance-note-tags">{t('Tags, separated by commas')}</span>
+              <small id="attendance-note-tags-optional" className="muted">
+                {t('Optional')}
+              </small>
+            </span>
+            <input
+              aria-labelledby="attendance-note-tags"
+              aria-describedby="attendance-note-tags-optional"
+              maxLength={500}
+              dir="auto"
+              disabled={disabled || savingNote}
+              value={noteTags}
+              onChange={(event) => setNoteTags(event.target.value)}
+            />
+          </label>
+          {noteSaveFailed && saveError && <p role="alert">{saveError}</p>}
+          <div className="flex flex-wrap gap-2">
+            <button className="primary" disabled={disabled || savingNote || !noteText.trim()}>
+              {t('Save note')}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              disabled={savingNote}
+              onClick={() => noteDialog.current?.close()}
+            >
+              {t('Cancel')}
+            </button>
+          </div>
+        </form>
+        {projected.notes
+          .filter(({ value }) => value.studentId === noteStudent?.studentId && value.date === date)
+          .toReversed()
+          .map(({ event, value }) => (
+            <article key={event.id} className="mt-4 border-t pt-3">
+              <p dir="auto" className="whitespace-pre-wrap">
+                {value.text}
+              </p>
+              <p className="muted">
+                <bdi>{event.actor}</bdi> {value.tags.map((tag) => `#${tag}`).join(' ')}
+              </p>
+            </article>
+          ))}
+      </dialog>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="title">
@@ -996,6 +1133,7 @@ function AttendanceView({
         <>
           <button
             className="secondary mb-4"
+            disabled={disabled}
             onClick={() =>
               setDraft({
                 ...draft,
@@ -1008,7 +1146,7 @@ function AttendanceView({
           {rows(visible)}
           <button
             className="primary mt-5"
-            disabled={!changed.length}
+            disabled={disabled || !changed.length}
             onClick={async () => {
               const payloads: Payload[] = changed.map((student) => ({
                 kind: 'attendance',
@@ -1031,182 +1169,6 @@ function AttendanceView({
         </>
       )}
     </section>
-  )
-}
-
-function NotesView({
-  students,
-  projected,
-  save,
-  assigned,
-}: {
-  students: Student[]
-  projected: Projection
-  save: Save
-  assigned: boolean
-}) {
-  const { t } = useLanguage()
-  const query = useQueryState()
-  const [text, setText] = useState('')
-  const [tags, setTags] = useState('')
-  const [studentId, setStudentId] = useState(query.student)
-  const ids = new Set(students.map((student) => student.studentId))
-  const selectedStudentId = assigned && !ids.has(studentId) ? '' : studentId
-  const notes = projected.notes.filter(
-    ({ value }) =>
-      (!value.studentId || ids.has(value.studentId)) &&
-      (!query.tag || value.tags.includes(query.tag)) &&
-      (!query.student || value.studentId === query.student) &&
-      value.date >= query.from &&
-      value.date <= query.to,
-  )
-  const availableTags = [...new Set(projected.notes.flatMap(({ value }) => value.tags))].sort()
-  return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-      <form
-        className="panel space-y-4 self-start"
-        onSubmit={async (event) => {
-          event.preventDefault()
-          const normalized = [
-            ...new Set(
-              tags
-                .split(/[,،]/)
-                .map((tag) => tag.trim().replace(/^#/, '').toLocaleLowerCase())
-                .filter(Boolean),
-            ),
-          ]
-          if (
-            await save([
-              {
-                kind: 'note',
-                studentId: selectedStudentId,
-                date: query.date,
-                tags: normalized,
-                text,
-              },
-            ])
-          ) {
-            setText('')
-            setTags('')
-          }
-        }}
-      >
-        <h2 className="title">{t('Leave a note')}</h2>
-        <label>
-          {t('Student')}
-          <select
-            required={assigned}
-            value={selectedStudentId}
-            onChange={(event) => setStudentId(event.target.value)}
-          >
-            <option value="">{assigned ? t('Choose a student') : t('General note')}</option>
-            {students.map((student) => (
-              <option key={student.studentId} value={student.studentId}>
-                {student.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          {t('Date')}
-          <input
-            type="date"
-            required
-            value={query.date}
-            onChange={(event) => setQuery({ date: event.target.value })}
-          />
-        </label>
-        <label>
-          {t('Tags, separated by commas')}
-          <input
-            required
-            maxLength={500}
-            dir="auto"
-            value={tags}
-            onChange={(event) => setTags(event.target.value)}
-            placeholder={t('revision, follow-up / مراجعة')}
-          />
-        </label>
-        <label>
-          <span id="note-label">{t('Note')}</span>
-          <textarea
-            aria-labelledby="note-label"
-            dir="auto"
-            rows={6}
-            required
-            maxLength={10000}
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder={t('What should the next teacher know?')}
-          />
-        </label>
-        <p className="muted">
-          {t('Plain text or your own structured format. Tags make it easy to find later.')}
-        </p>
-        <button className="primary" disabled={assigned && !selectedStudentId}>
-          {t('Save note')}
-        </button>
-      </form>
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="title">{t('Shared notes')}</h2>
-          <label>
-            {t('From')}
-            <input
-              type="date"
-              value={query.from}
-              onChange={(event) => setQuery({ from: event.target.value })}
-            />
-          </label>
-          <label>
-            {t('To')}
-            <input
-              type="date"
-              value={query.to}
-              onChange={(event) => setQuery({ to: event.target.value })}
-            />
-          </label>
-          <label>
-            {t('Filter tag')}
-            <select value={query.tag} onChange={(event) => setQuery({ tag: event.target.value })}>
-              <option value="">{t('All tags')}</option>
-              {availableTags.map((tag) => (
-                <option key={tag}>{tag}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {!notes.length && <Empty text={t('No notes match this view. Add the first one.')} />}
-        {notes.toReversed().map(({ event, value }) => (
-          <article key={event.id} className="panel">
-            <div className="mb-3 flex flex-wrap justify-between gap-2">
-              <h3 dir="auto" className="font-semibold">
-                {projected.students.find((student) => student.studentId === value.studentId)
-                  ?.name ?? (value.studentId ? t('Unknown student') : t('General note'))}
-              </h3>
-              <span className="muted">
-                <bdi>{value.date}</bdi> · <bdi>{event.actor}</bdi>
-              </span>
-            </div>
-            <p dir="auto" className="whitespace-pre-wrap break-words leading-relaxed">
-              {value.text}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {value.tags.map((tag) => (
-                <button
-                  key={tag}
-                  dir="auto"
-                  className="rounded-full bg-[#e2f4f4] px-3 py-1 text-sm text-[#005761]"
-                  onClick={() => setQuery({ tag })}
-                >
-                  #{tag}
-                </button>
-              ))}
-            </div>
-          </article>
-        ))}
-      </section>
-    </div>
   )
 }
 
@@ -1794,7 +1756,7 @@ function describeEvent(
     return `${t('Student')}: ${value.name} · ${t(value.active ? 'active' : 'inactive')}`
   if (value.kind === 'attendance')
     return `${name} · ${value.date} · ${t(normalizeStatus(value.status))}`
-  return `${name} · #${value.tags.join(' #')} · ${value.text}`
+  return `${name} · ${value.date} · #${value.tags.join(' #')} · ${value.text}`
 }
 function Empty({ text }: { text: string }) {
   return <p className="rounded-lg bg-slate-50 p-5 text-slate-600">{text}</p>

@@ -55,7 +55,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.goto('/')
   await usableLayout(page)
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
-  for (const name of ['Attendance', 'Notes', 'Students', 'Summary']) {
+  for (const name of ['Attendance', 'Students', 'Summary']) {
     await page.getByRole('button', { name, exact: true }).click()
     await usableLayout(page)
   }
@@ -67,25 +67,33 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.getByRole('button', { name: 'Add student', exact: true }).click()
   await expect(page.getByRole('status')).toContainText('saved in this demo')
   await usableLayout(page)
-  await page.getByRole('button', { name: 'Notes', exact: true }).click()
+  await page.getByRole('button', { name: 'Attendance', exact: true }).click()
+  await page.getByRole('button', { name: `Add note for ${longName}`, exact: true }).click()
   const note = page.getByLabel('Note', { exact: true })
   await note.fill('مسودة مشتركة English draft')
+  await usableLayout(page)
+  await page.keyboard.press('Escape')
   await clickAccountAction(page, 'العربية')
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
-  await expect(page.locator('textarea')).toHaveValue('مسودة مشتركة English draft')
+  const row = page.getByRole('row').filter({ hasText: longName })
+  const rowNote = row.getByRole('button')
+  await expect(rowNote).toBeVisible()
+  const markBounds = await row.getByRole('combobox').boundingBox()
+  const noteBounds = await rowNote.boundingBox()
+  if (!markBounds || !noteBounds) throw new Error('Missing attendance row controls')
+  expect(Math.abs(markBounds.y - noteBounds.y)).toBeLessThanOrEqual(2)
+  expect(noteBounds.x).toBeLessThan(markBounds.x)
+  await rowNote.click()
+  const arabicNote = page.getByLabel('الملاحظة', { exact: true })
+  await arabicNote.fill('مسودة مشتركة English draft')
   await usableLayout(page)
-  await clickAccountAction(page, 'English')
-  await expect(note).toHaveValue('مسودة مشتركة English draft')
-  await page.getByLabel('Tags, separated by commas').fill('مراجعة، قراءة')
-  await page.getByRole('button', { name: 'Save note', exact: true }).click()
-  await expect(page.getByRole('status')).toContainText('saved in this demo')
-  await page.getByLabel('Filter tag').selectOption('مراجعة')
-  await expect(
-    page.getByRole('article').filter({ hasText: 'مسودة مشتركة English draft' }),
-  ).toBeVisible()
-  await clickAccountAction(page, 'العربية')
-  for (const name of ['الحضور', 'الملاحظات', 'الطلاب', 'الملخص']) {
+  await page.getByRole('button', { name: 'حفظ الملاحظة', exact: true }).click()
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await page.getByRole('row').filter({ hasText: longName }).getByRole('button').click()
+  await expect(page.getByRole('dialog').getByText('مسودة مشتركة English draft')).toBeVisible()
+  await page.keyboard.press('Escape')
+  for (const name of ['الحضور', 'الطلاب', 'الملخص']) {
     await page.getByRole('button', { name, exact: true }).click()
     await usableLayout(page)
   }
@@ -95,7 +103,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.getByLabel(`الحضور للطالب ${longName}`).selectOption('absent')
   await page.getByRole('button', { name: 'حفظ الحضور (1)', exact: true }).click()
   await expect(page.getByRole('status')).not.toContainText('saved')
-  await page.getByRole('button', { name: 'الملاحظات', exact: true }).click()
+  await page.getByRole('row').filter({ hasText: longName }).getByRole('button').click()
   for (const size of [
     { width: 390, height: 844 },
     { width: 844, height: 390 },
@@ -103,6 +111,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
     await page.setViewportSize(size)
     await usableLayout(page)
   }
+  await page.keyboard.press('Escape')
   await clickAccountAction(page, 'السجل والتصحيحات')
   const savedNote = page.locator('li').filter({ hasText: 'مسودة مشتركة English draft' })
   await clickRecordAction(savedNote, 'تراجع')

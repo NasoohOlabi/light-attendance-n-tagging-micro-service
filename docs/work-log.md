@@ -1713,3 +1713,13 @@ The phone screenshot requested that the rarely used History tab move out of the 
 The browser cases exercise Settings and course navigation, old links, reload and Back, role visibility, Arabic mobile layout, record details and append-only corrections. The first full run found two outdated tests that expected seven navigation buttons. Both pass with six, including minimum touch targets in English and Arabic. Railway confirms the production trigger targets main with Wait for CI enabled.
 
 `bun run verify:release` passed with 118 browser cases, 33 local tests and 138 assertions, plus the build, formatting and security gates. Four optional database suites skipped. The browser checks used synthetic API responses and emulated phones. Exact-main deployment and the shipped browser check follow CI.
+
+## 2026-11-18 05:58 Asia/Damascus (UTC+03:00) - Move notes into Attendance
+
+The phone screenshot asked for note entry beside each student's attendance. The dedicated Notes tab is replaced by a row action that opens a dialog with the student's name, selected date and effective notes for that day. The note saves independently of any unsaved attendance marks. Tags are optional and default to `attendance`. Older note bookmarks open Attendance with their date and course, and History shows the date on each note alongside corrections.
+
+Browser coverage exercises narrow Arabic and English layouts, keyboard focus, cancelled drafts, date and student isolation, corrections, read-only access, and recovery from an uncertain save with the same pending event. Railway confirms that the production trigger targets `main` with Wait for CI enabled. The PR records the production deployment and smoke results.
+
+`bun run verify:release` passed at 06:01 with 118 browser cases, 34 local tests and the build, formatting, artifact and security gates. Four optional database suites skipped. The browser checks used synthetic records on desktop and emulated phones. The production baseline reproduced the old Notes tab before deployment.
+
+**Main integration at 06:14 Asia/Damascus** Integrated `0893221`, retaining the Attendance row note dialog, historical note dates and legacy Notes bookmarks. Updated the mobile checks for the combined navigation and verified that switching courses clears an open correction form. After correcting stale Arabic test navigation, `bun run verify:release` passed 118 browser cases and 34 local tests with 139 assertions. Four optional database suites skipped.

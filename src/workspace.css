@@ -359,7 +359,7 @@
 @media (max-width: 700px) {
   .workspace-rail nav {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     overflow: visible;
     position: fixed;
     inset-inline: 0;
@@ -384,7 +384,7 @@
     display: none;
   }
   .workspace-rail nav[data-courses='true'] {
-    grid-template-columns: repeat(6, minmax(44px, 1fr));
+    grid-template-columns: repeat(5, minmax(44px, 1fr));
     overflow-x: auto;
   }
   .workspace-tab-short {
@@ -583,7 +583,21 @@
   width: 7rem;
 }
 .roster-attendance-column {
-  width: 12rem;
+  width: 15rem;
+}
+.attendance-row-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.attendance-row-controls select {
+  flex: 1 1 6.5rem;
+  width: auto;
+  min-width: 0;
+}
+.attendance-note-dialog {
+  overflow-wrap: anywhere;
 }
 .roster-table th:not(:first-child),
 .roster-table td:not(:first-child) {

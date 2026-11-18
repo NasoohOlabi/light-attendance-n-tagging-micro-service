@@ -14,7 +14,7 @@ Open the three-dot menu for a record. Choose **Undo** on an ordinary record, ent
 
 `e2e/courses.spec.ts` checks Settings navigation, reload and Back, old history URLs, course selection including closed courses, inactive student search, and appending a correction. Exercise both languages on desktop and mobile. Verify no History tab appears in the notebook navigation. `e2e/neon.spec.ts` checks that a Teacher opening either history URL reaches the dashboard. `e2e/roles.spec.ts` checks the Student portal on the history URL.
 
-The `sample notebook` test scopes an `li` containing the saved Arabic note, clicks its Undo, fills Reason with تصحيح and appends. Assert the original row contains **Undone** and a separate **Correction: تصحيح** record exists. For changed correction behavior, also prove the note disappears from Notes; create two attendance statuses then undo newest and verify older status/summary returns; similarly undo a renamed/regrouped student snapshot. Unit ledger tests cover forward/reversal-of-reversal rejection and duplicate/conflicting IDs.
+The `sample notebook` test scopes an `li` containing the saved Arabic note, clicks its Undo, fills Reason with تصحيح and appends. Assert the original row contains **Undone** and a separate **Correction: تصحيح** record exists. For changed correction behavior, also prove the note disappears from the student's attendance dialog for that day. Create two attendance statuses, undo the newest and verify the older status and summary return. Repeat with a renamed or regrouped student snapshot. Unit ledger tests cover forward/reversal-of-reversal rejection and duplicate/conflicting IDs.
 
 ## Gotchas
 
