@@ -52,6 +52,8 @@ The temporary public Postgres TCP proxy and migration SSH key were removed after
 
 ## Private CLI inputs
 
+Apply `neon/013-invitations.sql` before deploying account invitations. Its columns are additive and existing accounts continue to sign in with email. Version 12 backups include invitation request IDs, usernames, phone numbers, dates of birth and setup status. Earlier backups can restore to an empty migrated database. Legacy comparisons reject invitation data that the older format cannot represent. Protect these backups as private personal and credential data.
+
 Set `DATABASE_URL_UNPOOLED` to the intended Railway database. Create the first identity through signup, then grant its role using an ignored private JSON file. Synthetic example:
 
 ```json

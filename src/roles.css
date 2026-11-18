@@ -761,3 +761,17 @@
   opacity: 0.6;
   cursor: default;
 }
+.invite-accounts textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  resize: vertical;
+}
+.invite-accounts > label,
+.invite-message {
+  display: block;
+  margin-block: 1rem;
+}
+.invite-accounts li {
+  margin-block: 0.5rem;
+}

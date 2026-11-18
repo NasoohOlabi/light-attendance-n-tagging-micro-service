@@ -2,7 +2,8 @@ import { LanguageSwitch, useLanguage } from './i18n'
 import { useEffect, useRef, useState } from 'react'
 import type { NeonAccount } from '../shared/neon'
 import { z } from 'zod'
-import { authClient, getAccount, NeonRequestError } from './neon'
+import { authClient, getAccount, NeonRequestError, request } from './neon'
+import { InvitationProfileForm } from './InvitationProfile'
 import type { Profile } from './ProfileMenu'
 import { WartaqLogo } from './brand/components'
 
@@ -69,10 +70,15 @@ function ConfiguredAuth({
   >(null)
   const [accountAttempt, setAccountAttempt] = useState(0)
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
+  const [usernameSignIn, setUsernameSignIn] = useState(
+    () => new URLSearchParams(window.location.search).get('login') === 'username',
+  )
+  const [username, setUsername] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [passwordChanged, setPasswordChanged] = useState(false)
   const [busy, setBusy] = useState(false)
   const [stalled, setStalled] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -188,6 +194,33 @@ function ConfiguredAuth({
       )
     if (!account || account.userId !== userId || account.kind !== 'ready')
       return <WorkspaceLoading message={t('Checking your access…')} />
+    const invitation = account.value.invitationProfile
+    const updateInvitation: NonNullable<Profile['updateInvitation']> = async (details) => {
+      await request('/api/me/invitation-profile', userId, details, false)
+      if (details.newPassword) {
+        setAccount(null)
+        await client.signOut()
+        setUsername(details.username)
+        setPassword('')
+        setUsernameSignIn(true)
+        setPasswordChanged(true)
+        await session.refetch()
+      } else {
+        setAccountAttempt((value) => value + 1)
+      }
+    }
+    if (invitation?.requiresSetup)
+      return (
+        <main id="main-content" tabIndex={-1} className="workspace-auth">
+          <AuthHeader />
+          <InvitationProfileForm
+            invitation={invitation}
+            update={updateInvitation}
+            setup
+            signOut={signOut}
+          />
+        </main>
+      )
     if (!account.value.canRead)
       return (
         <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
@@ -203,6 +236,8 @@ function ConfiguredAuth({
         </main>
       )
     return children(userId, account.value, signOut, {
+      invitation,
+      updateInvitation: invitation ? updateInvitation : undefined,
       name: session.data?.user.name ?? '',
       image: session.data?.user.image ?? null,
       update: async (name, image) => {
@@ -224,6 +259,23 @@ function ConfiguredAuth({
           setBusy(true)
           setError('')
           try {
+            if (mode === 'sign-in' && usernameSignIn) {
+              const response = await fetch('/api/auth/sign-in/username', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+              })
+              if (!response.ok) {
+                setError(
+                  language === 'ar'
+                    ? 'اسم المستخدم أو كلمة المرور غير صحيحة.'
+                    : 'Invalid username or password.',
+                )
+              } else {
+                await session.refetch()
+              }
+              return
+            }
             const result =
               mode === 'sign-in'
                 ? await client.signIn.email({ email, password })
@@ -260,21 +312,53 @@ function ConfiguredAuth({
             />
           </label>
         )}
-        <label>
-          {t('Email')}
-          <input
-            required
-            type="email"
-            dir="ltr"
-            autoCapitalize="none"
-            spellCheck={false}
-            inputMode="email"
-            enterKeyHint="next"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </label>
+        {mode === 'sign-in' && (
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              setUsernameSignIn(!usernameSignIn)
+              setError('')
+            }}
+          >
+            {usernameSignIn
+              ? language === 'ar'
+                ? 'تسجيل الدخول بالبريد الإلكتروني'
+                : 'Sign in with email'
+              : language === 'ar'
+                ? 'تسجيل الدخول باسم المستخدم'
+                : 'Sign in with username'}
+          </button>
+        )}
+        {mode === 'sign-in' && usernameSignIn ? (
+          <label>
+            {language === 'ar' ? 'اسم المستخدم' : 'Username'}
+            <input
+              required
+              autoComplete="username"
+              autoCapitalize="none"
+              dir="ltr"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </label>
+        ) : (
+          <label>
+            {t('Email')}
+            <input
+              required
+              type="email"
+              dir="ltr"
+              autoCapitalize="none"
+              spellCheck={false}
+              inputMode="email"
+              enterKeyHint="next"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+        )}
         <label>
           {t('Password')}
           <input
@@ -287,6 +371,13 @@ function ConfiguredAuth({
             onChange={(e) => setPassword(e.target.value)}
           />
         </label>
+        {passwordChanged && (
+          <p role="status">
+            {language === 'ar'
+              ? 'تم حفظ بياناتك. سجّل الدخول بكلمة مرورك الجديدة.'
+              : 'Details saved. Sign in with your new password.'}
+          </p>
+        )}
         {error && <p role="alert">{errorMessage(error)}</p>}
         <button className="primary" disabled={busy || session.isPending || Boolean(session.error)}>
           {busy ? t('Please wait…') : mode === 'sign-up' ? t('Create account') : t('Sign in')}

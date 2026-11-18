@@ -35,7 +35,7 @@ export function validProfileUpdate(input: unknown) {
   )
 }
 
-async function readBoundedBody(request: Request, limit: number) {
+export async function readBoundedBody(request: Request, limit: number) {
   const reader = request.body?.getReader()
   if (!reader) return null
   const chunks: Uint8Array[] = []
@@ -69,10 +69,20 @@ export async function validSignupRequest(request: Request) {
     if (body === null) return null
     const contentType = request.headers.get('content-type') ?? ''
     if (contentType.startsWith('application/x-www-form-urlencoded'))
-      return !new URLSearchParams(body).has('image') ? body : null
+      return !new URLSearchParams(body).has('image') &&
+        !new URLSearchParams(body).get('email')?.toLowerCase().endsWith('@invitation.invalid')
+        ? body
+        : null
     if (!contentType.startsWith('application/json')) return null
     const value = z.record(z.string(), z.unknown()).safeParse(JSON.parse(body))
-    return value.success && !Object.hasOwn(value.data, 'image') ? body : null
+    return value.success &&
+      !Object.hasOwn(value.data, 'image') &&
+      !(
+        typeof value.data.email === 'string' &&
+        value.data.email.toLowerCase().endsWith('@invitation.invalid')
+      )
+      ? body
+      : null
   } catch {
     return null
   }

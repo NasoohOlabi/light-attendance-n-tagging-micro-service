@@ -1,8 +1,10 @@
 import { z } from 'zod'
+import { invitationProfileSchema } from './invitations'
 import { eventSchema, statusSchema } from './ledger'
 
 export const neonTeacherSchema = z.object({
   role: z.enum(['teacher', 'administrator']).default('teacher'),
+  invitationProfile: invitationProfileSchema.optional(),
   id: z.uuid(),
   name: z.string().trim().min(1).max(100),
   canRead: z.boolean(),
@@ -99,6 +101,7 @@ const authUserId = z.string().min(1).max(256)
 const expiry = z.iso.datetime().nullable()
 export const neonStudentAccountSchema = z.object({
   role: z.literal('student'),
+  invitationProfile: invitationProfileSchema.optional(),
   id: z.uuid(),
   name: z.string(),
   canRead: z.literal(true),
@@ -183,6 +186,7 @@ export const neonAdminBoardSchema = z.object({
       email: z.string(),
       name: z.string(),
       profileName: z.string().optional(),
+      username: z.string().nullable().optional(),
       role: z.enum(['administrator', 'teacher', 'student']).nullable(),
       active: z.boolean(),
       expiresAt: expiry,

@@ -5,6 +5,7 @@ import { setQuery } from './queryState'
 import { ProfileMenu, type Profile } from './ProfileMenu'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
 import { WartaqLogo } from './brand/components'
+import { InvitationProfileForm } from './InvitationProfile'
 
 async function prepareImage(file: File) {
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024)
@@ -159,6 +160,9 @@ export function ProfileSettings({
           {busy || preparing ? t('Please wait…') : t('Save changes')}
         </button>
       </form>
+      {profile.invitation && profile.updateInvitation && (
+        <InvitationProfileForm invitation={profile.invitation} update={profile.updateInvitation} />
+      )}
     </section>
   )
   if (role === 'student')

@@ -47,6 +47,7 @@ export function useQueryState() {
 }
 const allowedKeys = new Set([
   'page',
+  'login',
   'tab',
   'view',
   'date',
@@ -64,6 +65,7 @@ const allowedKeys = new Set([
 export function sanitizedSearch(search: string) {
   const query = new URLSearchParams(search)
   for (const key of [...query.keys()]) if (!allowedKeys.has(key)) query.delete(key)
+  if (query.get('login') !== 'username') query.delete('login')
   if (query.get('tab') === 'notes') {
     query.set('tab', 'attendance')
     for (const key of ['from', 'to', 'student', 'q', 'group']) query.delete(key)

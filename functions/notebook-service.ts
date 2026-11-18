@@ -1,5 +1,10 @@
-﻿import { z } from 'zod'
-import { hashPassword } from 'better-auth/crypto'
+import { z } from 'zod'
+import { hashPassword, verifyPassword } from 'better-auth/crypto'
+import {
+  invitationRequestSchema,
+  invitationProfileInputSchema,
+  invitationProfileSchema,
+} from '../shared/invitations'
 import type { Pool, PoolClient } from 'pg'
 import {
   courseBoardSchema,
@@ -214,7 +219,7 @@ async function adminBoard(db: PoolClient) {
   // ponytail: bounded to 1000 accounts; add pagination when that ceiling matters.
   const accounts = (
     await db.query(`SELECT u.id AS "authUserId", u.email, u.name AS "profileName", COALESCE(t.name, s.name, u.name, '') AS name,
-    a.role, COALESCE(a.active, false) AS active, a.expires_at AS "expiresAt", a.teacher_id AS "teacherId", a.student_id AS "studentId"
+    a.invitation_username AS username, a.role, COALESCE(a.active, false) AS active, a.expires_at AS "expiresAt", a.teacher_id AS "teacherId", a.student_id AS "studentId"
     FROM neon_auth."user" u LEFT JOIN app_accounts a ON a.auth_user_id = u.id::text
     LEFT JOIN teachers t ON t.id = a.teacher_id LEFT JOIN students s ON s.id = a.student_id
     ORDER BY u.id LIMIT 1000`)
@@ -238,7 +243,63 @@ async function adminBoard(db: PoolClient) {
 }
 
 async function manage(db: PoolClient, path: string, body: unknown, subject: string) {
-  if (path === '/api/admin/accounts/grant') {
+  if (path === '/api/admin/accounts/invite') {
+    const { requestId, people } = invitationRequestSchema.parse(body)
+    await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [requestId])
+    if (
+      (
+        await db.query('SELECT 1 FROM app_accounts WHERE invitation_request_id = $1 LIMIT 1', [
+          requestId,
+        ])
+      ).rowCount
+    )
+      throw new HttpError(409)
+    const invitations = []
+    for (const person of people) {
+      const userId = crypto.randomUUID()
+      const stem =
+        person.firstName
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '')
+          .slice(0, 12) || person.role
+      const username = `${stem}-${Buffer.from(crypto.getRandomValues(new Uint8Array(5))).toString('hex')}`
+      const temporaryPassword = Buffer.from(crypto.getRandomValues(new Uint8Array(12))).toString(
+        'base64url',
+      )
+      const hash = await hashPassword(temporaryPassword)
+      const name = `${person.firstName} ${person.lastName}`
+      await db.query(
+        'INSERT INTO neon_auth."user" (id, name, email, "emailVerified") VALUES ($1, $2, $3, true)',
+        [userId, name, `${userId}@invitation.invalid`],
+      )
+      await db.query(
+        `INSERT INTO neon_auth.account (id, "accountId", "providerId", "userId", password) VALUES ($1, $2::text, 'credential', $2::text::uuid, $3)`,
+        [crypto.randomUUID(), userId, hash],
+      )
+      const recordId = crypto.randomUUID()
+      if (person.role === 'student') {
+        await db.query(
+          'INSERT INTO students (id, name, first_name, last_name, teacher_id) VALUES ($1, $2, $3, $4, NULL)',
+          [recordId, name, person.firstName, person.lastName],
+        )
+        await db.query(
+          'INSERT INTO app_accounts (auth_user_id, role, student_id, invitation_request_id, invitation_username, invitation_requires_setup) VALUES ($1, $2, $3, $4, $5, true)',
+          [userId, person.role, recordId, requestId, username],
+        )
+      } else {
+        await db.query(
+          "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, $3, 'read_write')",
+          [recordId, userId, name],
+        )
+        await db.query(
+          'INSERT INTO app_accounts (auth_user_id, role, teacher_id, invitation_request_id, invitation_username, invitation_requires_setup) VALUES ($1, $2, $3, $4, $5, true)',
+          [userId, person.role, recordId, requestId, username],
+        )
+      }
+      invitations.push({ ...person, username, temporaryPassword })
+    }
+    return { invitations }
+  } else if (path === '/api/admin/accounts/grant') {
     const grant = neonAdminGrantSchema.parse(body)
     if (grant.authUserId === subject) throw new HttpError(403)
     await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [grant.authUserId])
@@ -591,10 +652,12 @@ export function createHandler(
     if (
       ![
         '/api/me',
+        '/api/me/invitation-profile',
         '/api/notebook',
         '/api/events',
         '/api/student/attendance',
         '/api/admin',
+        '/api/admin/accounts/invite',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
@@ -614,6 +677,8 @@ export function createHandler(
     if (
       ([
         '/api/events',
+        '/api/me/invitation-profile',
+        '/api/admin/accounts/invite',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
@@ -631,6 +696,8 @@ export function createHandler(
         request.method !== 'POST') ||
       (![
         '/api/events',
+        '/api/me/invitation-profile',
+        '/api/admin/accounts/invite',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
@@ -663,12 +730,61 @@ export function createHandler(
       try {
         await db.query('BEGIN')
         const result = await db.query(
-          'SELECT role, teacher_id, student_id, active, expires_at FROM app_accounts WHERE auth_user_id = $1 FOR UPDATE',
+          `SELECT role, teacher_id, student_id, active, expires_at,
+            invitation_username AS username, invitation_phone AS phone,
+            invitation_birth_date::text AS "birthDate", invitation_requires_setup AS "requiresSetup"
+           FROM app_accounts WHERE auth_user_id = $1 FOR UPDATE`,
           [subject],
         )
         if (!result.rows.length) throw new HttpError(403)
         const account = accountRow.parse(result.rows[0])
         if (!live(account.active, account.expires_at)) throw new HttpError(403)
+        const invitationProfile = result.rows[0].username
+          ? invitationProfileSchema.parse(result.rows[0])
+          : undefined
+        if (path === '/api/me/invitation-profile') {
+          const eligible =
+            account.role === 'student'
+              ? await db.query('SELECT 1 FROM students WHERE id = $1 AND active', [
+                  account.student_id,
+                ])
+              : await db.query(
+                  'SELECT 1 FROM teachers WHERE id = $1 AND active AND (expires_at IS NULL OR expires_at > now())',
+                  [account.teacher_id],
+                )
+          if (!eligible.rowCount) throw new HttpError(403)
+          if (!invitationProfile) throw new HttpError(403)
+          const input = invitationProfileInputSchema.parse(await readBody(request))
+          await db.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
+          const credential = await db.query(
+            `SELECT password FROM neon_auth.account WHERE "userId"::text = $1 AND "providerId" = 'credential' FOR UPDATE`,
+            [subject],
+          )
+          const password = z.string().nullable().parse(credential.rows[0]?.password)
+          if (
+            !password ||
+            !(await verifyPassword({ hash: password, password: input.currentPassword }))
+          )
+            throw new HttpError(400)
+          if (invitationProfile.requiresSetup && !input.newPassword) throw new HttpError(400)
+          if (input.newPassword && input.newPassword === input.currentPassword)
+            throw new HttpError(400)
+          await db.query(
+            'UPDATE app_accounts SET invitation_username = $2, invitation_phone = $3, invitation_birth_date = $4, invitation_requires_setup = false WHERE auth_user_id = $1',
+            [subject, input.username, input.phone, input.birthDate],
+          )
+          if (input.newPassword) {
+            const hash = await hashPassword(input.newPassword)
+            await db.query(
+              `UPDATE neon_auth.account SET password = $2, "updatedAt" = now() WHERE "userId"::text = $1 AND "providerId" = 'credential'`,
+              [subject, hash],
+            )
+            await db.query('DELETE FROM neon_auth.session WHERE "userId"::text = $1', [subject])
+          }
+          await db.query('COMMIT')
+          return reply({ saved: true, sessionRevoked: !!input.newPassword })
+        }
+        if (invitationProfile?.requiresSetup && path !== '/api/me') throw new HttpError(403)
         if (account.role === 'student') {
           if (!account.student_id) throw new HttpError(403)
           const result = await db.query(
@@ -685,6 +801,7 @@ export function createHandler(
             canRead: true,
             canWrite: false,
             expiresAt: account.expires_at?.toISOString() ?? null,
+            ...(invitationProfile ? { invitationProfile } : {}),
           }
           if (path === '/api/me') {
             await db.query('COMMIT')
@@ -759,7 +876,10 @@ export function createHandler(
         })
         if (path === '/api/me') {
           await db.query('COMMIT')
-          return reply({ account: teacher, teacher })
+          return reply({
+            account: { ...teacher, ...(invitationProfile ? { invitationProfile } : {}) },
+            teacher,
+          })
         }
         if (path.startsWith('/api/admin')) {
           if (teacher.role !== 'administrator' || !teacher.canRead || !teacher.canWrite)

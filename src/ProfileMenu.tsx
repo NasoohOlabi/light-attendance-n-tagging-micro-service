@@ -2,11 +2,20 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Globe, History, LogOut, Settings, UserRound } from 'lucide-react'
 import { ThemeChoices, useLanguage } from './i18n'
 import { setQuery } from './queryState'
+import type { InvitationProfile } from './neon'
 
 export type Profile = {
   name: string
   image: string | null
   update: (name: string, image?: string | null) => Promise<void>
+  invitation?: InvitationProfile
+  updateInvitation?: (details: {
+    username: string
+    phone: string
+    birthDate: string
+    currentPassword: string
+    newPassword?: string
+  }) => Promise<void>
 }
 
 export function ProfileMenu({

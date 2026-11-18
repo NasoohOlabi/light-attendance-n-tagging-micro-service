@@ -16,6 +16,10 @@ Events are append-only through the API. Pending batches can contain private stud
 
 The frontend CSP permits three exact SHA-256 style hashes for dnd kit 0.5.3's feedback, grabbing cursor and selection rules. Arbitrary inline styles remain blocked. When upgrading dnd kit, regenerate hashes from its exact emitted style text and verify the actual dragged pill position under the production CSP; ordering alone does not prove the preview works. The synthetic table browser scenario asserts that visual geometry.
 
+## Account invitations
+
+Administrator-created invitations generate a random starter password. The server returns it in the creation response and stores its Better Auth hash. Only the signed-in user can submit their personal contact information with their current password. Invited users must finish setup before accessing private application records. Password changes revoke all sessions for that user, including the setup session. Application roles and roster links remain administrator-owned.
+
 ## Temporary development dependency exception
 
 Until **2026-12-01 00:00 UTC**, `security:audit` permits only picomatch's [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf), after verifying the local backport described above. The advisory has no patched published version; npm's latest remains 4.0.7. The pinned, patched copies are used by Vite/tinyglobby and lint-staged for repository-controlled build/commit patterns. They are not production dependencies or an application input parser.

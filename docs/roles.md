@@ -2,6 +2,14 @@
 
 Better Auth establishes identity; `app_accounts` grants a server-owned role. Signup alone grants no data access. Each request checks the account's active state and expiry.
 
+### Invite a user
+
+Open **Settings → Accounts → Create accounts**. Enter a first name and last name, choose the role, and select **Create account**. Teacher is preselected. To import teachers, paste two spreadsheet columns (first name and last name, without headings), preview the names, and create up to 50 accounts at once.
+
+Use **Copy message** for each recipient and send it privately. The message opens username sign-in and includes that person's initial username and temporary password. Leaving the screen clears the displayed messages. If the creation response is lost, **Retry safely** uses the same request. Check Accounts for the username and use its password reset if the account was created.
+
+At first sign-in the recipient enters their phone number and date of birth, chooses a personal password, and can edit their username. They sign in again with the new credentials. **Profile settings** lets them change those details later. A student invitation creates a fresh, unassigned roster record. To connect someone to an existing student, use the existing signup and account-grant flow and select the correct roster record.
+
 | Role          | Access                                                                                                                                                                               |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Administrator | Full notebook; approve, disable and assign roles; manage students and assignments; reset another credential user's password.                                                         |
