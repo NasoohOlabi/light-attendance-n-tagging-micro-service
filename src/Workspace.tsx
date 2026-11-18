@@ -4,7 +4,17 @@ import { formatLevel } from './levelFormat'
 import { PhoneNumber } from './PhoneNumber'
 import { TableHeader, TableToolbar } from './DataTable'
 import { useDataTable } from './useDataTable'
-import { ChevronRight, CircleCheck, CircleMinus, RefreshCw, UserRound } from 'lucide-react'
+import {
+  Check,
+  ChevronRight,
+  CircleCheck,
+  CircleMinus,
+  Pencil,
+  RefreshCw,
+  StickyNote,
+  UserRound,
+  X,
+} from 'lucide-react'
 import { useLanguage, type TranslationKey } from './useLanguage'
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -974,7 +984,11 @@ function AttendanceView({
           <col />
           <col className="roster-level-column" />
           <col />
-          <col className="roster-attendance-column" />
+          <col
+            className={
+              canCorrect ? 'roster-attendance-correction-column' : 'roster-attendance-column'
+            }
+          />
         </colgroup>
         <TableHeader model={attendanceTable} />
         <tbody>
@@ -1002,13 +1016,63 @@ function AttendanceView({
               </td>
               <td data-label={language === 'ar' ? 'الحضور' : 'Attendance'}>
                 <div className="attendance-row-controls">
-                  <select
+                  <div
+                    className="attendance-segments"
+                    role="group"
                     aria-label={`${t('Attendance for')} ${student.name}`}
-                    disabled={disabled}
-                    value={draft[student.studentId] ?? current.get(student.studentId) ?? ''}
-                    onChange={(event) => {
-                      const value = event.target.value
-                      if (value === 'correct') {
+                  >
+                    {statuses.map((status) => {
+                      const Icon =
+                        status === 'present' ? Check : status === 'absent' ? X : CircleMinus
+                      return (
+                        <button
+                          key={status}
+                          type="button"
+                          className={`attendance-segment attendance-segment-${status}`}
+                          aria-label={t(status)}
+                          title={t(status)}
+                          aria-pressed={
+                            (draft[student.studentId] ?? current.get(student.studentId)) === status
+                          }
+                          disabled={disabled}
+                          onClick={() =>
+                            setDraft({
+                              ...draft,
+                              [student.studentId]:
+                                !current.has(student.studentId) &&
+                                draft[student.studentId] === status
+                                  ? ''
+                                  : status,
+                            })
+                          }
+                        >
+                          <Icon size={18} aria-hidden="true" />
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    className="attendance-note-button"
+                    aria-label={`${t('Add note for')} ${student.name}`}
+                    title={t('Add note')}
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      setNoteStudent(student)
+                      noteDialog.current?.showModal()
+                    }}
+                  >
+                    <StickyNote size={18} aria-hidden="true" />
+                  </button>
+                  {canCorrect && current.has(student.studentId) && (
+                    <button
+                      type="button"
+                      className="attendance-correct-button"
+                      aria-label={`${language === 'ar' ? 'تصحيح العلامة' : 'Correct this mark'}: ${student.name}`}
+                      title={language === 'ar' ? 'تصحيح العلامة' : 'Correct this mark'}
+                      aria-haspopup="dialog"
+                      disabled={disabled}
+                      onClick={() => {
                         const record = projected.attendance.find(
                           ({ value }) =>
                             value.date === date && value.studentId === student.studentId,
@@ -1017,37 +1081,11 @@ function AttendanceView({
                           setCorrection({ id: record.event.id, name: student.name })
                           correctionDialog.current?.showModal()
                         }
-                      } else setDraft({ ...draft, [student.studentId]: value })
-                    }}
-                  >
-                    <option value="" disabled={current.has(student.studentId)}>
-                      {t('Not marked')}
-                    </option>
-                    {statuses.map((status) => (
-                      <option key={status} value={status}>
-                        {t(status)}
-                      </option>
-                    ))}
-                    {canCorrect && current.has(student.studentId) && (
-                      <optgroup label={language === 'ar' ? 'إجراءات' : 'Actions'}>
-                        <option value="correct">
-                          {language === 'ar' ? 'تصحيح العلامة…' : 'Correct this mark…'}
-                        </option>
-                      </optgroup>
-                    )}
-                  </select>
-                  <button
-                    type="button"
-                    className="secondary"
-                    aria-label={`${t('Add note for')} ${student.name}`}
-                    aria-haspopup="dialog"
-                    onClick={() => {
-                      setNoteStudent(student)
-                      noteDialog.current?.showModal()
-                    }}
-                  >
-                    {t('Add note')}
-                  </button>
+                      }}
+                    >
+                      <Pencil size={16} aria-hidden="true" />
+                    </button>
+                  )}
                 </div>
               </td>
             </tr>

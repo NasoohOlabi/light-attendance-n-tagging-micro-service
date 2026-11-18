@@ -79,10 +79,12 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   const row = page.getByRole('row').filter({ hasText: longName })
   const rowNote = row.getByRole('button', { name: /إضافة ملاحظة/ })
   await expect(rowNote).toBeVisible()
-  const markBounds = await row.getByRole('combobox').boundingBox()
+  const markBounds = await row.getByRole('group').boundingBox()
   const noteBounds = await rowNote.boundingBox()
   if (!markBounds || !noteBounds) throw new Error('Missing attendance row controls')
-  expect(Math.abs(markBounds.y - noteBounds.y)).toBeLessThanOrEqual(2)
+  expect(
+    Math.abs(markBounds.y + markBounds.height / 2 - noteBounds.y - noteBounds.height / 2),
+  ).toBeLessThanOrEqual(2)
   expect(noteBounds.x).toBeLessThan(markBounds.x)
   await rowNote.click()
   const arabicNote = page.getByLabel('الملاحظة', { exact: true })
@@ -104,7 +106,10 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await clickAccountAction(page, 'السجل والتصحيحات')
   await usableLayout(page)
   await page.getByRole('button', { name: 'الحضور', exact: true }).click()
-  await page.getByLabel(`الحضور للطالب ${longName}`).selectOption('absent')
+  await page
+    .getByLabel(`الحضور للطالب ${longName}`)
+    .getByRole('button', { name: 'غائب', exact: true })
+    .click()
   await page.getByRole('button', { name: 'حفظ الحضور (1)', exact: true }).click()
   await expect(page.getByRole('status')).not.toContainText('saved')
   await page

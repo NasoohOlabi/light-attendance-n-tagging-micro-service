@@ -1941,3 +1941,9 @@ The owner saw installation instructions after clicking Install Wartaq and asked 
 A clean desktop Chrome 157 profile received the deferred prompt event on Railway. Chrome for Testing 158 reported no installability errors on the local build and reached the real Web Install API with active user input. Browser tests simulate installer responses for cancellation, retry, and the older paths. OS-level confirmation and launcher behavior were not exercised. The pull request records hosted checks and production verification.
 
 `bun run verify:release` passed with 38 Bun tests and 152 browser cases. Six optional database tests and two desktop instances of phone-only cases skipped. File and history scans and the dependency audit passed.
+
+## 2026-11-18 18:00 Asia/Damascus (UTC+03:00) - Compact attendance rows
+
+The owner requested one line per attendance cell. Three connected icon buttons mark Present in green, Absent in red, and Excused in amber. A yellow sticky-note icon opens the student's session notes. An eligible saved mark has a correction icon on the same line. The first click drafts a mark, and pressing it again clears that draft for a previously unmarked student.
+
+`bun run verify:release` passed with 38 Bun tests and 152 browser cases. Six optional local database tests and two desktop instances of phone-only cases skipped. The browser suite verified 44px targets at 320–430px in English and Arabic, keyboard marking and clearing, note persistence, filtered bulk marking, and corrections. A synthetic browser smoke run checked the three status colors and saved notes at 1440px in English light mode and 320px in Arabic dark mode. Railway reports Wait for CI enabled on main. The PR records hosted checks and production smoke verification. Browser checks use synthetic records and emulated phones.

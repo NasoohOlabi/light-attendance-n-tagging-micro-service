@@ -240,7 +240,10 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.getByRole('button', { name: 'Synthetic course', exact: true }).click()
   await expect(page.getByText('Alpha Student')).toBeVisible()
   await expect(page.getByText('Beta Student')).toHaveCount(0)
-  await page.getByLabel('Attendance for Alpha Student').selectOption('present')
+  await page
+    .getByLabel('Attendance for Alpha Student')
+    .getByRole('button', { name: 'present', exact: true })
+    .click()
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await expect(page.getByRole('alert')).toContainText(
     'The save may already have reached the server',
@@ -314,7 +317,11 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await denied
   await expect(page.getByText('Beta Student')).toBeVisible()
   await expect(page.getByText('Alpha Student')).toHaveCount(0)
-  await expect(page.getByLabel('Attendance for Beta Student')).toBeDisabled()
+  await expect(
+    page
+      .getByLabel('Attendance for Beta Student')
+      .getByRole('button', { name: 'present', exact: true }),
+  ).toBeDisabled()
   await page.getByRole('button', { name: 'Add note for Beta Student' }).click()
   const betaNote = page.getByRole('dialog', { name: 'Student note for Beta Student' })
   await expect(betaNote.getByLabel('Note', { exact: true })).toBeDisabled()
@@ -593,7 +600,10 @@ test('unconfirmed sign-out hides private records and offers a retry', async ({ p
 })
 
 async function saveAttendance(page: Page) {
-  await page.getByLabel('Attendance for Alpha Student').selectOption('present')
+  await page
+    .getByLabel('Attendance for Alpha Student')
+    .getByRole('button', { name: 'present', exact: true })
+    .click()
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
 }
 
@@ -631,7 +641,11 @@ test('old pending batches block authenticated writes', async ({ page }) => {
   await expect(page.getByRole('alert').first()).toContainText(
     'Copy the pending batch from browser storage',
   )
-  await expect(page.getByLabel('Attendance for Alpha Student')).toBeDisabled()
+  await expect(
+    page
+      .getByLabel('Attendance for Alpha Student')
+      .getByRole('button', { name: 'present', exact: true }),
+  ).toBeDisabled()
   expect(posts).toBe(0)
 })
 

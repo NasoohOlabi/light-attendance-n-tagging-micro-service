@@ -10,7 +10,10 @@ test('table filtering limits bulk attendance and preserves hidden drafts', async
   await page.getByRole('button', { name: 'Explore with sample students' }).click()
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page.getByLabel('Session date').fill('2026-02-18')
-  await page.getByLabel('Attendance for Omar').selectOption('absent')
+  await page
+    .getByLabel('Attendance for Omar')
+    .getByRole('button', { name: 'absent', exact: true })
+    .click()
   await page.getByRole('button', { name: 'Filter options' }).first().click()
   await page.getByLabel('Add filter').selectOption({ label: 'Student' })
   const filter = page.getByLabel('Filter Student').first()
@@ -23,8 +26,12 @@ test('table filtering limits bulk attendance and preserves hidden drafts', async
   await page.getByRole('button', { name: 'Filter options' }).first().click()
   await page.getByRole('button', { name: 'Clear filters' }).click()
   await page.getByRole('button', { name: 'Close' }).click()
-  await expect(page.getByLabel('Attendance for Omar')).toHaveValue('absent')
-  await expect(page.getByLabel('Attendance for أحمد')).toHaveValue('present')
+  await expect(
+    page.getByLabel('Attendance for Omar').getByRole('button', { pressed: true }),
+  ).toHaveAccessibleName('absent')
+  await expect(
+    page.getByLabel('Attendance for أحمد').getByRole('button', { pressed: true }),
+  ).toHaveAccessibleName('present')
   await page.getByRole('button', { name: 'Filter options' }).first().click()
   await page.getByLabel('Add filter').selectOption({ label: 'Attendance' })
   await page.getByLabel('Filter Attendance').first().selectOption({ label: 'absent' })

@@ -1138,7 +1138,9 @@ test('grades, attendance, and withdrawal preserve course history', async ({ page
     payload: { kind: 'attendance', studentId, enrollmentId: enrollA, date, status: 'late' },
   })
   await page.reload()
-  await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveValue('present')
+  await expect(
+    page.getByLabel('Attendance for Synthetic Student').getByRole('button', { pressed: true }),
+  ).toHaveAccessibleName('present')
   const historyHeading = page.getByRole('heading', { name: 'History & corrections' })
   await expect(page.locator('.workspace-rail nav').getByText(/History/)).toHaveCount(0)
   await clickAccountAction(page, 'Settings')
@@ -1167,11 +1169,16 @@ test('grades, attendance, and withdrawal preserve course history', async ({ page
       .getByRole('cell')
       .nth(2),
   ).toHaveText('Admin')
-  await page.getByLabel('Attendance for Synthetic Student').selectOption('absent')
+  await page
+    .getByLabel('Attendance for Synthetic Student')
+    .getByRole('button', { name: 'absent', exact: true })
+    .click()
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
   await expect.poll(() => events.length).toBe(2)
   await makeCurrent(page, 'Course A')
-  await expect(page.getByLabel('Attendance for Synthetic Student')).toHaveValue('present')
+  await expect(
+    page.getByLabel('Attendance for Synthetic Student').getByRole('button', { pressed: true }),
+  ).toHaveAccessibleName('present')
   await page.getByRole('button', { name: 'Courses', exact: true }).click()
   const courseRow = page.getByRole('row').filter({ hasText: 'Course A' })
   await clickRecordAction(courseRow, 'Close course')

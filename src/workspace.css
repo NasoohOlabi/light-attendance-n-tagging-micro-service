@@ -510,18 +510,84 @@
   width: 7rem;
 }
 .roster-attendance-column {
-  width: 15rem;
+  width: calc(182px + 1.6rem);
+}
+.roster-attendance-correction-column {
+  width: calc(230px + 1.6rem);
 }
 .attendance-row-controls {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 4px;
 }
-.attendance-row-controls select {
-  flex: 1 1 6.5rem;
-  width: auto;
-  min-width: 0;
+.attendance-segments {
+  display: inline-flex;
+  border: 1px solid #bfd8db;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: #f0f7f7;
+}
+.attendance-row-controls button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 0;
+}
+.attendance-segment {
+  color: var(--attendance-status-color);
+  background: transparent;
+}
+.attendance-segment + .attendance-segment {
+  border-inline-start: 1px solid #bfd8db;
+}
+.attendance-segment:hover:not(:disabled):not([aria-pressed='true']),
+.attendance-correct-button:hover:not(:disabled) {
+  background: #164e561a;
+}
+.attendance-segment-present {
+  --attendance-status-color: #166534;
+}
+.attendance-segment-absent {
+  --attendance-status-color: #b91c1c;
+}
+.attendance-segment-excused {
+  --attendance-status-color: #92400e;
+}
+.attendance-segment[aria-pressed='true'] {
+  background: var(--attendance-status-color);
+  color: white;
+}
+.attendance-row-controls .attendance-note-button {
+  border-radius: 0.5rem;
+  background: #fef3c7;
+  color: #92400e;
+}
+.attendance-row-controls .attendance-correct-button {
+  border-radius: 0.5rem;
+}
+.attendance-row-controls button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -4px;
+}
+:root[data-theme='dark'] .attendance-segments,
+:root[data-theme='dark'] .attendance-segment + .attendance-segment {
+  border-color: #568188;
+}
+:root[data-theme='dark'] .attendance-segments {
+  background: #102b31;
+}
+:root[data-theme='dark'] .attendance-segment[aria-pressed='false'] {
+  color: color-mix(in srgb, var(--attendance-status-color) 35%, white);
+}
+:root[data-theme='dark'] .attendance-segment:hover:not(:disabled):not([aria-pressed='true']),
+:root[data-theme='dark'] .attendance-correct-button:hover:not(:disabled) {
+  background: #e3f1f126;
+}
+:root[data-theme='dark'] .attendance-note-button {
+  background: #493616;
+  color: #fde68a;
 }
 .attendance-note-dialog {
   overflow-wrap: anywhere;

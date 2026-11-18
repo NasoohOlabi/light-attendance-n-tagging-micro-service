@@ -6,7 +6,7 @@ Student notes from attendance rows, saved notes for the selected day, Arabic tex
 
 ## How to get to it (user POV)
 
-Open **Attendance**, choose the **Session date**, and use **Add note** on a student's row. Read the selected student and session date in the dialog. Enter the note and choose **Save note**. Blank tags use the default attendance tag. Reopen the row dialog to read saved notes for that day. Administrators can also review earlier notes in **Profile → Settings → History & corrections**.
+Open **Attendance**, choose the **Session date**, and use the yellow **Add note** icon beside the status buttons on a student's row. Read the selected student and session date in the dialog. Enter the note and choose **Save note**. Blank tags use the default attendance tag. Reopen the row dialog to read saved notes for that day. Administrators can also review earlier notes in **Profile → Settings → History & corrections**.
 
 ## Driving it with Playwright
 

@@ -450,7 +450,7 @@ test('attendance shares the table toolbar and leads with student names on phones
     const heading = toolbar.getByRole('heading')
     const title = row.locator('.record-title')
     const level = row.locator('td').nth(1)
-    const select = row.getByRole('combobox')
+    const segments = row.getByRole('group').getByRole('button')
     const note = row.getByRole('button', { name: /Add note for|إضافة ملاحظة للطالب/ })
     await expect(title).toHaveText('Alpha Family')
     await expect(table.locator('thead')).toBeHidden()
@@ -473,8 +473,18 @@ test('attendance shares the table toolbar and leads with student names on phones
         if (ar) expect(bounds.x + bounds.width).toBeLessThanOrEqual(titleBox.x)
         else expect(bounds.x).toBeGreaterThanOrEqual(titleBox.x + titleBox.width)
       }
-      await expect(select).toBeVisible()
-      await expect(note).toBeVisible()
+      await expect(segments).toHaveCount(3)
+      const noteBox = await note.boundingBox()
+      if (!noteBox) throw new Error('Attendance note button is hidden')
+      for (const control of [...(await segments.all()), note]) {
+        const bounds = await control.boundingBox()
+        if (!bounds) throw new Error('Attendance row control is hidden')
+        expect(bounds.width).toBeGreaterThanOrEqual(44)
+        expect(bounds.height).toBeGreaterThanOrEqual(44)
+        expect(
+          Math.abs(bounds.y + bounds.height / 2 - noteBox.y - noteBox.height / 2),
+        ).toBeLessThan(2)
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
         width,
       )
