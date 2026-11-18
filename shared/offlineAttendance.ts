@@ -12,6 +12,7 @@ export const offlineAttendanceRecordSchema = z.object({
     }),
   }),
   expectedEventId: z.uuid().nullable(),
+  expectedRevision: z.literal('unknown').optional(),
 })
 export const offlineAttendanceSyncSchema = z.object({
   accountId: z.string().min(1),

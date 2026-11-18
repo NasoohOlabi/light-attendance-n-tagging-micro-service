@@ -5,6 +5,11 @@ import { createHandler } from '../functions/notebook-service'
 import { makeEvent, projectEvents } from '../shared/ledger'
 import { courseBoardSchema, neonSnapshotSchema, neonStudentAttendanceSchema } from '../shared/neon'
 import { offlineAttendanceResponseSchema } from '../shared/offlineAttendance'
+import {
+  offlineStudentOutcomeSchema,
+  type offlineStudentOperationSchema,
+} from '../shared/offlineStudent'
+import type { z } from 'zod'
 
 const databaseUrl = process.env.TEST_RAILWAY_DATABASE_URL
 const integration = databaseUrl ? test : test.skip
@@ -830,6 +835,77 @@ integration(
       expect(projectedStudent.attendance.filter(({ date }) => date === offlineDate)).toEqual([
         expect.objectContaining({ status: winningStatus, enrollmentId: enrollmentIds[0] }),
       ])
+      const syncStudent = async (operation: z.input<typeof offlineStudentOperationSchema>) => {
+        const response = await call('/api/student/sync', subjects.teacher, {
+          accountId: subjects.teacher,
+          operation,
+        })
+        expect(response.status, await response.clone().text()).toBe(200)
+        return offlineStudentOutcomeSchema.parse(await response.json())
+      }
+      const initialPhone =
+        neonSnapshotSchema
+          .parse(await (await call('/api/notebook', subjects.teacher)).json())
+          .students.find((student) => student.studentId === studentId)?.whatsapp ?? null
+      const contact = {
+        kind: 'contact' as const,
+        id: crypto.randomUUID(),
+        studentId,
+        clientTime: new Date().toISOString(),
+        expectedWhatsapp: initialPhone,
+        whatsapp: '+15550101012',
+      }
+      expect(await syncStudent(contact)).toMatchObject({
+        kind: 'saved',
+        currentWhatsapp: contact.whatsapp,
+      })
+      const newerPhone = '+15550101013'
+      const next = await syncStudent({
+        ...contact,
+        id: crypto.randomUUID(),
+        expectedWhatsapp: contact.whatsapp,
+        whatsapp: newerPhone,
+      })
+      expect(next).toMatchObject({ kind: 'saved', currentWhatsapp: newerPhone })
+      expect(await syncStudent(contact)).toMatchObject({
+        kind: 'saved',
+        currentWhatsapp: newerPhone,
+      })
+      expect(await syncStudent({ ...contact, id: crypto.randomUUID() })).toMatchObject({
+        kind: 'conflict',
+        currentWhatsapp: newerPhone,
+      })
+      const receipt = await pool.query('SELECT payload FROM events WHERE id = $1', [contact.id])
+      expect(receipt.rows[0]?.payload).toEqual({
+        kind: 'contact_receipt',
+        fingerprint: expect.stringMatching(/^[0-9a-f]{64}$/),
+      })
+      const offlineNote = makeEvent('Synthetic course teacher', {
+        kind: 'note',
+        studentId,
+        date: offlineDate,
+        tags: ['attendance'],
+        text: 'Synthetic offline note',
+      })
+      const operation = { kind: 'note', event: offlineNote } as const
+      if (offlineNote.payload.kind !== 'note') throw new Error('Expected a note')
+      const noteOperation = {
+        ...operation,
+        event: { ...offlineNote, payload: offlineNote.payload },
+      }
+      expect((await syncStudent(noteOperation)).kind).toBe('saved')
+      expect((await syncStudent(noteOperation)).kind).toBe('saved')
+      const syncedNotebook = neonSnapshotSchema.parse(
+        await (await call('/api/notebook', subjects.teacher)).json(),
+      )
+      expect(
+        syncedNotebook.students.find((student) => student.studentId === studentId)?.whatsapp,
+      ).toBe(newerPhone)
+      expect(syncedNotebook.events.filter((event) => event.id === offlineNote.id)).toHaveLength(1)
+      expect(syncedNotebook.events.some((event) => event.id === contact.id)).toBe(false)
+      const portal = await (await call('/api/student/attendance', subjects.student)).text()
+      expect(portal).not.toContain(newerPhone)
+      expect(portal).not.toContain('Synthetic offline note')
 
       await pool.query('INSERT INTO courses (id, name) VALUES ($1, $2)', [
         promotionCourse,

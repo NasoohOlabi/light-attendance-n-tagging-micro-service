@@ -29,10 +29,17 @@ function setup(
     actor: string
     client_time: Date
     received_at: Date
-    payload: LedgerEvent['payload']
+    payload: unknown
   }> = []
+  let whatsapp: string | null = null
   const client = {
     async query(sql: string, values: unknown[] = []) {
+      if (sql.startsWith('UPDATE students SET whatsapp')) {
+        whatsapp = typeof values[1] === 'string' ? values[1] : null
+        return { rows: [], rowCount: 1 }
+      }
+      if (sql.startsWith('SELECT whatsapp FROM students'))
+        return { rows: options.assigned === false ? [] : [{ whatsapp }] }
       if (sql.startsWith('SELECT role, teacher_id'))
         return {
           rows: [
@@ -64,7 +71,7 @@ function setup(
           rows:
             options.assigned === false
               ? []
-              : [{ id: studentId, name: 'Student', group_name: '', active: true }],
+              : [{ id: studentId, name: 'Student', group_name: '', active: true, whatsapp }],
         }
       if (
         sql.includes('FROM course_enrollments ce JOIN students s') &&
@@ -85,7 +92,10 @@ function setup(
         }
       if (sql.startsWith('SELECT c.id, c.name, c.open'))
         return { rows: [{ id: courseId, name: 'Course', open: true }] }
-      if (sql.startsWith('SELECT e.id')) return { rows }
+      if (sql.startsWith('SELECT e.id'))
+        return {
+          rows: rows.filter((row) => !JSON.stringify(row.payload).includes('contact_receipt')),
+        }
       if (sql.startsWith('INSERT INTO events')) {
         if (rows.some((row) => row.id === values[0])) return { rows: [], rowCount: 0 }
         rows.push({
@@ -148,6 +158,21 @@ describe('Neon API boundary', () => {
     expect(
       (await (await sync({ event: same, expectedEventId: null })).json()).outcomes[0].kind,
     ).toBe('saved')
+    const unknown = eventSchema.parse({
+      ...first,
+      id: crypto.randomUUID(),
+      payload: { ...first.payload, status: 'absent' },
+    })
+    expect(
+      (
+        await (
+          await call('/api/attendance/sync', 'valid', {
+            accountId: 'subject',
+            records: [{ event: unknown, expectedEventId: null, expectedRevision: 'unknown' }],
+          })
+        ).json()
+      ).outcomes[0].kind,
+    ).toBe('conflict')
     const different = eventSchema.parse({
       ...first,
       id: crypto.randomUUID(),
@@ -174,6 +199,64 @@ describe('Neon API boundary', () => {
         await call('/api/attendance/sync', 'valid', {
           accountId: 'other',
           records: [{ event: first, expectedEventId: null }],
+        })
+      ).status,
+    ).toBe(403)
+  })
+  test('student sync preserves notes and detects contact conflicts and retries', async () => {
+    const { call, rows } = setup()
+    const send = async (operation: unknown) =>
+      await (await call('/api/student/sync', 'valid', { accountId: 'subject', operation })).json()
+    const note = {
+      kind: 'note',
+      event: {
+        ...event,
+        payload: { kind: 'note', studentId, date: '2026-11-13', tags: ['test'], text: 'First' },
+      },
+    }
+    expect((await send(note)).kind).toBe('saved')
+    expect((await send(note)).kind).toBe('saved')
+    expect(
+      (
+        await send({
+          ...note,
+          event: { ...note.event, payload: { ...note.event.payload, text: 'Changed' } },
+        })
+      ).kind,
+    ).toBe('id_conflict')
+    const contact = {
+      kind: 'contact',
+      id: crypto.randomUUID(),
+      studentId,
+      clientTime: event.clientTime,
+      expectedWhatsapp: null,
+      whatsapp: '123',
+    }
+    expect((await send(contact)).kind).toBe('saved')
+    const next = { ...contact, id: crypto.randomUUID(), expectedWhatsapp: '123', whatsapp: '456' }
+    expect((await send(next)).kind).toBe('saved')
+    expect(await send(contact)).toMatchObject({ kind: 'saved', currentWhatsapp: '456' })
+    expect(await send({ ...contact, id: crypto.randomUUID(), whatsapp: '789' })).toMatchObject({
+      kind: 'conflict',
+      currentWhatsapp: '456',
+    })
+    expect(rows.slice(1).map(({ payload }) => payload)).toEqual([
+      { kind: 'contact_receipt', fingerprint: expect.stringMatching(/^[0-9a-f]{64}$/) },
+      { kind: 'contact_receipt', fingerprint: expect.stringMatching(/^[0-9a-f]{64}$/) },
+    ])
+    expect(
+      await (
+        await setup({ assigned: false }).call('/api/student/sync', 'valid', {
+          accountId: 'subject',
+          operation: contact,
+        })
+      ).json(),
+    ).toMatchObject({ kind: 'forbidden' })
+    expect(
+      (
+        await setup({ mode: 'read_only' }).call('/api/student/sync', 'valid', {
+          accountId: 'subject',
+          operation: contact,
         })
       ).status,
     ).toBe(403)

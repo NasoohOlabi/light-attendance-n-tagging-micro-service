@@ -55,6 +55,17 @@ export type Payload = z.infer<typeof payloadSchema>
 export type Student = z.infer<typeof studentSchema>
 export type Attendance = z.infer<typeof projectedAttendanceSchema>
 export type Status = z.infer<typeof statusSchema>
+export function normalizedNoteTags(value: string) {
+  const tags = [
+    ...new Set(
+      value
+        .split(/[,\u060c]/)
+        .map((tag) => tag.trim().replace(/^#/, '').toLocaleLowerCase())
+        .filter(Boolean),
+    ),
+  ]
+  return tags.length ? tags : ['attendance']
+}
 export function makeEvent(actor: string, payload: Payload): LedgerEvent {
   return eventSchema.parse({
     id: crypto.randomUUID(),

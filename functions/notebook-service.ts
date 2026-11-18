@@ -32,6 +32,7 @@ import {
 } from '../shared/neon'
 import { eventSchema, projectEvents } from '../shared/ledger'
 import { offlineAttendanceSyncSchema } from '../shared/offlineAttendance'
+import { offlineStudentSyncSchema } from '../shared/offlineStudent'
 import { validateAssignedPayloads } from '../shared/roster'
 import { courseAttendance, effectiveGradeResult } from '../shared/courseGrading'
 
@@ -55,6 +56,10 @@ const eventRow = z.object({
   received_at: z.date(),
   payload: z.unknown(),
 })
+// Contact retry receipts stay in the ledger without entering any attendance or note projection.
+const visibleLedgerEvent = `(e.payload->>'kind' = 'contact_receipt'
+  AND e.payload = jsonb_build_object('kind', 'contact_receipt', 'fingerprint', e.payload->>'fingerprint')
+  AND e.payload->>'fingerprint' ~ '^[a-f0-9]{64}$') IS NOT TRUE`
 
 function numericLevel(value: string) {
   const normalized = value
@@ -156,7 +161,7 @@ async function snapshot(
     .parse(
       (
         await db.query(
-          `SELECT e.id, e.actor, e.client_time, e.received_at, e.payload FROM events e JOIN students s ON s.id = e.student_id WHERE ${scope} ORDER BY e.sequence`,
+          `SELECT e.id, e.actor, e.client_time, e.received_at, e.payload FROM events e JOIN students s ON s.id = e.student_id WHERE ${scope} AND ${visibleLedgerEvent} ORDER BY e.sequence`,
           values,
         )
       ).rows,
@@ -388,7 +393,7 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
           .parse(
             (
               await db.query(
-                'SELECT id, actor, client_time, received_at, payload FROM events WHERE student_id = ANY($1::uuid[]) ORDER BY sequence',
+                `SELECT e.id, e.actor, e.client_time, e.received_at, e.payload FROM events e WHERE e.student_id = ANY($1::uuid[]) AND ${visibleLedgerEvent} ORDER BY e.sequence`,
                 [students.map((student) => student.id)],
               )
             ).rows,
@@ -657,6 +662,7 @@ export function createHandler(
         '/api/notebook',
         '/api/events',
         '/api/attendance/sync',
+        '/api/student/sync',
         '/api/student/attendance',
         '/api/admin',
         '/api/admin/accounts/invite',
@@ -680,6 +686,7 @@ export function createHandler(
       ([
         '/api/events',
         '/api/attendance/sync',
+        '/api/student/sync',
         '/api/me/invitation-profile',
         '/api/admin/accounts/invite',
         '/api/admin/accounts/grant',
@@ -700,6 +707,7 @@ export function createHandler(
       (![
         '/api/events',
         '/api/attendance/sync',
+        '/api/student/sync',
         '/api/me/invitation-profile',
         '/api/admin/accounts/invite',
         '/api/admin/accounts/grant',
@@ -817,7 +825,7 @@ export function createHandler(
             .parse(
               (
                 await db.query(
-                  'SELECT e.id, e.actor, e.client_time, e.received_at, e.payload FROM events e WHERE e.student_id = $1 ORDER BY e.sequence',
+                  `SELECT e.id, e.actor, e.client_time, e.received_at, e.payload FROM events e WHERE e.student_id = $1 AND ${visibleLedgerEvent} ORDER BY e.sequence`,
                   [student.id],
                 )
               ).rows,
@@ -895,9 +903,15 @@ export function createHandler(
           await db.query('COMMIT')
           return reply(response)
         }
-        if ((path === '/api/events' || path === '/api/attendance/sync') && !teacher.canWrite)
+        if (
+          (path === '/api/events' ||
+            path === '/api/attendance/sync' ||
+            path === '/api/student/sync') &&
+          !teacher.canWrite
+        )
           throw new HttpError(403)
-        if (path === '/api/attendance/sync' && !teacher.canRead) throw new HttpError(403)
+        if ((path === '/api/attendance/sync' || path === '/api/student/sync') && !teacher.canRead)
+          throw new HttpError(403)
         const batch = path === '/api/events' ? neonBatchSchema.parse(await readBody(request)) : null
         if (
           path === '/api/student/attendance' ||
@@ -909,14 +923,77 @@ export function createHandler(
           path === '/api/attendance/sync'
             ? offlineAttendanceSyncSchema.parse(await readBody(request))
             : null
-        if (sync && sync.accountId !== subject) throw new HttpError(403)
+        const studentSync =
+          path === '/api/student/sync'
+            ? offlineStudentSyncSchema.parse(await readBody(request))
+            : null
+        if (
+          (sync && sync.accountId !== subject) ||
+          (studentSync && studentSync.accountId !== subject)
+        )
+          throw new HttpError(403)
         // ponytail: one ledger lock serializes writes; use ordered student locks if throughput requires it.
-        if (batch || sync)
+        if (batch || sync || studentSync)
           await db.query("SELECT pg_advisory_xact_lock(hashtextextended('attendance-ledger', 0))")
+        if (studentSync) {
+          const operation = studentSync.operation
+          const studentId =
+            operation.kind === 'note' ? operation.event.payload.studentId : operation.studentId
+          const id = operation.kind === 'note' ? operation.event.id : operation.id
+          const { rows } = await db.query(
+            'SELECT whatsapp FROM students WHERE id = $1 AND active AND ($2::boolean OR teacher_id = $3) FOR UPDATE',
+            [studentId, teacher.role === 'administrator', teacher.id],
+          )
+          const student = z.object({ whatsapp: z.string().nullable() }).optional().parse(rows[0])
+          if (!student) {
+            await db.query('COMMIT')
+            return reply({ id, kind: 'forbidden', currentWhatsapp: null })
+          }
+          const currentWhatsapp = student.whatsapp?.trim() || null
+          const clientTime =
+            operation.kind === 'note' ? operation.event.clientTime : operation.clientTime
+          const payload =
+            operation.kind === 'note'
+              ? operation.event.payload
+              : {
+                  kind: 'contact_receipt',
+                  fingerprint: new Bun.CryptoHasher('sha256')
+                    .update(JSON.stringify({ subject, operation }))
+                    .digest('hex'),
+                }
+          const existing = await db.query('SELECT 1 FROM events WHERE id = $1', [id])
+          if (existing.rowCount) {
+            const same = await db.query(
+              'SELECT 1 FROM events WHERE id = $1 AND teacher_id = $2 AND student_id = $3 AND client_time = $4 AND payload = $5::jsonb',
+              [id, teacher.id, studentId, clientTime, JSON.stringify(payload)],
+            )
+            await db.query('COMMIT')
+            return reply({ id, kind: same.rowCount ? 'saved' : 'id_conflict', currentWhatsapp })
+          }
+          if (operation.kind === 'contact' && currentWhatsapp !== operation.expectedWhatsapp) {
+            await db.query('COMMIT')
+            return reply({ id, kind: 'conflict', currentWhatsapp })
+          }
+          if (operation.kind === 'contact')
+            await db.query('UPDATE students SET whatsapp = $2 WHERE id = $1', [
+              studentId,
+              operation.whatsapp,
+            ])
+          await db.query(
+            'INSERT INTO events (id, teacher_id, student_id, actor, client_time, payload, enrollment_id) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)',
+            [id, teacher.id, studentId, teacher.name, clientTime, JSON.stringify(payload), null],
+          )
+          await db.query('COMMIT')
+          return reply({
+            id,
+            kind: 'saved',
+            currentWhatsapp: operation.kind === 'contact' ? operation.whatsapp : currentWhatsapp,
+          })
+        }
         const current = await snapshot(db, teacher, !batch && !sync)
         if (sync) {
           const outcomes = []
-          for (const { event, expectedEventId } of sync.records) {
+          for (const { event, expectedEventId, expectedRevision } of sync.records) {
             const payload = event.payload
             const latest = projectEvents(current.events).attendance.find(
               ({ value }) =>
@@ -959,7 +1036,9 @@ export function createHandler(
               continue
             }
             if (
-              (version?.eventId ?? null) !== expectedEventId &&
+              (expectedRevision === 'unknown'
+                ? version !== null
+                : (version?.eventId ?? null) !== expectedEventId) &&
               version?.status !== payload.status
             ) {
               outcomes.push({ id: event.id, kind: 'conflict', current: version })

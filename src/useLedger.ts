@@ -1,5 +1,5 @@
 import { useLanguage } from './useLanguage'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { z } from 'zod'
 import {
   eventSchema,
@@ -11,7 +11,13 @@ import {
 import { assignedEvents, validateAssignedPayloads } from '../shared/roster'
 import { demoEvents } from './demo'
 import { apiUrl, getNotebook, postEvents } from './neon'
-import type { Course, Enrollment, NeonTeacher, NeonRosterStudent } from '../shared/neon'
+import type {
+  Course,
+  Enrollment,
+  NeonTeacher,
+  NeonRosterStudent,
+  NeonSnapshot,
+} from '../shared/neon'
 
 const foreignPendingMessage =
   'A pending batch belongs to another account or an old link. Copy the pending batch from browser storage and contact your administrator to reconcile it before saving.'
@@ -49,6 +55,7 @@ export function useLedger(
   )
   const [courses, setCourses] = useState<Course[]>([])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [snapshotTeacher, setSnapshotTeacher] = useState<NeonTeacher>()
   const [pending, setPending] = useState<LedgerEvent[]>([])
   const [storageBlocked, setStorageBlocked] = useState(() =>
     neon && !navigator.locks
@@ -61,6 +68,14 @@ export function useLedger(
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const invalid = 0
+  const applySnapshot = useCallback((snapshot: NeonSnapshot) => {
+    setSnapshotTeacher(snapshot.teacher)
+    setEvents(snapshot.events)
+    setRoster(snapshot.students)
+    setCourses(snapshot.courses)
+    setEnrollments(snapshot.enrollments)
+    setLoaded(true)
+  }, [])
   useEffect(() => {
     if (!neonUserId) return
     try {
@@ -80,13 +95,7 @@ export function useLedger(
     let cancelled = false
     getNotebook(neonUserId)
       .then((snapshot) => {
-        if (!cancelled) {
-          setEvents(snapshot.events)
-          setRoster(snapshot.students)
-          setCourses(snapshot.courses)
-          setEnrollments(snapshot.enrollments)
-          setLoaded(true)
-        }
+        if (!cancelled) applySnapshot(snapshot)
       })
       .catch((cause: unknown) => {
         if (!cancelled) setError(errorText(cause))
@@ -94,7 +103,7 @@ export function useLedger(
     return () => {
       cancelled = true
     }
-  }, [key, neonUserId])
+  }, [key, neonUserId, applySnapshot])
 
   const refresh = useCallback(async () => {
     if (!neonUserId || locked.current) return
@@ -102,11 +111,7 @@ export function useLedger(
     setBusy(true)
     try {
       const snapshot = await getNotebook(neonUserId)
-      setEvents(snapshot.events)
-      setRoster(snapshot.students)
-      setCourses(snapshot.courses)
-      setEnrollments(snapshot.enrollments)
-      setLoaded(true)
+      applySnapshot(snapshot)
       setError('')
     } catch (cause) {
       setError(errorText(cause))
@@ -114,7 +119,7 @@ export function useLedger(
       locked.current = false
       setBusy(false)
     }
-  }, [neonUserId])
+  }, [neonUserId, applySnapshot])
 
   async function send(batch: LedgerEvent[], retry = false): Promise<boolean> {
     if (locked.current || !batch.length) return false
@@ -166,7 +171,7 @@ export function useLedger(
           setPending(batch)
           if (!neon.teacher.canWrite) throw new Error('Your account has read-only access.')
           const current = await getNotebook(neon.userId)
-          setRoster(current.students)
+          applySnapshot(current)
           if (
             projectEvents([...current.events, ...batch]).conflicts >
             projectEvents(current.events).conflicts
@@ -188,10 +193,7 @@ export function useLedger(
             writeStarted = true
             snapshot = await postEvents(neon.userId, remaining)
           }
-          setEvents(snapshot.events)
-          setRoster(snapshot.students)
-          setCourses(snapshot.courses)
-          setEnrollments(snapshot.enrollments)
+          applySnapshot(snapshot)
           localStorage.removeItem(key)
           return true
         })
@@ -260,11 +262,16 @@ export function useLedger(
     }
   }
 
+  const scopedEvents = useMemo(
+    () => (neonUserId || assignedDemo ? assignedEvents(events, roster) : events),
+    [neonUserId, assignedDemo, events, roster],
+  )
   return {
-    events: neon || assignedDemo ? assignedEvents(events, roster) : events,
+    events: scopedEvents,
     roster,
     courses,
     enrollments,
+    snapshotTeacher,
     pending,
     storageBlocked,
     loaded,

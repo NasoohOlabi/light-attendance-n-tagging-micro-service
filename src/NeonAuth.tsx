@@ -51,10 +51,10 @@ export function NeonAuth({
     teacher: NeonAccount,
     signOut: () => void,
     profile: Profile,
-    sessionExpires: number,
   ) => React.ReactNode
 }) {
   const { t, errorMessage, language } = useLanguage()
+  const openOfflineLabel = language === 'ar' ? 'فتح الدفتر دون اتصال' : 'Open offline notebook'
   const session = authClient.useSession()
   const userId = session.data?.user.id
   const [offlineSession, setOfflineSession] = useState(() =>
@@ -68,7 +68,7 @@ export function NeonAuth({
   useEffect(() => {
     if (session.isPending || session.error || !navigator.onLine) return
     const cached = offlineAccess()
-    if (cached && cached.userId !== userId) {
+    if (cached && userId && cached.userId !== userId) {
       clearOfflineAccess()
       // oxlint-disable-next-line react/set-state-in-effect
       setOfflineSession(null)
@@ -95,7 +95,6 @@ export function NeonAuth({
     const refreshWorkspace = () => {
       if (leaving) return
       leaving = true
-      clearOfflineAccess()
       window.location.replace(window.location.pathname + '?page=app')
     }
     const changed = (event: StorageEvent) => {
@@ -164,16 +163,13 @@ export function NeonAuth({
         .catch((cause: unknown) => {
           window.clearTimeout(timer)
           if (cancelled) return
-          if (cause instanceof NeonRequestError && (cause.status === 401 || cause.status === 403)) {
+          if (cause instanceof NeonRequestError && cause.status === 403) {
             clearOfflineAccess()
             setOfflineSession(null)
           }
           setAccount({
             userId,
-            kind:
-              cause instanceof NeonRequestError && (cause.status === 401 || cause.status === 403)
-                ? 'denied'
-                : 'error',
+            kind: cause instanceof NeonRequestError && cause.status === 403 ? 'denied' : 'error',
             message:
               cause instanceof NeonRequestError
                 ? cause.message
@@ -188,7 +184,7 @@ export function NeonAuth({
   useEffect(() => {
     const denied = (event: Event) => {
       if (event instanceof AccessDeniedEvent && event.userId === userId) {
-        clearOfflineAccess()
+        if (event.status === 403) clearOfflineAccess()
         setAccount({
           userId,
           kind: 'denied',
@@ -213,6 +209,7 @@ export function NeonAuth({
         setLogout('failed')
         return
       }
+      clearOfflineAccess()
       announceSessionChange()
       onSignOut()
     } catch {
@@ -224,7 +221,6 @@ export function NeonAuth({
     return (
       <OfflineAttendance
         userId={offline.userId}
-        requireLease
         actor={offline.actor}
         close={() => {
           setOfflineSession(null)
@@ -251,9 +247,7 @@ export function NeonAuth({
         <p role="alert">{t('Could not check your session. Please try again.')}</p>
         {(session.error || stalled) && offlineAccess() && (
           <button className="secondary" onClick={() => setOfflineSession(offlineAccess())}>
-            {language === 'ar'
-              ? '\u0641\u062a\u062d \u0627\u0644\u062d\u0636\u0648\u0631 \u062f\u0648\u0646 \u0627\u062a\u0635\u0627\u0644'
-              : 'Open offline attendance'}
+            {openOfflineLabel}
           </button>
         )}
         <button
@@ -293,9 +287,7 @@ export function NeonAuth({
           <p role="alert">{errorMessage(account.message)}</p>
           {account.kind === 'error' && offlineAccess()?.userId === userId && (
             <button className="secondary" onClick={() => setOfflineSession(offlineAccess())}>
-              {language === 'ar'
-                ? '\u0641\u062a\u062d \u0627\u0644\u062d\u0636\u0648\u0631 \u062f\u0648\u0646 \u0627\u062a\u0635\u0627\u0644'
-                : 'Open offline attendance'}
+              {openOfflineLabel}
             </button>
           )}
           {account.kind === 'error' && (
@@ -394,32 +386,32 @@ export function NeonAuth({
           </button>
         </main>
       )
-    return children(
-      userId,
-      account.value,
-      signOut,
-      {
-        invitation,
-        accounts: { currentUserId: userId, add: addAccount },
-        updateInvitation: invitation ? updateInvitation : undefined,
-        name: session.data?.user.name ?? '',
-        image: session.data?.user.image ?? null,
-        update: async (name, image) => {
-          const result = await authClient.updateUser(
-            { name, ...(image === undefined ? {} : { image }) },
-            { headers: { 'X-User-Id': userId } },
-          )
-          if (result.error) throw new Error('Could not save profile')
-          await session.refetch()
-        },
+    return children(userId, account.value, signOut, {
+      invitation,
+      accounts: { currentUserId: userId, add: addAccount },
+      updateInvitation: invitation ? updateInvitation : undefined,
+      name: session.data?.user.name ?? '',
+      image: session.data?.user.image ?? null,
+      update: async (name, image) => {
+        const result = await authClient.updateUser(
+          { name, ...(image === undefined ? {} : { image }) },
+          { headers: { 'X-User-Id': userId } },
+        )
+        if (result.error) throw new Error('Could not save profile')
+        await session.refetch()
       },
-      new Date(session.data?.session.expiresAt ?? 0).getTime(),
-    )
+    })
   }
   return (
     <main id="main-content" tabIndex={-1} className="workspace-auth">
       <AuthHeader />
       {!addingAccount && <AccountChoices add={addAccount} />}
+      {!addingAccount && offlineAccess() && (
+        <button className="secondary" onClick={() => setOfflineSession(offlineAccess())}>
+          {openOfflineLabel}
+        </button>
+      )}
+
       {addingAccount && (
         <button
           type="button"
