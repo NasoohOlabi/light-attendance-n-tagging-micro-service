@@ -1781,3 +1781,9 @@ The owner requested teacher invitations and imports without collecting contact d
 The server provisions identities and role records atomically, prevents duplicate batch submissions and revokes sessions on password rotation. Migration 013 adds the invitation fields to existing accounts. Transfer version 12 preserves the fields and compares previous versions safely. The additive migration committed on Railway and the main deployment trigger has Wait for CI enabled.
 
 The full release gate passed at the original base with 126 browser cases and 36 unit tests. All five optional PostgreSQL suites also passed on disposable databases, including versioned backup/restore and real Better Auth sign-in, setup gating, rotation and personal edits. An initial combined database run timed out in the glob and student name tests; both passed when rerun. Phone coverage uses emulation. Integrated the concurrent homepage change from main before publishing. The PR carries final CI, deployed revision and production verification evidence.
+
+## 2026-11-18 08:12 Asia/Damascus (UTC+03:00) - Audit event retries and backup fidelity
+
+The repository audit found two conversions through JavaScript that could lose PostgreSQL precision. The events API now checks retry identity against the stored timestamp and JSONB payload. Transfer exports event sequence numbers as decimal strings, accepts safe legacy numbers and locks all destination tables before checking emptiness. The import advances the identity sequence after row comparison.
+
+All 41 Bun tests passed with the five integration suites enabled against disposable local PostgreSQL. Cases cover equivalent timestamp formats, distinct microseconds, conflicting duplicate IDs rolling back a batch, and backup versions 1–12. A restored sequence of 9007199254740993 retained its exact value. Production data and migrations were outside these checks.

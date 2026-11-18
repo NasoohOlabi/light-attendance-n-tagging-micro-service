@@ -902,17 +902,8 @@ export function createHandler(
         const current = await snapshot(db, teacher, !batch)
         if (batch) {
           if (batch.events.some((e) => e.actor !== teacher.name)) throw new HttpError(403)
-          const newEvents = batch.events.filter((event) => {
-            const existing = current.events.find((item) => item.id === event.id)
-            if (!existing) return true
-            if (
-              existing.actor !== event.actor ||
-              existing.clientTime !== event.clientTime ||
-              JSON.stringify(existing.payload) !== JSON.stringify(event.payload)
-            )
-              throw new HttpError(409)
-            return false
-          })
+          const existingIds = new Set(current.events.map((event) => event.id))
+          const newEvents = batch.events.filter((event) => !existingIds.has(event.id))
           try {
             validateAssignedPayloads(
               newEvents.map((e) => e.payload),

@@ -98,6 +98,9 @@ integration(
         "INSERT INTO course_enrollments (id, course_id, student_id, level, practical, theory) VALUES ($1, $2, $3, 'One', 87.5, 92), ($4, $5, $3, 'Two', 71, 81.5)",
         [enrollmentA, courseA, student, enrollmentB, courseB],
       )
+      await source.query(
+        "SELECT setval(pg_get_serial_sequence('events', 'sequence'), 9007199254740993, false)",
+      )
       for (const enrollment of [enrollmentA, enrollmentB]) {
         const event = crypto.randomUUID()
         await source.query(
@@ -314,6 +317,27 @@ integration(
           )
         ).rows[0].count,
       ).toBe(2)
+      expect(
+        (
+          await targets[2].query('SELECT sequence::text FROM events WHERE enrollment_id = $1', [
+            enrollmentA,
+          ])
+        ).rows[0].sequence,
+      ).toBe('9007199254740993')
+      expect(
+        (
+          await targets[2].query(
+            "SELECT nextval(pg_get_serial_sequence('events', 'sequence'))::text AS next",
+          )
+        ).rows[0].next,
+      ).toBe('9007199254740995')
+      expect(
+        (
+          await targets[0].query(
+            "SELECT nextval(pg_get_serial_sequence('events', 'sequence'))::text AS next",
+          )
+        ).rows[0].next,
+      ).toBe('1')
       expect(
         (await targets[2].query('SELECT first_name, last_name FROM students')).rows[0],
       ).toEqual({ first_name: 'First', last_name: 'Last' })
