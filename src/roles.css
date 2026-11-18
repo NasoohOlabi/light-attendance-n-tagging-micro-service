@@ -133,6 +133,21 @@
   }
 }
 
+.course-save-status {
+  position: fixed;
+  z-index: 40;
+  inset-inline-end: max(1rem, env(safe-area-inset-left), env(safe-area-inset-right));
+  inset-block-end: max(1rem, env(safe-area-inset-bottom));
+  margin: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 700px) {
+  .course-save-status {
+    inset-block-end: calc(5rem + env(safe-area-inset-bottom));
+  }
+}
+
 .course-list-scroll {
   container: course-list / inline-size;
 }

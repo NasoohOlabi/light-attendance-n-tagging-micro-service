@@ -4,6 +4,7 @@ import { formatLevel } from './levelFormat'
 import { TableHeader, TableToolbar, useDataTable } from './DataTable'
 import { useEffect, useRef, useState } from 'react'
 import {
+  Check,
   ClipboardList,
   Download,
   History,
@@ -78,6 +79,11 @@ export function Courses({
   useEffect(() => {
     setName(course?.name ?? '')
   }, [course?.id, course?.name, query.courseView])
+  useEffect(() => {
+    if (!saved) return
+    const timer = window.setTimeout(() => setSaved(false), 4_000)
+    return () => window.clearTimeout(timer)
+  }, [saved])
   async function submit(path: string, body: unknown) {
     setBusy(true)
     setError('')
@@ -175,13 +181,20 @@ export function Courses({
   ])
   return (
     <section className="panel space-y-5">
+      <div className="course-save-status" role="status">
+        {saved && (
+          <span className="flex items-center gap-2 rounded-lg bg-[#004d57] px-4 py-2.5 text-sm font-medium text-white shadow-lg">
+            <Check aria-hidden="true" size={18} />
+            {ar ? 'تم الحفظ' : 'Saved'}
+          </span>
+        )}
+      </div>
       {!query.courseView && (
         <TableToolbar model={courses.length ? courseTable : undefined}>
           <h1 className="title">{ar ? 'الدورات' : 'Courses'}</h1>
         </TableToolbar>
       )}
       {error && <p role="alert">{error}</p>}
-      {saved && <p role="status">{ar ? 'تم الحفظ' : 'Saved'}</p>}
       {!query.courseView && (
         <>
           <button

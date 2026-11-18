@@ -1841,3 +1841,13 @@ Integrated the course row action update from `8ac18fb`. The four course browser 
 The owner asked to show the course actions directly when there is room. At a course-list width of 48rem or more, the Actions column shows up to six icons in one row with localized names and tooltips. Narrower lists use the three-dot menu. Both layouts use the same actions and availability rules.
 
 `bun run verify` passed with 38 tests and six optional database skips. Formatting, file and history scans, and the dependency audit passed. The affected synthetic course scenario passed on desktop and on an emulated phone, including both languages, 320/390/430px widths, a constrained list on a wide viewport, and course action destinations. The full local browser run hit Windows memory and Chromium launch errors. GitHub Verify gates the merge, and the PR carries the production deployment receipt.
+
+## 2026-11-18 11:58 Asia/Damascus (UTC+03:00) - Show course save confirmation as a toast
+
+The owner reported that the Arabic save confirmation took up space above Manage students. Courses now announces successful course, membership and grade saves in a fixed lower-corner toast that dismisses after four seconds. On compact screens it sits above navigation. Errors remain visible in the page.
+
+The course browser scenario passed in English and Arabic on desktop and emulated mobile, including the 320px toast position, a stable heading, auto-dismissal, and failure followed by successful retry. One Windows Chromium capture error in an unrelated role-administration test cleared on retry. The full release gate then passed with 38 unit and 134 browser tests, with six optional database tests and two phone-only cases on desktop skipped. The local browser checks use synthetic data.
+
+At 12:08 Asia/Damascus, integrated the responsive course row actions from main at `8ac18fb`. The combined course browser scenario passed on desktop and emulated mobile. The PR records final CI, Railway deployment and verification of the deployed interface.
+
+At 12:16 Asia/Damascus, integrated `3363d11`, which removes Back to courses from Manage students. Both browser projects passed the combined course scenario, including navigation through Courses and the localized toast.
