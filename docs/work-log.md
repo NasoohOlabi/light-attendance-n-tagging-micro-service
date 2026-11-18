@@ -1947,3 +1947,9 @@ A clean desktop Chrome 157 profile received the deferred prompt event on Railway
 The owner requested one line per attendance cell. Three connected icon buttons mark Present in green, Absent in red, and Excused in amber. A yellow sticky-note icon opens the student's session notes. An eligible saved mark has a correction icon on the same line. The first click drafts a mark, and pressing it again clears that draft for a previously unmarked student.
 
 `bun run verify:release` passed with 38 Bun tests and 152 browser cases. Six optional local database tests and two desktop instances of phone-only cases skipped. The browser suite verified 44px targets at 320–430px in English and Arabic, keyboard marking and clearing, note persistence, filtered bulk marking, and corrections. A synthetic browser smoke run checked the three status colors and saved notes at 1440px in English light mode and 320px in Arabic dark mode. Railway reports Wait for CI enabled on main. The PR records hosted checks and production smoke verification. Browser checks use synthetic records and emulated phones.
+
+## 2026-11-18 18:42 Asia/Damascus (UTC+03:00) - Use neutral attendance segments
+
+The owner requested the reference's rounded track and raised selected tile, with color reserved for the icons. Attendance uses the Base UI primitives behind shadcn's Toggle Group. Present, Absent, and Excused share the same neutral selected surface. Add note uses a neutral surface with an amber icon.
+
+The local browser smoke verified the three icon colors, common selected surface, RTL and LTR arrow keys, clearing a draft, saving a mark, one-line 44px controls with correction, and reopening a note in English light mode at 1440px and Arabic dark mode at 320px. The smoke used synthetic records and sent zero application writes. The pull request records the hosted checks and Railway smoke. Physical phones and live authenticated sessions were outside this verification.

@@ -1,3 +1,6 @@
+import { DirectionProvider } from '@base-ui/react/direction-provider'
+import { Toggle } from '@base-ui/react/toggle'
+import { ToggleGroup } from '@base-ui/react/toggle-group'
 import { RowActions } from './RowActions'
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
@@ -1016,41 +1019,34 @@ function AttendanceView({
               </td>
               <td data-label={language === 'ar' ? 'الحضور' : 'Attendance'}>
                 <div className="attendance-row-controls">
-                  <div
+                  <ToggleGroup
                     className="attendance-segments"
-                    role="group"
                     aria-label={`${t('Attendance for')} ${student.name}`}
+                    value={[
+                      draft[student.studentId] ?? current.get(student.studentId) ?? '',
+                    ].filter(Boolean)}
+                    disabled={disabled}
+                    onValueChange={(value) => {
+                      if (!value.length && current.has(student.studentId)) return
+                      setDraft({ ...draft, [student.studentId]: value[0] ?? '' })
+                    }}
                   >
                     {statuses.map((status) => {
                       const Icon =
                         status === 'present' ? Check : status === 'absent' ? X : CircleMinus
                       return (
-                        <button
+                        <Toggle
                           key={status}
-                          type="button"
+                          value={status}
                           className={`attendance-segment attendance-segment-${status}`}
                           aria-label={t(status)}
                           title={t(status)}
-                          aria-pressed={
-                            (draft[student.studentId] ?? current.get(student.studentId)) === status
-                          }
-                          disabled={disabled}
-                          onClick={() =>
-                            setDraft({
-                              ...draft,
-                              [student.studentId]:
-                                !current.has(student.studentId) &&
-                                draft[student.studentId] === status
-                                  ? ''
-                                  : status,
-                            })
-                          }
                         >
                           <Icon size={18} aria-hidden="true" />
-                        </button>
+                        </Toggle>
                       )
                     })}
-                  </div>
+                  </ToggleGroup>
                   <button
                     type="button"
                     className="attendance-note-button"
@@ -1324,7 +1320,9 @@ function AttendanceView({
                 : `Mark ${unmarked.length} unmarked present`}
             </button>
           )}
-          {rows(visible)}
+          <DirectionProvider direction={language === 'ar' ? 'rtl' : 'ltr'}>
+            {rows(visible)}
+          </DirectionProvider>
           {changed.length > 0 && (
             <div className="attendance-save">
               <button

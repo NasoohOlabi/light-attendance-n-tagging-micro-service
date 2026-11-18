@@ -510,10 +510,10 @@
   width: 7rem;
 }
 .roster-attendance-column {
-  width: calc(182px + 1.6rem);
+  width: calc(184px + 1.6rem);
 }
 .roster-attendance-correction-column {
-  width: calc(230px + 1.6rem);
+  width: calc(232px + 1.6rem);
 }
 .attendance-row-controls {
   display: flex;
@@ -522,10 +522,9 @@
 }
 .attendance-segments {
   display: inline-flex;
-  border: 1px solid #bfd8db;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  background: #f0f7f7;
+  padding: 2px;
+  border-radius: 0.625rem;
+  background: #e5e7eb;
 }
 .attendance-row-controls button {
   display: inline-grid;
@@ -533,18 +532,17 @@
   min-width: 44px;
   min-height: 44px;
   padding: 0;
-  border-radius: 0;
+  border-radius: 0.5rem;
 }
 .attendance-segment {
-  color: var(--attendance-status-color);
   background: transparent;
 }
-.attendance-segment + .attendance-segment {
-  border-inline-start: 1px solid #bfd8db;
+.attendance-segment svg {
+  color: var(--attendance-status-color);
 }
 .attendance-segment:hover:not(:disabled):not([aria-pressed='true']),
 .attendance-correct-button:hover:not(:disabled) {
-  background: #164e561a;
+  background: #0000000d;
 }
 .attendance-segment-present {
   --attendance-status-color: #166534;
@@ -556,37 +554,39 @@
   --attendance-status-color: #92400e;
 }
 .attendance-segment[aria-pressed='true'] {
-  background: var(--attendance-status-color);
-  color: white;
+  background: #fff;
+  box-shadow: 0 1px 3px #0003;
 }
-.attendance-row-controls .attendance-note-button {
-  border-radius: 0.5rem;
-  background: #fef3c7;
+.attendance-note-button {
+  background: #e5e7eb;
+}
+.attendance-note-button svg {
   color: #92400e;
 }
-.attendance-row-controls .attendance-correct-button {
-  border-radius: 0.5rem;
-}
 .attendance-row-controls button:focus-visible {
-  outline: 2px solid currentColor;
+  outline: 2px solid #475569;
   outline-offset: -4px;
 }
-:root[data-theme='dark'] .attendance-segments,
-:root[data-theme='dark'] .attendance-segment + .attendance-segment {
-  border-color: #568188;
-}
 :root[data-theme='dark'] .attendance-segments {
-  background: #102b31;
+  background: #374151;
 }
-:root[data-theme='dark'] .attendance-segment[aria-pressed='false'] {
+:root[data-theme='dark'] .attendance-segment svg {
   color: color-mix(in srgb, var(--attendance-status-color) 35%, white);
+}
+:root[data-theme='dark'] .attendance-segment[aria-pressed='true'] {
+  background: #4b5563;
+}
+:root[data-theme='dark'] .attendance-row-controls button:focus-visible {
+  outline-color: #f3f4f6;
 }
 :root[data-theme='dark'] .attendance-segment:hover:not(:disabled):not([aria-pressed='true']),
 :root[data-theme='dark'] .attendance-correct-button:hover:not(:disabled) {
-  background: #e3f1f126;
+  background: #ffffff1f;
 }
 :root[data-theme='dark'] .attendance-note-button {
-  background: #493616;
+  background: #374151;
+}
+:root[data-theme='dark'] .attendance-note-button svg {
   color: #fde68a;
 }
 .attendance-note-dialog {
