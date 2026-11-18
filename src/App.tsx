@@ -1,4 +1,5 @@
 import { RowActions } from './RowActions'
+import { AttendanceChartExport } from './AttendanceChartExport'
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
 import { PhoneNumber } from './PhoneNumber'
@@ -515,7 +516,7 @@ function Notebook({
           className={tab === 'attendance' ? 'workspace-content' : ''}
         >
           <fieldset
-            disabled={disabled && tab !== 'dashboard' && tab !== 'attendance' && tab !== 'summary'}
+            disabled={disabled && (tab === 'roster' || tab === 'history')}
             className="min-w-0"
           >
             {tab === 'dashboard' && query.view === 'notebook' && (
@@ -621,7 +622,23 @@ function Notebook({
                 attendance={(query.course ? scopedProjection : baseProjection).attendance}
               />
             )}
-            {tab === 'summary' && <Summary students={projected.students} projected={projected} />}
+            {tab === 'summary' && (
+              <Summary
+                key={query.course}
+                students={projected.students}
+                projected={projected}
+                scope={
+                  demo
+                    ? language === 'ar'
+                      ? 'دورة تجريبية'
+                      : 'Sample course'
+                    : ledger.courses.find((course) => course.id === query.course)?.name ||
+                      (language === 'ar'
+                        ? '\u0627\u0644\u0633\u062c\u0644 \u0627\u0644\u0633\u0627\u0628\u0642 / \u0628\u0644\u0627 \u062f\u0648\u0631\u0629'
+                        : 'Previous / no course')
+                }
+              />
+            )}
             {tab === 'history' && (
               <History
                 key={query.course}
@@ -1526,7 +1543,15 @@ function StudentEditor({ student, save }: { student: Student; save: Save }) {
   )
 }
 
-function Summary({ students, projected }: { students: Student[]; projected: Projection }) {
+function Summary({
+  students,
+  projected,
+  scope,
+}: {
+  students: Student[]
+  projected: Projection
+  scope: string
+}) {
   const { t } = useLanguage()
   const totals = new Map(
     students.map((student) => [student.studentId, { present: 0, absent: 0, excused: 0, notes: 0 }]),
@@ -1558,6 +1583,7 @@ function Summary({ students, projected }: { students: Student[]; projected: Proj
       <TableToolbar model={summaryTable} className="mb-6">
         <h2 className="title">{t('Attendance overview')}</h2>
       </TableToolbar>
+      <AttendanceChartExport students={students} attendance={records} scope={scope} />
       <SummaryInsights students={students} records={records} />
 
       <div
