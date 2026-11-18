@@ -1782,6 +1782,12 @@ The server provisions identities and role records atomically, prevents duplicate
 
 The full release gate passed at the original base with 126 browser cases and 36 unit tests. All five optional PostgreSQL suites also passed on disposable databases, including versioned backup/restore and real Better Auth sign-in, setup gating, rotation and personal edits. An initial combined database run timed out in the glob and student name tests; both passed when rerun. Phone coverage uses emulation. Integrated the concurrent homepage change from main before publishing. The PR carries final CI, deployed revision and production verification evidence.
 
+## 2026-11-18 08:11 Asia/Damascus (UTC+03:00) - Custom course downloads
+
+The owner requested simple downloads for grades, student information, attendance records and exam participants, with optional filters. Grades now opens an export dialog with five report presets. Administrators can choose columns, combine filters and see the matching row count before downloading. Exam participation uses a saved theory or practical score, including zero. A missing score cannot establish absence. Daily records use corrected marks and inclusive date bounds. Contact details require explicit selection.
+
+The full release gate passed with 37 unit tests and 126 browser cases. Five optional database tests skipped without a disposable database, and two phone-only scenarios skipped on desktop. Downloaded and inspected all five workbook formats through synthetic administrator sessions in English and Arabic on desktop and emulated phones. Checked zero grades, withdrawn enrollments, corrections, selected columns, empty matches, date validation and keyboard focus return. The post-merge Railway deployment and shipped UI checks are recorded in the PR delivery receipt.
+
 ## 2026-11-18 08:14 Asia/Damascus (UTC+03:00) - Switch signed-in accounts in one browser
 
 The owner wanted to create invitations as an administrator, try the teacher or student experience, and return to the administrator without another browser or a manual sign-out. The profile menu now adds email or username sign-ins and switches between saved identities. Switching resets the workspace, and other open tabs follow the new identity. Sign-out removes only the current session. Added invitees can complete setup and enter their workspace using the new password they just chose.
@@ -1791,3 +1797,5 @@ The server validates Better Auth sessions before listing or activating them. It 
 Verified with real sessions on disposable PostgreSQL and a single Chromium context. An administrator added an invited teacher and student, completed each first-login form, switched back after each visit and switched again after reload. The teacher and student could not open administration. A second tab followed the selected identity. Signing out the teacher kept the student and administrator available. The synthetic fixtures were removed. The 54-assertion integration scenario also exercises expired sessions, separate-browser denial, device limits and browser-session cookie lifetime. Updated the signed-out preview and role-test fixtures to model the device account endpoint after the first full UI run exposed stale assumptions. Phone coverage uses emulation. The PR records final release and production evidence.
 
 The release gate passed with 40 unit/integration tests and 128 desktop/mobile browser cases. Two unrelated optional database suites were disabled, and two phone-only checks skipped on desktop. The production trigger targets main with Wait for CI enabled.
+
+Integrated the concurrent course export change from main at `cf7c1a1`. Both delivery entries are retained.
