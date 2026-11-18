@@ -1921,3 +1921,9 @@ At 14:07 Asia/Damascus, integrated `3d2c0f9` from main and resolved the work-log
 At 14:10 Asia/Damascus, investigated GitHub Verify on `163f52c`. Its restored-batch test reloaded when the pending banner appeared, before the initial attendance POST. A delayed synthetic notebook read reproduced the zero-POST failure twice. Three related browser cases now wait for the write-failure alert before changing retry state. The delayed reproduction passed on desktop and mobile, then all 18 focused runs passed without the temporary delay. `bun run verify` passed with six optional database skips. The fix changes browser tests only.
 
 At 14:16 Asia/Damascus, integrated the full course title change from `87fedf4` and kept both work-log entries. The combined `bun run verify` passed with six optional database skips. All ten focused browser cases passed for account creation, attendance retry and the course title on desktop and emulated mobile.
+
+## 2026-11-18 14:55 Asia/Damascus (UTC+03:00) - Restore the course number badge
+
+The owner reported that the full-title change duplicated the site name for numbered Wartaq courses. The header now shows a highlighted number beside the wordmark for those courses. The badge opens the course selector, which uses the full stored names. Other titles still wrap below the wordmark.
+
+The focused browser test reproduced the duplicate on desktop and emulated mobile before the fix. It passed afterward with Arabic-Indic and Western digits, English and Arabic layout, long titles, dropdown behavior and 44px controls at phone and desktop widths. `bun run verify:release` passed with 38 Bun tests and 150 browser cases. Six optional local database tests and two desktop instances of phone-only cases skipped. Browser coverage uses synthetic sessions and records. The PR tracks hosted CI and Railway verification.

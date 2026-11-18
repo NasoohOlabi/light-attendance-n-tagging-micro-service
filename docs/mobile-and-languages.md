@@ -6,4 +6,4 @@ The notebook uses one branded account header. On phones, 16px separates the head
 
 Browser emulation does not certify physical iOS or Android devices, keyboards, screen readers or OS controls. Native installation has not been verified on a physical device. See [PWA behavior](pwa.md).
 
-The workspace profile avatar sits beside the logo on desktop and phones. The full course name appears below them and wraps when it needs more room.
+The workspace profile avatar sits beside the logo on desktop and phones. A course named with the wordmark followed by a number uses a highlighted number beside the logo. Other course names appear in full below the logo and wrap when needed.
