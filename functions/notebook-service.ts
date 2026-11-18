@@ -31,6 +31,7 @@ import {
   neonTeacherSchema,
 } from '../shared/neon'
 import { eventSchema, projectEvents } from '../shared/ledger'
+import { offlineAttendanceSyncSchema } from '../shared/offlineAttendance'
 import { validateAssignedPayloads } from '../shared/roster'
 import { courseAttendance, effectiveGradeResult } from '../shared/courseGrading'
 
@@ -655,6 +656,7 @@ export function createHandler(
         '/api/me/invitation-profile',
         '/api/notebook',
         '/api/events',
+        '/api/attendance/sync',
         '/api/student/attendance',
         '/api/admin',
         '/api/admin/accounts/invite',
@@ -677,6 +679,7 @@ export function createHandler(
     if (
       ([
         '/api/events',
+        '/api/attendance/sync',
         '/api/me/invitation-profile',
         '/api/admin/accounts/invite',
         '/api/admin/accounts/grant',
@@ -696,6 +699,7 @@ export function createHandler(
         request.method !== 'POST') ||
       (![
         '/api/events',
+        '/api/attendance/sync',
         '/api/me/invitation-profile',
         '/api/admin/accounts/invite',
         '/api/admin/accounts/grant',
@@ -891,7 +895,9 @@ export function createHandler(
           await db.query('COMMIT')
           return reply(response)
         }
-        if (path === '/api/events' && !teacher.canWrite) throw new HttpError(403)
+        if ((path === '/api/events' || path === '/api/attendance/sync') && !teacher.canWrite)
+          throw new HttpError(403)
+        if (path === '/api/attendance/sync' && !teacher.canRead) throw new HttpError(403)
         const batch = path === '/api/events' ? neonBatchSchema.parse(await readBody(request)) : null
         if (
           path === '/api/student/attendance' ||
@@ -899,7 +905,88 @@ export function createHandler(
           (batch && !teacher.canWrite)
         )
           throw new HttpError(403)
-        const current = await snapshot(db, teacher, !batch)
+        const sync =
+          path === '/api/attendance/sync'
+            ? offlineAttendanceSyncSchema.parse(await readBody(request))
+            : null
+        if (sync && sync.accountId !== subject) throw new HttpError(403)
+        // ponytail: one ledger lock serializes writes; use ordered student locks if throughput requires it.
+        if (batch || sync)
+          await db.query("SELECT pg_advisory_xact_lock(hashtextextended('attendance-ledger', 0))")
+        const current = await snapshot(db, teacher, !batch && !sync)
+        if (sync) {
+          const outcomes = []
+          for (const { event, expectedEventId } of sync.records) {
+            const payload = event.payload
+            const latest = projectEvents(current.events).attendance.find(
+              ({ value }) =>
+                value.studentId === payload.studentId &&
+                value.enrollmentId === payload.enrollmentId &&
+                value.date === payload.date,
+            )
+            const version = latest
+              ? { eventId: latest.event.id, status: latest.value.status }
+              : null
+            try {
+              validateAssignedPayloads(
+                [payload],
+                current.students,
+                current.events,
+                current.enrollments,
+                current.courses,
+              )
+            } catch {
+              outcomes.push({ id: event.id, kind: 'forbidden', current: null })
+              continue
+            }
+            const existing = await db.query('SELECT 1 FROM events WHERE id = $1', [event.id])
+            if (existing.rowCount) {
+              const same = await db.query(
+                'SELECT 1 FROM events WHERE id = $1 AND teacher_id = $2 AND student_id = $3 AND client_time = $4 AND payload = $5::jsonb',
+                [
+                  event.id,
+                  teacher.id,
+                  payload.studentId,
+                  event.clientTime,
+                  JSON.stringify(payload),
+                ],
+              )
+              outcomes.push({
+                id: event.id,
+                kind: same.rowCount ? 'saved' : 'id_conflict',
+                current: version,
+              })
+              continue
+            }
+            if (
+              (version?.eventId ?? null) !== expectedEventId &&
+              version?.status !== payload.status
+            ) {
+              outcomes.push({ id: event.id, kind: 'conflict', current: version })
+              continue
+            }
+            await db.query(
+              'INSERT INTO events (id, teacher_id, student_id, actor, client_time, payload, enrollment_id) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)',
+              [
+                event.id,
+                teacher.id,
+                payload.studentId,
+                teacher.name,
+                event.clientTime,
+                JSON.stringify(payload),
+                payload.enrollmentId,
+              ],
+            )
+            current.events.push(event)
+            outcomes.push({
+              id: event.id,
+              kind: 'saved',
+              current: { eventId: event.id, status: payload.status },
+            })
+          }
+          await db.query('COMMIT')
+          return reply({ outcomes })
+        }
         if (batch) {
           if (batch.events.some((e) => e.actor !== teacher.name)) throw new HttpError(403)
           const existingIds = new Set(current.events.map((event) => event.id))

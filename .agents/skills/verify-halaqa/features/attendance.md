@@ -29,3 +29,7 @@ Open **Export attendance chart** on Summary with a read-only teacher and a multi
 Same student/date uses last surviving event in database sequence, never device clock. Undoing newest attendance reveals the prior surviving status. Filtered-out/inactive students must not be saved by group marking. Summary ignores saved date ranges, including reversed bounds.
 
 Keep a legacy raw mark in projection/API tests, reverse a newer mark to reveal it as Present, and verify the original status remains in the raw event. An identical legacy retry stays idempotent; reusing its ID for a different raw status still conflicts even if both statuses project to Present. Course enrollment scopes remain independent.
+
+## Offline attendance
+
+Prepare an open course and date online with an approved read/write teacher. Reopen the same session while offline, mark students, reload, and verify the marks and pending count. Reconnect with one changed server mark and one lost successful reply. Verify the uncontested mark retries with its original ID, the disputed row shows both values, and an explicit resolution clears the queue. Exercise the scenario on desktop and a touch-emulated phone with `e2e/offline-attendance.spec.ts`.

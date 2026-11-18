@@ -1961,3 +1961,9 @@ The owner opened Wartaq in a regular tab for testing after installing it and saw
 Chrome 157 and 158 reproduced the banner in fresh tabs after installing from the old manifest in disposable profiles. With the updated manifest, both browsers found that installation on a fresh notebook link, hid the banner and stayed in browser mode at the same URL. Uninstalling the test app restored the banner on reload. The probes used localhost with the same app ID structure and cleaned up their app registrations. Physical Android and iOS devices were outside verification. The pull request records hosted checks and Railway verification.
 
 `bun run verify:release` passed with 38 Bun tests and 162 browser cases. Six optional database tests and two desktop instances of phone-only cases skipped. File and history scans and the dependency audit passed.
+
+## 2026-11-18 20:08 Asia/Damascus (UTC+03:00) - Record teacher attendance offline
+
+The owner requested attendance that teachers can record during connectivity loss and sync on return. Teachers can prepare an open course and date, reopen its local roster and save marks in IndexedDB. Sync rechecks current access and attendance versions, retries the same event ID after a lost reply and lets the teacher resolve a differing mark. The existing student projection receives accepted marks.
+
+The focused desktop and mobile Chromium scenarios passed for offline reopen, persisted marks, lost replies and conflict resolution. The API tests passed for conflicts and exact retries. A disposable Postgres scenario checks competing teachers and the student projection in CI. Physical phones are outside the automated suite. The PR records release and Railway evidence.

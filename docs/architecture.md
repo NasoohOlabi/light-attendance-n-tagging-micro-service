@@ -16,6 +16,12 @@ Attendance has three current statuses: **Present**, **Absent** and **Excused**. 
 
 `bun run verify` checks the code and build; `bun run verify:ui` drives synthetic browser paths. Neither replaces live Railway verification. See the [verification skill](../.agents/skills/verify-halaqa/SKILL.md).
 
+### Offline attendance
+
+A read/write teacher prepares an open course and session date on a trusted device. IndexedDB stores a minimal account-scoped roster with the confirmed attendance status and event ID for each enrollment. The offline screen saves marks locally before acknowledging them and keeps the original event IDs across app restarts and retries. Its device access expires and is separate from server authentication. Local storage can still be cleared by the device or browser.
+
+Foreground sync uses the existing same-origin session and confirms the authenticated account. `POST /api/attendance/sync` checks current account and roster permissions, locks attendance writers, compares each mark against the effective event version, and appends accepted marks. A different status at a changed version is retained for the teacher to review. The teacher can keep the server value or submit their value against the newly displayed version. A closed course, withdrawn enrollment, or lost assignment blocks the queued write. Receipt times and device times are available for history; database order determines effective attendance. Students see the accepted marks through their existing attendance view.
+
 ## Courses
 
 Administrators manage courses and one enrollment per student/course. Scores are optional numbers from 0 to 100. The server locks the student during enrollment changes and attendance checks, validates scope and keeps enrollment IDs stable. Historical unscoped attendance remains unassigned. See [courses](courses.md).

@@ -98,12 +98,18 @@ function setup(
         return { rows: [{ id: values[0] }], rowCount: 1 }
       }
       if (sql.startsWith('SELECT 1 FROM events')) {
+        if (values.length === 1) {
+          const found = rows.some((row) => row.id === values[0])
+          return { rows: found ? [{}] : [], rowCount: found ? 1 : 0 }
+        }
+        const [actor, time, payload] =
+          values.length === 5 ? [undefined, ...values.slice(3)] : values.slice(3)
         const found = rows.some(
           (row) =>
             row.id === values[0] &&
-            row.actor === values[3] &&
-            row.client_time.toISOString() === values[4] &&
-            JSON.stringify(row.payload) === values[5],
+            (actor === undefined || row.actor === actor) &&
+            row.client_time.toISOString() === time &&
+            JSON.stringify(row.payload) === payload,
         )
         return { rows: found ? [{}] : [], rowCount: found ? 1 : 0 }
       }
@@ -131,6 +137,47 @@ function setup(
   return { call, rows, handler }
 }
 describe('Neon API boundary', () => {
+  test('sync detects conflicts and retries exact IDs after later changes', async () => {
+    const { call } = setup()
+    const sync = (record: { event: LedgerEvent; expectedEventId: string | null }) =>
+      call('/api/attendance/sync', 'valid', { accountId: 'subject', records: [record] })
+    const first = eventSchema.parse(event)
+    const firstResponse = await sync({ event: first, expectedEventId: null })
+    expect((await firstResponse.json()).outcomes[0].kind).toBe('saved')
+    const same = eventSchema.parse({ ...first, id: crypto.randomUUID() })
+    expect(
+      (await (await sync({ event: same, expectedEventId: null })).json()).outcomes[0].kind,
+    ).toBe('saved')
+    const different = eventSchema.parse({
+      ...first,
+      id: crypto.randomUUID(),
+      payload: { ...first.payload, status: 'absent' },
+    })
+    expect(
+      (await (await sync({ event: different, expectedEventId: first.id })).json()).outcomes[0].kind,
+    ).toBe('conflict')
+    expect(
+      (await (await sync({ event: different, expectedEventId: same.id })).json()).outcomes[0].kind,
+    ).toBe('saved')
+    expect(
+      (await (await sync({ event: same, expectedEventId: null })).json()).outcomes[0].kind,
+    ).toBe('saved')
+    expect(
+      (
+        await (
+          await sync({ event: { ...same, payload: different.payload }, expectedEventId: null })
+        ).json()
+      ).outcomes[0].kind,
+    ).toBe('id_conflict')
+    expect(
+      (
+        await call('/api/attendance/sync', 'valid', {
+          accountId: 'other',
+          records: [{ event: first, expectedEventId: null }],
+        })
+      ).status,
+    ).toBe(403)
+  })
   test('rejects missing and invalid credentials and foreign origins', async () => {
     const { call, handler } = setup()
     expect((await handler(new Request('https://api.example/api/me'))).status).toBe(401)

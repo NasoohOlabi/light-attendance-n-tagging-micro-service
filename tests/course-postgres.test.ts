@@ -4,6 +4,7 @@ import { Pool } from 'pg'
 import { createHandler } from '../functions/notebook-service'
 import { makeEvent, projectEvents } from '../shared/ledger'
 import { courseBoardSchema, neonSnapshotSchema, neonStudentAttendanceSchema } from '../shared/neon'
+import { offlineAttendanceResponseSchema } from '../shared/offlineAttendance'
 
 const databaseUrl = process.env.TEST_RAILWAY_DATABASE_URL
 const integration = databaseUrl ? test : test.skip
@@ -797,6 +798,38 @@ integration(
           .status,
       ).toBe(200)
       expect((await call('/api/events', subjects.teacher, { events: [stale] })).status).toBe(200)
+
+      const offlineDate = '2026-12-02'
+      const race = await Promise.all(
+        (
+          [
+            ['admin', 'present'],
+            ['teacher', 'absent'],
+          ] as const
+        ).map(async ([role, mark]) => {
+          const event = makeEvent('Synthetic course teacher', {
+            kind: 'attendance',
+            studentId,
+            enrollmentId: enrollmentIds[0],
+            date: offlineDate,
+            status: mark,
+          })
+          const response = await call('/api/attendance/sync', subjects[role], {
+            accountId: subjects[role],
+            records: [{ event, expectedEventId: null }],
+          })
+          expect(response.status, await response.clone().text()).toBe(200)
+          return offlineAttendanceResponseSchema.parse(await response.json()).outcomes[0]
+        }),
+      )
+      expect(race.map((outcome) => outcome?.kind).sort()).toEqual(['conflict', 'saved'])
+      const winningStatus = race.find((outcome) => outcome?.kind === 'saved')?.current?.status
+      const projectedStudent = neonStudentAttendanceSchema.parse(
+        await (await call('/api/student/attendance', subjects.student)).json(),
+      )
+      expect(projectedStudent.attendance.filter(({ date }) => date === offlineDate)).toEqual([
+        expect.objectContaining({ status: winningStatus, enrollmentId: enrollmentIds[0] }),
+      ])
 
       await pool.query('INSERT INTO courses (id, name) VALUES ($1, $2)', [
         promotionCourse,

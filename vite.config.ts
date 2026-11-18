@@ -37,6 +37,7 @@ const prefix = 'wartaq-' + encodeURIComponent(scope.pathname) + '-'
 const cacheName = prefix + ${JSON.stringify(version)}
 const urls = ${JSON.stringify(files)}.map((file) => new URL(file, scope).href)
 const index = new URL('index.html', scope).href
+const appNavigationKeys = new Set(['page', 'view', 'tab', 'course', 'date', 'from', 'to', 'courseView', 'all', 'missing', 'unmarked', 'tables', 'q', 'group', 'student', 'account'])
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(urls)).then(() => self.skipWaiting()))
 })
@@ -50,7 +51,10 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url)
   if (request.method !== 'GET' || url.origin !== scope.origin || request.headers.has('Authorization')) return
   if (request.mode === 'navigate') {
-    const safeQuery = !url.search || (url.searchParams.size === 1 && ['app', 'home'].includes(url.searchParams.get('page')))
+    const safeQuery = !url.search ||
+      (url.searchParams.size === 1 && url.searchParams.get('page') === 'home') ||
+      (url.searchParams.getAll('page').length === 1 && url.searchParams.get('page') === 'app' &&
+        [...url.searchParams.keys()].every((key) => appNavigationKeys.has(key)))
     if (!safeQuery || (url.pathname !== scope.pathname && url.pathname !== new URL('index.html', scope).pathname)) return
     event.respondWith((async () => {
       const cache = await caches.open(cacheName)
@@ -69,11 +73,12 @@ self.addEventListener('fetch', (event) => {
   }
   if (!url.search && (urls.includes(url.href) || url.pathname.startsWith(new URL('assets/', scope).pathname))) {
     event.respondWith((async () => {
-      const current = await (await caches.open(cacheName)).match(request)
+      // Precached static files are identical across Origin and Accept-Encoding variants.
+      const current = await (await caches.open(cacheName)).match(request, { ignoreVary: true })
       if (current) return current
       const previous = (await caches.keys()).filter((key) => key.startsWith(prefix) && key !== cacheName)
       for (const key of previous) {
-        const cached = await (await caches.open(key)).match(request)
+        const cached = await (await caches.open(key)).match(request, { ignoreVary: true })
         if (cached) return cached
       }
       return fetch(request)
