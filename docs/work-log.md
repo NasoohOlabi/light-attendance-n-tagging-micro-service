@@ -1782,6 +1782,12 @@ The server provisions identities and role records atomically, prevents duplicate
 
 The full release gate passed at the original base with 126 browser cases and 36 unit tests. All five optional PostgreSQL suites also passed on disposable databases, including versioned backup/restore and real Better Auth sign-in, setup gating, rotation and personal edits. An initial combined database run timed out in the glob and student name tests; both passed when rerun. Phone coverage uses emulation. Integrated the concurrent homepage change from main before publishing. The PR carries final CI, deployed revision and production verification evidence.
 
+## 2026-11-18 08:11 Asia/Damascus (UTC+03:00) - Custom course downloads
+
+The owner requested simple downloads for grades, student information, attendance records and exam participants, with optional filters. Grades now opens an export dialog with five report presets. Administrators can choose columns, combine filters and see the matching row count before downloading. Exam participation uses a saved theory or practical score, including zero. A missing score cannot establish absence. Daily records use corrected marks and inclusive date bounds. Contact details require explicit selection.
+
+The full release gate passed with 37 unit tests and 126 browser cases. Five optional database tests skipped without a disposable database, and two phone-only scenarios skipped on desktop. Downloaded and inspected all five workbook formats through synthetic administrator sessions in English and Arabic on desktop and emulated phones. Checked zero grades, withdrawn enrollments, corrections, selected columns, empty matches, date validation and keyboard focus return. The post-merge Railway deployment and shipped UI checks are recorded in the PR delivery receipt.
+
 ## 2026-11-18 08:12 Asia/Damascus (UTC+03:00) - Audit event retries and backup fidelity
 
 The repository audit found two conversions through JavaScript that could lose PostgreSQL precision. The events API now checks retry identity against the stored timestamp and JSONB payload. Transfer exports event sequence numbers as decimal strings, accepts safe legacy numbers and locks all destination tables before checking emptiness. The import advances the identity sequence after row comparison.
@@ -1798,6 +1804,8 @@ Focused desktop and emulated-phone checks passed for sign-out failure, stale res
 
 ## 2026-11-18 08:17 Asia/Damascus (UTC+03:00) - Enforce audit checks in CI
 
-The ordinary verification command previously passed while Prettier flagged App.tsx and Oxlint reported seven warnings. It now includes formatting and runs Oxlint across repository JavaScript and TypeScript with warnings and unused suppression directives treated as failures. The TanStack Table adapter documents its local React Compiler compatibility exception.
+The ordinary verification command omitted Prettier and accepted seven Oxlint warnings. A separate formatting check caught an in-progress edit to App.tsx. The file at the starting commit matched Prettier. It now includes formatting and runs Oxlint across repository JavaScript and TypeScript with warnings and unused suppression directives treated as failures. The TanStack Table adapter documents its local React Compiler compatibility exception.
 
 CI provisions disposable PostgreSQL databases for the five integration suites and runs the Python workbook test, Ruff lint and Ruff formatting checks. The workbook adapter and its test use four-space indentation and the configured single-quote style. The local lint, formatting, Python and 41 Bun tests passed. The hosted workflow runs on the PR.
+
+**Main integration at 08:48 Asia/Damascus.** Integrated the customizable Excel downloads from `cf7c1a1`. The full release gate passed with all 42 Bun tests, including the five PostgreSQL suites, and 140 browser cases. Two mobile-only cases skipped on desktop. Both Python checks and the workbook test passed. An additional transfer check accepted safe numeric legacy sequences and rejected unsafe numeric values. Railway's production trigger targets main with Wait for CI enabled.

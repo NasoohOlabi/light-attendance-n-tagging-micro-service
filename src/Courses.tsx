@@ -13,7 +13,7 @@ import {
 } from '../shared/neon'
 import { projectEvents, type LedgerEvent } from '../shared/ledger'
 import { courseAttendance, savedGradeResult } from '../shared/courseGrading'
-import { downloadCourseWorkbook } from './courseExport'
+import { CourseExportDialog } from './CourseExportDialog'
 import { request } from './neon'
 import { useLanguage } from './useLanguage'
 import { setQuery, useQueryState } from './queryState'
@@ -520,8 +520,7 @@ function GradePage({
   useEffect(() => {
     if (decisionEntry) dialogRef.current?.showModal()
   }, [decisionEntry])
-  const [exporting, setExporting] = useState(false)
-  const [exportError, setExportError] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [decisions, setDecisions] = useState<
     Record<string, { requestId: string; result: 'pass' | 'fail' | 'calculated'; note: string }>
   >({})
@@ -642,20 +641,8 @@ function GradePage({
             className="secondary flex items-center gap-2"
             aria-label={ar ? 'تصدير Excel' : 'Export Excel'}
             title={ar ? 'تصدير Excel' : 'Export Excel'}
-            disabled={busy || exporting || settingsDirty || !!gradeDirty}
-            onClick={() => {
-              setExporting(true)
-              setExportError(false)
-              void downloadCourseWorkbook({
-                course,
-                entries: exportEntries,
-                students,
-                attendance,
-                ar,
-              })
-                .catch(() => setExportError(true))
-                .finally(() => setExporting(false))
-            }}
+            disabled={busy || settingsDirty || !!gradeDirty}
+            onClick={() => setExportOpen(true)}
           >
             <Download size={20} aria-hidden="true" />
             <span className="hidden sm:inline">{ar ? 'تصدير Excel' : 'Export Excel'}</span>
@@ -666,7 +653,16 @@ function GradePage({
           {course.name} — {ar ? 'الدرجات' : 'Grades'}
         </h1>
       </TableToolbar>
-      {exportError && <p role="alert">{ar ? 'تعذر تصدير الملف' : 'Could not export file'}</p>}
+      {exportOpen && (
+        <CourseExportDialog
+          course={course}
+          entries={exportEntries}
+          students={students}
+          attendance={attendance}
+          ar={ar}
+          onClose={() => setExportOpen(false)}
+        />
+      )}
       <form
         className="flex flex-wrap items-end justify-end gap-3"
         dir="ltr"
