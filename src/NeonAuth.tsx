@@ -154,24 +154,31 @@ export function NeonAuth({
       ])
         .then((value) => {
           window.clearTimeout(timer)
-          if (!cancelled) setAccount({ kind: 'ready', userId, value })
+          if (cancelled) return
+          if (value.role === 'student' || !value.canRead || !value.canWrite) {
+            clearOfflineAccess()
+            setOfflineSession(null)
+          }
+          setAccount({ kind: 'ready', userId, value })
         })
         .catch((cause: unknown) => {
-          if (cause instanceof NeonRequestError && (cause.status === 401 || cause.status === 403))
-            clearOfflineAccess()
           window.clearTimeout(timer)
-          if (!cancelled)
-            setAccount({
-              userId,
-              kind:
-                cause instanceof NeonRequestError && (cause.status === 401 || cause.status === 403)
-                  ? 'denied'
-                  : 'error',
-              message:
-                cause instanceof NeonRequestError
-                  ? cause.message
-                  : 'The request failed. Please try again.',
-            })
+          if (cancelled) return
+          if (cause instanceof NeonRequestError && (cause.status === 401 || cause.status === 403)) {
+            clearOfflineAccess()
+            setOfflineSession(null)
+          }
+          setAccount({
+            userId,
+            kind:
+              cause instanceof NeonRequestError && (cause.status === 401 || cause.status === 403)
+                ? 'denied'
+                : 'error',
+            message:
+              cause instanceof NeonRequestError
+                ? cause.message
+                : 'The request failed. Please try again.',
+          })
         })
     return () => {
       cancelled = true

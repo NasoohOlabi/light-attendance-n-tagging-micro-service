@@ -1975,3 +1975,5 @@ The owner requested attendance that teachers can record during connectivity loss
 The focused desktop and mobile Chromium scenarios passed for offline reopen, persisted marks, lost replies and conflict resolution. The API tests passed for conflicts and exact retries. A disposable Postgres scenario checks competing teachers and the student projection in CI. Physical phones are outside the automated suite. The PR records release and Railway evidence.
 
 Mark entry waits for the local transaction only. A slow sync leaves the other attendance controls available and overlapping sync attempts are serialized.
+
+If live account verification confirms a role or permission change, the app closes prepared attendance access and keeps any queued marks for reconciliation.
