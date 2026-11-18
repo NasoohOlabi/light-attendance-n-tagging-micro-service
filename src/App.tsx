@@ -2,8 +2,8 @@ import { RowActions } from './RowActions'
 import { LevelInput } from './level'
 import { formatLevel } from './levelFormat'
 import { PhoneNumber } from './PhoneNumber'
-import { TableHeader, useDataTable } from './DataTable'
-import { CircleCheck, CircleMinus, RefreshCw, UserRound } from 'lucide-react'
+import { TableControls, TableHeader, useDataTable } from './DataTable'
+import { ChevronRight, CircleCheck, CircleMinus, RefreshCw, UserRound } from 'lucide-react'
 import { LanguageProvider, useLanguage, type TranslationKey } from './i18n'
 import { useEffect, useState } from 'react'
 import {
@@ -1272,7 +1272,14 @@ function RosterView({
   ])
   return (
     <section className="panel">
-      <h2 className="title mb-5">{t('Your students')}</h2>
+      <header className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="title">{t('Your students')}</h2>
+        {assigned && (
+          <div className="flex shrink-0 items-center gap-2">
+            <TableControls model={rosterTable} />
+          </div>
+        )}
+      </header>
       {!assigned && (
         <form
           className="mb-6 flex flex-wrap items-end gap-3"
@@ -1326,14 +1333,33 @@ function RosterView({
               <col className="roster-active-column" />
               <col className="roster-actions-column" />
             </colgroup>
-            <TableHeader model={rosterTable} actions />
+            <TableHeader model={rosterTable} actions showControls={false} />
             <tbody>
               {rosterTable.rows.map((student) => (
                 <tr key={student.studentId} data-student-id={student.studentId}>
-                  <td data-label={ar ? 'الاسم الأول' : 'First name'}>
-                    <bdi>{student.firstName ?? student.name}</bdi>
+                  <td
+                    className="roster-student-name"
+                    data-label={ar ? 'الاسم الأول' : 'First name'}
+                  >
+                    <bdi className="roster-first-name">{student.firstName ?? student.name}</bdi>
+                    <button
+                      type="button"
+                      className="icon-button roster-mobile-open"
+                      aria-label={`${t('Open student')}: ${student.name}`}
+                      title={t('Open student')}
+                      onClick={() =>
+                        setQuery({ view: 'student', student: student.studentId }, true)
+                      }
+                    >
+                      <bdi>{student.name}</bdi>
+                      <ChevronRight
+                        className="icon-directional shrink-0"
+                        size={20}
+                        aria-hidden="true"
+                      />
+                    </button>
                   </td>
-                  <td data-label={ar ? 'اسم العائلة' : 'Last name'}>
+                  <td className="roster-last-name" data-label={ar ? 'اسم العائلة' : 'Last name'}>
                     <bdi>{student.lastName || '—'}</bdi>
                   </td>
                   <td data-label={ar ? 'رقم الهاتف' : 'Phone'}>
@@ -1388,8 +1414,12 @@ function RosterView({
                             ))}
                           </div>
                           <details className="roster-courses-mobile">
-                            <summary>
-                              {ar ? `الدورات (${names.length})` : `Courses (${names.length})`}
+                            <summary
+                              aria-label={
+                                ar ? `الدورات (${names.length})` : `Courses (${names.length})`
+                              }
+                            >
+                              {names.length}
                             </summary>
                             <div>
                               {names.map((course) => (
@@ -1407,7 +1437,7 @@ function RosterView({
                       )
                     })()}
                   </td>
-                  <td data-label={ar ? 'الحالة' : 'Active'}>
+                  <td className="roster-student-status" data-label={ar ? 'الحالة' : 'Active'}>
                     <span
                       role="img"
                       aria-label={
@@ -1422,8 +1452,9 @@ function RosterView({
                       )}
                     </span>
                   </td>
-                  <td data-label={ar ? 'الإجراءات' : 'Actions'}>
+                  <td className="roster-desktop-action" data-label={ar ? 'الإجراءات' : 'Actions'}>
                     <button
+                      type="button"
                       className="icon-button"
                       aria-label={t('Open student')}
                       title={t('Open student')}
@@ -1432,7 +1463,6 @@ function RosterView({
                       }
                     >
                       <UserRound size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
-                      <span className="roster-open-label">{t('Open student')}</span>
                     </button>
                   </td>
                 </tr>

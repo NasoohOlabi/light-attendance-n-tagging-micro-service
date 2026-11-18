@@ -273,7 +273,7 @@
   text-align: start;
 }
 
-.roster-open-label {
+.roster-students-table .roster-mobile-open {
   display: none;
 }
 
@@ -319,14 +319,9 @@
     font-weight: 600;
     text-align: start;
   }
-  .roster-table.mobile-record-table:not(.roster-students-table) td:last-child,
-  .roster-students-table.mobile-record-table td:last-child,
+  .roster-table.mobile-record-table td:last-child,
   .mobile-record-table th[scope='row'] {
     grid-column: 1 / -1;
-  }
-  .roster-open-label {
-    display: inline;
-    margin-inline-start: 0.5rem;
   }
   [dir='rtl'] .mobile-record-table td::before {
     direction: rtl;
@@ -377,6 +372,29 @@
     width: 100%;
     min-width: 0;
     min-height: 44px;
+  }
+  .mobile-record-table.roster-students-table thead,
+  .role-table.roster-students-table tbody .roster-last-name,
+  .role-table.roster-students-table tbody .roster-desktop-action,
+  .mobile-record-table .roster-student-name::before,
+  .roster-student-name .roster-first-name {
+    display: none;
+  }
+  .roster-student-name {
+    grid-column: 1 / -1;
+  }
+  .roster-student-status svg {
+    margin-inline: 0;
+  }
+  .roster-students-table .roster-mobile-open {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-inline: 0;
+    text-align: start;
+    font-size: 1.125rem;
+    font-weight: 600;
   }
 }
 
