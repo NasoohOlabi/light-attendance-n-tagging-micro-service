@@ -98,9 +98,11 @@ export default defineConfig(({ mode }) => ({
             name: 'verification-api-boundary',
             configurePreviewServer(server) {
               server.middlewares.use('/api', (request, response) => {
-                response.statusCode = request.url?.split('?')[0] === '/auth/get-session' ? 200 : 401
+                const path = request.url?.split('?')[0]
+                const chooser = request.method === 'GET' && path === '/device-accounts'
+                response.statusCode = chooser || path === '/auth/get-session' ? 200 : 401
                 response.setHeader('Content-Type', 'application/json')
-                response.end('null')
+                response.end(chooser ? JSON.stringify({ accounts: [] }) : 'null')
               })
             },
           } satisfies Plugin,

@@ -555,6 +555,8 @@
   background: white;
   color: #133f46;
   box-shadow: 0 8px 24px #00383f33;
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
 }
 .profile-panel strong {
   display: block;
@@ -767,4 +769,25 @@
   color: white;
   font-size: 20px;
   font-weight: 700;
+}
+
+.account-choices {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.account-list {
+  max-height: 12rem;
+  overflow-y: auto;
+}
+.account-choices button {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.account-choices small {
+  display: block;
+  font-size: 0.75rem;
 }

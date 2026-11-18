@@ -3,9 +3,11 @@ import { Globe, History, LogOut, Settings, UserRound } from 'lucide-react'
 import { ThemeChoices, useLanguage } from './i18n'
 import { setQuery } from './queryState'
 import type { InvitationProfile } from './neon'
+import { AccountChoices } from './AccountChoices'
 
 export type Profile = {
   name: string
+  accounts?: { currentUserId: string; add: () => void }
   image: string | null
   update: (name: string, image?: string | null) => Promise<void>
   invitation?: InvitationProfile
@@ -87,6 +89,7 @@ export function ProfileMenu({
       {open && (
         <div className="profile-panel" id={panelId}>
           {profile?.name && <strong dir="auto">{profile.name}</strong>}
+          {profile?.accounts && <AccountChoices {...profile.accounts} disabled={disabled} />}
           {profile && (
             <button
               type="button"

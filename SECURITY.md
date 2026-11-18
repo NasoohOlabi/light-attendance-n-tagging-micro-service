@@ -18,6 +18,8 @@ The frontend CSP permits three exact SHA-256 style hashes for dnd kit 0.5.3's fe
 
 ## Account invitations
 
+The device account chooser lists identities with live Better Auth sessions held in this browser. Session credentials stay in signed HttpOnly cookies, with Secure on HTTPS. Switching validates the target session and sets the active cookie. The chooser returns only user IDs, names and login identifiers. Application APIs continue to authorize the active identity and its role. Personal profile updates check the expected identity, and password rotation or session expiry invalidates the saved login.
+
 Administrator-created invitations generate a random starter password. The server returns it in the creation response and stores its Better Auth hash. Only the signed-in user can submit their personal contact information with their current password. Invited users must finish setup before accessing private application records. Password changes revoke all sessions for that user, including the setup session. Application roles and roster links remain administrator-owned.
 
 ## Temporary development dependency exception
