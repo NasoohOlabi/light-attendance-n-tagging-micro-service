@@ -1,6 +1,9 @@
+import { z } from 'zod'
+
 type InstallPrompt = Event & { prompt: () => unknown; userChoice: unknown }
 let promptEvent: InstallPrompt | null = null
 let installed = false
+let checkingInstalled = false
 let initialized = false
 const listeners = new Set<() => void>()
 
@@ -14,7 +17,6 @@ function isInstallPrompt(event: Event): event is InstallPrompt {
 
 function isStandalone() {
   return (
-    installed ||
     window.matchMedia('(display-mode: standalone)').matches ||
     ('standalone' in navigator && navigator.standalone === true)
   )
@@ -35,6 +37,35 @@ export function initializeInstallPrompt() {
     notify()
   })
   window.matchMedia('(display-mode: standalone)').addEventListener('change', notify)
+  if (
+    'getInstalledRelatedApps' in navigator &&
+    typeof navigator.getInstalledRelatedApps === 'function'
+  ) {
+    checkingInstalled = true
+    const getApps = navigator.getInstalledRelatedApps.bind(navigator)
+    void checkInstalledApps(getApps)
+  }
+}
+
+async function checkInstalledApps(getApps: () => Promise<unknown>) {
+  try {
+    const apps = z
+      .array(
+        z.object({ platform: z.string(), url: z.string().optional(), id: z.string().optional() }),
+      )
+      .parse(await getApps())
+    const manifest = document.querySelector<HTMLLinkElement>('link[rel=manifest]')?.href
+    installed ||= apps.some(
+      (app) =>
+        app.platform === 'webapp' &&
+        (app.id === `${location.origin}/` || (manifest !== undefined && app.url === manifest)),
+    )
+  } catch {
+    // An unavailable lookup leaves the normal install options available.
+  } finally {
+    checkingInstalled = false
+    notify()
+  }
 }
 
 export function subscribeInstall(listener: () => void) {
@@ -43,7 +74,9 @@ export function subscribeInstall(listener: () => void) {
 }
 
 export function installAvailability() {
-  return isStandalone() ? 'installed' : promptEvent ? 'ready' : 'instructions'
+  if (installed || isStandalone()) return 'installed'
+  if (checkingInstalled) return 'checking'
+  return promptEvent ? 'ready' : 'instructions'
 }
 
 export function takeInstallPrompt() {

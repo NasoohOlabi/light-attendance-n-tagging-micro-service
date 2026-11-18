@@ -2,11 +2,13 @@
 
 Use **Install Wartaq / تثبيت وارتق** at the top of the homepage or notebook. A click calls `navigator.install()` where supported, including Chrome 158 on desktop. Other compatible browsers use their deferred installation prompt when available. The browser asks for your confirmation. If the browser offers neither path, the button shows installation instructions. On iPhone/iPad, open the site in Safari and use **Share → Add to Home Screen**.
 
-The install control disappears in standalone mode and after an `appinstalled` event. You can retry a canceled Web Install API request. A deferred prompt event can be used once, and the instructions remain available after dismissal. Feedback and instructions follow the selected language. The UI does not automatically interrupt the teacher or cover the phone navigation.
+The install control is hidden in standalone mode, after an `appinstalled` event, and when the browser confirms that Wartaq is already installed in the current profile. A link you open in a regular tab stays there. Chrome and Edge support this lookup on desktop from version 140, and Chrome supports it on Android from version 84. Browsers that cannot confirm an existing install fall back to the install control and help. [Browser support and matching rules](https://developer.chrome.com/docs/capabilities/get-installed-related-apps#check-if-your-progressive-web-app-is-already-installed-in-scope)
+
+You can retry a canceled Web Install API request. A deferred prompt event can be used once, and the instructions remain available after dismissal. Feedback and instructions follow the selected language.
 
 ## App identity and hosting
 
-The manifest uses **وارتق** alone with 192px and 512px PNG icons and a separate maskable declaration. Icons use the approved Arabic wordmark on deep teal. Regenerate them with `node scripts/render-pwa-icons.mjs` after installing the repository's Playwright Chromium. All identity, start and scope URLs are relative to the deployed repository path. The installed app opens `?page=app`, where the normal account and teacher-approval rules apply.
+The manifest uses **وارتق** alone with 192px and 512px PNG icons and a separate maskable declaration. Icons use the approved Arabic wordmark on deep teal. Regenerate them with `node scripts/render-pwa-icons.mjs` after installing the repository's Playwright Chromium. The manifest's own ID, start URL and scope are relative. The related app entry uses Railway's absolute app ID because desktop Chromium requires it for installed-app lookup. Update the related app ID if the production origin changes. The installed app opens `?page=app`, where the normal account and teacher-approval rules apply.
 
 HTTPS is required outside localhost. The native prompt is not available in every browser; see [MDN's install-prompt guidance](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/How_to/Trigger_install_prompt) and [installability requirements](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable).
 
@@ -26,7 +28,7 @@ During the first upgrade from the previous cache-first worker, its download may 
 
 `e2e/pwa.spec.ts` serves the actual built artifact below `/notebook/` on an isolated local HTTP listener. It verifies the manifest through Chromium, icon dimensions, worker scope, offline shell/sample, stalled-network clean navigation, excluded private/authenticated/query/POST requests, direct API invocation and retry after cancellation, deferred prompt single use, localized dismissal, iPad-style instructions, standalone hiding and a legacy-worker upgrade by normal refresh while another tab has an unsaved note. The suite runs desktop and touch-emulated cases. Synthetic screenshots are retained under `.artifacts/pwa/`.
 
-The automated suite simulates browser responses to both install APIs. It exercises the real manifest, service worker, cache and offline requests. Native installation and OS launcher behavior require verification in a browser with an installer.
+The automated suite simulates browser responses to both install APIs and checks installed-app lookup on a fresh browser link, including fallback after an empty or rejected lookup. It exercises the real manifest, service worker, cache and offline requests. Native installation and OS launcher behavior require verification in a browser with an installer.
 
 ## Appearance
 

@@ -7,6 +7,13 @@
   "scope": "./",
   "start_url": "./?page=app",
   "display": "standalone",
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "./manifest.webmanifest",
+      "id": "https://light-attendance-n-tagging-micro-service-production.up.railway.app/"
+    }
+  ],
   "theme_color": "#004d57",
   "background_color": "#f5fafc",
   "icons": [
