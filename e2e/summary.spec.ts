@@ -96,6 +96,15 @@ test('summary counts all dates for the selected course and ignores saved filters
       date: '2020-01-02',
       status: 'present',
     }),
+    ...Array.from({ length: 6 }, (_, index) =>
+      event(10 + index, {
+        kind: 'attendance',
+        studentId,
+        enrollmentId: enrollB,
+        date: `2021-01-0${index + 1}`,
+        status: 'present',
+      }),
+    ),
   ]
   await page.route('**/api/auth/**', (route) =>
     route.fulfill({
@@ -137,21 +146,9 @@ test('summary counts all dates for the selected course and ignores saved filters
     '1',
     '0',
   ])
-  await expect(page.getByText('66.7%', { exact: true })).toBeVisible()
-  await expect(page.getByText('0.0%', { exact: true })).toBeVisible()
-  await expect(page.getByText('33.3%', { exact: true })).toBeVisible()
-  await expect(page.getByRole('meter', { name: 'present' })).toHaveAttribute(
-    'aria-valuenow',
-    '66.7',
-  )
-  await expect(page.getByRole('meter', { name: 'absent' })).toHaveAttribute('aria-valuenow', '0')
-  await expect(page.getByRole('meter', { name: 'excused' })).toHaveAttribute(
-    'aria-valuetext',
-    '33.3%',
-  )
-  await expect(
-    page.getByText('Percentages of recorded student-sessions; unmarked days are excluded.'),
-  ).toBeVisible()
+  await expect(page.getByText('No explicit absences recorded.')).toBeVisible()
+  await page.getByText('2026-11-01 \u00b7 Absent: 0, Excused: 1, Recorded: 1').click()
+  await expect(page.getByText('Former Student', { exact: true }).first()).toBeVisible()
   await expect(page.getByLabel('Find a student')).toBeHidden()
   await expect(page.locator('label').filter({ hasText: 'All groups' })).toBeHidden()
   await expect(page.getByLabel('From', { exact: true })).toHaveCount(0)
@@ -161,42 +158,33 @@ test('summary counts all dates for the selected course and ignores saved filters
   await expect(row.locator('td')).toHaveText(['2', '0', '0', '2'])
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({
-    path: `.artifacts/verification/summary-percentages-${testInfo.project.name}-en.png`,
+    path: `.artifacts/verification/summary-absences-${testInfo.project.name}-en.png`,
     fullPage: true,
   })
   await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
   await expect(row.locator('td')).toHaveText(['2', '0', '0', '2'])
-  const arabicMeter = page.getByRole('meter', { name: 'حاضر' })
-  await expect(arabicMeter).toHaveAttribute('aria-valuenow', '66.7')
-  const geometry = await arabicMeter.evaluate((meter) => {
-    const track = meter.getBoundingClientRect()
-    const fill = meter.firstElementChild?.getBoundingClientRect()
-    return {
-      direction: getComputedStyle(meter).direction,
-      right: track.right,
-      fillRight: fill?.right,
-    }
-  })
-  expect(geometry.direction).toBe('rtl')
-  expect(geometry.fillRight).toBeCloseTo(geometry.right, 0)
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await expect(
-    page.getByText('النسب من جلسات الطلاب المسجلة؛ لا تُحتسب الأيام غير المحددة.'),
+    page
+      .getByText(
+        '\u0627\u0644\u063a\u064a\u0627\u0628 \u062d\u0633\u0628 \u0627\u0644\u062c\u0644\u0633\u0629',
+        { exact: true },
+      )
+      .first(),
   ).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({
-    path: `.artifacts/verification/summary-percentages-${testInfo.project.name}-ar.png`,
+    path: `.artifacts/verification/summary-absences-${testInfo.project.name}-ar.png`,
     fullPage: true,
   })
   await clickAccountAction(page, 'English')
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page.getByRole('combobox', { name: 'Default course', exact: true }).selectOption(courseB)
   await page.getByRole('button', { name: 'Summary', exact: true }).click()
-  await expect(row.locator('td')).toHaveText(['0', '1', '0', '2'])
+  await expect(row.locator('td')).toHaveText(['6', '1', '0', '2'])
   await expect(page.getByRole('row', { name: /Former Student/ })).toHaveCount(0)
-  await expect(page.getByRole('meter', { name: 'absent' })).toHaveAttribute(
-    'aria-valuetext',
-    '100.0%',
-  )
+  await expect(page.getByText('2020-01-01 \u00b7 Absent: 1, Excused: 0, Recorded: 1')).toBeVisible()
+  await page.getByText('Show remaining dates').click()
+  await expect(page.getByText('2021-01-01 \u00b7 Absent: 0, Excused: 0, Recorded: 1')).toBeVisible()
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page
     .getByRole('combobox', { name: 'Default course', exact: true })

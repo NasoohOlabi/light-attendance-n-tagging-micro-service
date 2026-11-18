@@ -6,7 +6,7 @@ Present, Absent and Excused only; group marking of displayed active students, ca
 
 ## How to get to it (user POV)
 
-Sign in or choose **Explore with sample students**. The dashboard opens first. For signed-in users, use **Take attendance** and choose an open course on Attendance to mark its enrolled students in name order. Drafts survive table filter changes. The dashboard shows effective status counts for the selected date, including unmarked, and present-student counts for up to five recorded dates through that date, including dates with zero present. **Summary** shows all-date totals for the selected course's authorized roster, including inactive memberships, with per-column table filters. Notes remain student-scoped and count across all dates.
+Sign in or choose **Explore with sample students**. The dashboard opens first. For signed-in users, use **Take attendance** and choose an open course on Attendance to mark its enrolled students in name order. Drafts survive table filter changes. The dashboard lists the current students with the most explicit absences in the last six recorded sessions through the selected date. Open a name to review the student. Reversing an absence changes the outreach list. **Summary** shows all-date totals for the selected course's authorized roster, including inactive memberships, with per-column table filters. Notes remain student-scoped and count across all dates.
 
 ## Driving it with Playwright
 
@@ -18,7 +18,7 @@ The `sample notebook` test adds ليلى, selects `getByLabel('Attendance for ل
 
 For Summary, use historical and current attendance in two courses. Assert course switching and reload retain independent all-date totals and inactive membership history. Saved `from`, `to`, `date`, `q`, `group`, `student` and `all` parameters must not narrow Summary. The page-level date, student-search and group controls are absent; per-column table filters narrow its rows without changing the overview totals. Other tabs retain their page controls. Check desktop/mobile in English/Arabic. Previous / no course counts only unscoped attendance.
 
-Overview meters display each status's percentage of recorded student-sessions to one decimal place, with unmarked days excluded. In `e2e/summary.spec.ts`, verify mixed-status rounding, zero-share status, course switching, and no-records messaging without fabricated percentages. Check meter accessibility, flat brand styling, RTL fill direction and phone overflow; per-student table cells keep exact counts.
+In `e2e/summary.spec.ts`, inspect the dates ranked by recorded absences and expand one to check names and marks. Verify the remaining dates, historical memberships, course switching, no records and zero absences. Check the labelled bars in English and Arabic, phone overflow and the exact counts in the student table.
 
 ## Gotchas
 
