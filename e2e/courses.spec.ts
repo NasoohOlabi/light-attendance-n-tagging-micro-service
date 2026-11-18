@@ -770,15 +770,23 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
       fullPage: true,
     })
   }
-  await expect(page.getByLabel('Handbook received: Synthetic Student')).not.toBeChecked()
-  await page.getByLabel('Handbook received: Synthetic Student').click()
-  await expect(page.getByLabel('Handbook received: Synthetic Student')).toBeChecked()
+  const handbook = page.getByRole('checkbox', { name: 'Handbook received: Synthetic Student' })
+  const handbookTarget = handbook.locator('..')
+  await expect(handbook).toHaveCSS('width', '20px')
+  await expect(handbook).toHaveCSS('height', '20px')
+  await expect(handbook).toHaveCSS('cursor', 'pointer')
+  await expect(handbookTarget).toHaveCSS('width', '44px')
+  await expect(handbookTarget).toHaveCSS('height', '44px')
+  await expect(handbookTarget).toHaveCSS('cursor', 'pointer')
+  await expect(
+    page.getByRole('checkbox', { name: 'Handbook received: Quick Student' }),
+  ).toBeDisabled()
+  await expect(handbook).not.toBeChecked()
+  await handbookTarget.click({ position: { x: 4, y: 4 } })
+  await expect(handbook).toBeChecked()
   await page.reload()
-  await expect(page.getByLabel('Handbook received: Synthetic Student')).toBeChecked()
-  const handbookBounds = await page.getByLabel('Handbook received: Synthetic Student').boundingBox()
-  expect(handbookBounds?.width).toBeGreaterThanOrEqual(44)
-  expect(handbookBounds?.height).toBeGreaterThanOrEqual(44)
-  await page.getByLabel('Handbook received: Synthetic Student').scrollIntoViewIfNeeded()
+  await expect(handbook).toBeChecked()
+  await handbook.scrollIntoViewIfNeeded()
   await page.screenshot({
     path: `.artifacts/verification/handbook-${testInfo.project.name}.png`,
     fullPage: true,

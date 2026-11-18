@@ -1895,3 +1895,9 @@ Integrated main commit `c197bf5` into the audit. Course navigation, grading filt
 The older role suite served mutable source from a second Vite process. During integration its failure snapshot showed a source conflict marker. Both role tests now exercise the built preview with the same synthetic API handlers. The shared preview also removes the separate server, port allocation and startup polling.
 
 At 12:35 Asia/Damascus, the combined release gate passed with 150 browser cases, including both role scenarios on desktop and mobile. Two phone-only cases skipped on desktop. The local Bun run passed 38 tests and skipped six optional database suites. The earlier database-enabled run passed all 44 tests. The production dependency audit found no vulnerabilities. PR 119 tracks final CI and the Railway deployment.
+
+## 2026-11-18 13:51 Asia/Damascus (UTC+03:00) - Standardize checkbox sizing and cursor
+
+The owner reported oversized checkboxes in course membership and inconsistent sizing across the site. Plain checkboxes now use a shared 20px native control with a teal checkmark. Enabled controls and their labels show a pointer. Handbook received keeps a 44px clickable label, and the course enrollment switch retains its own sizing.
+
+The new assertions reproduced the original 44px Handbook and 13px Excel-export checkbox widths before the fix. `bun run verify`, file and history scans, and the dependency audit passed on the updated main base. The full local release run hit Windows browser-process memory limits. Focused browser checks verify the rendered size, cursor, disabled enrollment state, click outside the square and persistence with synthetic data. GitHub Verify gates the merge. The PR records the Railway deployment and shipped UI checks. Physical phones were not used.

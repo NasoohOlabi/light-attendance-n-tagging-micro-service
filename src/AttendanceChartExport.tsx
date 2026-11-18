@@ -130,9 +130,8 @@ function ChartPreview({ students, attendance, scope }: ChartSource) {
           ))}
         </select>
       </label>
-      <label className="inline-flex min-h-11 cursor-pointer items-center gap-2">
+      <label className="inline-flex min-h-11 items-center gap-2">
         <input
-          className="size-5"
           type="checkbox"
           checked={showNames}
           onChange={(event) => setShowNames(event.target.checked)}

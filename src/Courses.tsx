@@ -553,20 +553,21 @@ export function Courses({
                             />
                           </td>
                           <td data-label={ar ? 'استلم الكتاب' : 'Handbook received'}>
-                            <input
-                              type="checkbox"
-                              className="h-11 w-11"
-                              aria-label={`${ar ? 'استلم الكتاب' : 'Handbook received'}: ${student.firstName} ${student.lastName}`}
-                              checked={entry?.handbookReceived ?? false}
-                              disabled={busy || !entry}
-                              onChange={(event) =>
-                                entry &&
-                                void submit('/api/admin/enrollments/handbook', {
-                                  id: entry.id,
-                                  handbookReceived: event.target.checked,
-                                })
-                              }
-                            />
+                            <label className="inline-flex size-11 items-center justify-center align-middle">
+                              <input
+                                type="checkbox"
+                                aria-label={`${ar ? 'استلم الكتاب' : 'Handbook received'}: ${student.firstName} ${student.lastName}`}
+                                checked={entry?.handbookReceived ?? false}
+                                disabled={busy || !entry}
+                                onChange={(event) =>
+                                  entry &&
+                                  void submit('/api/admin/enrollments/handbook', {
+                                    id: entry.id,
+                                    handbookReceived: event.target.checked,
+                                  })
+                                }
+                              />
+                            </label>
                           </td>
                           <td data-label={ar ? 'الإجراءات' : 'Actions'}>
                             <button
