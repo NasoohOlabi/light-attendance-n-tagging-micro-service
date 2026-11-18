@@ -160,14 +160,26 @@ function Notebook({
 }) {
   const { t, language, errorMessage } = useLanguage()
   const query = useQueryState()
+  const administrator = neon?.teacher.role === 'administrator'
+  const canViewHistory = administrator || demo === 'editable'
+  const history = query.view === 'history' && canViewHistory
+  const tab = history ? 'history' : query.tab
+  useEffect(() => {
+    if (query.view === 'history') {
+      if (!canViewHistory) setQuery({ view: 'notebook', tab: '' })
+      else if (new URLSearchParams(window.location.search).get('tab') === 'history')
+        setQuery({ view: 'history', tab: '' })
+    }
+  }, [canViewHistory, query.view])
   const ledger = useLedger(demo !== null, demo === 'assigned', neon)
   const preference = useCoursePreference(neon?.userId, ledger.loaded, ledger.courses)
   const assigned = !!neon || demo === 'assigned'
   const fullRegister =
-    neon?.teacher.role === 'administrator' &&
+    administrator &&
     (query.view === 'notebook' || query.view === 'student') &&
-    query.tab === 'roster' &&
+    tab === 'roster' &&
     !query.course
+  const includeInactive = fullRegister || (history && administrator)
   const baseProjection = projectEvents(ledger.events)
   const closedCourse = ledger.courses.find((course) => course.id === query.course && !course.open)
   const selectedEnrollments =
@@ -203,10 +215,10 @@ function Notebook({
   const scopedProjection = projectEvents(scopedEvents)
   const courseStudents = ledger.roster.filter((student) =>
     query.course
-      ? query.tab === 'dashboard' || query.tab === 'attendance' || query.tab === 'roster'
+      ? tab === 'dashboard' || tab === 'attendance' || tab === 'roster'
         ? student.active && activeEnrollments.some((entry) => entry.studentId === student.studentId)
         : selectedEnrollments.some((entry) => entry.studentId === student.studentId)
-      : fullRegister || student.active,
+      : includeInactive || student.active,
   )
   const projected = assigned ? { ...scopedProjection, students: courseStudents } : baseProjection
   const groups = [
@@ -214,13 +226,13 @@ function Notebook({
   ].sort()
   const students = projected.students.filter(
     (student) =>
-      (fullRegister || query.all || student.active) &&
-      (query.tab === 'attendance' ||
+      (includeInactive || query.all || student.active) &&
+      (tab === 'attendance' ||
         !assigned ||
         !query.student ||
         student.studentId === query.student) &&
-      (query.tab === 'attendance' || !query.group || student.group === query.group) &&
-      (query.tab === 'attendance' ||
+      (tab === 'attendance' || !query.group || student.group === query.group) &&
+      (tab === 'attendance' ||
         student.name.toLocaleLowerCase().includes(query.q.toLocaleLowerCase())),
   )
   const visibleIds = new Set(students.map((student) => student.studentId))
@@ -253,15 +265,21 @@ function Notebook({
       <WorkspaceNavigation
         defaultCourse={preference.defaultCourse}
         courseName={ledger.courses.find((course) => course.id === query.course)?.name}
-        administrator={neon?.teacher.role === 'administrator'}
+        administrator={administrator}
         assigned={assigned}
         profile={profile}
         leave={leave}
         sample={!neon}
+        sampleHistory={demo === 'editable'}
         disabled={ledger.busy}
       />
       <main id="main-content" tabIndex={-1} className="workspace-main">
-        {query.view !== 'courses' && query.view !== 'student' && (
+        {history && administrator && (
+          <button className="secondary mb-4" onClick={() => setQuery({ view: 'settings' }, true)}>
+            {t('Back to settings')}
+          </button>
+        )}
+        {!history && query.view !== 'courses' && query.view !== 'student' && (
           <header className="workspace-welcome">
             <div>
               <h1>{t('Halaqa notebook')}</h1>
@@ -282,10 +300,11 @@ function Notebook({
           </p>
         )}
         {neon &&
-          ((query.view === 'notebook' && (query.tab === 'dashboard' || query.tab === 'roster')) ||
-            (query.view === 'student' && query.tab === 'roster')) && (
+          ((query.view === 'notebook' && (tab === 'dashboard' || tab === 'roster')) ||
+            (query.view === 'student' && tab === 'roster') ||
+            history) && (
             <label className="mb-4">
-              {query.tab === 'dashboard'
+              {tab === 'dashboard'
                 ? language === 'ar'
                   ? '\u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a\u0629'
                   : 'Default course'
@@ -293,9 +312,9 @@ function Notebook({
                   ? '\u0627\u0644\u062f\u0648\u0631\u0629'
                   : 'Course'}
               <select
-                value={query.tab === 'dashboard' ? preference.defaultCourse : query.course}
+                value={tab === 'dashboard' ? preference.defaultCourse : query.course}
                 onChange={(event) => {
-                  if (query.tab === 'dashboard') preference.chooseDefault(event.target.value)
+                  if (tab === 'dashboard') preference.chooseDefault(event.target.value)
                   else
                     setQuery(
                       {
@@ -307,7 +326,7 @@ function Notebook({
                 }}
               >
                 <option value="">
-                  {query.tab === 'roster'
+                  {tab === 'roster'
                     ? language === 'ar'
                       ? '\u062c\u0645\u064a\u0639 \u0627\u0644\u0637\u0644\u0627\u0628'
                       : 'All students'
@@ -318,6 +337,7 @@ function Notebook({
                 {ledger.courses
                   .filter(
                     (course) =>
+                      history ||
                       course.open ||
                       course.id === preference.defaultCourse ||
                       course.id === query.course,
@@ -334,16 +354,16 @@ function Notebook({
           <p role="status">
             <strong dir="auto">{closedCourse.name}</strong>{' '}
             {language === 'ar'
-              ? 'الدورة مغلقة. السجل والتصحيحات متاحة، ولا يمكن تسجيل حضور جديد.'
-              : 'This course is closed. History and corrections remain available; new attendance is disabled.'}
+              ? 'الدورة مغلقة. لا يمكن تسجيل حضور جديد.'
+              : 'This course is closed. New attendance is disabled.'}
           </p>
         )}
         <div
           className="mb-6 flex flex-wrap items-end gap-3"
           hidden={
-            query.tab === 'dashboard' ||
-            query.tab === 'attendance' ||
-            query.tab === 'summary' ||
+            tab === 'dashboard' ||
+            tab === 'attendance' ||
+            tab === 'summary' ||
             query.view === 'courses' ||
             query.view === 'student'
           }
@@ -492,10 +512,10 @@ function Notebook({
         )}
         <div
           hidden={query.view === 'courses' || query.view === 'student'}
-          className={query.tab === 'attendance' ? 'workspace-content' : ''}
+          className={tab === 'attendance' ? 'workspace-content' : ''}
         >
-          <fieldset disabled={disabled && query.tab !== 'dashboard'} className="min-w-0">
-            {query.tab === 'dashboard' && (
+          <fieldset disabled={disabled && tab !== 'dashboard'} className="min-w-0">
+            {tab === 'dashboard' && (
               <NotebookDashboard
                 projected={projected}
                 date={query.date}
@@ -510,7 +530,7 @@ function Notebook({
                 }
               />
             )}
-            {query.tab === 'attendance' && neon && (!query.course || closedCourse) && (
+            {tab === 'attendance' && neon && (!query.course || closedCourse) && (
               <section className="panel">
                 <p>
                   {language === 'ar'
@@ -535,7 +555,7 @@ function Notebook({
                 </button>
               </section>
             )}
-            {query.tab === 'attendance' && (!neon || (query.course && !closedCourse)) && (
+            {tab === 'attendance' && (!neon || (query.course && !closedCourse)) && (
               <AttendanceView
                 key={`${query.date}:${query.course}`}
                 enrollments={activeEnrollments}
@@ -568,7 +588,7 @@ function Notebook({
                 save={ledger.save}
               />
             )}
-            {query.tab === 'notes' && (
+            {tab === 'notes' && (
               <NotesView
                 students={students}
                 projected={projected}
@@ -576,7 +596,7 @@ function Notebook({
                 assigned={assigned}
               />
             )}
-            {query.tab === 'roster' && (
+            {tab === 'roster' && (
               <RosterView
                 students={students}
                 save={ledger.save}
@@ -588,10 +608,8 @@ function Notebook({
                 attendance={(query.course ? scopedProjection : baseProjection).attendance}
               />
             )}
-            {query.tab === 'summary' && (
-              <Summary students={projected.students} projected={projected} />
-            )}
-            {query.tab === 'history' && (
+            {tab === 'summary' && <Summary students={projected.students} projected={projected} />}
+            {tab === 'history' && (
               <History
                 projected={projected}
                 students={students}
@@ -600,7 +618,7 @@ function Notebook({
               />
             )}
           </fieldset>
-          {query.tab === 'attendance' && (!neon || (query.course && !closedCourse)) && (
+          {tab === 'attendance' && (!neon || (query.course && !closedCourse)) && (
             <aside className="workspace-context" aria-label={t('Summary')}>
               <section className="panel">
                 <h2>{t('Summary')}</h2>
@@ -629,9 +647,6 @@ function Notebook({
             </aside>
           )}
         </div>
-        <footer className="mt-8 border-t border-slate-200 py-5 text-sm text-slate-500">
-          {t('Every change leaves a record. Use History & corrections to undo a mistake.')}
-        </footer>
       </main>
     </div>
   )
@@ -955,11 +970,7 @@ function AttendanceView({
           <h2 className="title">
             {courseName ? `${t('Attendance')} · ${courseName}` : t('Who is here today?')}
           </h2>
-          <p className="muted mt-2">
-            {t(
-              'Only marked students are saved. To remove an existing mark, use History & corrections; undoing the latest mark may reveal an earlier one.',
-            )}
-          </p>
+          <p className="muted mt-2">{t('Only marked students are saved.')}</p>
         </div>
         <label>
           {t('Session date')}
@@ -1660,7 +1671,7 @@ function History({
   })
   return (
     <section className="panel">
-      <h2 className="title">{t('History & corrections')}</h2>
+      <h1 className="title">{t('History & corrections')}</h1>
       <p className="muted mt-2 mb-6">
         {t(
           'Undo appends a correction. The original stays in the record. Undoing the latest attendance restores the previous status.',

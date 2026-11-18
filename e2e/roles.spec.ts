@@ -162,8 +162,9 @@ test('student sees only their attendance and loses it after access is denied', a
       })
     return route.fulfill({ status: 403, headers, json: { error: 'Forbidden' } })
   })
-  await page.goto(`${origin}/?page=app`)
+  await page.goto(`${origin}/?page=app&view=history`)
   await expect(page.getByRole('heading', { name: 'My attendance' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'History & corrections' })).toHaveCount(0)
   await expect(page.getByText('Synthetic Student')).toBeVisible()
   await expect(page.locator('dl')).toContainText('Roster level')
   await expect(page.locator('dl dd')).toHaveText(['Synthetic Student', 'Synthetic Group'])
@@ -473,7 +474,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
         return { top: box.top, width: box.width, height: box.height }
       }),
     )
-    expect(boxes).toHaveLength(7)
+    expect(boxes).toHaveLength(6)
     for (const box of boxes) {
       expect(box.width).toBeGreaterThanOrEqual(44)
       expect(box.height).toBeGreaterThanOrEqual(44)
@@ -496,7 +497,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
           return { top: box.top, width: box.width, height: box.height }
         }),
       )
-      expect(boxes).toHaveLength(7)
+      expect(boxes).toHaveLength(6)
       for (const box of boxes) {
         expect(box.width).toBeGreaterThanOrEqual(44)
         expect(box.height).toBeGreaterThanOrEqual(44)

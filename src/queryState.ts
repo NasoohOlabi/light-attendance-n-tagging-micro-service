@@ -1,14 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { z } from 'zod'
 
-export const tabSchema = z.enum([
-  'dashboard',
-  'attendance',
-  'notes',
-  'roster',
-  'summary',
-  'history',
-])
+const tabSchema = z.enum(['dashboard', 'attendance', 'notes', 'roster', 'summary'])
 export type Tab = z.infer<typeof tabSchema>
 export function today() {
   const date = new Date()
@@ -21,20 +14,22 @@ function subscribe(callback: () => void) {
 export function useQueryState() {
   const search = useSyncExternalStore(subscribe, () => window.location.search)
   const query = new URLSearchParams(search)
+  const view =
+    z
+      .enum([
+        'settings',
+        'administration',
+        'add-student',
+        'notebook',
+        'courses',
+        'student',
+        'profile',
+        'history',
+      ])
+      .safeParse(query.get('view')).data ?? 'notebook'
   return {
     page: z.enum(['home', 'app']).safeParse(query.get('page')).data ?? 'home',
-    view:
-      z
-        .enum([
-          'settings',
-          'administration',
-          'add-student',
-          'notebook',
-          'courses',
-          'student',
-          'profile',
-        ])
-        .safeParse(query.get('view')).data ?? 'notebook',
+    view: view === 'notebook' && query.get('tab') === 'history' ? 'history' : view,
     tab: tabSchema.safeParse(query.get('tab')).data ?? 'dashboard',
     date: z.iso.date().safeParse(query.get('date')).data ?? today(),
     from: z.iso.date().safeParse(query.get('from')).data ?? today().slice(0, 7) + '-01',

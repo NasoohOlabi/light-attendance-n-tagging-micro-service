@@ -254,6 +254,13 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await page.getByRole('button', { name: 'Take attendance' }).click()
   await expect(page.getByText('Beta Student')).toBeVisible()
   await expect(page.getByText('Alpha Student')).toHaveCount(0)
+  for (const route of ['view=history', 'tab=history']) {
+    await page.goto(`${origin}/?page=app&${route}`)
+    await expect(page.getByRole('button', { name: 'Take attendance' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'History & corrections' })).toHaveCount(0)
+    await expect(page.locator('.workspace-rail nav').getByText(/History/)).toHaveCount(0)
+    await expect(page).toHaveURL(/view=notebook/)
+  }
 })
 
 test('session restoration shows a neutral placeholder until signed out', async ({ page }) => {

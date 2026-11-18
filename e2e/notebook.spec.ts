@@ -1,4 +1,5 @@
 import { clickRecordAction } from './recordActions'
+import { clickAccountAction } from './profileActions'
 import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 
@@ -60,7 +61,7 @@ test('sample notebook supports attendance, notes and corrections without network
     await mkdir('.artifacts/verification', { recursive: true })
     await page.screenshot({ path: '.artifacts/verification/notebook.png', fullPage: true })
   }
-  await page.getByRole('button', { name: 'History & corrections', exact: true }).click()
+  await clickAccountAction(page, 'History & corrections')
   const note = page.locator('li').filter({ hasText: 'راجعت السورة اليوم' })
   await clickRecordAction(note, 'Undo')
   await page.getByLabel('Reason').fill('تصحيح')
