@@ -1896,8 +1896,16 @@ The older role suite served mutable source from a second Vite process. During in
 
 At 12:35 Asia/Damascus, the combined release gate passed with 150 browser cases, including both role scenarios on desktop and mobile. Two phone-only cases skipped on desktop. The local Bun run passed 38 tests and skipped six optional database suites. The earlier database-enabled run passed all 44 tests. The production dependency audit found no vulnerabilities. PR 119 tracks final CI and the Railway deployment.
 
+## 2026-11-18 13:51 Asia/Damascus (UTC+03:00) - Standardize checkbox sizing and cursor
+
+The owner reported oversized checkboxes in course membership and inconsistent sizing across the site. Plain checkboxes now use a shared 20px native control with a teal checkmark. Enabled controls and their labels show a pointer. Handbook received keeps a 44px clickable label, and the course enrollment switch retains its own sizing.
+
+The new assertions reproduced the original 44px Handbook and 13px Excel-export checkbox widths before the fix. `bun run verify`, file and history scans, and the dependency audit passed on the updated main base. The full local release run hit Windows browser-process memory limits. Focused browser checks verify the rendered size, cursor, disabled enrollment state, click outside the square and persistence with synthetic data. GitHub Verify gates the merge. The PR records the Railway deployment and shipped UI checks. Physical phones were not used.
+
 ## 2026-11-18 13:53 Asia/Damascus (UTC+03:00) - Show the full course title
 
 The owner reported a cut-off title in the Arabic sidebar. The course selector shared the wordmark and profile row and clipped the title to fit. The selector now has its own row, wraps long titles and shows the complete stored name, including branded course names that previously appeared as a number.
 
 The browser regression reproduced clipping at 320px. The updated scenario checks the full title, wordmark and avatar alignment, 44px controls and bounded dropdowns in English and Arabic at 320px, 390px, 701px and 1440px. `bun run verify:release` passed with 38 Bun tests and 150 browser cases. Six optional database tests and two phone-only cases on desktop skipped. Browser coverage uses synthetic records on desktop and emulated phones. The PR records hosted checks and the production verification.
+
+At 14:03 Asia/Damascus, merged `3d2c0f9` into the title branch. The work-log entries collided and both were preserved. The integrated stylesheet retains the checkbox styling and title layout. `bun run verify` passed on the combined tree.
