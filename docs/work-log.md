@@ -1799,3 +1799,7 @@ Verified with real sessions on disposable PostgreSQL and a single Chromium conte
 The release gate passed with 40 unit/integration tests and 128 desktop/mobile browser cases. Two unrelated optional database suites were disabled, and two phone-only checks skipped on desktop. The production trigger targets main with Wait for CI enabled.
 
 Integrated the concurrent course export change from main at `cf7c1a1`. Both delivery entries are retained.
+
+## 2026-11-18 08:30 Asia/Damascus (UTC+03:00) - Fix the profile test after sign-out
+
+PR 113's Verify job timed out on desktop and mobile when sign-out removed the profile button between two Playwright calls. The helper now checks the menu's expanded state and visibility in one lookup. The same teacher sign-in, reload, sign-out and data isolation scenario passed three times on each viewport. The full release gate passed with 41 unit and integration tests against disposable PostgreSQL and 128 browser cases. Two optional database tests and two desktop cases for phone-only behavior skipped. Mobile coverage used Chromium emulation.
