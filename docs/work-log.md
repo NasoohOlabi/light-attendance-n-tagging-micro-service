@@ -2016,8 +2016,16 @@ The owner asked to hide **My changes** when the queue is empty and keep the norm
 
 Ten focused Chromium tests passed on desktop and emulated mobile. They checked both menu languages, navigation from the review, conflict actions, and the menu disappearing after sync without a reload. The Arabic screenshots use synthetic records. The PR records the release and Railway checks. Physical-device behavior remains unverified.
 
+## 2026-11-19 09:31 Asia/Damascus (UTC+03:00) - Use wide screens for the attendance overview
+
+The owner reported that the full-width session chart left a lot of unused space and pushed the student totals down. At 72rem of available panel content width, the overview places a compact session chart and its export beside the student totals. The columns follow the page direction. Narrower panels stack the sections, and desktop totals align with their column headings.
+
+`bun run verify` and all four focused Summary browser cases passed. Chromium verified the layout in English and Arabic at 1920px and on an emulated phone, including session drill-down and chart export with synthetic data. The PR tracks release CI and Railway verification. Physical phones and live authenticated records were outside local verification.
+
 ## 2026-11-19 09:32 Asia/Damascus (UTC+03:00) - Use wide screens for student history
 
 The owner reported unused space on Student information. At 1440px and wider, the profile, totals and courses sit beside the attendance history. The layout follows the reading direction, and mixed-direction values stay aligned with their labels. The compact view keeps the profile above the labelled history rows.
 
 On Railway's previous build (`6be0e5c`), the first history row was fully below the viewport in the synthetic 1920×560 browser case. The updated build passed at 1920px and 2560px in English and Arabic, including date sorting and Back. The emulated phone case passed at 320px, 390px and 430px without horizontal history scrolling. These checks use synthetic records. The PR records release checks and the exact-main Railway deployment.
+
+At 09:44 Asia/Damascus, integrated main (`7219b89`) and retained both wide-layout work-log entries. `bun run verify` passed, along with six focused Chromium cases covering the attendance overview and student history on desktop and emulated phones.

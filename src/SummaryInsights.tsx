@@ -30,7 +30,7 @@ export function SummaryInsights({ students, records }: { students: Student[]; re
 
   function dateRow(day: (typeof dates)[number]) {
     return (
-      <li key={day.date} className="border-b border-slate-300 py-3">
+      <li key={day.date} className="border-b border-slate-300 py-3 @min-[72rem]/overview:py-1.5">
         <details
           onToggle={(event) => {
             const open = event.currentTarget.open
@@ -67,7 +67,7 @@ export function SummaryInsights({ students, records }: { students: Student[]; re
           )}
         </details>
         <meter
-          className="summary-insights-meter w-full"
+          className="summary-insights-meter w-full @min-[72rem]/overview:block"
           min={0}
           max={max}
           value={day.absent}
@@ -80,7 +80,10 @@ export function SummaryInsights({ students, records }: { students: Student[]; re
   }
 
   return (
-    <section className="mb-8" aria-label={ar ? 'الغياب حسب الجلسة' : 'Absences by session'}>
+    <section
+      className="mb-8 @min-[72rem]/overview:mb-0"
+      aria-label={ar ? 'الغياب حسب الجلسة' : 'Absences by session'}
+    >
       <h3 className="font-semibold">{ar ? 'الغياب حسب الجلسة' : 'Absences by session'}</h3>
       <p className="muted">
         {ar
