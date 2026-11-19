@@ -47,7 +47,12 @@ import type { Profile } from './ProfileMenu'
 import { ProfileSettings } from './ProfileSettings'
 import { enrollmentSchema, type NeonTeacher } from '../shared/neon'
 import { allowOfflineAccess, clearOfflineAccess, offlineAccess } from './offlineAccess'
-import { cacheOfflineRoster } from './offlineAttendanceStore'
+import {
+  cacheOfflineRoster,
+  listPendingAttendance,
+  listPendingStudent,
+  subscribeOfflineQueue,
+} from './offlineAttendanceStore'
 import { OfflineAttendance } from './OfflineAttendance'
 import { syncOfflineAttendance, syncOfflineStudent } from './offlineAttendanceSync'
 
@@ -128,9 +133,11 @@ function Notebook({
   profile?: Profile
 }) {
   const { t, language, errorMessage } = useLanguage()
-  const [offlineView, setOfflineView] = useState<'notebook' | 'changes' | null>(null)
+  const [offlineView, setOfflineView] = useState(false)
   const [offlineRoster, setOfflineRoster] = useState<ReturnType<typeof useLedger>['roster']>()
+  const [hasPendingChanges, setHasPendingChanges] = useState(false)
   const query = useQueryState()
+  const changesOrigin = useRef<typeof query.view>('notebook')
   const administrator = neon?.teacher.role === 'administrator'
   const canViewHistory = administrator || demo === 'editable'
   const history = query.view === 'history' && canViewHistory
@@ -176,6 +183,7 @@ function Notebook({
   const userId = neon?.userId
   const access = ledger.snapshotTeacher ?? neon?.teacher
   const canCacheOffline = Boolean(access?.canRead && access.canWrite)
+  const reviewChanges = query.view === 'changes' && canCacheOffline
   const actor = access?.name
   const expires = access?.expiresAt
   const { loaded, roster, courses, enrollments, events, refresh } = ledger
@@ -200,10 +208,35 @@ function Notebook({
   }, [userId, actor, expires, canCacheOffline, loaded, roster, courses, enrollments, events])
   useEffect(() => {
     if (!userId || !canCacheOffline || !navigator.locks) return
+    let revision = 0
+    const readQueue = () => {
+      const current = ++revision
+      void Promise.all([listPendingAttendance(userId), listPendingStudent(userId)]).then(
+        ([attendance, students]) => {
+          if (current === revision)
+            setHasPendingChanges(attendance.length > 0 || students.length > 0)
+        },
+        () => {
+          if (current === revision) setHasPendingChanges(false)
+        },
+      )
+    }
+    const unsubscribe = subscribeOfflineQueue(readQueue)
+    readQueue()
+    return () => {
+      revision++
+      unsubscribe()
+    }
+  }, [userId, canCacheOffline])
+  useEffect(() => {
+    if (query.view === 'changes' && !canCacheOffline) setQuery({ view: 'notebook' })
+  }, [query.view, canCacheOffline])
+  useEffect(() => {
+    if (!userId || !canCacheOffline || !navigator.locks) return
     let active = true
     let syncing = false
     const reconnect = (retryBlocked = false) => {
-      if (!navigator.onLine || syncing || offlineView) return
+      if (!navigator.onLine || syncing || offlineView || reviewChanges) return
       syncing = true
       void Promise.allSettled([
         syncOfflineAttendance(userId, retryBlocked),
@@ -222,7 +255,7 @@ function Notebook({
         })
     }
     const disconnect = () => {
-      if (offlineAccess()?.userId === userId) setOfflineView('notebook')
+      if (offlineAccess()?.userId === userId) setOfflineView(true)
     }
     const online = () => reconnect(true)
     const focus = () => reconnect()
@@ -236,7 +269,7 @@ function Notebook({
       window.removeEventListener('offline', disconnect)
       window.removeEventListener('focus', focus)
     }
-  }, [userId, canCacheOffline, offlineView, refresh])
+  }, [userId, canCacheOffline, offlineView, reviewChanges, refresh])
   const preference = useCoursePreference(neon?.userId, ledger.loaded, ledger.courses)
   const assigned = !!neon || demo === 'assigned'
   const fullRegister =
@@ -315,15 +348,13 @@ function Notebook({
     !ledger.loaded ||
     !!(neon && !neon.teacher.canWrite)
   const openOfflineLabel = language === 'ar' ? 'فتح الدفتر دون اتصال' : 'Open offline notebook'
-  const offlineReady = canCacheOffline && offlineRoster === roster
   if (offlineView && neon && canCacheOffline)
     return (
       <OfflineAttendance
         userId={neon.userId}
         actor={neon.teacher.name}
-        reviewChanges={offlineView === 'changes'}
         close={() => {
-          setOfflineView(null)
+          setOfflineView(false)
           if (navigator.onLine) void ledger.refresh()
         }}
       />
@@ -336,7 +367,7 @@ function Notebook({
           {t('Try again')}
         </button>
         {canCacheOffline && offlineAccess()?.userId === userId && (
-          <button className="secondary" onClick={() => setOfflineView('notebook')}>
+          <button className="secondary" onClick={() => setOfflineView(true)}>
             {openOfflineLabel}
           </button>
         )}
@@ -344,38 +375,62 @@ function Notebook({
     ) : (
       <WorkspaceLoading message={t('Loading records…')} />
     )
+  const showCourseSwitcher =
+    neon && (query.view === 'notebook' || query.view === 'student' || history)
+  const navigation = (
+    <WorkspaceNavigation
+      defaultCourse={preference.defaultCourse}
+      courses={
+        showCourseSwitcher
+          ? ledger.courses.map((course) => ({
+              id: course.id,
+              name: course.name,
+              closed: !course.open,
+            }))
+          : undefined
+      }
+      currentCourse={query.courseScope}
+      chooseDefault={showCourseSwitcher ? preference.chooseDefault : undefined}
+      courseName={ledger.courses.find((course) => course.id === query.course)?.name}
+      administrator={administrator}
+      assigned={assigned}
+      profile={
+        profile && canCacheOffline && offlineRoster === roster && hasPendingChanges
+          ? {
+              ...profile,
+              openChanges: () => {
+                if (reviewChanges) return
+                changesOrigin.current = query.view
+                setQuery({ view: 'changes' }, true)
+                window.scrollTo(0, 0)
+              },
+            }
+          : profile
+      }
+      leave={leave}
+      sample={!neon}
+      sampleHistory={demo === 'editable'}
+      disabled={ledger.busy}
+    />
+  )
+  if (reviewChanges && neon)
+    return (
+      <div className="workspace">
+        {navigation}
+        <main id="main-content" tabIndex={-1} className="workspace-main">
+          <OfflineAttendance
+            userId={neon.userId}
+            actor={neon.teacher.name}
+            reviewChanges
+            onSynced={() => void refresh()}
+            close={() => setQuery({ view: changesOrigin.current })}
+          />
+        </main>
+      </div>
+    )
   return (
     <div className="workspace">
-      <WorkspaceNavigation
-        defaultCourse={preference.defaultCourse}
-        courses={
-          neon && (query.view === 'notebook' || query.view === 'student' || history)
-            ? ledger.courses.map((course) => ({
-                id: course.id,
-                name: course.name,
-                closed: !course.open,
-              }))
-            : undefined
-        }
-        currentCourse={query.courseScope}
-        chooseDefault={
-          neon && (query.view === 'notebook' || query.view === 'student' || history)
-            ? preference.chooseDefault
-            : undefined
-        }
-        courseName={ledger.courses.find((course) => course.id === query.course)?.name}
-        administrator={administrator}
-        assigned={assigned}
-        profile={
-          profile && offlineReady
-            ? { ...profile, openChanges: () => setOfflineView('changes') }
-            : profile
-        }
-        leave={leave}
-        sample={!neon}
-        sampleHistory={demo === 'editable'}
-        disabled={ledger.busy}
-      />
+      {navigation}
       <main id="main-content" tabIndex={-1} className="workspace-main">
         {history && administrator && (
           <button

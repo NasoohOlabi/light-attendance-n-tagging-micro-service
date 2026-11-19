@@ -40,7 +40,10 @@ export function WorkspaceNavigation({
   const { t, language } = useLanguage()
   const query = useQueryState()
   const notebookCourse =
-    query.view === 'notebook' || query.view === 'history' || query.view === 'student'
+    query.view === 'notebook' ||
+    query.view === 'history' ||
+    query.view === 'student' ||
+    query.view === 'changes'
       ? query.courseScope === 'all'
         ? ''
         : query.courseScope || defaultCourse
