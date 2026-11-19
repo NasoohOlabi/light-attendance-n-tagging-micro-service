@@ -11,7 +11,7 @@
     {
       "platform": "webapp",
       "url": "./manifest.webmanifest",
-      "id": "https://light-attendance-n-tagging-micro-service-production.up.railway.app/"
+      "id": "https://wartaqi.up.railway.app/"
     }
   ],
   "theme_color": "#004d57",

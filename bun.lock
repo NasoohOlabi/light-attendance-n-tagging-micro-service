@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "pages-micro-service",
+      "name": "wartaqi",
       "dependencies": {
         "@base-ui/react": "1.9.0",
         "@better-auth/cimd": "1.7.25",

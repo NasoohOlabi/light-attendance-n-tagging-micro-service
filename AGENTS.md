@@ -1,4 +1,4 @@
-# light-attendance-n-tagging-micro-service
+# wartaqi
 
 Implementation and public publication were authorized on 2026-11-13. Preserve historical prototype `2d8fbe5`. Railway replacement of Neon was requested on 2026-11-15: read `docs/railway-setup.md` for current deployment, data transfer and access management; preserve `backup/neon-current-2026-11-15` at `77cedae`; `docs/implementation-plan.md` tracks delivery. Local and synthetic tests never prove live provider behavior.
 
