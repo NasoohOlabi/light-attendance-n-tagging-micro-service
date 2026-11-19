@@ -14,7 +14,7 @@ HTTPS is required outside localhost. The native prompt is not available in every
 
 ## Offline and updates
 
-Wartaq opens the offline notebook automatically when it detects a lost connection. Choose **Profile → My changes** to review changes awaiting sync and resolve conflicts after reconnecting. The sign-in and loading screens offer **Open offline notebook** when offline access is available and the normal notebook cannot open.
+Wartaq opens the offline notebook automatically when it detects a lost connection. **Profile → My changes** appears while this device has unsynced attendance, notes or contact edits for the current account. Review them and resolve conflicts inside the regular notebook layout after reconnecting. The menu item disappears when the queue clears. The sign-in and loading screens offer **Open offline notebook** when offline access is available and the normal notebook cannot open.
 
 Production/verification builds generate a versioned `sw.js` from the exact built static assets. Development does not register a worker. It precaches the public HTML shell, compiled code, styles, local fonts, images and manifest. Allowlisted homepage and notebook navigation tries the network first and falls back to the public shell when the network is slow or offline. Open the notebook once online to save the full assigned roster on that device. Reopen Wartaq offline to browse students, record course attendance, add notes and change phone numbers. The offline notebook saves on the device and syncs while open when connectivity and the same account's sign-in are available.
 

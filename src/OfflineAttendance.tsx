@@ -30,11 +30,13 @@ export function OfflineAttendance({
   actor,
   close,
   reviewChanges = false,
+  onSynced,
 }: {
   userId: string
   actor: string
   close: () => void
   reviewChanges?: boolean
+  onSynced?: () => void
 }) {
   const { language, t } = useLanguage()
   const ar = language === 'ar'
@@ -55,6 +57,7 @@ export function OfflineAttendance({
   const saveLock = useRef(false)
   const [syncing, setSyncing] = useState(false)
   const syncLock = useRef(false)
+  const reviewHeading = useRef<HTMLHeadingElement>(null)
   const revalidated = useRef(false)
   const [leaseExpired, setLeaseExpired] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -76,6 +79,9 @@ export function OfflineAttendance({
     void refresh().catch(() => setError('Offline storage is unavailable.'))
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
+  useEffect(() => {
+    reviewHeading.current?.focus({ preventScroll: true })
+  }, [])
   const sync = async (retryBlocked = false) => {
     if (!navigator.onLine || syncLock.current) return
     syncLock.current = true
@@ -93,6 +99,17 @@ export function OfflineAttendance({
         syncOfflineStudent(userId, retryBlocked),
       ])
       await refresh()
+      if (
+        onSynced &&
+        results.some(
+          (result) =>
+            result.status === 'fulfilled' &&
+            result.value.some(
+              (outcome) => outcome.kind === 'saved' || outcome.kind === 'unchanged',
+            ),
+        )
+      )
+        onSynced()
       for (const result of results) if (result.status === 'rejected') throw result.reason
       setError('')
     } catch (cause) {
@@ -127,9 +144,13 @@ export function OfflineAttendance({
     }
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
+  const Container = reviewChanges ? 'section' : 'main'
+  const containerProps = reviewChanges
+    ? { className: 'max-w-4xl space-y-4' }
+    : { id: 'main-content', tabIndex: -1, className: 'workspace-auth panel space-y-3' }
   if (leaseExpired)
     return (
-      <main id="main-content" className="workspace-auth panel space-y-3">
+      <Container {...containerProps}>
         <p role="alert">
           {ar
             ? 'انتهت صلاحية الوصول. اتصل بالإنترنت.'
@@ -138,7 +159,7 @@ export function OfflineAttendance({
         <button className="secondary" onClick={close}>
           {ar ? 'رجوع' : 'Back'}
         </button>
-      </main>
+      </Container>
     )
   const course = snapshot?.courses.find((item) => item.id === selected)
   const selectedStudent = snapshot?.students.find((student) => student.id === studentId)
@@ -230,21 +251,49 @@ export function OfflineAttendance({
     }
   }
   const pendingCount = pending.length + studentPending.length
+  const syncActions = (
+    <div className="flex flex-wrap gap-2">
+      {(!reviewChanges || pendingCount > 0) && (
+        <button
+          className={reviewChanges ? 'primary' : 'secondary'}
+          disabled={saving || syncing || !navigator.onLine}
+          onClick={() => void sync(true)}
+        >
+          {ar ? 'مزامنة الآن' : 'Sync now'}
+        </button>
+      )}
+      <button className="secondary" onClick={close}>
+        {ar ? 'رجوع' : 'Back'}
+      </button>
+    </div>
+  )
   return (
-    <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
-      <h1 className="title">
-        {reviewChanges
-          ? ar
-            ? 'تغييراتي'
-            : 'My changes'
-          : ar
-            ? 'الدفتر دون اتصال'
-            : 'Offline notebook'}
-      </h1>
-      <p role="status">
-        {navigator.onLine ? (ar ? 'متصل' : 'Online') : ar ? 'دون اتصال' : 'Offline'} آ·{' '}
-        {pendingCount} {ar ? 'بانتظار المزامنة' : 'pending sync'}
-      </p>
+    <Container {...containerProps}>
+      {reviewChanges ? (
+        <header className="workspace-welcome flex-wrap">
+          <div className="space-y-1">
+            <h1 ref={reviewHeading} tabIndex={-1}>
+              {ar ? 'تغييراتي' : 'My changes'}
+            </h1>
+            <p role="status" className="muted">
+              {!loaded
+                ? t('Loading records…')
+                : pendingCount > 0
+                  ? `${pendingCount} ${ar ? 'بانتظار المزامنة' : 'pending sync'}`
+                  : ''}
+            </p>
+          </div>
+          {syncActions}
+        </header>
+      ) : (
+        <>
+          <h1 className="title">{ar ? 'الدفتر دون اتصال' : 'Offline notebook'}</h1>
+          <p role="status">
+            {navigator.onLine ? (ar ? 'متصل' : 'Online') : ar ? 'دون اتصال' : 'Offline'} ·{' '}
+            {pendingCount} {ar ? 'بانتظار المزامنة' : 'pending sync'}
+          </p>
+        </>
+      )}
       {error && <p role="alert">{error}</p>}
       <nav
         hidden={reviewChanges}
@@ -526,28 +575,35 @@ export function OfflineAttendance({
         </section>
       )}
       {reviewChanges && loaded && pendingCount === 0 && (
-        <p>{ar ? 'لا توجد تغييرات بانتظار المزامنة.' : 'No changes waiting to sync.'}</p>
+        <p role="status" className="panel">
+          {ar ? 'لا توجد تغييرات بانتظار المزامنة.' : 'No changes waiting to sync.'}
+        </p>
       )}
       {((reviewChanges ? pending.length > 0 : pending.some((item) => item.outcome)) ||
         studentPending.length > 0) && (
         <section className="space-y-2" aria-label={ar ? 'التغييرات المنتظرة' : 'Pending changes'}>
-          <h2>{ar ? 'التغييرات المنتظرة' : 'Pending changes'}</h2>
+          {!reviewChanges && <h2>{ar ? 'التغييرات المنتظرة' : 'Pending changes'}</h2>}
           {pending
             .filter((item) => reviewChanges || item.outcome)
             .map((item) => (
-              <div key={item.event.id}>
-                <p>
-                  {item.event.payload.date} -{' '}
-                  {snapshot?.students.find((student) => student.id === item.event.payload.studentId)
-                    ?.name ?? (ar ? 'طالب غير متاح' : 'Student unavailable')}{' '}
-                  · {changeStatus(item.outcome?.kind)}
+              <div key={item.event.id} className={reviewChanges ? 'panel space-y-3' : undefined}>
+                <p className={reviewChanges ? 'font-semibold' : undefined}>
+                  <bdi>
+                    {snapshot?.students.find(
+                      (student) => student.id === item.event.payload.studentId,
+                    )?.name ?? (ar ? 'طالب غير متاح' : 'Student unavailable')}
+                  </bdi>
+                </p>
+                <p className={reviewChanges ? 'muted' : undefined}>
+                  {t('Attendance')} · <bdi>{item.event.payload.date}</bdi> ·{' '}
+                  {changeStatus(item.outcome?.kind)}
                   {reviewChanges && item.outcome?.kind !== 'conflict' && (
                     <> · {t(item.event.payload.status)}</>
                   )}
                 </p>
                 {item.outcome?.kind === 'conflict' && (
                   <div className="flex flex-wrap gap-2">
-                    <p>
+                    <p className="basis-full">
                       {ar
                         ? '\u0627\u0644\u0639\u0644\u0627\u0645\u0629 \u0627\u0644\u0645\u062d\u0641\u0648\u0638\u0629'
                         : 'Saved mark'}
@@ -602,21 +658,28 @@ export function OfflineAttendance({
               ({ operation }) => operation.kind === 'contact' && operation.studentId === student,
             )?.operation
             return (
-              <div key={id}>
-                <p>
-                  {snapshot?.students.find((entry) => entry.id === student)?.name ??
-                    (ar ? 'طالب غير متاح' : 'Student unavailable')}{' '}
-                  · {operation.kind === 'note' ? (ar ? 'ملاحظة' : 'Note') : ar ? 'هاتف' : 'Phone'} ·{' '}
+              <div key={id} className={reviewChanges ? 'panel space-y-3' : undefined}>
+                <p className={reviewChanges ? 'font-semibold' : undefined}>
+                  <bdi>
+                    {snapshot?.students.find((entry) => entry.id === student)?.name ??
+                      (ar ? 'طالب غير متاح' : 'Student unavailable')}
+                  </bdi>
+                </p>
+                <p className={reviewChanges ? 'muted' : undefined}>
+                  {operation.kind === 'note' ? (ar ? 'ملاحظة' : 'Note') : ar ? 'هاتف' : 'Phone'} ·{' '}
                   {changeStatus(item.outcome?.kind)}
                 </p>
                 {item.outcome?.kind === 'conflict' && operation.kind === 'contact' && (
                   <div className="flex flex-wrap gap-2">
-                    <p>
-                      {ar ? 'الهاتف المحفوظ' : 'Saved phone'}: {item.outcome.currentWhatsapp ?? '-'}{' '}
-                      · {ar ? 'هاتفي' : 'Your phone'}:{' '}
-                      {(latestContact?.kind === 'contact'
-                        ? latestContact.whatsapp
-                        : operation.whatsapp) ?? '-'}
+                    <p className="basis-full">
+                      {ar ? 'الهاتف المحفوظ' : 'Saved phone'}:{' '}
+                      <bdi>{item.outcome.currentWhatsapp ?? '-'}</bdi> ·{' '}
+                      {ar ? 'هاتفي' : 'Your phone'}:{' '}
+                      <bdi>
+                        {(latestContact?.kind === 'contact'
+                          ? latestContact.whatsapp
+                          : operation.whatsapp) ?? '-'}
+                      </bdi>
                     </p>
                     <button
                       className="secondary"
@@ -648,18 +711,7 @@ export function OfflineAttendance({
           })}
         </section>
       )}
-      <div className="flex flex-wrap gap-2">
-        <button
-          className="secondary"
-          disabled={saving || syncing || !navigator.onLine || (reviewChanges && pendingCount === 0)}
-          onClick={() => void sync(true)}
-        >
-          {ar ? 'مزامنة الآن' : 'Sync now'}
-        </button>
-        <button className="secondary" onClick={close}>
-          {ar ? 'رجوع' : 'Back'}
-        </button>
-      </div>
-    </main>
+      {!reviewChanges && syncActions}
+    </Container>
   )
 }

@@ -23,7 +23,7 @@ const courseUrl = `/?page=app&tab=attendance&course=${courseId}&date=${date}`
 test('the full roster, attendance, notes and phone edits survive a cold offline restart and reconcile', async ({
   context,
   page,
-}) => {
+}, testInfo) => {
   const teacher = {
     role: 'teacher',
     id: '10000000-0000-4000-8000-000000000001',
@@ -170,12 +170,11 @@ test('the full roster, attendance, notes and phone edits survive a cold offline 
   await expect(dashboard).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('button', { name: openChanges })).toHaveCount(0)
   await page.getByRole('button', { name: 'Profile', exact: true }).click()
-  await expect(page.getByRole('button', { name: openChanges })).toBeVisible()
-  await page.getByRole('button', { name: 'العربية', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'تغييراتي', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'English', exact: true }).click()
-  await page.keyboard.press('Escape')
   await expect(page.getByRole('button', { name: openChanges })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await expect
+    .poll(() => page.evaluate(() => Boolean(localStorage.getItem('halaqa-offline-access'))))
+    .toBe(true)
 
   networkAvailable = false
   await context.setOffline(true)
@@ -254,10 +253,37 @@ test('the full roster, attendance, notes and phone edits survive a cold offline 
   expect(new Set(studentAttempts).size).toBe(2)
   expect(studentAttempts).toHaveLength(3)
   await offlinePage.getByRole('button', { name: 'Back', exact: true }).click()
-  await offlinePage.getByRole('button', { name: 'Profile', exact: true }).click()
-  await offlinePage.getByRole('button', { name: openChanges }).click()
-  await expect(offlinePage.getByRole('heading', { name: openChanges })).toBeVisible()
+  const profile = offlinePage.getByRole('button', { name: 'Profile', exact: true })
+  const changesMenuItem = offlinePage.getByRole('button', { name: openChanges, exact: true })
+  const changesHeading = offlinePage.getByRole('heading', { name: openChanges, exact: true })
+  await profile.click()
+  await expect(changesMenuItem).toBeVisible()
+  await offlinePage.getByRole('button', { name: 'العربية', exact: true }).click()
+  await offlinePage.getByRole('button', { name: 'تغييراتي', exact: true }).click()
+  await expect(offlinePage.getByRole('heading', { name: 'تغييراتي', exact: true })).toBeVisible()
+  await expect(offlinePage.locator('.workspace-rail nav')).toBeVisible()
+  await expect(offlinePage.locator('.workspace-auth')).toHaveCount(0)
+  await expect(offlinePage.getByRole('region', { name: 'التغييرات المنتظرة' })).toBeVisible()
+  expect(
+    await offlinePage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+  ).toBe(true)
+  await testInfo.attach('Arabic pending changes', {
+    body: await offlinePage.screenshot({ animations: 'disabled' }),
+    contentType: 'image/png',
+  })
+  await offlinePage.getByRole('button', { name: 'الملف الشخصي', exact: true }).click()
+  await offlinePage.getByRole('button', { name: 'English', exact: true }).click()
+  await offlinePage.keyboard.press('Escape')
+  await expect(changesHeading).toBeVisible()
+  const navigation = offlinePage.getByRole('navigation', { name: 'Main navigation' })
+  await expect(navigation).toBeVisible()
   await expect(offlinePage.getByRole('navigation', { name: 'Notebook' })).toHaveCount(0)
+  await navigation.getByRole('button', { name: 'Dashboard' }).click()
+  await expect(changesHeading).toHaveCount(0)
+  await expect(offlinePage.getByRole('heading', { name: 'Attendance & notes' })).toBeVisible()
+  await profile.click()
+  await changesMenuItem.click()
+  await expect(changesHeading).toBeVisible()
   await expect(offlinePage.getByText(/saved phone.*15550101011/i)).toBeVisible()
   rejectFirstStudent = false
   await offlinePage.getByRole('button', { name: 'Sync now' }).click()
@@ -267,20 +293,31 @@ test('the full roster, attendance, notes and phone edits survive a cold offline 
   await offlinePage.getByRole('button', { name: 'Use my mark' }).click()
   await expect(offlinePage.getByText('1 pending sync')).toBeVisible()
   await offlinePage.getByRole('button', { name: 'Use my phone' }).click()
-  await expect(offlinePage.getByText('0 pending sync')).toBeVisible()
   expect([...accepted.values()].map(({ payload }) => payload.status)).toEqual(['present', 'absent'])
+  await expect(offlinePage.getByText('No changes waiting to sync.')).toBeVisible()
   expect(serverPhone).toBe(updatedPhone)
   expect(contactReceipts.size).toBe(1)
-  await expect(offlinePage.getByText('No changes waiting to sync.')).toBeVisible()
+  await expect(offlinePage.getByRole('button', { name: 'Sync now' })).toHaveCount(0)
+  await expect(navigation).toBeVisible()
+  await profile.click()
+  await expect(changesMenuItem).toHaveCount(0)
+  await offlinePage.keyboard.press('Escape')
+  await offlinePage.getByRole('button', { name: 'Back', exact: true }).click()
+  await expect(navigation.getByRole('button', { name: 'Dashboard' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
 
   snapshot.students.shift()
   snapshot.enrollments.shift()
+  await offlinePage.evaluate(() => localStorage.removeItem('halaqa-offline-access'))
   await offlinePage.reload()
   await expect(offlinePage.getByRole('heading', { name: 'Attendance & notes' })).toBeVisible()
-  await expect(offlinePage.getByRole('button', { name: openChanges })).toHaveCount(0)
-  await offlinePage.getByRole('button', { name: 'Profile', exact: true }).click()
-  await offlinePage.getByRole('button', { name: openChanges }).click()
-  await expect(offlinePage.getByText('No changes waiting to sync.')).toBeVisible()
+  await expect
+    .poll(() => offlinePage.evaluate(() => Boolean(localStorage.getItem('halaqa-offline-access'))))
+    .toBe(true)
+  await profile.click()
+  await expect(changesMenuItem).toHaveCount(0)
   networkAvailable = false
   await context.setOffline(true)
   await expect(offlinePage.getByRole('heading', { name: 'Offline notebook' })).toBeVisible()

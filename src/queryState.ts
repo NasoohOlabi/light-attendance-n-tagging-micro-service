@@ -25,6 +25,7 @@ export function useQueryState() {
         'student',
         'profile',
         'history',
+        'changes',
       ])
       .safeParse(query.get('view')).data ?? 'notebook'
   return {

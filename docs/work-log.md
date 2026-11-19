@@ -2009,3 +2009,9 @@ The owner reported that a partial Arabic family name returned an empty Students 
 `bun run verify:release` passed with 40 Bun tests and 166 browser cases. Six optional database tests and two desktop instances of phone-only cases skipped. The Arabic search regression covers a partial family name, a typo, group scope, an unrelated query and clearing on desktop and emulated mobile. Course membership and the roster name filter also passed with misspellings. The PR records hosted CI and Railway verification. Physical phones and live authenticated rosters were outside local verification.
 
 At 06:46 Asia/Damascus, the full release gate passed again after merging main `363298d` and retaining both work-log entries.
+
+## 2026-11-19 06:57 Asia/Damascus (UTC+03:00) - Keep pending changes inside the notebook
+
+The owner asked to hide **My changes** when the queue is empty and keep the normal header and navigation on the review screen. Profile now tracks both offline queues for the current account. The review uses the notebook layout with readable change cards and a compact completion message. It refreshes the online notebook when a queued write succeeds.
+
+Ten focused Chromium tests passed on desktop and emulated mobile. They checked both menu languages, navigation from the review, conflict actions, and the menu disappearing after sync without a reload. The Arabic screenshots use synthetic records. The PR records the release and Railway checks. Physical-device behavior remains unverified.

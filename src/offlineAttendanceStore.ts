@@ -88,6 +88,29 @@ function queueKey(userId: string) {
   return userId
 }
 
+const queueChangeEvent = 'halaqa-offline-queue-change'
+
+function notifyQueueChanged() {
+  window.dispatchEvent(new Event(queueChangeEvent))
+  try {
+    localStorage.setItem(queueChangeEvent, crypto.randomUUID())
+  } catch {
+    // The committed change is still visible in this tab.
+  }
+}
+
+export function subscribeOfflineQueue(refresh: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === queueChangeEvent) refresh()
+  }
+  window.addEventListener(queueChangeEvent, refresh)
+  window.addEventListener('storage', onStorage)
+  return () => {
+    window.removeEventListener(queueChangeEvent, refresh)
+    window.removeEventListener('storage', onStorage)
+  }
+}
+
 export async function listPreparedRosters(userId: string): Promise<PreparedRoster[]> {
   return transaction('rosters', 'readonly', (store, done) => {
     const values: PreparedRoster[] = []
@@ -138,6 +161,7 @@ export async function queueAttendance(userId: string, entry: Omit<PendingAttenda
       done()
     }
   })
+  notifyQueueChanged()
 }
 export async function recordAttendanceOutcome(userId: string, outcome: AttendanceOutcome) {
   const db = await openDatabase()
@@ -221,6 +245,7 @@ export async function recordAttendanceOutcome(userId: string, outcome: Attendanc
   } finally {
     db.close()
   }
+  notifyQueueChanged()
 }
 
 export async function resolveAttendanceConflict(
@@ -334,6 +359,7 @@ export async function resolveAttendanceConflict(
     } finally {
       db.close()
     }
+    notifyQueueChanged()
   })
 }
 
@@ -478,6 +504,7 @@ export async function queueStudentOperation(userId: string, operation: StudentOp
       done()
     }
   })
+  notifyQueueChanged()
 }
 export async function recordStudentOutcome(userId: string, outcome: StudentOutcome) {
   const db = await openDatabase()
@@ -528,6 +555,7 @@ export async function recordStudentOutcome(userId: string, outcome: StudentOutco
   } finally {
     db.close()
   }
+  notifyQueueChanged()
 }
 export async function resolveStudentConflict(
   userId: string,
@@ -606,5 +634,6 @@ export async function resolveStudentConflict(
     } finally {
       db.close()
     }
+    notifyQueueChanged()
   })
 }
