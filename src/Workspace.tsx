@@ -127,7 +127,7 @@ function Notebook({
   profile?: Profile
 }) {
   const { t, language, errorMessage } = useLanguage()
-  const [offlineView, setOfflineView] = useState(false)
+  const [offlineView, setOfflineView] = useState<'notebook' | 'changes' | null>(null)
   const [offlineRoster, setOfflineRoster] = useState<ReturnType<typeof useLedger>['roster']>()
   const query = useQueryState()
   const administrator = neon?.teacher.role === 'administrator'
@@ -198,11 +198,11 @@ function Notebook({
     }
   }, [userId, actor, expires, canCacheOffline, loaded, roster, courses, enrollments, events])
   useEffect(() => {
-    if (!userId || !canCacheOffline || offlineView || !navigator.locks) return
+    if (!userId || !canCacheOffline || !navigator.locks) return
     let active = true
     let syncing = false
     const reconnect = (retryBlocked = false) => {
-      if (!navigator.onLine || syncing) return
+      if (!navigator.onLine || syncing || offlineView) return
       syncing = true
       void Promise.allSettled([
         syncOfflineAttendance(userId, retryBlocked),
@@ -221,7 +221,7 @@ function Notebook({
         })
     }
     const disconnect = () => {
-      if (offlineAccess()?.userId === userId) setOfflineView(true)
+      if (offlineAccess()?.userId === userId) setOfflineView('notebook')
     }
     const online = () => reconnect(true)
     const focus = () => reconnect()
@@ -321,8 +321,9 @@ function Notebook({
       <OfflineAttendance
         userId={neon.userId}
         actor={neon.teacher.name}
+        reviewChanges={offlineView === 'changes'}
         close={() => {
-          setOfflineView(false)
+          setOfflineView(null)
           if (navigator.onLine) void ledger.refresh()
         }}
       />
@@ -335,7 +336,7 @@ function Notebook({
           {t('Try again')}
         </button>
         {canCacheOffline && offlineAccess()?.userId === userId && (
-          <button className="secondary" onClick={() => setOfflineView(true)}>
+          <button className="secondary" onClick={() => setOfflineView('notebook')}>
             {openOfflineLabel}
           </button>
         )}
@@ -367,7 +368,7 @@ function Notebook({
         assigned={assigned}
         profile={
           profile && offlineReady
-            ? { ...profile, openOffline: () => setOfflineView(true) }
+            ? { ...profile, openChanges: () => setOfflineView('changes') }
             : profile
         }
         leave={leave}

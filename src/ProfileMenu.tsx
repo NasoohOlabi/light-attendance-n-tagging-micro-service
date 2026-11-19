@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { CloudOff, Globe, History, LogOut, Settings, UserRound } from 'lucide-react'
+import { Globe, History, ListChecks, LogOut, Settings, UserRound } from 'lucide-react'
 import { ThemeChoices } from './i18n'
 import { useLanguage } from './useLanguage'
 import { setQuery } from './queryState'
@@ -12,7 +12,7 @@ export type Profile = {
   image: string | null
   update: (name: string, image?: string | null) => Promise<void>
   invitation?: InvitationProfile
-  openOffline?: () => void
+  openChanges?: () => void
   updateInvitation?: (details: {
     username: string
     phone: string
@@ -104,17 +104,17 @@ export function ProfileMenu({
               {language === 'ar' ? 'إعدادات الملف الشخصي' : 'Profile settings'}
             </button>
           )}
-          {profile?.openOffline && (
+          {profile?.openChanges && (
             <button
               type="button"
               disabled={disabled}
               onClick={() => {
                 setOpen(false)
-                profile.openOffline?.()
+                profile.openChanges?.()
               }}
             >
-              <CloudOff size={18} aria-hidden="true" />{' '}
-              {language === 'ar' ? 'فتح الدفتر دون اتصال' : 'Open offline notebook'}
+              <ListChecks size={18} aria-hidden="true" />{' '}
+              {language === 'ar' ? 'تغييراتي' : 'My changes'}
             </button>
           )}
           <div className="preference-group">
