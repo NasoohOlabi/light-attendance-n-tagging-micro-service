@@ -4,7 +4,11 @@ Railway replaces Neon hosting, managed Auth and Postgres. A Bun server serves Re
 
 ## Deployment
 
-Use the `wartaqi` project in the AppSuite Hobby workspace, the `production` environment, and the service linked to `NasoohOlabi/wartaqi`. The [production origin](https://wartaqi.up.railway.app/) also serves Auth and MCP OAuth. Authenticate with `railway login` using the AppSuite account. Keep credentials in private files or service variables.
+Use the `wartaqi` project in the AppSuite Hobby workspace, the `production` environment, and the service linked to `NasoohOlabi/wartaqi`. The [production origin](https://wartaqi.up.railway.app/) also serves Auth and MCP OAuth.
+
+Before managing production with the CLI, authenticate to AppSuite and run `railway list --json`. Confirm `workspace.name` is `AppSuite` and the project ID is `c6fef2bc-da82-436b-b359-7a6bff9ff753`. Both projects were named `wartaqi`. The personal workspace project (`6755aed9-cc26-43d1-b9bf-fe544d3eb8c8`) is retired. If the CLI lists only that project, clear its cached login with `railway logout` and sign in to AppSuite with `railway login`. Pass the AppSuite project ID and `production` environment explicitly to Railway commands. Keep API tokens in private credential storage and load them only into the process issuing the Railway command. Use the current secure handoff for a temporary credential file.
+
+For read-only release verification, GitHub also records Railway deployments for each commit. Query `gh api "repos/NasoohOlabi/wartaqi/deployments?sha=$sha"` with the merged commit SHA. Find the `wartaqi / production` deployment from `railway-app[bot]`, then check its latest status with `gh api "repos/NasoohOlabi/wartaqi/deployments/$deploymentId/statuses"`. Verify success for the AppSuite project and check `/health` and the affected feature at the production origin.
 
 During the v0.1.0 development release, all changes deploy from `main`. There is no nightly Railway environment or service; nightly builds and deployments remain disabled until the owner explicitly requests them. Keep the existing production application and Postgres service only.
 
