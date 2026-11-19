@@ -44,4 +44,6 @@ Verify an active and an inactive unassigned student appear in the full administr
 
 Staff phone displays in Students, Student information and Administrator register use isolated LTR dial links: verify synthetic local leading-zero, bare international, explicit +/00, missing and invalid values in English and Arabic at phone widths. Editing retains raw values; filters and sorting use the stored values.
 
+Open a student with attendance records at 1920px and 2560px in English and Arabic. Student information, attendance totals and courses stay at the reading start, with the wider history beside them. Confirm the first record is visible on a 560px-high viewport, the history date sort works and Back and Edit student remain reachable. At 320/390/430px, check that history follows courses and its labelled rows fit without horizontal scrolling. `e2e/table-pages.spec.ts` exercises both layouts with synthetic records.
+
 Whole-number decimal levels display without the zero-only fraction in roster, filters, profile, history and student portal. Editing a different field preserves the original stored level. Fractional and named levels remain unchanged.

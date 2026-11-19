@@ -924,121 +924,128 @@ function StudentDetails({
           </button>
         )}
       </div>
-      <h1 className="title">{ar ? 'معلومات الطالب' : 'Student information'}</h1>
-      {administrator && (
-        <button
-          className="secondary"
-          onClick={() =>
-            setQuery({ view: 'settings', student: student.studentId, account: '' }, true)
-          }
-        >
-          {ar
-            ? '\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0637\u0627\u0644\u0628'
-            : 'Edit student'}
-        </button>
-      )}
-      <dl className="student-detail-fields">
-        <div>
-          <dt>{ar ? 'الاسم الأول' : 'First name'}</dt>
-          <dd dir="auto">{student.firstName ?? student.name}</dd>
+      <div className="student-details-overview">
+        <div className="student-details-heading">
+          <h1 className="title">{ar ? 'معلومات الطالب' : 'Student information'}</h1>
+          {administrator && (
+            <button
+              className="secondary"
+              onClick={() =>
+                setQuery({ view: 'settings', student: student.studentId, account: '' }, true)
+              }
+            >
+              {ar
+                ? '\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0637\u0627\u0644\u0628'
+                : 'Edit student'}
+            </button>
+          )}
         </div>
-        <div>
-          <dt>{ar ? 'اسم العائلة' : 'Last name'}</dt>
-          <dd dir="auto">{student.lastName || '—'}</dd>
-        </div>
-        <div>
-          <dt>{ar ? 'رقم الهاتف' : 'Phone'}</dt>
-          <dd dir="auto">
-            {student.whatsapp ? (
-              <PhoneNumber value={student.whatsapp} />
-            ) : ar ? (
-              'غير متوفر'
-            ) : (
-              'Not provided'
-            )}
-          </dd>
-        </div>
-        <div>
-          <dt>{ar ? 'المستوى' : 'Level'}</dt>
-          <dd dir="auto">{studentLevel(student, !!courseId, memberships) || '—'}</dd>
-        </div>
-      </dl>
-      <h3>{ar ? 'معلومات الحضور' : 'Attendance information'}</h3>
-      <dl className="student-detail-fields">
-        <div>
-          <dt>{t('present')}</dt>
-          <dd>{counts.present}</dd>
-        </div>
-        <div>
-          <dt>{t('absent')}</dt>
-          <dd>{counts.absent}</dd>
-        </div>
-        <div>
-          <dt>{t('excused')}</dt>
-          <dd>{counts.excused}</dd>
-        </div>
-        <div>
-          <dt>{ar ? 'الجلسات المسجلة' : 'Recorded sessions'}</dt>
-          <dd>{records.length}</dd>
-        </div>
-        <div>
-          <dt>{ar ? 'نسبة الحضور' : 'Attendance percentage'}</dt>
-          <dd>
-            {records.length ? `${((counts.present / records.length) * 100).toFixed(1)}%` : '—'}
-          </dd>
-        </div>
-      </dl>
-      {eligible && canWrite && (
-        <button
-          className="primary"
-          onClick={() =>
-            navigateNotebook('attendance', courseId, { q: '', group: '', student: '' })
-          }
-        >
-          {ar ? 'تسجيل الحضور' : 'Take attendance'}
-        </button>
-      )}
-      <h3>{ar ? 'الدورات' : 'Courses'}</h3>
-      <p>
-        {courses
-          .filter((course) =>
-            memberships.some((entry) => entry.courseId === course.id && entry.active),
-          )
-          .map((course) => course.name)
-          .join(', ') || (ar ? 'لا يوجد' : 'None')}
-      </p>
-      <TableToolbar model={records.length ? detailTable : undefined} className="mt-6 mb-2">
-        <h3 className="m-0!">{ar ? 'سجل الحضور' : 'Attendance history'}</h3>
-      </TableToolbar>
-      {records.length ? (
-        <div
-          className="role-table-scroll"
-          tabIndex={0}
-          role="region"
-          aria-label={ar ? 'سجل الحضور' : 'Attendance history'}
-        >
-          <table className="mobile-record-table role-table">
-            <TableHeader model={detailTable} />
-            <tbody>
-              {detailTable.rows.map(({ event, value }) => (
-                <tr key={event.id}>
-                  <td data-label={ar ? 'التاريخ' : 'Date'}>{value.date}</td>
-                  <td data-label={ar ? 'الدورة' : 'Course'}>
-                    {courses.find((course) =>
-                      memberships.some(
-                        (entry) => entry.id === value.enrollmentId && entry.courseId === course.id,
-                      ),
-                    )?.name || (ar ? 'بلا دورة' : 'No course')}
-                  </td>
-                  <td data-label={ar ? 'الحالة' : 'Status'}>{t(value.status)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p>{ar ? 'لا توجد سجلات حضور' : 'No attendance records'}</p>
-      )}
+        <dl className="student-detail-fields">
+          <div>
+            <dt>{ar ? 'الاسم الأول' : 'First name'}</dt>
+            <dd dir="auto">{student.firstName ?? student.name}</dd>
+          </div>
+          <div>
+            <dt>{ar ? 'اسم العائلة' : 'Last name'}</dt>
+            <dd dir="auto">{student.lastName || '—'}</dd>
+          </div>
+          <div>
+            <dt>{ar ? 'رقم الهاتف' : 'Phone'}</dt>
+            <dd dir="auto">
+              {student.whatsapp ? (
+                <PhoneNumber value={student.whatsapp} />
+              ) : ar ? (
+                'غير متوفر'
+              ) : (
+                'Not provided'
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>{ar ? 'المستوى' : 'Level'}</dt>
+            <dd dir="auto">{studentLevel(student, !!courseId, memberships) || '—'}</dd>
+          </div>
+        </dl>
+        <h2>{ar ? 'معلومات الحضور' : 'Attendance information'}</h2>
+        <dl className="student-detail-fields student-detail-totals">
+          <div>
+            <dt>{t('present')}</dt>
+            <dd>{counts.present}</dd>
+          </div>
+          <div>
+            <dt>{t('absent')}</dt>
+            <dd>{counts.absent}</dd>
+          </div>
+          <div>
+            <dt>{t('excused')}</dt>
+            <dd>{counts.excused}</dd>
+          </div>
+          <div>
+            <dt>{ar ? 'الجلسات المسجلة' : 'Recorded sessions'}</dt>
+            <dd>{records.length}</dd>
+          </div>
+          <div>
+            <dt>{ar ? 'نسبة الحضور' : 'Attendance percentage'}</dt>
+            <dd>
+              {records.length ? `${((counts.present / records.length) * 100).toFixed(1)}%` : '—'}
+            </dd>
+          </div>
+        </dl>
+        {eligible && canWrite && (
+          <button
+            className="primary"
+            onClick={() =>
+              navigateNotebook('attendance', courseId, { q: '', group: '', student: '' })
+            }
+          >
+            {ar ? 'تسجيل الحضور' : 'Take attendance'}
+          </button>
+        )}
+        <h2>{ar ? 'الدورات' : 'Courses'}</h2>
+        <p>
+          {courses
+            .filter((course) =>
+              memberships.some((entry) => entry.courseId === course.id && entry.active),
+            )
+            .map((course) => course.name)
+            .join(', ') || (ar ? 'لا يوجد' : 'None')}
+        </p>
+      </div>
+      <div className="student-details-history">
+        <TableToolbar model={records.length ? detailTable : undefined} className="mb-2">
+          <h2>{ar ? 'سجل الحضور' : 'Attendance history'}</h2>
+        </TableToolbar>
+        {records.length ? (
+          <div
+            className="role-table-scroll"
+            tabIndex={0}
+            role="region"
+            aria-label={ar ? 'سجل الحضور' : 'Attendance history'}
+          >
+            <table className="mobile-record-table role-table">
+              <TableHeader model={detailTable} />
+              <tbody>
+                {detailTable.rows.map(({ event, value }) => (
+                  <tr key={event.id}>
+                    <td data-label={ar ? 'التاريخ' : 'Date'}>{value.date}</td>
+                    <td data-label={ar ? 'الدورة' : 'Course'}>
+                      {courses.find((course) =>
+                        memberships.some(
+                          (entry) =>
+                            entry.id === value.enrollmentId && entry.courseId === course.id,
+                        ),
+                      )?.name || (ar ? 'بلا دورة' : 'No course')}
+                    </td>
+                    <td data-label={ar ? 'الحالة' : 'Status'}>{t(value.status)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p>{ar ? 'لا توجد سجلات حضور' : 'No attendance records'}</p>
+        )}
+      </div>
     </section>
   )
 }

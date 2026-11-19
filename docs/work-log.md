@@ -2015,3 +2015,9 @@ At 06:46 Asia/Damascus, the full release gate passed again after merging main `3
 The owner asked to hide **My changes** when the queue is empty and keep the normal header and navigation on the review screen. Profile now tracks both offline queues for the current account. The review uses the notebook layout with readable change cards and a compact completion message. It refreshes the online notebook when a queued write succeeds.
 
 Ten focused Chromium tests passed on desktop and emulated mobile. They checked both menu languages, navigation from the review, conflict actions, and the menu disappearing after sync without a reload. The Arabic screenshots use synthetic records. The PR records the release and Railway checks. Physical-device behavior remains unverified.
+
+## 2026-11-19 09:32 Asia/Damascus (UTC+03:00) - Use wide screens for student history
+
+The owner reported unused space on Student information. At 1440px and wider, the profile, totals and courses sit beside the attendance history. The layout follows the reading direction, and mixed-direction values stay aligned with their labels. The compact view keeps the profile above the labelled history rows.
+
+On Railway's previous build (`6be0e5c`), the first history row was fully below the viewport in the synthetic 1920×560 browser case. The updated build passed at 1920px and 2560px in English and Arabic, including date sorting and Back. The emulated phone case passed at 320px, 390px and 430px without horizontal history scrolling. These checks use synthetic records. The PR records release checks and the exact-main Railway deployment.

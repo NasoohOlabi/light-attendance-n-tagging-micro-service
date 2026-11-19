@@ -806,9 +806,16 @@
 .roster-phone-column {
   width: 10rem;
 }
-.student-details h3 {
+.student-details-overview h2 {
   font-weight: 600;
   margin: 1.5rem 0 0.5rem;
+}
+.student-details-history {
+  min-width: 0;
+  margin-block-start: 1.5rem;
+}
+.student-details-history h2 {
+  font-weight: 600;
 }
 .student-details-actions {
   display: flex;
@@ -828,6 +835,52 @@
 .student-detail-fields dd {
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+@media (min-width: 90rem) {
+  .student-details {
+    display: grid;
+    grid-template-columns: clamp(22rem, 25%, 28rem) minmax(0, 1fr);
+    column-gap: 2rem;
+    align-items: start;
+  }
+  .student-details-actions {
+    grid-column: 1 / -1;
+  }
+  .student-details-overview {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .student-details-overview h2 {
+    margin-block-start: 1rem;
+  }
+  .student-details-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .student-details-history {
+    margin-block-start: 0;
+    border-inline-start: 1px solid;
+    border-color: inherit;
+    padding-inline-start: 2rem;
+  }
+  .student-detail-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem 1rem;
+    margin-block: 0.75rem;
+  }
+  .student-detail-fields > div {
+    display: grid;
+    justify-items: start;
+    align-content: start;
+    min-width: 0;
+  }
+  .student-detail-totals {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .roster-name-column {
   width: 12rem;
