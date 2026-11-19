@@ -2069,3 +2069,9 @@ The owner asked for charcoal navigation, neutral attendance controls and cards, 
 The owner asked to remove the retired project credential and document how to select AppSuite. The default Railway CLI login listed only the retired project. Cleared that cached login and confirmed the saved tokens were removed. The migration's temporary AppSuite credential file had expired. The runbook identifies both project IDs and explains how to verify production through Railway's GitHub deployment records.
 
 Verified the runbook's GitHub procedure against `7ae8058`. Railway's integration reported success for that exact commit on the AppSuite project. The GitHub record covers release verification. Direct Railway CLI management requires an AppSuite login.
+
+## 2026-11-19 16:01 Asia/Damascus (UTC+03:00) - Match the installed app's title bar to the page
+
+The owner reported a teal title bar above the charcoal notebook. The title bar now follows the page background in light and dark modes. The manifest uses the light background as its fallback. The startup script has a new URL so an existing service worker cannot supply the old script during the first online refresh.
+
+A disposable Chrome 157 installation on Windows reproduced the old mismatch. After one refresh into the new build, sampled native title-bar pixels matched the page background in dark and light mode. Browser checks cover device and saved themes, early startup, offline dark mode and the manifest fallback. Physical phones are outside this verification. The PR records release and Railway checks.

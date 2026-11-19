@@ -35,3 +35,5 @@ The automated suite simulates browser responses to both install APIs and checks 
 ## Appearance
 
 Choose **Device**, **Light** or **Dark** from the homepage/sign-in appearance control or the notebook profile menu. Device follows the operating system, including changes while the app is open. Explicit choices are saved on this browser and synchronized across tabs. When browser storage is unavailable, the choice still works for the current page session. The same-origin startup script restores the palette before application rendering and is included in the public offline cache. Arabic labels and native form controls follow the selected appearance.
+
+The installed app requests the same window title-bar color as the page background in each theme. The manifest uses the light page color as its startup fallback. An existing installation picks up the updated appearance on an online refresh.

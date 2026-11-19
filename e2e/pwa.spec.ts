@@ -107,6 +107,8 @@ test('repository-scoped PWA installs its real manifest and opens the public shel
       id: z.string(),
       start_url: z.string(),
       display: z.string(),
+      theme_color: z.string(),
+      background_color: z.string(),
       related_applications: z.array(
         z.object({ platform: z.string(), url: z.string(), id: z.string() }),
       ),
@@ -120,6 +122,8 @@ test('repository-scoped PWA installs its real manifest and opens the public shel
   )
   expect(new URL(manifest.scope, origin + prefix).href).toBe(origin + prefix)
   expect(manifest.display).toBe('standalone')
+  expect(manifest.theme_color).toBe('#f5fafc')
+  expect(manifest.theme_color).toBe(manifest.background_color)
   expect(manifest.related_applications).toContainEqual({
     platform: 'webapp',
     url: './manifest.webmanifest',
@@ -179,6 +183,7 @@ test('repository-scoped PWA installs its real manifest and opens the public shel
   await page.reload()
   await expect(page.locator('.wartaq-home h1')).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#181a1b')
   await expect(page.getByRole('combobox', { name: 'Color theme' })).toHaveValue('dark')
   await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
   await expect(page.locator('.workspace')).toBeVisible()

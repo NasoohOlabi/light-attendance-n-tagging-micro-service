@@ -1,4 +1,4 @@
-// Apply the stored choice before styles paint, and follow device changes in system mode.
+// Restore the saved appearance before styles paint and follow device changes in system mode.
 const preference = matchMedia('(prefers-color-scheme: dark)')
 function readChoice() {
   try {
@@ -28,7 +28,7 @@ if (themeColor) {
   const lightThemeColor = themeColor.content
   const syncThemeColor = () => {
     themeColor.content =
-      document.documentElement.dataset.theme === 'dark' ? '#1e2022' : lightThemeColor
+      document.documentElement.dataset.theme === 'dark' ? '#181a1b' : lightThemeColor
   }
   syncThemeColor()
   new MutationObserver(syncThemeColor).observe(document.documentElement, {
