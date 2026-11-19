@@ -2081,3 +2081,9 @@ A disposable Chrome 157 installation on Windows reproduced the old mismatch. Aft
 The owner reported inconsistent spacing in the Students phone column. The shared phone display used the stored separators, which could vary by entry or import. The roster, student profile and Administrator register now use consistent groups for Syrian mobile numbers entered in local or international form. The formatter uses the existing dial number to recognize these shapes. Edits, filters and sorting use the stored values.
 
 The focused unit test reproduced the unspaced display and passed after the fix. It checks mixed spacing, local and international inputs, dial targets and existing behavior for other numbers. Browser verification uses synthetic records on desktop and emulated phones. The PR records the full release and exact-main Railway checks.
+
+## 2026-11-19 16:41 Asia/Damascus (UTC+03:00) - Recover the Railway rollout through GitHub CI
+
+PR #145 merged as `7f20362`. The invitation integration test hit an occupied fixed port in the first post-merge validation run. Railway skipped the deployment. The same SHA passed validation on rerun and its deployment remained inactive. The owner asked to fix the environment after a repeated token request. The cutover's temporary secret file expired and the retired CLI login had been cleared. The runbook explains the release path through the existing GitHub connection and how to recognize the account for direct management.
+
+The invitation, held-session, OAuth and Railway API tests now share a test launcher that binds an OS-assigned loopback port before starting the application handler. It checks the application health with that exact origin. Binding the old invitation port reproduced the startup error on Windows. All four integration tests passed against disposable PostgreSQL with all four old ports held open. The follow-up PR tracks validation and the Railway rollout for the resulting main commit.

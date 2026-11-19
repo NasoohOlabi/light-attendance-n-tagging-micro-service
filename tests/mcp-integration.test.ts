@@ -5,11 +5,10 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { SignJWT, calculateJwkThumbprint, exportJWK, generateKeyPair } from 'jose'
 import { Pool } from 'pg'
 import { z } from 'zod'
+import { startIntegrationServer } from './integration-server'
 
 const databaseUrl = process.env.TEST_RAILWAY_DATABASE_URL
 const integration = databaseUrl ? test : test.skip
-const origin = 'http://127.0.0.1:39385'
-const resource = `${origin}/mcp`
 const redirectUri = 'http://127.0.0.1:39386/callback'
 const email = `mcp-test-${crypto.randomUUID()}@example.test`
 const password = randomBytes(32).toString('base64url')
@@ -47,20 +46,6 @@ afterAll(async () => {
   await pool.end()
 })
 
-function browserPost(path: string, body: unknown, cookie?: string, expectedUser?: string) {
-  return fetch(new URL(path, origin), {
-    method: 'POST',
-    headers: {
-      origin,
-      'content-type': 'application/json',
-      ...(cookie ? { cookie } : {}),
-      ...(expectedUser ? { 'x-user-id': expectedUser } : {}),
-    },
-    body: JSON.stringify(body),
-    redirect: 'manual',
-  })
-}
-
 function sessionCookie(response: Response) {
   const value = response.headers
     .getSetCookie()
@@ -74,21 +59,21 @@ integration(
   async () => {
     if (!databaseUrl) throw new Error('A migrated disposable database is required')
     pool = new Pool({ connectionString: databaseUrl })
-    server = Bun.spawn([process.execPath, 'run', 'server/index.ts'], {
-      env: {
-        ...process.env,
-        DATABASE_URL: databaseUrl,
-        BETTER_AUTH_SECRET: randomBytes(32).toString('hex'),
-        BETTER_AUTH_URL: origin,
-        PORT: '39385',
-      },
-      stdout: 'ignore',
-      stderr: 'inherit',
-    })
-    for (let attempt = 0; attempt < 100; attempt++) {
-      const ready = await fetch(`${origin}/health`).catch(() => null)
-      if (ready?.ok) break
-      await Bun.sleep(100)
+    const { origin, child } = await startIntegrationServer(databaseUrl)
+    server = child
+    const resource = `${origin}/mcp`
+    function browserPost(path: string, body: unknown, cookie?: string, expectedUser?: string) {
+      return fetch(new URL(path, origin), {
+        method: 'POST',
+        headers: {
+          origin,
+          'content-type': 'application/json',
+          ...(cookie ? { cookie } : {}),
+          ...(expectedUser ? { 'x-user-id': expectedUser } : {}),
+        },
+        body: JSON.stringify(body),
+        redirect: 'manual',
+      })
     }
     const denied = await fetch(resource)
     expect(denied.status).toBe(401)
