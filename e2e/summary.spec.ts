@@ -6,6 +6,26 @@ import { unzipSync } from 'fflate'
 
 test.use({ trace: 'off' })
 
+async function expectSummaryLayout(page: Page, ar: boolean, wide: boolean) {
+  const sessions = await page
+    .getByRole('region', { name: ar ? 'الغياب حسب الجلسة' : 'Absences by session' })
+    .boundingBox()
+  const totals = await page
+    .getByRole('region', { name: ar ? 'نظرة عامة على الحضور' : 'Attendance overview' })
+    .boundingBox()
+  if (!sessions || !totals) throw new Error('Expected visible attendance sessions and totals')
+
+  if (wide) {
+    expect(totals.y).toBeLessThanOrEqual(sessions.y)
+    const gap = ar
+      ? sessions.x - (totals.x + totals.width)
+      : totals.x - (sessions.x + sessions.width)
+    expect(gap).toBeGreaterThan(0)
+  } else {
+    expect(totals.y).toBeGreaterThanOrEqual(sessions.y + sessions.height)
+  }
+}
+
 async function openSummary(page: Page, role: 'administrator' | 'teacher') {
   const teacherId = '10000000-0000-4000-8000-000000000001'
   const studentId = '20000000-0000-4000-8000-000000000001'
@@ -171,13 +191,17 @@ async function openSummary(page: Page, role: 'administrator' | 'teacher') {
 test('summary counts all dates for the selected course and ignores saved filters', async ({
   page,
 }, testInfo) => {
+  const wide = testInfo.project.name === 'chromium'
+  if (wide) await page.setViewportSize({ width: 1920, height: 1000 })
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'canShare', { value: () => false })
   })
   await openSummary(page, 'administrator')
+  await expectSummaryLayout(page, false, wide)
   const row = page.getByRole('row', { name: /Synthetic Student/ })
   await expect(row).toContainText('Synthetic Student')
   await expect(row.locator('td')).toHaveText(['2', '0', '0', '2'])
+  await expect(row.locator('td').first()).toHaveCSS('text-align', wide ? 'center' : 'start')
   await expect(page.getByRole('row', { name: /Former Student/ }).locator('td')).toHaveText([
     '0',
     '0',
@@ -201,6 +225,7 @@ test('summary counts all dates for the selected course and ignores saved filters
   })
   await clickAccountAction(page, '\u0627\u0644\u0639\u0631\u0628\u064a\u0629')
   await expect(row.locator('td')).toHaveText(['2', '0', '0', '2'])
+  await expectSummaryLayout(page, true, wide)
   await expect(
     page
       .getByText(

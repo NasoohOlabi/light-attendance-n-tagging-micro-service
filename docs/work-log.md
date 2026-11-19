@@ -2015,3 +2015,9 @@ At 06:46 Asia/Damascus, the full release gate passed again after merging main `3
 The owner asked to hide **My changes** when the queue is empty and keep the normal header and navigation on the review screen. Profile now tracks both offline queues for the current account. The review uses the notebook layout with readable change cards and a compact completion message. It refreshes the online notebook when a queued write succeeds.
 
 Ten focused Chromium tests passed on desktop and emulated mobile. They checked both menu languages, navigation from the review, conflict actions, and the menu disappearing after sync without a reload. The Arabic screenshots use synthetic records. The PR records the release and Railway checks. Physical-device behavior remains unverified.
+
+## 2026-11-19 09:31 Asia/Damascus (UTC+03:00) - Use wide screens for the attendance overview
+
+The owner reported that the full-width session chart left a lot of unused space and pushed the student totals down. At 72rem of available panel content width, the overview places a compact session chart and its export beside the student totals. The columns follow the page direction. Narrower panels stack the sections, and desktop totals align with their column headings.
+
+`bun run verify` and all four focused Summary browser cases passed. Chromium verified the layout in English and Arabic at 1920px and on an emulated phone, including session drill-down and chart export with synthetic data. The PR tracks release CI and Railway verification. Physical phones and live authenticated records were outside local verification.

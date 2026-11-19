@@ -1884,39 +1884,43 @@ function Summary({
     },
   ])
   return (
-    <section className="panel">
-      <TableToolbar model={summaryTable} className="mb-6">
+    <section className="panel @container/overview">
+      <TableToolbar model={summaryTable} className="mb-6 @min-[72rem]/overview:mb-4">
         <h2 className="title">{t('Attendance overview')}</h2>
       </TableToolbar>
-      <AttendanceChartExport students={students} attendance={records} scope={scope} />
-      <SummaryInsights students={students} records={records} />
 
-      <div
-        className="overflow-x-auto"
-        role="region"
-        aria-label={t('Attendance overview')}
-        tabIndex={0}
-      >
-        <table className="mobile-record-table role-table summary-table min-w-[42rem] table-fixed text-start text-sm">
-          <TableHeader model={summaryTable} />
-          <tbody>
-            {summaryTable.rows.map((student) => (
-              <tr key={student.studentId} className="border-t border-slate-100">
-                <th scope="row" dir="auto" className="record-title p-3 text-start font-medium">
-                  {student.name}
-                </th>
-                {statuses.map((status) => (
-                  <td data-label={t(status)} key={status} className="p-3 text-center">
-                    {totals.get(student.studentId)?.[status] ?? 0}
+      <div className="@min-[72rem]/overview:grid @min-[72rem]/overview:grid-cols-[28rem_minmax(0,1fr)] @min-[72rem]/overview:items-start @min-[72rem]/overview:gap-6">
+        <div className="min-w-0">
+          <AttendanceChartExport students={students} attendance={records} scope={scope} />
+          <SummaryInsights students={students} records={records} />
+        </div>
+        <div
+          className="overflow-x-auto"
+          role="region"
+          aria-label={t('Attendance overview')}
+          tabIndex={0}
+        >
+          <table className="mobile-record-table role-table summary-table min-w-[42rem] table-fixed text-start text-sm">
+            <TableHeader model={summaryTable} />
+            <tbody>
+              {summaryTable.rows.map((student) => (
+                <tr key={student.studentId} className="border-t border-slate-100">
+                  <th scope="row" dir="auto" className="record-title p-3 text-start font-medium">
+                    {student.name}
+                  </th>
+                  {statuses.map((status) => (
+                    <td data-label={t(status)} key={status} className="p-3">
+                      {totals.get(student.studentId)?.[status] ?? 0}
+                    </td>
+                  ))}
+                  <td data-label={t('Notes')} className="p-3">
+                    {totals.get(student.studentId)?.notes ?? 0}
                   </td>
-                ))}
-                <td data-label={t('Notes')} className="p-3 text-center">
-                  {totals.get(student.studentId)?.notes ?? 0}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   )

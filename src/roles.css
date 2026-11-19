@@ -309,6 +309,9 @@
   width: 10rem;
   text-align: start;
 }
+.summary-table tbody td {
+  text-align: center;
+}
 
 .roster-students-table .roster-mobile-open {
   display: none;
