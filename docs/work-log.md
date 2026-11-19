@@ -2037,3 +2037,11 @@ The owner asked to use the empty space to the left of the Grades thresholds. The
 Two new Chromium layout cases reproduced the old offset, then passed at 1750px and 320px in English and Arabic. The existing grades and withdrawal scenario also passed in both browser projects, including opening and clearing the filter. The browser checks use synthetic data and an emulated phone. The PR records the release gate and Railway verification.
 
 At 10:28 Asia/Damascus, the release run exposed a scroll test that located the thresholds form by its old position in the DOM. It now finds the form by its Save thresholds button. The scroll check passed in both Chromium projects with the updated locator.
+
+## 2026-11-19 13:14 Asia/Damascus (UTC+03:00) - Connect Wartaq through OAuth and MCP
+
+The owner requested an MCP covering the site features with OAuth. Terra implemented the provider, login and consent pages, and tool catalog. The server routes trusted OAuth subjects through the existing notebook policy and shares course workbook generation with the site. The connection supports S256 PKCE, client metadata documents, dynamic registration, role-aware scopes, DPoP, rotating refresh tokens and revocation. Browser presentation and device preferences remain browser features.
+
+Disposable PostgreSQL checks exercised the official MCP SDK, attendance and note retries, assignment restrictions, student isolation, course report rows and workbook, scope narrowing, DPoP replay rejection, revocation and sign-out. Chromium completed real Codex metadata discovery, email sign-in and consent on desktop, and checked decline and layout at 320px in English and Arabic. The release suite passed with 47 repository tests and 169 browser checks, with three project-specific skips. The additive OAuth schema was applied transactionally on Railway. The PR tracks the exact-main deployment and live verification.
+
+At 13:24 Asia/Damascus, GitGuardian flagged the generated integration-test password's fixed prefix. The reported line contained a runtime-generated value for a disposable identity. The fixture now generates the complete password from random bytes.

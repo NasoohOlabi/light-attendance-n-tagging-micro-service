@@ -1,0 +1,27 @@
+# Wartaq MCP
+
+Add `https://light-attendance-n-tagging-micro-service-production.up.railway.app/mcp` as a remote Streamable HTTP server in your MCP client. Choose OAuth if prompted. Sign in with your existing Wartaq email or invited username, check the selected account and requested permissions, then approve the connection. An approved application role is required for notebook access.
+
+## Permissions
+
+| OAuth scope      | Access                                                                                                |
+| ---------------- | ----------------------------------------------------------------------------------------------------- |
+| `mcp:read`       | View your account and the records and reports available to your role.                                 |
+| `mcp:write`      | Make the changes available to your role. Admin mutations and offline conflict checks use both scopes. |
+| `offline_access` | Refresh access while the originating Wartaq session remains valid.                                    |
+
+Teachers work with active assigned students and their configured read/write mode. Students see their own effective attendance and can manage their own profile. Administrators can manage accounts, the full student register, courses, enrollment, scores, thresholds, handbook receipt and final grade decisions. Account invitations and password resets handle credentials, so only grant write access to a client you trust.
+
+## Tools
+
+- `get_account`, `get_profile`, `update_profile` and `update_invitation_profile` cover account and profile settings. The invitation tool asks for the current password.
+- `get_my_attendance` serves the Student portal. Staff use `get_notebook` for the authorized roster, courses, event history and tagged notes and `get_attendance_summary` for effective marks and notes.
+- `append_events` records attendance, notes and corrections. Use the same event ID, time and payload for an exact retry. Use `sync_attendance` or `sync_student` when submitting changes against a previously read version.
+- `get_admin_board`, account grant/disable/invite/reset tools, roster tools, and course and enrollment tools use the same restrictions as Settings and Courses.
+- `export_course_report` returns course data as rows or an Excel workbook with the site's report filters. Attendance chart rendering, sharing, offline device storage and display preferences run in the browser.
+
+## Protocol and local verification
+
+The server supports OAuth authorization-code flow with S256 PKCE, HTTPS client ID metadata documents and dynamic client registration. It advertises the issuer through protected-resource metadata, binds access tokens to `/mcp`, supports DPoP and rotating refresh tokens, and accepts token revocation. Signing out of the originating Wartaq session ends the connection. Role and roster changes apply on the next call.
+
+For a local client, use the configured Bun origin followed by `/mcp`. Apply the Railway Auth and application migrations to a disposable database, then set `TEST_RAILWAY_DATABASE_URL` and run `bun test tests/mcp-integration.test.ts`. Use synthetic accounts for verification and keep traces off.

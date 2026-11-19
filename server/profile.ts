@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 const maxImageLength = 120_000
-const profileUpdate = z
+export const profileUpdateSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
     image: z.string().max(maxImageLength).nullable().optional(),
@@ -9,7 +9,7 @@ const profileUpdate = z
   .strict()
 
 export function validProfileUpdate(input: unknown) {
-  const parsed = profileUpdate.safeParse(input)
+  const parsed = profileUpdateSchema.safeParse(input)
   if (!parsed.success) return false
   const image = parsed.data.image
   if (image == null) return true

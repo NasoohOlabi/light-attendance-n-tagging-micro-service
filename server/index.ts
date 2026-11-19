@@ -1,9 +1,20 @@
 import { createHash } from 'node:crypto'
+import { verifyOAuthQueryParams } from '@better-auth/oauth-provider'
 import { betterAuth } from 'better-auth'
 import { Pool } from 'pg'
 import { z } from 'zod'
 import { createHandler } from '../functions/notebook-service'
-import { readBoundedBody, validProfileRequest, validSignupRequest } from './profile'
+import { createMcpHandler } from './mcp'
+import { mcpConsentPage } from './mcp-consent'
+import { createMcpOAuthPlugins } from './mcp-oauth'
+import type { McpOperation } from './mcp-tools'
+import {
+  profileUpdateSchema,
+  readBoundedBody,
+  validProfileRequest,
+  validProfileUpdate,
+  validSignupRequest,
+} from './profile'
 
 const config = z
   .object({
@@ -50,6 +61,7 @@ const auth = betterAuth({
   database: authPool,
   advanced: { database: { generateId: 'uuid' } },
   emailAndPassword: { enabled: true },
+  plugins: createMcpOAuthPlugins(origin),
 })
 const secureCookies = baseUrl.protocol === 'https:'
 const sessionCookie = `${secureCookies ? '__Secure-' : ''}better-auth.session_token`
@@ -182,6 +194,77 @@ const notebook = createHandler(
   },
 )
 
+const mcpProfileSchema = z.object({ name: z.string(), image: z.string().nullable() })
+const usernameLoginSchema = z.strictObject({
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9._-]{3,32}$/),
+  password: z.string().min(1).max(128),
+  oauth_query: z.string().max(6000).optional(),
+})
+
+function notebookAsUser(userId: string, operation: McpOperation) {
+  // This request is built in-process from a named tool and a verified OAuth subject.
+  const authenticated = async () => userId
+  return createHandler(
+    pool,
+    authenticated,
+    [origin],
+    authenticated,
+  )(
+    new Request(new URL(operation.path, origin), {
+      method: operation.method,
+      headers: { 'content-type': 'application/json' },
+      ...(operation.body === undefined ? {} : { body: JSON.stringify(operation.body) }),
+    }),
+  )
+}
+
+const mcp = createMcpHandler(
+  origin,
+  (request) => {
+    const authorization = request.headers.get('authorization') ?? ''
+    const proof = request.headers.get('dpop')
+    if (authorization.length > 4096 || (proof && proof.length > 8192)) return Promise.resolve(null)
+    return auth.api.validateMcpToken({ body: { authorization, method: request.method, proof } })
+  },
+  async (userId, operation) => {
+    if (operation.path !== '/api/mcp/profile') return notebookAsUser(userId, operation)
+    if (operation.method === 'GET') {
+      const result = await authPool.query('SELECT name, image FROM "user" WHERE id = $1', [userId])
+      return Response.json(mcpProfileSchema.parse(result.rows[0]))
+    }
+    if (!validProfileUpdate(operation.body))
+      return Response.json({ error: 'Invalid account data' }, { status: 400 })
+    const { name, image } = profileUpdateSchema.parse(operation.body)
+    const result = await authPool.query(
+      'UPDATE "user" SET name = $2, image = CASE WHEN $3 THEN $4::text ELSE image END, "updatedAt" = now() WHERE id = $1 RETURNING name, image',
+      [userId, name, image !== undefined, image ?? null],
+    )
+    return Response.json(mcpProfileSchema.parse(result.rows[0]))
+  },
+)
+
+const discoveryPaths = new Set([
+  '/.well-known/oauth-protected-resource',
+  '/.well-known/oauth-protected-resource/mcp',
+  '/.well-known/oauth-authorization-server',
+  '/.well-known/oauth-authorization-server/api/auth',
+])
+const oauthMachinePaths = new Set([
+  '/api/auth/oauth2/register',
+  '/api/auth/oauth2/token',
+  '/api/auth/oauth2/introspect',
+  '/api/auth/oauth2/revoke',
+])
+const oauthBrowserPaths = new Set([
+  '/api/auth/oauth2/authorize',
+  '/api/auth/oauth2/continue',
+  '/api/auth/oauth2/consent',
+])
+
 export async function handle(request: Request): Promise<Response> {
   const url = new URL(request.url)
   let authPath: string
@@ -189,6 +272,33 @@ export async function handle(request: Request): Promise<Response> {
     authPath = decodeURIComponent(url.pathname).replace(/\/+$/, '').toLowerCase()
   } catch {
     return new Response('Not found', { status: 404 })
+  }
+  if (url.pathname === '/mcp') return mcp(request)
+  if (url.pathname === '/mcp/login' || url.pathname === '/mcp/consent') {
+    if (request.method !== 'GET')
+      return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET' } })
+    if (!(await verifyOAuthQueryParams(url.search.slice(1), config.BETTER_AUTH_SECRET)))
+      return new Response(
+        'This connection request is invalid or expired. Start again in your MCP client.',
+        {
+          status: 400,
+          headers: { 'Cache-Control': 'no-store' },
+        },
+      )
+    return mcpConsentPage(request)
+  }
+  if (discoveryPaths.has(url.pathname)) return auth.handler(request)
+  if (authPath.startsWith('/api/auth/oauth2/')) {
+    if (oauthMachinePaths.has(url.pathname)) {
+      if (request.method !== 'POST')
+        return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } })
+      const body = await readBoundedBody(request, 64 * 1024)
+      if (body === null) return Response.json({ error: 'invalid_request' }, { status: 400 })
+      const headers = new Headers(request.headers)
+      headers.delete('cookie')
+      return auth.handler(new Request(request.url, { method: 'POST', headers, body }))
+    }
+    if (!oauthBrowserPaths.has(url.pathname)) return new Response('Not found', { status: 404 })
   }
   if (
     [
@@ -206,6 +316,9 @@ export async function handle(request: Request): Promise<Response> {
       await pool.query(
         'SELECT course_enrollments.teacher_id, course_enrollments.active, course_enrollments.handbook_received, course_enrollments.notes, course_enrollments.grade_decisions, app_accounts.invitation_request_id, app_accounts.invitation_username, app_accounts.invitation_phone, app_accounts.invitation_birth_date, app_accounts.invitation_requires_setup, students.whatsapp, students.location, students.birth_year, courses.open, courses.attendance_minimum, courses.practical_minimum, courses.theory_minimum FROM app_accounts, teachers, students, courses, course_enrollments, events, neon_auth."user", neon_auth.account, neon_auth.session, neon_auth.verification LIMIT 0',
       )
+      await authPool.query(
+        'SELECT 1 FROM "oauthClient", "oauthClientResource", "oauthResource", "oauthAccessToken", "oauthRefreshToken", "oauthConsent", "oauthClientAssertion" LIMIT 0',
+      )
       const assignment = await pool.query(
         "SELECT is_nullable FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name = 'teacher_id'",
       )
@@ -222,6 +335,14 @@ export async function handle(request: Request): Promise<Response> {
       request.headers.get('origin') !== origin
     )
       return Response.json({ error: 'Forbidden' }, { status: 403 })
+    if (url.pathname === '/api/auth/oauth2/consent' && request.method === 'POST') {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+        query: { disableRefresh: true },
+      })
+      if (!session?.user.id || request.headers.get('x-user-id') !== session.user.id)
+        return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (url.pathname === '/api/device-accounts' && request.method === 'GET') {
       const accounts = await rememberedAccounts(request, await activeAccount(request))
       const headers = new Headers({ 'Cache-Control': 'no-store' })
@@ -305,26 +426,15 @@ export async function handle(request: Request): Promise<Response> {
         if (invited.rowCount) return Response.json({ error: 'Forbidden' }, { status: 403 })
       }
     }
-    let usernameLogin: { username: string; password: string } | undefined
+    let usernameLogin: z.infer<typeof usernameLoginSchema> | undefined
     if (url.pathname === '/api/auth/sign-in/username' && request.method === 'POST') {
-      let input: { username: string; password: string }
       try {
         const body = await readBoundedBody(request, 8192)
         if (body === null) throw new Error('Invalid request')
-        input = z
-          .strictObject({
-            username: z
-              .string()
-              .trim()
-              .toLowerCase()
-              .regex(/^[a-z0-9._-]{3,32}$/),
-            password: z.string().min(1).max(128),
-          })
-          .parse(JSON.parse(body))
+        usernameLogin = usernameLoginSchema.parse(JSON.parse(body))
       } catch {
         return Response.json({ error: 'Invalid credentials' }, { status: 400 })
       }
-      usernameLogin = input
     }
     const isLogin =
       request.method === 'POST' &&
@@ -364,7 +474,11 @@ export async function handle(request: Request): Promise<Response> {
           request = new Request(new URL('/api/auth/sign-in/email', request.url), {
             method: 'POST',
             headers: request.headers,
-            body: JSON.stringify({ email: email.data, password: usernameLogin.password }),
+            body: JSON.stringify({
+              email: email.data,
+              password: usernameLogin.password,
+              oauth_query: usernameLogin.oauth_query,
+            }),
           })
         } else if (authPath === '/api/auth/sign-in/email') {
           const body = await readBoundedBody(request, 8192)
