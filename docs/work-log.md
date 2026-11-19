@@ -2045,3 +2045,9 @@ The owner requested an MCP covering the site features with OAuth. Terra implemen
 Disposable PostgreSQL checks exercised the official MCP SDK, attendance and note retries, assignment restrictions, student isolation, course report rows and workbook, scope narrowing, DPoP replay rejection, revocation and sign-out. Chromium completed real Codex metadata discovery, email sign-in and consent on desktop, and checked decline and layout at 320px in English and Arabic. The release suite passed with 47 repository tests and 169 browser checks, with three project-specific skips. The additive OAuth schema was applied transactionally on Railway. The PR tracks the exact-main deployment and live verification.
 
 At 13:24 Asia/Damascus, GitGuardian flagged the generated integration-test password's fixed prefix. The reported line contained a runtime-generated value for a disposable identity. The fixture now generates the complete password from random bytes.
+
+## 2026-11-19 14:05 Asia/Damascus (UTC+03:00) - Move production to wartaqi
+
+The owner authorized swapping the public origin and renaming the local checkout, GitHub repository and Railway resources to the first available spelling. Railway assigned `wartaqi.up.railway.app` to the existing service, and `BETTER_AUTH_URL` now uses that origin. GitHub renamed the existing repository and Railway read back its `main` trigger with Wait for CI enabled. The package metadata, installable app identity and MCP instructions now use `wartaqi`. Existing browser sessions, app installs and MCP connections belong to the old origin and need to be established on the new one.
+
+Railway health responded successfully at the new origin during cutover. The PR delivery receipt tracks verification of the shipped manifest, OAuth discovery and exact-main deployment. Native app installation requires a physical-device check.

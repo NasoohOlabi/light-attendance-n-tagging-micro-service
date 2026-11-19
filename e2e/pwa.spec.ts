@@ -123,7 +123,7 @@ test('repository-scoped PWA installs its real manifest and opens the public shel
   expect(manifest.related_applications).toContainEqual({
     platform: 'webapp',
     url: './manifest.webmanifest',
-    id: 'https://light-attendance-n-tagging-micro-service-production.up.railway.app/',
+    id: 'https://wartaqi.up.railway.app/',
   })
   for (const icon of manifest.icons) {
     const size = Number(icon.sizes.split('x')[0])

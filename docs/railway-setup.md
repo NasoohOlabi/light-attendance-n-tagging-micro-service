@@ -4,7 +4,7 @@ Railway replaces Neon hosting, managed Auth and Postgres. A Bun server serves Re
 
 ## Deployment
 
-Use existing project `perfect-insight`, environment `production`, and the repository service. Authenticate with `railway login`; no token is needed after browser consent. Keep credentials in private files/service variables.
+Use the `wartaqi` project, the `production` environment, and the service linked to `NasoohOlabi/wartaqi`. The [production origin](https://wartaqi.up.railway.app/) also serves Auth and MCP OAuth. Authenticate with `railway login`; no token is needed after browser consent. Keep credentials in private files/service variables.
 
 During the v0.1.0 development release, all changes deploy from `main`. There is no nightly Railway environment or service; nightly builds and deployments remain disabled until the owner explicitly requests them. Keep the existing production application and Postgres service only.
 
@@ -42,7 +42,7 @@ Take a final snapshot after stopping old-host writes and compare the destination
 
 ## Observed publication
 
-PR #31 passed required Verify, CodeQL and security checks, then merged to main `e9408cd`. Railway Docker deployment `08b82682-730b-4d8c-b6be-738c49042e96` built successfully and passed `/health`. The [public site](https://light-attendance-n-tagging-micro-service-production.up.railway.app/) served the actual main implementation. Real synthetic signup, secure HttpOnly cookies, unapproved denial, forged-identity and foreign-origin rejection, teacher assignment scope, phone sign-in, attendance/note appends, Postgres readback, reload, Arabic layout and signout passed. All synthetic rows were cleaned; target rows/hashes again matched the original private snapshot. Browser traffic stayed on the Railway origin. Sanitized JSON and a synthetic phone screenshot remain ignored under `.artifacts/verification/railway-live*`.
+PR #31 passed required Verify, CodeQL and security checks, then merged to main `e9408cd`. Railway Docker deployment `08b82682-730b-4d8c-b6be-738c49042e96` built successfully and passed `/health`. The original public hostname served that deployment. Real synthetic signup, secure HttpOnly cookies, unapproved denial, forged-identity and foreign-origin rejection, teacher assignment scope, phone sign-in, attendance/note appends, Postgres readback, reload, Arabic layout and signout passed. All synthetic rows were cleaned; target rows/hashes again matched the original private snapshot. Browser traffic stayed on the Railway origin. Sanitized JSON and a synthetic phone screenshot remain ignored under `.artifacts/verification/railway-live*`.
 
 The first live browser attempt hit a known Bun/Windows launch stall; Node completed the browser run. A subsequent test incorrectly reloaded when matching the note still in its input, before the network save finished. Waiting for the actual successful POST and database count resolved that verification error; no application change was needed. This proves the new account path and migrated hash compatibility, not an interactive sign-in with the owner's existing password. Native installation on a physical device remains unverified.
 
