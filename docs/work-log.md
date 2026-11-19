@@ -2029,3 +2029,9 @@ The owner reported unused space on Student information. At 1440px and wider, the
 On Railway's previous build (`6be0e5c`), the first history row was fully below the viewport in the synthetic 1920×560 browser case. The updated build passed at 1920px and 2560px in English and Arabic, including date sorting and Back. The emulated phone case passed at 320px, 390px and 430px without horizontal history scrolling. These checks use synthetic records. The PR records release checks and the exact-main Railway deployment.
 
 At 09:44 Asia/Damascus, integrated main (`7219b89`) and retained both wide-layout work-log entries. `bun run verify` passed, along with six focused Chromium cases covering the attendance overview and student history on desktop and emulated phones.
+
+## 2026-11-19 10:26 Asia/Damascus (UTC+03:00) - Move the missing-scores filter to the left
+
+The owner asked to use the empty space to the left of the Grades thresholds. The missing-scores button now shares their row when the controls fit and wraps below the form at narrow widths. Agent instructions ask contributors to check for stranded controls on wide desktop and narrow phone layouts in both languages.
+
+Two new Chromium layout cases reproduced the old offset, then passed at 1750px and 320px in English and Arabic. The existing grades and withdrawal scenario also passed in both browser projects, including opening and clearing the filter. The browser checks use synthetic data and an emulated phone. The PR records the release gate and Railway verification.

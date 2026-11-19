@@ -784,63 +784,65 @@ function GradePage({
           onClose={() => setExportOpen(false)}
         />
       )}
-      <form
-        className="flex flex-wrap items-end justify-end gap-3"
-        dir="ltr"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void save('/api/admin/courses/settings', {
-            id: course.id,
-            attendanceMinimum: Number(settings.attendanceMinimum),
-            practicalMinimum: Number(settings.practicalMinimum),
-            theoryMinimum: Number(settings.theoryMinimum),
-          })
-        }}
-      >
-        {(
-          [
-            ['attendanceMinimum', ar ? 'الحد الأدنى للحضور %' : 'Minimum attendance %'],
-            ['practicalMinimum', ar ? 'درجة النجاح العملي' : 'Practical passing grade'],
-            ['theoryMinimum', ar ? 'درجة النجاح النظري' : 'Theory passing grade'],
-          ] as const
-        ).map(([key, label]) => (
-          <label className="w-full max-w-48" key={key} dir={ar ? 'rtl' : 'ltr'}>
-            {label}
-            <input
-              type="number"
-              disabled={busy}
-              min="0"
-              max="100"
-              step="any"
-              required
-              value={settings[key]}
-              onChange={(event) =>
-                setSettings((current) => ({ ...current, [key]: event.target.value }))
-              }
-            />
-          </label>
-        ))}
-        <button className="secondary" disabled={busy || !settingsDirty}>
-          {ar ? 'حفظ الحدود' : 'Save thresholds'}
-        </button>
-      </form>
+      <div className="flex flex-wrap items-end gap-3 ltr:flex-row-reverse">
+        <form
+          className="ml-auto flex flex-wrap items-end justify-end gap-3"
+          dir="ltr"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void save('/api/admin/courses/settings', {
+              id: course.id,
+              attendanceMinimum: Number(settings.attendanceMinimum),
+              practicalMinimum: Number(settings.practicalMinimum),
+              theoryMinimum: Number(settings.theoryMinimum),
+            })
+          }}
+        >
+          {(
+            [
+              ['attendanceMinimum', ar ? 'الحد الأدنى للحضور %' : 'Minimum attendance %'],
+              ['practicalMinimum', ar ? 'درجة النجاح العملي' : 'Practical passing grade'],
+              ['theoryMinimum', ar ? 'درجة النجاح النظري' : 'Theory passing grade'],
+            ] as const
+          ).map(([key, label]) => (
+            <label className="w-full max-w-48" key={key} dir={ar ? 'rtl' : 'ltr'}>
+              {label}
+              <input
+                type="number"
+                disabled={busy}
+                min="0"
+                max="100"
+                step="any"
+                required
+                value={settings[key]}
+                onChange={(event) =>
+                  setSettings((current) => ({ ...current, [key]: event.target.value }))
+                }
+              />
+            </label>
+          ))}
+          <button className="secondary" disabled={busy || !settingsDirty}>
+            {ar ? 'حفظ الحدود' : 'Save thresholds'}
+          </button>
+        </form>
+        {(missing.length > 0 || showMissing) && (
+          <button
+            type="button"
+            className="secondary mr-auto"
+            aria-pressed={showMissing}
+            onClick={() => setQuery({ missing: showMissing ? '' : '1' })}
+          >
+            {ar
+              ? `إظهار الدرجات الناقصة (${missing.length})`
+              : `Show missing scores (${missing.length})`}
+          </button>
+        )}
+      </div>
       <p>
         {ar
           ? 'الحضور = الحاضر / (الحاضر + الغائب + المعذور). الأيام غير المسجلة مستبعدة.'
           : 'Attendance = Present / (Present + Absent + Excused). Unmarked days are excluded.'}
       </p>
-      {(missing.length > 0 || showMissing) && (
-        <button
-          type="button"
-          className="secondary"
-          aria-pressed={showMissing}
-          onClick={() => setQuery({ missing: showMissing ? '' : '1' })}
-        >
-          {ar
-            ? `إظهار الدرجات الناقصة (${missing.length})`
-            : `Show missing scores (${missing.length})`}
-        </button>
-      )}
       <div
         className="role-table-scroll grade-table-scroll"
         role="region"
