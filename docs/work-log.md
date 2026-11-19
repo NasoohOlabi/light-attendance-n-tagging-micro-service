@@ -2035,3 +2035,5 @@ At 09:44 Asia/Damascus, integrated main (`7219b89`) and retained both wide-layou
 The owner asked to use the empty space to the left of the Grades thresholds. The missing-scores button now shares their row when the controls fit and wraps below the form at narrow widths. Agent instructions ask contributors to check for stranded controls on wide desktop and narrow phone layouts in both languages.
 
 Two new Chromium layout cases reproduced the old offset, then passed at 1750px and 320px in English and Arabic. The existing grades and withdrawal scenario also passed in both browser projects, including opening and clearing the filter. The browser checks use synthetic data and an emulated phone. The PR records the release gate and Railway verification.
+
+At 10:28 Asia/Damascus, the release run exposed a scroll test that located the thresholds form by its old position in the DOM. It now finds the form by its Save thresholds button. The scroll check passed in both Chromium projects with the updated locator.
