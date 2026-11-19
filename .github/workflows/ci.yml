@@ -45,6 +45,7 @@ jobs:
           DATABASE_URL_UNPOOLED: postgres://postgres@127.0.0.1:5432/notebook_test
         run: |
           psql "$DATABASE_URL_UNPOOLED" -v ON_ERROR_STOP=1 -f railway/001-auth.sql
+          psql "$DATABASE_URL_UNPOOLED" -v ON_ERROR_STOP=1 -f railway/002-mcp-oauth.sql
           bun run db:migrate
           psql "$DATABASE_URL_UNPOOLED" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE student_names_test'
       - run: bun run verify

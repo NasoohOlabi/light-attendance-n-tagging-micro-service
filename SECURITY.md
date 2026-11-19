@@ -16,6 +16,10 @@ Events are append-only through the API. Pending batches can contain private stud
 
 The frontend CSP permits three exact SHA-256 style hashes for dnd kit 0.5.3's feedback, grabbing cursor and selection rules. Arbitrary inline styles remain blocked. When upgrading dnd kit, regenerate hashes from its exact emitted style text and verify the actual dragged pill position under the production CSP; ordering alone does not prove the preview works. The synthetic table browser scenario asserts that visual geometry.
 
+## MCP access
+
+MCP uses audience-bound OAuth tokens stored as hashes by the Better Auth provider. The resource checks the token, originating session and current application permissions before presenting tools or handling them. Browser API credentials stay in the site session. Client ID metadata uses a DNS-pinned public HTTPS connection and OAuth authorization parameters are signed during browser sign-in and consent. Store client credentials and tokens privately. See [MCP setup and permissions](docs/mcp.md).
+
 ## Account invitations
 
 The device account chooser lists identities with live Better Auth sessions held in this browser. Session credentials stay in signed HttpOnly cookies, with Secure on HTTPS. Switching validates the target session and sets the active cookie. The chooser returns only user IDs, names and login identifiers. Application APIs continue to authorize the active identity and its role. Personal profile updates check the expected identity, and password rotation or session expiry invalidates the saved login.
