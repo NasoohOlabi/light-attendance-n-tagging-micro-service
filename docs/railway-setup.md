@@ -4,7 +4,7 @@ Railway replaces Neon hosting, managed Auth and Postgres. A Bun server serves Re
 
 ## Deployment
 
-Use the `wartaqi` project, the `production` environment, and the service linked to `NasoohOlabi/wartaqi`. The [production origin](https://wartaqi.up.railway.app/) also serves Auth and MCP OAuth. Authenticate with `railway login`; no token is needed after browser consent. Keep credentials in private files/service variables.
+Use the `wartaqi` project in the AppSuite Hobby workspace, the `production` environment, and the service linked to `NasoohOlabi/wartaqi`. The [production origin](https://wartaqi.up.railway.app/) also serves Auth and MCP OAuth. Authenticate with `railway login` using the AppSuite account. Keep credentials in private files or service variables.
 
 During the v0.1.0 development release, all changes deploy from `main`. There is no nightly Railway environment or service; nightly builds and deployments remain disabled until the owner explicitly requests them. Keep the existing production application and Postgres service only.
 
@@ -12,7 +12,7 @@ During the v0.1.0 development release, all changes deploy from `main`. There is 
 
 Apply the ordered `railway/*.sql` authentication migrations, then ordered `neon/*.sql` application migrations to the new database. These are repeatable; preserve the Neon source data and record any access pause separately. Run `bun run verify:release` before stable promotion. The service's main deployment trigger has **Wait for CI** enabled.
 
-Apply `railway/002-mcp-oauth.sql` before deploying the [MCP endpoint](mcp.md). Run the file with `psql` using `ON_ERROR_STOP=1` and a single transaction through the private Railway database network. The migration creates only Better Auth provider tables in `neon_auth`. `/health` checks that those tables exist. The same `BETTER_AUTH_URL` determines the public OAuth issuer and MCP resource. Moving to a different database or origin requires clients to reconnect.
+Apply `railway/002-mcp-oauth.sql` before deploying the [MCP endpoint](mcp.md). Run the file with `psql` using `ON_ERROR_STOP=1` and a single transaction through the private Railway database network. The migration creates only Better Auth provider tables in `neon_auth`. `/health` checks that those tables exist. The same `BETTER_AUTH_URL` determines the public OAuth issuer and MCP resource. Clients must reconnect after an origin change or a restore that omits OAuth and session data.
 
 The separate-name student editor requires `neon/004-student-names.sql` before deploying its API/UI. The migration adds nullable `first_name` and `last_name` columns without guessing how existing full names should split. Version 3 backups retain name parts, courses, enrollment levels/scores and attendance enrollment references in dependency order. Version 1 (original schema) and version 2 (name parts only) remain supported; legacy comparisons refuse to hide courses in the target. Partial schemas fail closed. Keep the protected original recovery snapshots unchanged.
 
@@ -21,6 +21,8 @@ The searchable course-membership workflow additionally requires `neon/005-active
 For local authenticated use, set private server variables against a disposable database and run `bun run build`, then `bun run server/index.ts`. Open port 3000 directly so Auth and notebook share the configured origin. Plain Vite preview supports the public shell/sample; authenticated operation needs Bun.
 
 ## Transfer and recovery
+
+On 2026-11-19, the AppSuite rebuild restored a complete PostgreSQL archive into an empty database over authenticated Railway SSH. It preserved Auth data, the signing secret and the public origin. The AppSuite Postgres service uses a new database password and a private connection. Railway scheduled the old project for deletion after the restored data and original URL passed live checks. The protected PostgreSQL archive is the recovery point for this rebuild. The selective transfer CLI below still applies to the original Neon migration.
 
 Course closure requires `neon/006-closed-courses.sql` before deployment. Existing courses default open; version 5 backups preserve status. Older backups import courses as open and comparison refuses to hide closed target courses.
 

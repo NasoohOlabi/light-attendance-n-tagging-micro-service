@@ -2051,3 +2051,9 @@ At 13:24 Asia/Damascus, GitGuardian flagged the generated integration-test passw
 The owner authorized swapping the public origin and renaming the local checkout, GitHub repository and Railway resources to the first available spelling. Railway assigned `wartaqi.up.railway.app` to the existing service, and `BETTER_AUTH_URL` now uses that origin. GitHub renamed the existing repository and Railway read back its `main` trigger with Wait for CI enabled. The package metadata, installable app identity and MCP instructions now use `wartaqi`. Existing browser sessions, app installs and MCP connections belong to the old origin and need to be established on the new one.
 
 Railway health responded successfully at the new origin during cutover. The PR delivery receipt tracks verification of the shipped manifest, OAuth discovery and exact-main deployment. Native app installation requires a physical-device check.
+
+## 2026-11-19 15:05 Asia/Damascus (UTC+03:00) - Move Wartaqi to AppSuite Hobby
+
+The owner chose to rebuild on AppSuite because the original Railway workspace was on a trial. Restored a private PostgreSQL archive into AppSuite and reused the original Auth signing secret. Once the old app stopped, row fingerprints matched across all 17 application and Auth tables, and the event sequence matched. Renamed the old service URL to release the hostname, then assigned `wartaqi.up.railway.app` to AppSuite. The AppSuite GitHub trigger points to `main` with Wait for CI enabled.
+
+On AppSuite deployment `36d4cae7-4d0c-46c7-b623-fa17d937ed5b` at `8f445ae`, the original URL passed health, OAuth discovery, secure session, email sign-in and sign-out checks. The database comparison passed again after synthetic fixture cleanup. Railway scheduled the old project for deletion on 2026-11-21 and public health passed afterward. The private archive remains available for recovery. Existing users' passwords were outside the live checks.
