@@ -20,7 +20,7 @@ test('staff phone links remain usable in both languages', async ({ page }) => {
     name: 'Synthetic Student',
     firstName: 'Synthetic',
     lastName: 'Student',
-    whatsapp: '963 912 345 678',
+    whatsapp: '963912345678',
     group: 'A',
     active: true,
     teacherId: id,
@@ -29,7 +29,7 @@ test('staff phone links remain usable in both languages', async ({ page }) => {
   }
   const students = [
     student,
-    ...['0912 345 678', null, '1234567', 'invalid 123'].map((whatsapp, index) => ({
+    ...['0912345678', null, '1234567', 'invalid 123'].map((whatsapp, index) => ({
       ...student,
       studentId: `20000000-0000-4000-8000-00000000000${index + 2}`,
       name: `Synthetic ${index}`,
@@ -92,6 +92,9 @@ test('staff phone links remain usable in both languages', async ({ page }) => {
     )
   }
   await check()
+  await clickAccountAction(page, 'العربية')
+  await check()
+  await clickAccountAction(page, 'English')
   await page.setViewportSize({ width: 320, height: 844 })
   await check()
   const list = page.getByRole('region', { name: 'Student list' })

@@ -2075,3 +2075,9 @@ Verified the runbook's GitHub procedure against `7ae8058`. Railway's integration
 The owner reported a teal title bar above the charcoal notebook. The title bar now follows the page background in light and dark modes. The manifest uses the light background as its fallback. The startup script has a new URL so an existing service worker cannot supply the old script during the first online refresh.
 
 A disposable Chrome 157 installation on Windows reproduced the old mismatch. After one refresh into the new build, sampled native title-bar pixels matched the page background in dark and light mode. Browser checks cover device and saved themes, early startup, offline dark mode and the manifest fallback. Physical phones are outside this verification. The PR records release and Railway checks.
+
+## 2026-11-19 16:14 Asia/Damascus (UTC+03:00) - Space Syrian mobile numbers in the roster
+
+The owner reported inconsistent spacing in the Students phone column. The shared phone display used the stored separators, which could vary by entry or import. The roster, student profile and Administrator register now use consistent groups for Syrian mobile numbers entered in local or international form. The formatter uses the existing dial number to recognize these shapes. Edits, filters and sorting use the stored values.
+
+The focused unit test reproduced the unspaced display and passed after the fix. It checks mixed spacing, local and international inputs, dial targets and existing behavior for other numbers. Browser verification uses synthetic records on desktop and emulated phones. The PR records the full release and exact-main Railway checks.

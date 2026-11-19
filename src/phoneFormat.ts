@@ -12,7 +12,10 @@ export function phoneNumber(value: string) {
   )
     return { display: text, href: null }
   const international = !text.startsWith('+') && !digits.startsWith('0') && digits.length >= 11
-  const display = prefix ? `+${number}` : international ? `+${text}` : text
   const dial = prefix || international || text.startsWith('+') ? `+${number}` : number
-  return { display, href: `tel:${dial}` }
+  const display = prefix ? dial : international ? `+${text}` : text
+  const spaced = dial
+    .replace(/^(09\d{2})(\d{3})(\d{3})$/, '$1 $2 $3')
+    .replace(/^(\+963)(9\d{2})(\d{3})(\d{3})$/, '$1 $2 $3 $4')
+  return { display: spaced === dial ? display : spaced, href: `tel:${dial}` }
 }
