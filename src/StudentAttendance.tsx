@@ -58,7 +58,7 @@ export function StudentAttendance({
         label: ar ? 'الدورة' : 'Course',
         value: (item) => item.course ?? (ar ? 'سجل سابق' : 'Previous record'),
       },
-      { id: 'date', label: t('Date'), value: (item) => item.date },
+      { id: 'date', filterMode: 'literal', label: t('Date'), value: (item) => item.date },
       {
         id: 'status',
         choices: [t('present'), t('absent'), t('excused')],

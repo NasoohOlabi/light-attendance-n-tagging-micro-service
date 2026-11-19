@@ -1,10 +1,11 @@
-﻿import {
+import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
 } from '@tanstack/react-table'
+import { matchesText } from './studentSearch'
 import { useLanguage } from './useLanguage'
 import { setTableQuery, useTableQuery } from './queryState'
 
@@ -14,6 +15,7 @@ export type TableColumn<T> = {
   label: string
   value: (row: T) => Value
   choices?: string[]
+  filterMode?: 'literal'
   filterText?: (row: T) => string
 }
 
@@ -61,7 +63,9 @@ export function useDataTable<T>(
       ).toLocaleLowerCase()
       return column.choices
         ? text === (column.choices[Number(value) - 1] ?? '').toLocaleLowerCase()
-        : text.includes(value.toLocaleLowerCase())
+        : typeof row.getValue<Value>(columnId) === 'number' || column.filterMode === 'literal'
+          ? text.includes(value.toLocaleLowerCase())
+          : matchesText(text, value)
     },
   }))
   // The table exposes mutable getters. Keep them outside compiler memoization.

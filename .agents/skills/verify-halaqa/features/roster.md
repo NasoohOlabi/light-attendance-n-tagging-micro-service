@@ -24,6 +24,8 @@ In the sample, open **Students**. Use **Student name**, optional **Group**, and 
 
 ## Driving it with Playwright
 
+On desktop and an emulated Arabic phone, search `ابرا` for a synthetic student with the family name `إبراهيم`. Verify the partial name and a typo both find the student, an unrelated query shows the empty state, and clearing restores the list. Check the search combines with group and course scope, and that free-text column filters handle typos while phone lookups stay literal.
+
 The `sample notebook` test fills **Student name** with ليلى and clicks **Add student**, observes saved feedback, then proves the same name is selectable in Attendance and Notes. Reload proves demo changes disappear. For sample roster edits, scope `getByRole('textbox', { name: 'Name', exact: true })` and **Save changes** to the chosen row form; verify changed group in Group filtering, inactive exclusion, **Include inactive** and Activate. History must retain every snapshot with a stable student ID.
 
 ## Gotchas

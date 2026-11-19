@@ -2001,3 +2001,11 @@ The browser regression checks the normal dashboard, Attendance, Profile shortcut
 The owner asked for a clearer name in Profile. **My changes** opens the pending sync queue and conflict actions, with an empty state after sync. The notebook still opens automatically on disconnect, and recovery screens use **Open offline notebook** when they offer access to the cached notebook.
 
 The browser regression checks both menu languages, pending conflict review, the empty state and the switch to the offline notebook on disconnect. The PR records the release and Railway checks. Browser scenarios use synthetic records and emulated phones.
+
+## 2026-11-19 06:31 Asia/Damascus (UTC+03:00) - Use fuzzy search for free text
+
+The owner reported that a partial Arabic family name returned an empty Students list and asked to prefer a package for fuzzy search. The notebook, course membership, free-text table filters and design sample share Fuse.js matching. Arabic alif forms and diacritics normalize for search, and a misspelling can still find the intended record. Date, number and phone filters use literal matching. Choice filters still select exact values. The repository instructions record the fuzzy search convention for new fields.
+
+`bun run verify:release` passed with 40 Bun tests and 166 browser cases. Six optional database tests and two desktop instances of phone-only cases skipped. The Arabic search regression covers a partial family name, a typo, group scope, an unrelated query and clearing on desktop and emulated mobile. Course membership and the roster name filter also passed with misspellings. The PR records hosted CI and Railway verification. Physical phones and live authenticated rosters were outside local verification.
+
+At 06:46 Asia/Damascus, the full release gate passed again after merging main `363298d` and retaining both work-log entries.
