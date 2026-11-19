@@ -16,6 +16,8 @@ The orchestrator scopes tasks, reviews diffs, runs gates and owns final commits/
 
 Prefer mobile-first, page-oriented navigation: list pages open on saved records, and add/edit, membership and grading actions lead to separate destinations. Keep each page focused, avoid repeated role labels and generic introductory text, and keep the course list's row actions visible on phones.
 
+Use available horizontal space for related controls and panels. Share a row when they fit naturally, then wrap on narrow screens. During UI verification, check wide desktop and narrow phone widths in English and Arabic for stranded controls, wasted rows, and horizontal overflow.
+
 ## Validation and safety
 
 - Run `bun run verify` before completing any repository change. For UI changes use `.agents/skills/verify-halaqa/SKILL.md` and the affected feature map. Run `bun run verify:release` before stable promotion/publication. Fix failed checks; document provider checks that cannot run locally.

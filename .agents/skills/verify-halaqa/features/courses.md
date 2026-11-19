@@ -42,6 +42,8 @@ For long Grades tables, check English and Arabic on desktop (including short win
 
 At 320/390/430px in English and Arabic, verify at least 16px between the mobile workspace header and the Grades panel. Inspect grade records in light and dark appearance for consistent inset padding and separation, equally aligned Theory and Practical inputs, and full-width Notes. Result and Actions share the row below Notes, with Actions on the left in Arabic and right in English. Save grades and the menu fit with 44px touch targets. `e2e/grades-scroll.spec.ts` checks header spacing and record geometry and captures both palettes.
 
+On Grades, verify that Show missing scores uses the left edge of the table and shares the threshold row on wide screens. At 320px, check that it wraps below the thresholds, stays on the left, and fits without horizontal page scrolling. `e2e/courses.spec.ts` checks both layouts in English and Arabic.
+
 On the saved Courses list, verify that the card starts 32px below the top of the desktop workspace and at least 16px below the phone header. `e2e/courses.spec.ts` measures the rendered gap and checks that course actions fit at 320/390/430px in English and Arabic.
 
 Sort and Filter share the Courses title row at the top-left in Arabic and top-right in English. `e2e/table-pages.spec.ts` checks the alignment, 44px targets, and popovers on desktop and at 320/390/430px. The table starts with the column headings. Apply a status filter, reload and clear it without writing to the notebook.

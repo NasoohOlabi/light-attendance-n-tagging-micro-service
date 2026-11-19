@@ -825,6 +825,42 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
   await expect.poll(() => enrollments[0].level).toBe('Intermediate')
 })
 
+test('missing scores uses the left side of the Grades controls', async ({ page }, testInfo) => {
+  await setupCourses(page)
+  const phone = testInfo.project.name === 'mobile'
+  await page.setViewportSize({ width: phone ? 320 : 1750, height: 844 })
+  await page.goto(`/?page=app&view=courses&courseView=grades&course=${courseA}`)
+
+  for (const ar of [false, true]) {
+    if (ar) await clickAccountAction(page, 'العربية')
+    const filter = page.getByRole('button', {
+      name: ar ? /إظهار الدرجات الناقصة/ : /Show missing scores/,
+    })
+    const save = page.getByRole('button', { name: ar ? 'حفظ الحدود' : 'Save thresholds' })
+    const grades = page.getByRole('region', { name: ar ? 'درجات الدورة' : 'Course grades' })
+    await expect(filter).toBeVisible()
+    const filterBox = await filter.boundingBox()
+    const saveBox = await save.boundingBox()
+    const gradesBox = await grades.boundingBox()
+    if (!filterBox || !saveBox || !gradesBox) throw new Error('Grades controls must be visible')
+    expect(filterBox.x).toBeCloseTo(gradesBox.x, 0)
+    expect(filterBox.height).toBeGreaterThanOrEqual(44)
+    if (phone) {
+      expect(filterBox.y).toBeGreaterThanOrEqual(saveBox.y + saveBox.height)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      )
+    } else {
+      expect(filterBox.y + filterBox.height).toBeCloseTo(saveBox.y + saveBox.height, 0)
+    }
+    if (ar) {
+      await page.screenshot({
+        path: `.artifacts/verification/missing-scores-${testInfo.project.name}-ar.png`,
+      })
+    }
+  }
+})
+
 test('grades, attendance, and withdrawal preserve course history', async ({ page }, testInfo) => {
   const { board, enrollments, events } = await setupCourses(page)
   enrollments[0].level = 'Intermediate'
