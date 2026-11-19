@@ -1,21 +1,30 @@
+import Fuse from 'fuse.js'
+
 function normalize(value: string) {
-  return value.normalize('NFKD').replace(/\p{M}/gu, '').toLocaleLowerCase().trim()
+  return value
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[أإآٱ]/g, 'ا')
+    .toLocaleLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
 }
 
-function score(name: string, query: string) {
-  const index = name.indexOf(query)
-  if (index >= 0) return index
-  let position = 0
-  for (const letter of name) if (letter === query[position]) position++
-  return position === query.length ? 100 + name.length : Infinity
+function options(term: string) {
+  return { ignoreLocation: true, threshold: term.length < 3 ? 0 : 0.34 }
+}
+
+export function matchesText(value: string, query: string): boolean {
+  const term = normalize(query)
+  if (!term) return true
+  return Fuse.match(term, normalize(value), options(term)).isMatch
 }
 
 export function rankStudents<T extends { name: string }>(students: T[], query: string): T[] {
   const term = normalize(query)
   if (!term) return students
-  return students
-    .map((student) => ({ student, score: score(normalize(student.name), term) }))
-    .filter((entry) => Number.isFinite(entry.score))
-    .sort((a, b) => a.score - b.score || a.student.name.localeCompare(b.student.name))
-    .map(({ student }) => student)
+  const entries = students.map((student) => ({ student, name: normalize(student.name) }))
+  return new Fuse(entries, { ...options(term), keys: ['name'] })
+    .search(term)
+    .map(({ item }) => item.student)
 }

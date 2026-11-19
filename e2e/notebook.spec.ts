@@ -192,3 +192,28 @@ test('a teacher can finish a partial session without overwriting exceptions or l
     page.getByLabel('Attendance for Omar').getByRole('button', { pressed: true }),
   ).toHaveAccessibleName('excused')
 })
+
+test('student search finds a normalized Arabic family name', async ({ page }) => {
+  await page.route('**/api/auth/**', (route) => route.fulfill({ json: null }))
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Explore with sample students' }).click()
+  await page.getByRole('button', { name: 'Students', exact: true }).click()
+  await page.getByLabel('Student name').fill('سلمى إبراهيم')
+  await page.getByRole('button', { name: 'Add student', exact: true }).click()
+  await clickAccountAction(page, 'العربية')
+  const search = page.getByRole('searchbox', { name: 'ابحث عن طالب' })
+  const names = page.getByRole('textbox', { name: 'الاسم', exact: true })
+  const group = page.getByRole('combobox', { name: 'المجموعة', exact: true })
+  for (const term of ['ابرا', 'ابراهم']) {
+    await search.fill(term)
+    await expect(names).toHaveValue('سلمى إبراهيم')
+  }
+  await group.selectOption('الحلقة الأولى')
+  await expect(names).toHaveCount(0)
+  await group.selectOption('')
+  await expect(names).toHaveValue('سلمى إبراهيم')
+  await search.fill('unrelated')
+  await expect(names).toHaveCount(0)
+  await search.clear()
+  await expect(names).toHaveCount(3)
+})

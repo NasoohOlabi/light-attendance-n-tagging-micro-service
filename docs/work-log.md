@@ -1995,3 +1995,9 @@ Focused Chromium tests exercised the offline restart, notes and phone for an une
 The owner asked to remove the prominent offline button from regular notebook pages. A teacher with a cached roster can open the offline notebook from Profile, and losing the connection still opens it automatically. Sign-in and notebook loading errors can still offer access to the saved roster.
 
 The browser regression checks the normal dashboard, Attendance, Profile shortcut and automatic offline entry. It also exercises the existing restart and sync scenario with synthetic data on desktop and an emulated phone. The PR records release and Railway verification.
+
+## 2026-11-19 06:31 Asia/Damascus (UTC+03:00) - Use fuzzy search for free text
+
+The owner reported that a partial Arabic family name returned an empty Students list and asked to prefer a package for fuzzy search. The notebook, course membership, free-text table filters and design sample share Fuse.js matching. Arabic alif forms and diacritics normalize for search, and a misspelling can still find the intended record. Date, number and phone filters use literal matching. Choice filters still select exact values. The repository instructions record the fuzzy search convention for new fields.
+
+`bun run verify:release` passed with 40 Bun tests and 166 browser cases. Six optional database tests and two desktop instances of phone-only cases skipped. The Arabic search regression covers a partial family name, a typo, group scope, an unrelated query and clearing on desktop and emulated mobile. Course membership and the roster name filter also passed with misspellings. The PR records hosted CI and Railway verification. Physical phones and live authenticated rosters were outside local verification.

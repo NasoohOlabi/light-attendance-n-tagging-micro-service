@@ -648,7 +648,7 @@ test('course enrollment and same-day attendance stay separate', async ({ page },
     'Manage students',
   )
   await expect(page.getByRole('button', { name: 'Back to courses' })).toHaveCount(0)
-  await page.getByRole('searchbox', { name: 'Find a student' }).fill('New')
+  await page.getByRole('searchbox', { name: 'Find a student' }).fill('Nw Student')
   const newRow = page.getByRole('row').filter({ hasText: 'New' })
   await newRow.getByLabel('Course level: New Student').fill('Beginner')
   await page.getByRole('searchbox', { name: 'Find a student' }).fill('Synthetic')

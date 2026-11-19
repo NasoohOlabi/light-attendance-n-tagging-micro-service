@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react'
 import { WartaqIcon, WartaqLogo } from '../brand/components'
 import { brandAsset } from '../brand/assets'
+import { matchesText } from '../studentSearch'
 import { draftStudents, draftStatuses, type DraftProps } from './shared'
 import './b.css'
 
@@ -121,9 +122,7 @@ export function DeskDraft({ language }: DraftProps) {
     { text: string; tag: 'followup' | 'achievement' | 'general' }[]
   >([])
   const tabs: Tab[] = ['attendance', 'notes', 'students', 'summary']
-  const filtered = students.filter((student) =>
-    `${student.ar} ${student.en}`.toLowerCase().includes(search.toLowerCase()),
-  )
+  const filtered = students.filter((student) => matchesText(`${student.ar} ${student.en}`, search))
   const present = students.filter((student) => student.status === 'present').length
   const absent = students.filter((student) => student.status === 'absent').length
 

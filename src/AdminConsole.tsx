@@ -99,9 +99,19 @@ export function AdminConsole({
     { id: 'first', label: ar ? 'الاسم الأول' : 'First name', value: (s) => s.firstName },
     { id: 'last', label: ar ? 'اسم العائلة' : 'Last name', value: (s) => s.lastName },
     { id: 'level', label: ar ? 'المستوى' : 'Level', value: (s) => formatLevel(s.group) },
-    { id: 'phone', label: ar ? 'واتساب' : 'WhatsApp', value: (s) => s.whatsapp },
+    {
+      id: 'phone',
+      filterMode: 'literal',
+      label: ar ? 'واتساب' : 'WhatsApp',
+      value: (s) => s.whatsapp,
+    },
     { id: 'location', label: ar ? 'المنطقة' : 'Location', value: (s) => s.location },
-    { id: 'year', label: ar ? 'سنة الميلاد' : 'Birth year', value: (s) => s.birthYear },
+    {
+      id: 'year',
+      filterMode: 'literal',
+      label: ar ? 'سنة الميلاد' : 'Birth year',
+      value: (s) => s.birthYear,
+    },
     {
       id: 'teacher',
       label: ar ? 'المعلم' : 'Teacher',

@@ -422,7 +422,7 @@ test('compact roster opens by student name and sorts from its toolbar', async ({
     await filters.selectOption('first')
     await page
       .getByRole('searchbox', { name: ar ? 'تصفية الاسم الأول' : 'Filter First name' })
-      .fill('Zulu')
+      .fill('Zlu')
     await page.getByRole('button', { name: ar ? 'إغلاق' : 'Close', exact: true }).click()
     await expect(rows).toHaveCount(1)
     await expect(rows.first().locator('.roster-mobile-open')).toHaveText('Zulu Family')

@@ -7,6 +7,7 @@ import { formatLevel } from './levelFormat'
 import { PhoneNumber } from './PhoneNumber'
 import { TableHeader, TableToolbar } from './DataTable'
 import { useDataTable } from './useDataTable'
+import { matchesText } from './studentSearch'
 import {
   Check,
   ChevronRight,
@@ -297,8 +298,7 @@ function Notebook({
         !query.student ||
         student.studentId === query.student) &&
       (tab === 'attendance' || !query.group || student.group === query.group) &&
-      (tab === 'attendance' ||
-        student.name.toLocaleLowerCase().includes(query.q.toLocaleLowerCase())),
+      (tab === 'attendance' || matchesText(student.name, query.q)),
   )
   const visibleIds = new Set(students.map((student) => student.studentId))
   const markedToday = projected.attendance.filter(
@@ -808,7 +808,12 @@ function StudentDetails({
     ({ value }) => value.studentId === student?.studentId,
   )
   const detailTable = useDataTable('student-history', detailRecords, [
-    { id: 'date', label: ar ? 'التاريخ' : 'Date', value: (row) => row.value.date },
+    {
+      id: 'date',
+      filterMode: 'literal',
+      label: ar ? 'التاريخ' : 'Date',
+      value: (row) => row.value.date,
+    },
     {
       id: 'course',
       label: ar ? 'الدورة' : 'Course',
@@ -1472,7 +1477,12 @@ function RosterView({
   const rosterTable = useDataTable('roster', students, [
     { id: 'first', label: ar ? 'الاسم الأول' : 'First name', value: (s) => s.firstName ?? s.name },
     { id: 'last', label: ar ? 'اسم العائلة' : 'Last name', value: (s) => s.lastName },
-    { id: 'phone', label: ar ? 'رقم الهاتف' : 'Phone', value: (s) => s.whatsapp },
+    {
+      id: 'phone',
+      filterMode: 'literal',
+      label: ar ? 'رقم الهاتف' : 'Phone',
+      value: (s) => s.whatsapp,
+    },
     {
       id: 'attendance',
       label: ar ? 'الحضور' : 'Attendance',
