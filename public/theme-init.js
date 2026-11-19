@@ -22,3 +22,16 @@ window.addEventListener('storage', (event) => {
   }
 })
 applyTheme()
+
+const themeColor = document.querySelector('meta[name="theme-color"]')
+if (themeColor) {
+  const lightThemeColor = themeColor.content
+  const syncThemeColor = () => {
+    themeColor.content =
+      document.documentElement.dataset.theme === 'dark' ? '#1e2022' : lightThemeColor
+  }
+  syncThemeColor()
+  new MutationObserver(syncThemeColor).observe(document.documentElement, {
+    attributeFilter: ['data-theme'],
+  })
+}

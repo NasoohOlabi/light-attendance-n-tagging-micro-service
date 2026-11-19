@@ -152,7 +152,7 @@ test('remembers a validated course per account and keeps the header compact', as
         const background = await menu.evaluate(
           (element) => getComputedStyle(element).backgroundColor,
         )
-        expect(background).toBe(theme === 'dark' ? 'rgb(23, 59, 64)' : 'rgb(255, 255, 255)')
+        expect(background).toBe(theme === 'dark' ? 'rgb(45, 48, 50)' : 'rgb(255, 255, 255)')
       }
       await page.keyboard.press('Escape')
 

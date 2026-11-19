@@ -1,36 +1,101 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
+  --dark-page: #181a1b;
+  --dark-navigation: #1e2022;
+  --dark-card: #242628;
+  --dark-raised: #2d3032;
+  --dark-active: #36393c;
+  --dark-border: #3c4043;
+  --dark-control-border: #797d81;
+  --dark-text: #f1f2f3;
+  --dark-muted: #a5a8ac;
+  --dark-primary: #3678ad;
+  --dark-accent: #83b9e1;
+  --dark-present: #9ed3ae;
+  --dark-absent: #ef7777;
+  --dark-excused: #efc17e;
 }
 :root[data-theme='dark'] body,
 :root[data-theme='dark'] .wartaq-home,
 :root[data-theme='dark'] .workspace,
 :root[data-theme='dark'] .workspace-loading {
-  background: #102b31;
-  color: #e3f1f1;
+  background: var(--dark-page);
+  color: var(--dark-text);
 }
 :root[data-theme='dark'] .wartaq-site {
-  --wartaq-deep: #e3f1f1;
+  --wartaq-deep: var(--dark-text);
 }
-:root[data-theme='dark'] .grade-dialog,
+:root[data-theme='dark'] .workspace-rail,
+:root[data-theme='dark'] .workspace-loading aside,
+:root[data-theme='dark'] .loading-mobile-nav,
+:root[data-theme='dark'] .home-header,
+:root[data-theme='dark'] .home-footer {
+  background: var(--dark-navigation);
+  color: var(--dark-text);
+}
+:root[data-theme='dark'] .workspace-rail nav button,
+:root[data-theme='dark'] .workspace-brand,
+:root[data-theme='dark'] .workspace-topline,
+:root[data-theme='dark'] .home-footer {
+  color: var(--dark-muted);
+}
+:root[data-theme='dark'] .workspace-rail nav button:is(:hover, .active) {
+  background: var(--dark-active);
+  color: var(--dark-text);
+  box-shadow: none;
+}
+@media (max-width: 700px) {
+  :root[data-theme='dark'] .workspace-rail nav {
+    background: var(--dark-navigation);
+    border-color: var(--dark-border);
+  }
+}
 :root[data-theme='dark'] .panel,
 :root[data-theme='dark'] .workspace-count,
+:root[data-theme='dark'] .install-strip {
+  background: var(--dark-card);
+  color: var(--dark-text);
+  border-color: var(--dark-border);
+}
+:root[data-theme='dark'] .grade-dialog,
 :root[data-theme='dark'] .profile-panel,
 :root[data-theme='dark'] .table-control-popup,
 :root[data-theme='dark'] .sort-help-popover,
+:root[data-theme='dark'] .dashboard-actions,
 :root[data-theme='dark'] .grade-table-scroll thead th,
 :root[data-theme='dark'] input:not([type='checkbox']),
 :root[data-theme='dark'] select,
 :root[data-theme='dark'] textarea,
-:root[data-theme='dark'] .secondary {
-  background: #193b42;
-  color: #e3f1f1;
-  border-color: #41666a;
+:root[data-theme='dark'] .secondary,
+:root[data-theme='dark'] .profile-trigger,
+:root[data-theme='dark'] .profile-photo,
+:root[data-theme='dark'] .workspace-course-switcher[data-numbered='true'] summary span {
+  background: var(--dark-raised);
+  color: var(--dark-text);
+  border-color: var(--dark-border);
+}
+:root[data-theme='dark'] .primary,
+:root[data-theme='dark'] .home-actions .home-primary,
+:root[data-theme='dark'] .role-tabs [aria-pressed='true'],
+:root[data-theme='dark'] .table-control-count {
+  background: var(--dark-primary);
+  color: white;
+}
+:root[data-theme='dark'] .course-students-table input[role='switch']:checked::before {
+  background: var(--dark-primary);
+}
+:root[data-theme='dark'] .primary:hover,
+:root[data-theme='dark'] .home-actions .home-primary:hover,
+:root[data-theme='dark'] .role-tabs [aria-pressed='true']:hover {
+  background: #2d6695;
+}
+:root[data-theme='dark'] input[type='checkbox'] {
+  accent-color: var(--dark-primary);
 }
 :root[data-theme='dark'] label,
+:root[data-theme='dark'] ::placeholder,
 :root[data-theme='dark'] .mobile-record-table td::before,
-:root[data-theme='dark'] .student-detail-fields dt {
-  color: #c4dada;
-}
+:root[data-theme='dark'] .student-detail-fields dt,
 :root[data-theme='dark'] .muted,
 :root[data-theme='dark'] .workspace-metrics span,
 :root[data-theme='dark'] .workspace-recent small,
@@ -40,7 +105,7 @@
 :root[data-theme='dark'] .home-curriculum p,
 :root[data-theme='dark'] .home-faq p,
 :root[data-theme='dark'] .home-tools p {
-  color: #b5cdce;
+  color: var(--dark-muted);
 }
 :root[data-theme='dark'] .wartaq-home h1,
 :root[data-theme='dark'] .wartaq-home h2,
@@ -49,36 +114,50 @@
 :root[data-theme='dark'] .workspace-count strong,
 :root[data-theme='dark'] .workspace-context h2,
 :root[data-theme='dark'] .workspace-metrics strong,
+:root[data-theme='dark'] .loading-mobile-brand,
+:root[data-theme='dark'] .home-header nav a,
+:root[data-theme='dark'] .home-header .language-switch button,
 :root[data-theme='dark'] .dashboard-actions h2,
 :root[data-theme='dark'] .attendance-group summary,
 :root[data-theme='dark'] .sort-toolbar-label {
-  color: #e3f1f1;
+  color: var(--dark-text);
 }
 :root[data-theme='dark'] .home-kicker,
 :root[data-theme='dark'] .role-heading > div > span,
 :root[data-theme='dark'] .role-manage,
 :root[data-theme='dark'] .sort-pill-number,
 :root[data-theme='dark'] .table-sort-priority {
-  color: #70d6d5;
+  color: var(--dark-accent);
 }
 :root[data-theme='dark'] .home-notice,
 :root[data-theme='dark'] .home-curriculum,
 :root[data-theme='dark'] .home-tools,
-:root[data-theme='dark'] .dashboard-actions,
+:root[data-theme='dark'] .skip-link,
 :root[data-theme='dark'] .role-editor,
 :root[data-theme='dark'] .sort-pill,
-:root[data-theme='dark'] .roster-course-badge {
-  background: #21484e;
-  color: #e3f1f1;
+:root[data-theme='dark'] .roster-course-badge,
+:root[data-theme='dark'] .home-illustration,
+:root[data-theme='dark'] .dashboard-mark {
+  background: var(--dark-card);
+  color: var(--dark-text);
 }
-:root[data-theme='dark'] .home-illustration {
-  background: #21484e;
+:root[data-theme='dark'] .dashboard-mark-present {
+  border-block-start-color: var(--dark-present);
+}
+:root[data-theme='dark'] .dashboard-mark-absent {
+  border-block-start-color: var(--dark-absent);
+}
+:root[data-theme='dark'] .dashboard-mark-absent span {
+  color: var(--dark-absent);
+}
+:root[data-theme='dark'] .dashboard-mark-excused {
+  border-block-start-color: var(--dark-excused);
 }
 :root[data-theme='dark'] .home-illustration img {
   filter: brightness(1.8) saturate(0.65);
 }
 :root[data-theme='dark'] .home-curriculum li::marker {
-  color: #70d6d5;
+  color: var(--dark-accent);
 }
 :root[data-theme='dark'] .home-tool-actions button,
 :root[data-theme='dark'] .icon-button,
@@ -87,73 +166,94 @@
 :root[data-theme='dark'] .sort-toolbar button,
 :root[data-theme='dark'] .sort-add,
 :root[data-theme='dark'] .sort-help {
-  color: #b9eeee;
+  color: var(--dark-text);
 }
 :root[data-theme='dark'] .icon-button:hover:not(:disabled),
 :root[data-theme='dark'] .secondary:hover,
 :root[data-theme='dark'] .profile-panel button:hover,
 :root[data-theme='dark'] .profile-panel button:focus-visible,
 :root[data-theme='dark'] .table-control-popup button:hover,
+:root[data-theme='dark'] .sort-add:hover,
+:root[data-theme='dark'] .home-header .language-switch button:hover,
 :root[data-theme='dark'] .sort-toolbar button:hover {
-  background: #315b60;
+  background: var(--dark-active);
 }
 :root[data-theme='dark'] .workspace .panel,
 :root[data-theme='dark'] .workspace-topline,
+:root[data-theme='dark'] .workspace-identity,
+:root[data-theme='dark'] .workspace-loading p,
+:root[data-theme='dark'] .workspace-metrics div,
+:root[data-theme='dark'] .dashboard-followups > li,
 :root[data-theme='dark'] .attendance-group,
+:root[data-theme='dark'] .role-header,
 :root[data-theme='dark'] .role-account,
 :root[data-theme='dark'] .role-row,
 :root[data-theme='dark'] .role-table th,
 :root[data-theme='dark'] .role-table td,
 :root[data-theme='dark'] .mobile-record-table tbody tr,
+:root[data-theme='dark'] .table-popup-header,
+:root[data-theme='dark'] .sort-pill,
+:root[data-theme='dark'] .profile-panel .preference-group,
 :root[data-theme='dark'] .home-details article,
+:root[data-theme='dark'] .home-outcomes article,
 :root[data-theme='dark'] .home-faq details {
-  border-color: #41666a;
+  border-color: var(--dark-border);
 }
-:root[data-theme='dark'] .bg-slate-50 {
-  background: #21484e;
+:root[data-theme='dark'] .dashboard-mark {
+  border-inline-color: var(--dark-border);
+  border-block-end-color: var(--dark-border);
+}
+:root[data-theme='dark'] .home-notice {
+  border-inline-start-color: var(--dark-accent);
+}
+:root[data-theme='dark'] .bg-slate-50,
+:root[data-theme='dark'] .bg-teal-100 {
+  background: var(--dark-raised);
 }
 :root[data-theme='dark'] .text-slate-500,
 :root[data-theme='dark'] .text-slate-600 {
-  color: #b5cdce;
+  color: var(--dark-muted);
 }
 :root[data-theme='dark'] .border-slate-100,
-:root[data-theme='dark'] .border-slate-200 {
-  border-color: #41666a;
+:root[data-theme='dark'] .border-slate-200,
+:root[data-theme='dark'] .border-slate-300,
+:root[data-theme='dark'] .divide-slate-100 > :not(:last-child) {
+  border-color: var(--dark-border);
 }
 :root[data-theme='dark'] .bg-amber-50,
-:root[data-theme='dark'] .bg-amber-100 {
-  background: #554521;
+:root[data-theme='dark'] .bg-amber-100,
+:root[data-theme='dark'] .update-notice,
+:root[data-theme='dark'] .bg-red-50,
+:root[data-theme='dark'] .bg-emerald-50 {
+  background: var(--dark-card);
+  border-inline-start: 2px solid currentColor;
 }
 :root[data-theme='dark'] .text-amber-800,
-:root[data-theme='dark'] .text-amber-900 {
-  color: #ffe5a3;
+:root[data-theme='dark'] .text-amber-900,
+:root[data-theme='dark'] .update-notice {
+  color: var(--dark-excused);
 }
 :root[data-theme='dark'] .border-amber-300 {
-  border-color: #ba984c;
-}
-:root[data-theme='dark'] .bg-red-50 {
-  background: #582f35;
+  border-color: var(--dark-excused);
 }
 :root[data-theme='dark'] .text-red-800,
 :root[data-theme='dark'] .home-error {
-  color: #ffc1c5;
-}
-:root[data-theme='dark'] .bg-emerald-50 {
-  background: #204d40;
+  color: var(--dark-absent);
 }
 :root[data-theme='dark'] .text-emerald-800 {
-  color: #b5efd2;
+  color: var(--dark-present);
 }
-:root[data-theme='dark'] .bg-teal-100 {
-  background: #28545a;
-}
+:root[data-theme='dark'] .workspace-loading aside div:not(.loading-brand),
 :root[data-theme='dark'] .loading-line,
 :root[data-theme='dark'] .loading-cards div,
 :root[data-theme='dark'] .loading-panel {
-  background: #31565a;
+  background: var(--dark-raised);
 }
-:root[data-theme='dark'] :focus-visible {
-  outline-color: #70d6d5;
+:root[data-theme='dark'] :focus-visible,
+:root[data-theme='dark'] .sort-add:focus-within,
+:root[data-theme='dark'] .profile-upload:focus-within,
+:root[data-theme='dark'] .home-header .language-switch button:focus-visible {
+  outline-color: var(--dark-accent);
 }
 
 .theme-select {
@@ -196,32 +296,22 @@
   }
 }
 
-:root[data-theme='dark'] .install-strip {
-  background: #21484e;
-  border-color: #41666a;
-  color: #e3f1f1;
-}
-:root[data-theme='dark'] .update-notice {
-  background: #554521;
-  color: #ffe5a3;
-}
 :root[data-theme='dark'] input:not([type='checkbox']),
 :root[data-theme='dark'] select,
 :root[data-theme='dark'] textarea,
-:root[data-theme='dark'] .secondary {
-  border-color: #628d91;
+:root[data-theme='dark'] .home-sign-in,
+:root[data-theme='dark'] .home-tool-actions button {
+  border-color: var(--dark-control-border);
 }
-:root[data-theme='dark'] .role-tabs [aria-pressed='true'] {
-  background: #70d6d5;
-  color: #102b31;
-  border-color: #70d6d5;
+:root[data-theme='dark'] .course-students-table input[role='switch']:not(:checked)::before {
+  background: var(--dark-control-border);
 }
 
 :root[data-theme='dark'] .grade-row-pass {
-  background-color: #204d40;
+  background-color: #26382d;
 }
 :root[data-theme='dark'] .grade-row-fail {
-  background-color: #582f35;
+  background-color: #3e292d;
 }
 :root[data-theme='dark'] .grade-pass,
 :root[data-theme='dark'] .role-table input.grade-pass {
