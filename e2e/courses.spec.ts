@@ -1331,9 +1331,9 @@ test('grades, attendance, and withdrawal preserve course history', async ({ page
   await page.emulateMedia({ colorScheme: 'dark' })
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await clickRecordAction(gradeRow, 'Override result')
-  await expect(page.getByRole('dialog')).toHaveCSS('background-color', 'rgb(25, 59, 66)')
+  await expect(page.getByRole('dialog')).toHaveCSS('background-color', 'rgb(45, 48, 50)')
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click()
-  await expect(gradeRow).toHaveCSS('background-color', 'rgb(32, 77, 64)')
+  await expect(gradeRow).toHaveCSS('background-color', 'rgb(38, 56, 45)')
   await expect(gradeRow.getByText('50.0%')).toHaveCSS('color', 'rgb(255, 193, 197)')
   await expect(page.getByLabel('Practical: Synthetic Student')).toHaveCSS(
     'color',
@@ -1350,7 +1350,7 @@ test('grades, attendance, and withdrawal preserve course history', async ({ page
     .getByLabel('Decision note (required)')
     .fill('Restore calculated attendance')
   await page.getByRole('dialog').getByRole('button', { name: 'Save decision' }).click()
-  await expect(gradeRow).toHaveCSS('background-color', 'rgb(88, 47, 53)')
+  await expect(gradeRow).toHaveCSS('background-color', 'rgb(62, 41, 45)')
   await clickAccountAction(page, 'العربية')
   await page.setViewportSize({ width: 320, height: 844 })
   await expect(gradeRow).not.toContainText('الحضور أقل من الحد الأدنى')

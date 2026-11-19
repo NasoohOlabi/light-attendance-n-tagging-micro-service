@@ -20,13 +20,13 @@
 }
 
 :root[data-theme='dark'] .summary-insights-meter::-webkit-meter-bar {
-  background: #254d51;
+  background: var(--dark-active);
 }
 
 :root[data-theme='dark'] .summary-insights-meter::-webkit-meter-optimum-value {
-  background: #5dd2d2;
+  background: var(--dark-accent);
 }
 
 :root[data-theme='dark'] .summary-insights-meter::-moz-meter-bar {
-  background: #5dd2d2;
+  background: var(--dark-accent);
 }

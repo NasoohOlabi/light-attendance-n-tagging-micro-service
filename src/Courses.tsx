@@ -269,7 +269,7 @@ export function Courses({
     <section className="panel space-y-5">
       <div className="course-save-status" role="status">
         {saved && (
-          <span className="flex items-center gap-2 rounded-lg bg-[#004d57] px-4 py-2.5 text-sm font-medium text-white shadow-lg">
+          <span className="flex items-center gap-2 rounded-lg bg-[var(--dark-active,#004d57)] px-4 py-2.5 text-sm font-medium text-white shadow-lg">
             <Check aria-hidden="true" size={18} />
             {ar ? 'تم الحفظ' : 'Saved'}
           </span>

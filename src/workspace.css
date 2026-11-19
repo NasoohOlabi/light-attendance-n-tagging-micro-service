@@ -592,21 +592,29 @@
   outline-offset: -4px;
 }
 :root[data-theme='dark'] .attendance-segments {
-  --attendance-track: #25343c;
-  --attendance-divider: #46545d;
+  --attendance-track: var(--dark-raised);
+  --attendance-divider: var(--dark-border);
 }
-:root[data-theme='dark'] .attendance-segment {
-  color: color-mix(in srgb, var(--attendance-icon) 55%, white);
+:root[data-theme='dark'] .attendance-segment-present {
+  --attendance-icon: var(--dark-muted);
+  --attendance-selected-icon: var(--dark-present);
+}
+:root[data-theme='dark'] .attendance-segment-absent {
+  --attendance-icon: var(--dark-absent);
+  --attendance-selected-icon: var(--dark-absent);
+}
+:root[data-theme='dark'] .attendance-segment-excused {
+  --attendance-icon: var(--dark-excused);
+  --attendance-selected-icon: var(--dark-excused);
 }
 :root[data-theme='dark'] .attendance-segment[aria-pressed='true'] {
-  color: color-mix(in srgb, var(--attendance-selected-icon) 35%, white);
-  background: color-mix(in srgb, currentColor 19%, var(--attendance-track));
+  background: color-mix(in srgb, currentColor 15%, var(--attendance-track));
 }
 :root[data-theme='dark'] .attendance-row-controls button:focus-visible {
-  outline-color: #f3f4f6;
+  outline-color: var(--dark-accent);
 }
 :root[data-theme='dark'] .attendance-correct-button:hover:not(:disabled) {
-  background: #ffffff1f;
+  background: var(--dark-active);
 }
 :root[data-theme='dark'] .attendance-note-button {
   color: #f5c351;
@@ -709,9 +717,9 @@
   color: #103d43;
 }
 :root[data-theme='dark'] .profile-panel .preference-choices button[aria-pressed='true'] {
-  background: #315b60;
-  color: #e3f1f1;
-  border-color: #70d6d5;
+  background: var(--dark-active);
+  color: var(--dark-text);
+  border-color: var(--dark-accent);
 }
 .profile-settings {
   max-width: 36rem;
@@ -965,13 +973,12 @@
 }
 
 :root[data-theme='dark'] .workspace-course-menu {
-  background: #173b40;
-  color: #e3f1f1;
-  border: 1px solid #568188;
+  background: var(--dark-raised);
+  color: var(--dark-text);
+  border: 1px solid var(--dark-border);
 }
-:root[data-theme='dark'] .workspace-course-menu button[aria-pressed='true'] {
-  background: #315b60;
-  color: #e3f1f1;
+:root[data-theme='dark'] .workspace-course-menu button:is(:hover, [aria-pressed='true']) {
+  background: var(--dark-active);
 }
 
 .account-choices {

@@ -63,7 +63,7 @@
   border-radius: 999px;
 }
 :root[data-theme='dark'] .course-readiness meter::-webkit-meter-bar {
-  background: #345b60;
+  background: var(--dark-active);
 }
 :root[data-theme='dark'] .course-readiness meter::-webkit-meter-optimum-value {
   background: #ffc17d;

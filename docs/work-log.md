@@ -2057,3 +2057,9 @@ Railway health responded successfully at the new origin during cutover. The PR d
 The owner chose to rebuild on AppSuite because the original Railway workspace was on a trial. Restored a private PostgreSQL archive into AppSuite and reused the original Auth signing secret. Once the old app stopped, row fingerprints matched across all 17 application and Auth tables, and the event sequence matched. Renamed the old service URL to release the hostname, then assigned `wartaqi.up.railway.app` to AppSuite. The AppSuite GitHub trigger points to `main` with Wait for CI enabled.
 
 On AppSuite deployment `36d4cae7-4d0c-46c7-b623-fa17d937ed5b` at `8f445ae`, the original URL passed health, OAuth discovery, secure session, email sign-in and sign-out checks. The database comparison passed again after synthetic fixture cleanup. Railway scheduled the old project for deletion on 2026-11-21 and public health passed afterward. The private archive remains available for recovery. Existing users' passwords were outside the live checks.
+
+## 2026-11-19 15:32 Asia/Damascus (UTC+03:00) - Use charcoal and muted blue in dark mode
+
+The owner asked for charcoal navigation, neutral attendance controls and cards, muted blue primary actions, and soft-red absence dates. Applied the palette across shared dark surfaces, inputs, menus, alerts and browser chrome. Used `#3678ad` for primary buttons so their white labels reach a 4.72:1 contrast ratio. Light mode retains its teal identity.
+
+`bun run verify` and the eight focused theme browser cases passed. Synthetic checks covered theme persistence, first paint, keyboard attendance marking, and the saved absence dashboard in English and Arabic at 320px and 1440px. The browser screenshots use synthetic records and emulated phones. The PR records release and Railway verification.
