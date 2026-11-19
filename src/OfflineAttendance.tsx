@@ -29,10 +29,12 @@ export function OfflineAttendance({
   userId,
   actor,
   close,
+  reviewChanges = false,
 }: {
   userId: string
   actor: string
   close: () => void
+  reviewChanges?: boolean
 }) {
   const { language, t } = useLanguage()
   const ar = language === 'ar'
@@ -47,7 +49,7 @@ export function OfflineAttendance({
   const query = useQueryState()
   const date = query.date
   const selected = query.course
-  const showAttendance = query.tab === 'attendance'
+  const showAttendance = !reviewChanges && query.tab === 'attendance'
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const saveLock = useRef(false)
@@ -55,6 +57,7 @@ export function OfflineAttendance({
   const syncLock = useRef(false)
   const revalidated = useRef(false)
   const [leaseExpired, setLeaseExpired] = useState(false)
+  const [loaded, setLoaded] = useState(false)
   useEffect(() => {
     const timer = window.setInterval(() => {
       if (offlineAccess()?.userId !== userId) setLeaseExpired(true)
@@ -66,6 +69,7 @@ export function OfflineAttendance({
     setRosters(await listPreparedRosters(userId))
     setPending(await listPendingAttendance(userId))
     setStudentPending(await listPendingStudent(userId))
+    setLoaded(true)
   }
   // The store is external and must be read when the account changes.
   useEffect(() => {
@@ -225,15 +229,28 @@ export function OfflineAttendance({
         return ar ? 'بانتظار المزامنة' : 'Pending sync'
     }
   }
+  const pendingCount = pending.length + studentPending.length
   return (
     <main id="main-content" tabIndex={-1} className="workspace-auth panel space-y-3">
-      <h1 className="title">{ar ? 'الدفتر دون اتصال' : 'Offline notebook'}</h1>
+      <h1 className="title">
+        {reviewChanges
+          ? ar
+            ? 'تغييراتي'
+            : 'My changes'
+          : ar
+            ? 'الدفتر دون اتصال'
+            : 'Offline notebook'}
+      </h1>
       <p role="status">
         {navigator.onLine ? (ar ? 'متصل' : 'Online') : ar ? 'دون اتصال' : 'Offline'} آ·{' '}
-        {pending.length + studentPending.length} {ar ? 'بانتظار المزامنة' : 'pending sync'}
+        {pendingCount} {ar ? 'بانتظار المزامنة' : 'pending sync'}
       </p>
       {error && <p role="alert">{error}</p>}
-      <nav className="flex flex-wrap gap-2" aria-label={ar ? 'الدفتر' : 'Notebook'}>
+      <nav
+        hidden={reviewChanges}
+        className={reviewChanges ? undefined : 'flex flex-wrap gap-2'}
+        aria-label={ar ? 'الدفتر' : 'Notebook'}
+      >
         <button
           className={showAttendance ? 'secondary' : 'primary'}
           aria-pressed={!showAttendance}
@@ -249,7 +266,7 @@ export function OfflineAttendance({
           {ar ? 'الحضور' : 'Attendance'}
         </button>
       </nav>
-      {!snapshot && !rosters.length && (
+      {!reviewChanges && !snapshot && !rosters.length && (
         <p>{ar ? 'لا توجد بيانات محفوظة.' : 'No saved roster on this device.'}</p>
       )}
       {showAttendance && (
@@ -345,7 +362,7 @@ export function OfflineAttendance({
           )}
         </>
       )}
-      {snapshot && !showAttendance && (
+      {snapshot && !reviewChanges && !showAttendance && (
         <section className="space-y-3">
           {!selectedStudent ? (
             <ul aria-label={t('Students')} className="space-y-2">
@@ -508,11 +525,15 @@ export function OfflineAttendance({
           )}
         </section>
       )}
-      {(pending.some((item) => item.outcome) || studentPending.length > 0) && (
+      {reviewChanges && loaded && pendingCount === 0 && (
+        <p>{ar ? 'لا توجد تغييرات بانتظار المزامنة.' : 'No changes waiting to sync.'}</p>
+      )}
+      {((reviewChanges ? pending.length > 0 : pending.some((item) => item.outcome)) ||
+        studentPending.length > 0) && (
         <section className="space-y-2" aria-label={ar ? 'التغييرات المنتظرة' : 'Pending changes'}>
           <h2>{ar ? 'التغييرات المنتظرة' : 'Pending changes'}</h2>
           {pending
-            .filter((item) => item.outcome)
+            .filter((item) => reviewChanges || item.outcome)
             .map((item) => (
               <div key={item.event.id}>
                 <p>
@@ -520,6 +541,9 @@ export function OfflineAttendance({
                   {snapshot?.students.find((student) => student.id === item.event.payload.studentId)
                     ?.name ?? (ar ? 'طالب غير متاح' : 'Student unavailable')}{' '}
                   · {changeStatus(item.outcome?.kind)}
+                  {reviewChanges && item.outcome?.kind !== 'conflict' && (
+                    <> · {t(item.event.payload.status)}</>
+                  )}
                 </p>
                 {item.outcome?.kind === 'conflict' && (
                   <div className="flex flex-wrap gap-2">
@@ -627,7 +651,7 @@ export function OfflineAttendance({
       <div className="flex flex-wrap gap-2">
         <button
           className="secondary"
-          disabled={saving || syncing || !navigator.onLine}
+          disabled={saving || syncing || !navigator.onLine || (reviewChanges && pendingCount === 0)}
           onClick={() => void sync(true)}
         >
           {ar ? 'مزامنة الآن' : 'Sync now'}

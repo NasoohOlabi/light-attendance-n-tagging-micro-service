@@ -1995,3 +1995,9 @@ Focused Chromium tests exercised the offline restart, notes and phone for an une
 The owner asked to remove the prominent offline button from regular notebook pages. A teacher with a cached roster can open the offline notebook from Profile, and losing the connection still opens it automatically. Sign-in and notebook loading errors can still offer access to the saved roster.
 
 The browser regression checks the normal dashboard, Attendance, Profile shortcut and automatic offline entry. It also exercises the existing restart and sync scenario with synthetic data on desktop and an emulated phone. The PR records release and Railway verification.
+
+## 2026-11-19 06:29 Asia/Damascus (UTC+03:00) - Name the Profile shortcut My changes
+
+The owner asked for a clearer name in Profile. **My changes** opens the pending sync queue and conflict actions, with an empty state after sync. The notebook still opens automatically on disconnect, and recovery screens use **Open offline notebook** when they offer access to the cached notebook.
+
+The browser regression checks both menu languages, pending conflict review, the empty state and the switch to the offline notebook on disconnect. The PR records the release and Railway checks. Browser scenarios use synthetic records and emulated phones.
