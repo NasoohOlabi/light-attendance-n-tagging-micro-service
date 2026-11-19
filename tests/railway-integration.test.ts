@@ -2,6 +2,7 @@
 import { Pool } from 'pg'
 import { z } from 'zod'
 import { neonAdminBoardSchema } from '../shared/neon'
+import { startIntegrationServer } from './integration-server'
 
 // Set only to a disposable database with the Railway and application migrations applied.
 const databaseUrl = process.env.TEST_RAILWAY_DATABASE_URL
@@ -15,7 +16,6 @@ const teacherId = crypto.randomUUID()
 const studentId = crypto.randomUUID()
 const courseId = crypto.randomUUID()
 const enrollmentId = crypto.randomUUID()
-const origin = 'http://127.0.0.1:39377'
 const password = 'synthetic-password-12345'
 const email = `synthetic-${crypto.randomUUID()}@example.test`
 
@@ -44,30 +44,8 @@ integration(
   async () => {
     if (!databaseUrl) throw new Error('Disposable database is required')
     pool = new Pool({ connectionString: databaseUrl })
-    server = Bun.spawn([process.execPath, 'run', 'server/index.ts'], {
-      env: {
-        ...process.env,
-        DATABASE_URL: databaseUrl,
-        BETTER_AUTH_URL: origin,
-        BETTER_AUTH_SECRET: crypto.randomUUID() + crypto.randomUUID(),
-        PORT: '39377',
-      },
-      stdout: 'ignore',
-      stderr: 'inherit',
-    })
-    let ready = false
-    for (let i = 0; i < 100; i++) {
-      try {
-        if ((await fetch(`${origin}/health`)).ok) {
-          ready = true
-          break
-        }
-      } catch {
-        /* starting */
-      }
-      await Bun.sleep(100)
-    }
-    expect(ready).toBe(true)
+    const { origin, child } = await startIntegrationServer(databaseUrl)
+    server = child
     const signUp = await fetch(`${origin}/api/auth/sign-up/email`, {
       method: 'POST',
       headers: { origin, 'content-type': 'application/json' },

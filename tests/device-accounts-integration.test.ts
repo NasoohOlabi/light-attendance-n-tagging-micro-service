@@ -2,11 +2,11 @@ import { afterAll, expect, test } from 'bun:test'
 import { Pool } from 'pg'
 import { z } from 'zod'
 import { invitationResponseSchema } from '../shared/invitations'
+import { startIntegrationServer } from './integration-server'
 
 // Only use a disposable, migrated database.
 const databaseUrl = process.env.TEST_RAILWAY_DATABASE_URL
 const integration = databaseUrl ? test : test.skip
-const origin = 'http://127.0.0.1:39379'
 const requestId = crypto.randomUUID()
 const teacherId = crypto.randomUUID()
 let adminId = ''
@@ -42,30 +42,8 @@ integration(
   async () => {
     if (!databaseUrl) throw new Error('Disposable database required')
     pool = new Pool({ connectionString: databaseUrl })
-    server = Bun.spawn([process.execPath, 'run', 'server/index.ts'], {
-      env: {
-        ...process.env,
-        DATABASE_URL: databaseUrl,
-        BETTER_AUTH_URL: origin,
-        BETTER_AUTH_SECRET: crypto.randomUUID() + crypto.randomUUID(),
-        PORT: '39379',
-      },
-      stdout: 'ignore',
-      stderr: 'inherit',
-    })
-    let ready = false
-    for (let i = 0; i < 100; i++) {
-      try {
-        if ((await fetch(`${origin}/health`)).ok) {
-          ready = true
-          break
-        }
-      } catch {
-        /* starting */
-      }
-      await Bun.sleep(100)
-    }
-    expect(ready).toBe(true)
+    const { origin, child } = await startIntegrationServer(databaseUrl)
+    server = child
 
     // Apply Set-Cookie responses as a browser does, including deletion and replacement.
     const cookies = new Map<string, string>()
