@@ -1,5 +1,5 @@
 import { clickAccountAction, openProfile } from './profileActions'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { randomBytes } from 'node:crypto'
 import { mkdir } from 'node:fs/promises'
 import { compactHeader } from './headerLayout'
@@ -19,6 +19,24 @@ test.beforeEach(({ baseURL }) => {
   auth = `${origin}/api/auth`
   api = `${origin}/api`
 })
+
+async function expectSettingsRow(navigation: Locator, rtl: boolean) {
+  const boxes = await navigation.getByRole('link').evaluateAll((links) =>
+    links.map((link) => {
+      const { top, width, height, right, left } = link.getBoundingClientRect()
+      return { top, width, height, right, left, viewport: innerWidth }
+    }),
+  )
+  expect(boxes).toHaveLength(3)
+  for (const box of boxes) {
+    expect(box.width).toBeGreaterThanOrEqual(44)
+    expect(box.height).toBeGreaterThanOrEqual(44)
+    expect(box.top).toBe(boxes[0].top)
+    expect(box.left).toBeGreaterThanOrEqual(0)
+    expect(box.right).toBeLessThanOrEqual(box.viewport)
+  }
+  expect(rtl ? boxes[0].left >= boxes[2].right : boxes[0].right <= boxes[2].left).toBe(true)
+}
 
 async function mockAuth(page: Page, id: string, image: string | null = null) {
   await page.route(`${auth}/**`, async (route) => {
@@ -463,11 +481,27 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
   await page.goto(`${origin}/?page=app&view=administration`)
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
-  await expect(page.locator('.role-tabs button')).toHaveCount(2)
-  const tabColors = await page
-    .locator('.role-tabs button')
-    .evaluateAll((tabs) => tabs.map((tab) => getComputedStyle(tab).backgroundColor))
-  expect(tabColors[0]).not.toBe(tabColors[1])
+  const settingsSections = page.getByRole('navigation', { name: 'Settings sections' })
+  await expect(settingsSections.getByRole('link')).toHaveText([
+    'Accounts',
+    'Students',
+    'History & corrections',
+  ])
+  const accountsSection = settingsSections.getByRole('link', { name: 'Accounts' })
+  const studentsSection = settingsSections.getByRole('link', { name: 'Students' })
+  await expect(accountsSection).toHaveAttribute('aria-current', 'page')
+  await accountsSection.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(studentsSection).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(studentsSection).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('region', { name: 'Student list' })).toBeVisible()
+  await page.reload()
+  await expect(studentsSection).toHaveAttribute('aria-current', 'page')
+  await page.goBack()
+  await expect(accountsSection).toHaveAttribute('aria-current', 'page')
+  await expect(accountsSection).toHaveCSS('border-block-end-color', 'rgb(0, 125, 141)')
+  await expectSettingsRow(settingsSections, false)
   await expect(page.getByText('admin@example.test')).toHaveCount(0)
   await expect(page.getByLabel('Role').filter({ visible: true })).toHaveCount(0)
   await mkdir('.artifacts/verification', { recursive: true })
@@ -496,6 +530,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     fullPage: true,
   })
   await page.setViewportSize({ width: 320, height: 844 })
+  await expectSettingsRow(settingsSections, false)
   const lastControl = page.locator('.role-page button:visible').last()
   await lastControl.scrollIntoViewIfNeeded()
   const controlBox = await lastControl.boundingBox()
@@ -516,11 +551,17 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     }
   }
   await clickAccountAction(page, 'العربية')
+  const arabicSettings = page.getByRole('navigation', { name: 'أقسام الإعدادات' })
+  const arabicAccounts = arabicSettings.getByRole('link', { name: 'الحسابات' })
+  await arabicAccounts.focus()
+  await page.keyboard.press('ArrowLeft')
+  await expect(arabicSettings.getByRole('link', { name: 'الطلاب' })).toBeFocused()
   await expect(
     account.getByRole('button', { name: 'إعادة تعيين كلمة المرور', exact: true }),
   ).toBeVisible()
   await page.emulateMedia({ colorScheme: 'dark' })
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(arabicAccounts).toHaveCSS('border-block-end-color', 'rgb(131, 185, 225)')
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 844 })
     await accountSummary.focus()
@@ -535,7 +576,11 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true,
     )
+    await expectSettingsRow(arabicSettings, true)
     if (width === 320) {
+      await page.screenshot({
+        path: `.artifacts/verification/settings-navigation-ar-320-${testInfo.project.name}.png`,
+      })
       const boxes = await page.locator('.workspace-rail nav button').evaluateAll((buttons) =>
         buttons.map((button) => {
           const box = button.getBoundingClientRect()
@@ -662,19 +707,19 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   })
   await page
     .getByRole('navigation', { name: 'Settings sections' })
-    .getByRole('button', { name: 'Students' })
+    .getByRole('link', { name: 'Students' })
     .click()
   await expect(page.getByLabel('Role')).toHaveCount(0)
   await page
     .getByRole('navigation', { name: 'Settings sections' })
-    .getByRole('button', { name: 'Accounts' })
+    .getByRole('link', { name: 'Accounts' })
     .click()
   await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible()
   await expect(page.getByRole('table')).toHaveCount(0)
   await expect(page.getByLabel('Role').filter({ visible: true })).toHaveCount(0)
   await page
     .getByRole('navigation', { name: 'Settings sections' })
-    .getByRole('button', { name: 'Students' })
+    .getByRole('link', { name: 'Students' })
     .click()
   const list = page.getByRole('region', { name: 'Student list' })
   await list.focus()

@@ -23,7 +23,6 @@ const arabic = {
   Students: 'الطلاب',
   Summary: 'الملخص',
   'History & corrections': 'السجل والتصحيحات',
-  'Back to settings': 'العودة إلى الإعدادات',
   'Find a student': 'ابحث عن طالب',
   'Name / اسم الطالب': 'اسم الطالب',
   Group: 'المجموعة',

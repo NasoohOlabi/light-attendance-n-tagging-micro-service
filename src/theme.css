@@ -76,7 +76,6 @@
 }
 :root[data-theme='dark'] .primary,
 :root[data-theme='dark'] .home-actions .home-primary,
-:root[data-theme='dark'] .role-tabs [aria-pressed='true'],
 :root[data-theme='dark'] .table-control-count {
   background: var(--dark-primary);
   color: white;
@@ -85,8 +84,7 @@
   background: var(--dark-primary);
 }
 :root[data-theme='dark'] .primary:hover,
-:root[data-theme='dark'] .home-actions .home-primary:hover,
-:root[data-theme='dark'] .role-tabs [aria-pressed='true']:hover {
+:root[data-theme='dark'] .home-actions .home-primary:hover {
   background: #2d6695;
 }
 :root[data-theme='dark'] input[type='checkbox'] {

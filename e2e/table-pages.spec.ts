@@ -327,7 +327,7 @@ test('every staff table column sorts and filters without writes', async ({ page 
   await page.goto('/?page=app&view=settings')
   await page
     .getByRole('navigation', { name: 'Settings sections' })
-    .getByRole('button', { name: 'Students' })
+    .getByRole('link', { name: 'Students' })
     .click()
   const table = page.locator('table')
   await everyColumn(table, 8, true)

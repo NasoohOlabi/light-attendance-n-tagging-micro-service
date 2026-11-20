@@ -189,6 +189,8 @@ test('repository-scoped PWA installs its real manifest and opens the public shel
   await expect(page.locator('.workspace')).toBeVisible()
   await page.goto(origin + prefix + '?page=app&tab=attendance&date=2026-11-18')
   await expect(page.locator('.workspace-loading, .workspace-auth, .workspace')).toBeVisible()
+  await page.goto(origin + prefix + '?page=app&view=settings&settingsSection=students')
+  await expect(page.locator('.workspace-loading, .workspace-auth, .workspace')).toBeVisible()
   await expect(
     page.goto(origin + prefix + '?page=app&token=synthetic-private-token'),
   ).rejects.toThrow()

@@ -18,6 +18,7 @@ import {
 import { useLanguage } from './useLanguage'
 import type { Profile } from './ProfileMenu'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
+import { SettingsNavigation } from './SettingsNavigation'
 import { getNotebook, request } from './neon'
 import { setQuery, useQueryState } from './queryState'
 
@@ -66,9 +67,6 @@ export function AdminConsole({
       cancelled = true
     }
   }, [courseId, userId])
-  const [section, setSection] = useState<'accounts' | 'students'>(
-    initialCreateStudent ? 'students' : 'accounts',
-  )
   useEffect(() => {
     let cancelled = false
     request('/api/admin', userId)
@@ -92,7 +90,13 @@ export function AdminConsole({
   const linkedStudent = editingStudentId
     ? board?.students.find((student) => student.studentId === editingStudentId)
     : undefined
-  const selectedSection = editingStudentId ? 'students' : section
+  const selectedSection =
+    initialCreateStudent || editingStudentId
+      ? 'students'
+      : query.account
+        ? 'accounts'
+        : query.settingsSection
+  if (selectedSection === 'students' && inviting) setInviting(false)
   const activeEditing = editingStudentId ? linkedStudent : editing
   const showStudentTable = !courseId && !creating && !editingStudentId
   const studentTable = useDataTable('admin-students', board?.students ?? [], [
@@ -147,7 +151,7 @@ export function AdminConsole({
       <main id="main-content" className="workspace-main role-page" tabIndex={-1}>
         <div className="role-heading">
           <div>
-            <span>{ar ? 'مسؤول' : 'Administrator'}</span>
+            {initialCreateStudent && <span>{ar ? 'مسؤول' : 'Administrator'}</span>}
             <h1>
               {initialCreateStudent ? (ar ? 'الطلاب' : 'Students') : ar ? 'الإعدادات' : 'Settings'}
             </h1>
@@ -163,46 +167,12 @@ export function AdminConsole({
             </button>
           </div>
         </div>
-        {!initialCreateStudent && (
-          <button
-            className="secondary mb-4"
-            onClick={() =>
-              setQuery({ view: 'history', tab: '', q: '', group: '', student: '' }, true)
-            }
-          >
-            {t('History & corrections')}
-          </button>
-        )}
+        {!initialCreateStudent && <SettingsNavigation current={selectedSection} />}
         {error && <p role="alert">{errorMessage(error)}</p>}
         {message && <p role="status">{message}</p>}
         {!board && !error && <p role="status">{ar ? 'جارٍ التحميل…' : 'Loading…'}</p>}
         {board && (
           <>
-            {!initialCreateStudent && (
-              <nav className="role-tabs" aria-label={ar ? 'أقسام الإعدادات' : 'Settings sections'}>
-                <button
-                  className="secondary"
-                  aria-pressed={selectedSection === 'accounts'}
-                  onClick={() => {
-                    setQuery({ student: '' })
-                    setSection('accounts')
-                  }}
-                >
-                  {ar ? 'الحسابات' : 'Accounts'}
-                </button>
-                <button
-                  className="secondary"
-                  aria-pressed={selectedSection === 'students'}
-                  onClick={() => {
-                    setQuery({ account: '', student: '' })
-                    setInviting(false)
-                    setSection('students')
-                  }}
-                >
-                  {ar ? 'الطلاب' : 'Students'}
-                </button>
-              </nav>
-            )}
             {selectedSection === 'accounts' && !initialCreateStudent && (
               <section className="panel role-section">
                 <h2 className="title">{ar ? 'الحسابات' : 'Accounts'}</h2>
