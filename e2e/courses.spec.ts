@@ -1180,12 +1180,17 @@ test('grades, attendance, and withdrawal preserve course history', async ({ page
   const historyHeading = page.getByRole('heading', { name: 'History & corrections' })
   await expect(page.locator('.workspace-rail nav').getByText(/History/)).toHaveCount(0)
   await clickAccountAction(page, 'Settings')
-  await page.getByRole('button', { name: 'History & corrections', exact: true }).click()
+  const historySection = page
+    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('link', { name: 'History & corrections' })
+  await historySection.click()
   await expect(historyHeading).toBeVisible()
+  await expect(historySection).toHaveAttribute('aria-current', 'page')
   await expect(page).toHaveURL(/view=history/)
   await expect(page).toHaveURL(new RegExp(`course=${courseA}`))
   await page.reload()
   await expect(historyHeading).toBeVisible()
+  await expect(historySection).toHaveAttribute('aria-current', 'page')
   await page.goBack()
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
   await page.goForward()
@@ -1450,7 +1455,7 @@ test('grades, attendance, and withdrawal preserve course history', async ({ page
   await page.getByRole('switch', { name: 'Enrolled: Synthetic Student' }).click()
   await expect.poll(() => enrollments[0].active).toBe(false)
   await clickAccountAction(page, 'Settings')
-  await page.getByRole('button', { name: 'History & corrections', exact: true }).click()
+  await page.getByRole('link', { name: 'History & corrections', exact: true }).click()
   const presentRecord = page
     .locator('li')
     .filter({ hasText: 'Synthetic Student' })
@@ -1748,7 +1753,7 @@ test('administrator no-course Students includes the complete inactive register',
   })
   await expect(page.locator('.workspace-rail nav').getByText('السجل')).toHaveCount(0)
   await clickAccountAction(page, 'الإعدادات')
-  await page.getByRole('button', { name: 'السجل والتصحيحات' }).click()
+  await page.getByRole('link', { name: 'السجل والتصحيحات' }).click()
   await expect(page.getByRole('heading', { name: 'السجل والتصحيحات' })).toBeVisible()
   await page.getByRole('searchbox', { name: 'ابحث عن طالب' }).fill('Historical Student')
   await expect(page.locator('li').filter({ hasText: 'Historical Student' })).toContainText(
@@ -1769,8 +1774,8 @@ test('administrator no-course Students includes the complete inactive register',
   await page.screenshot({
     path: `.artifacts/verification/history-settings-${testInfo.project.name}-ar.png`,
   })
-  await page.getByRole('button', { name: 'العودة إلى الإعدادات' }).click()
-  await expect(page.getByRole('heading', { name: 'الإعدادات', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'الحسابات', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'الحسابات', exact: true })).toBeVisible()
   await page.goto(`/?page=app&tab=history&course=${courseB}`)
   await expect(page.getByRole('heading', { name: 'السجل والتصحيحات' })).toBeVisible()
   await expect(page).toHaveURL(/view=history/)

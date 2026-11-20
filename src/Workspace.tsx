@@ -37,6 +37,7 @@ import { SummaryInsights } from './SummaryInsights'
 import { CourseReadiness } from './CourseReadiness'
 import { NotebookDashboard } from './NotebookDashboard'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
+import { SettingsNavigation } from './SettingsNavigation'
 import { useLedger } from './useLedger'
 import { NeonAuth } from './NeonAuth'
 import { NeonRequestError, request } from './neon'
@@ -433,14 +434,18 @@ function Notebook({
   return (
     <div className="workspace">
       {navigation}
-      <main id="main-content" tabIndex={-1} className="workspace-main">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={history && administrator ? 'workspace-main role-page' : 'workspace-main'}
+      >
         {history && administrator && (
-          <button
-            className="secondary mb-4"
-            onClick={() => setQuery({ view: 'settings', student: '' }, true)}
-          >
-            {t('Back to settings')}
-          </button>
+          <>
+            <header className="role-heading">
+              <h1>{language === 'ar' ? 'الإعدادات' : 'Settings'}</h1>
+            </header>
+            <SettingsNavigation current="history" />
+          </>
         )}
         {!history && query.view !== 'courses' && query.view !== 'student' && (
           <header className="workspace-welcome">
@@ -801,6 +806,7 @@ function Notebook({
                 students={students}
                 save={ledger.save}
                 assigned={assigned}
+                inSettings={administrator}
               />
             )}
           </fieldset>
@@ -2126,11 +2132,13 @@ function History({
   students,
   save,
   assigned,
+  inSettings,
 }: {
   projected: Projection
   students: Student[]
   save: Save
   assigned: boolean
+  inSettings: boolean
 }) {
   const { t, language } = useLanguage()
   const [target, setTarget] = useState('')
@@ -2158,9 +2166,10 @@ function History({
       ids.has(payload.studentId)
     )
   })
+  const Heading = inSettings ? 'h2' : 'h1'
   return (
     <section className="panel">
-      <h1 className="title">{t('History & corrections')}</h1>
+      <Heading className="title">{t('History & corrections')}</Heading>
       <p className="muted mt-2 mb-6">
         {t(
           'Undo appends a correction. The original stays in the record. Undoing the latest attendance restores the previous status.',

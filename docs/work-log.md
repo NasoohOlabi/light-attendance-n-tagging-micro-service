@@ -2107,3 +2107,9 @@ Chromium checked the account editor and saved student profile against the built 
 The owner reported a blue box around an expanded account row. Shared styles remove focus outlines from structural containers and disclosures. Keyboard focus underlines the disclosure action and tints scrollable table regions. Buttons, links and form fields retain their focus indicators.
 
 The Settings test reproduced the account outline before the fix. The focused Chromium checks passed for pointer and keyboard disclosure, role field focus, the student table region, the homepage FAQ and skip-to-content. Browser evidence uses synthetic accounts and emulated phones. The PR records the release and exact-main Railway checks.
+
+## 2026-11-20 16:19 Asia/Damascus (UTC+03:00) - Clarify Settings navigation
+
+The owner reported that the three Settings controls looked like unrelated buttons. Accounts, Students and History & corrections now share one underlined navigation row using shadcn's Base UI Navigation Menu composition. The current section is marked visually and for assistive technology. Students now has a shareable URL and follows browser Back and reload alongside the existing History route.
+
+The focused Chromium run passed 35 desktop and emulated phone cases with three device-specific skips. It exercised section navigation, keyboard direction, reload, browser Back and history corrections with synthetic data. The PR records the final release suite and exact-main Railway verification.
