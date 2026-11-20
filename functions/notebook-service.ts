@@ -17,6 +17,8 @@ import {
   enrollmentHandbookSchema,
   enrollmentGradesSchema,
   gradeDecisionInputSchema,
+  studentProfileVersionSchema,
+  teacherStudentUpdateSchema,
   gradeDecisionSchema,
   neonAdminBoardSchema,
   neonAdminDisableSchema,
@@ -94,7 +96,9 @@ async function courseBoard(
   const enrollments = (
     await db.query(
       `SELECT ce.id, ce.course_id AS "courseId", ce.student_id AS "studentId", ce.level,
-    ce.practical::float8 AS practical, ce.theory::float8 AS theory, ce.notes, ce.active, ce.handbook_received AS "handbookReceived",
+    ${teacher.role === 'administrator' ? 'ce.practical::float8' : 'NULL::float8'} AS practical,
+    ${teacher.role === 'administrator' ? 'ce.theory::float8' : 'NULL::float8'} AS theory,
+    ${teacher.role === 'administrator' ? 'ce.notes' : "''::text"} AS notes, ce.active, ce.handbook_received AS "handbookReceived",
     ce.teacher_id AS "teacherId", (SELECT name FROM teachers WHERE id = ce.teacher_id) AS "teacherName",
     ${teacher.role === 'administrator' ? 'ce.grade_decisions' : "'[]'::jsonb"} AS "gradeDecisions"
     FROM course_enrollments ce JOIN students s ON s.id = ce.student_id WHERE ${scope} ORDER BY ce.id FOR SHARE OF ce`,
@@ -110,7 +114,7 @@ async function courseBoard(
         ).rows
       : (
           await db.query(
-            'SELECT c.id, c.name, c.open, c.attendance_minimum AS "attendanceMinimum", c.practical_minimum AS "practicalMinimum", c.theory_minimum AS "theoryMinimum" FROM courses c WHERE EXISTS (SELECT 1 FROM course_enrollments ce JOIN students s ON s.id = ce.student_id WHERE ce.course_id = c.id AND s.teacher_id = $1 AND s.active) ORDER BY c.id FOR SHARE OF c',
+            'SELECT c.id, c.name, c.open FROM courses c WHERE EXISTS (SELECT 1 FROM course_enrollments ce JOIN students s ON s.id = ce.student_id WHERE ce.course_id = c.id AND s.teacher_id = $1 AND s.active) ORDER BY c.id FOR SHARE OF c',
             [teacher.id],
           )
         ).rows
@@ -137,12 +141,14 @@ async function snapshot(
         first_name: z.string().nullable().optional(),
         last_name: z.string().nullable().optional(),
         whatsapp: z.string().nullable().optional(),
+        location: z.string().nullable().optional(),
+        birth_year: z.number().int().nullable().optional(),
       }),
     )
     .parse(
       (
         await db.query(
-          `SELECT s.id, s.name, s.group_name, s.active, s.first_name, s.last_name, s.whatsapp FROM students s WHERE ${scope} ORDER BY s.name, s.id FOR SHARE`,
+          `SELECT s.id, s.name, s.group_name, s.active, s.first_name, s.last_name, s.whatsapp, s.location, s.birth_year FROM students s WHERE ${scope} ORDER BY s.name, s.id FOR SHARE`,
           values,
         )
       ).rows,
@@ -156,6 +162,8 @@ async function snapshot(
       firstName: s.first_name ?? s.name,
       lastName: s.last_name ?? '',
       whatsapp: s.whatsapp ?? null,
+      location: s.location ?? null,
+      birthYear: s.birth_year ?? null,
     }))
   const events = z
     .array(eventRow)
@@ -309,7 +317,15 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
     }
     return { invitations }
   } else if (path === '/api/admin/accounts/grant') {
-    const grant = neonAdminGrantSchema.parse(body)
+    const legacyGrant = z
+      .object({
+        role: z.string(),
+        mode: z.enum(['read_write', 'read_only', 'write_only']).optional(),
+      })
+      .passthrough()
+      .parse(body)
+    const { mode: _mode, ...grantBody } = legacyGrant
+    const grant = neonAdminGrantSchema.parse(grantBody)
     if (grant.authUserId === subject) throw new HttpError(403)
     await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [grant.authUserId])
     const user = await db.query('SELECT id FROM neon_auth."user" WHERE id::text = $1 FOR SHARE', [
@@ -330,7 +346,7 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
         [grant.authUserId, grant.studentId, grant.expiresAt],
       )
     } else {
-      const mode = grant.role === 'teacher' ? grant.mode : 'read_write'
+      const mode = 'read_write'
       const expiry = grant.role === 'teacher' ? grant.expiresAt : null
       const staff = await db.query(
         `INSERT INTO teachers (id, auth_user_id, name, active, access_mode, expires_at) VALUES ($1, $2, $3, true, $4, $5)
@@ -690,6 +706,7 @@ export function createHandler(
         '/api/events',
         '/api/attendance/sync',
         '/api/student/sync',
+        '/api/student/update',
         '/api/student/attendance',
         '/api/admin',
         '/api/admin/accounts/invite',
@@ -715,6 +732,7 @@ export function createHandler(
         '/api/events',
         '/api/attendance/sync',
         '/api/student/sync',
+        '/api/student/update',
         '/api/me/invitation-profile',
         '/api/admin/accounts/invite',
         '/api/admin/accounts/grant',
@@ -737,6 +755,7 @@ export function createHandler(
         '/api/events',
         '/api/attendance/sync',
         '/api/student/sync',
+        '/api/student/update',
         '/api/me/invitation-profile',
         '/api/admin/accounts/invite',
         '/api/admin/accounts/grant',
@@ -908,8 +927,8 @@ export function createHandler(
           role: account.role,
           id: row.id,
           name: row.name,
-          canRead: row.access_mode !== 'write_only',
-          canWrite: row.access_mode !== 'read_only',
+          canRead: account.role === 'teacher' || row.access_mode !== 'write_only',
+          canWrite: account.role === 'teacher' || row.access_mode !== 'read_only',
           expiresAt:
             [row.expires_at, account.expires_at]
               .filter((v): v is Date => v !== null)
@@ -922,6 +941,41 @@ export function createHandler(
             account: { ...teacher, ...(invitationProfile ? { invitationProfile } : {}) },
             teacher,
           })
+        }
+        if (path === '/api/student/update') {
+          if (!teacher.canWrite) throw new HttpError(403)
+          const student = teacherStudentUpdateSchema.parse(await readBody(request))
+          const current = await db.query(
+            `SELECT COALESCE(first_name, name) AS "firstName", COALESCE(last_name, '') AS "lastName", group_name AS "group", whatsapp, location, birth_year AS "birthYear" FROM students WHERE id = $1 AND active AND ($2::boolean OR teacher_id = $3) FOR UPDATE`,
+            [student.studentId, teacher.role === 'administrator', teacher.id],
+          )
+          if (!current.rows.length) throw new HttpError(403)
+          const currentStudent = studentProfileVersionSchema.parse(current.rows[0])
+          if (
+            studentProfileVersionSchema
+              .keyof()
+              .options.some((field) => currentStudent[field] !== student.expected[field])
+          )
+            throw new HttpError(409)
+          const result = await db.query(
+            `UPDATE students SET first_name = $2, last_name = $3, name = $4, group_name = $5, whatsapp = $6, location = $7, birth_year = $8
+             WHERE id = $1 AND active AND ($9::boolean OR teacher_id = $10)`,
+            [
+              student.studentId,
+              student.firstName,
+              student.lastName,
+              [student.firstName, student.lastName].filter(Boolean).join(' '),
+              student.group,
+              student.whatsapp,
+              student.location,
+              student.birthYear,
+              teacher.role === 'administrator',
+              teacher.id,
+            ],
+          )
+          if (!result.rowCount) throw new HttpError(403)
+          await db.query('COMMIT')
+          return reply({ saved: true })
         }
         if (path.startsWith('/api/admin')) {
           if (teacher.role !== 'administrator' || !teacher.canRead || !teacher.canWrite)

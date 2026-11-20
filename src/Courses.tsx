@@ -147,7 +147,7 @@ export function Courses({
   enrollments: Enrollment[]
   exportEnrollments: Enrollment[]
   events: LedgerEvent[]
-  refresh: () => Promise<void>
+  refresh: () => Promise<boolean>
   defaultCourse: string
   chooseDefault: (course: string) => void
 }) {

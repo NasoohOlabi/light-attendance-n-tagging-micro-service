@@ -442,7 +442,6 @@ function AccountForm({
   >({ kind: 'idle' })
   const resetButton = useRef<HTMLButtonElement>(null)
   const [studentId, setStudentId] = useState(account.studentId ?? '')
-  const [mode, setMode] = useState<'read_write' | 'read_only' | 'write_only' | ''>('')
   const [expires, setExpires] = useState(() => {
     if (!account.expiresAt) return ''
     const date = new Date(account.expiresAt)
@@ -500,7 +499,7 @@ function AccountForm({
             role === 'administrator'
               ? { role, authUserId: account.authUserId, name }
               : role === 'teacher'
-                ? { role, authUserId: account.authUserId, name, mode, expiresAt }
+                ? { role, authUserId: account.authUserId, name, expiresAt }
                 : { role, authUserId: account.authUserId, studentId, expiresAt }
           const parsed = neonAdminGrantSchema.safeParse(input)
           if (parsed.success) void save('/api/admin/accounts/grant', parsed.data)
@@ -543,25 +542,6 @@ function AccountForm({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
-            </label>
-          )}
-          {role === 'teacher' && (
-            <label>
-              {ar ? 'الصلاحية' : 'Access'}
-              <select
-                value={mode}
-                required
-                onChange={(e) =>
-                  setMode(
-                    z.enum(['', 'read_write', 'read_only', 'write_only']).parse(e.target.value),
-                  )
-                }
-              >
-                <option value="">{ar ? 'اختر الصلاحية' : 'Choose access'}</option>
-                <option value="read_write">{ar ? 'قراءة وكتابة' : 'Read and write'}</option>
-                <option value="read_only">{ar ? 'قراءة فقط' : 'Read only'}</option>
-                <option value="write_only">{ar ? 'كتابة فقط' : 'Write only'}</option>
-              </select>
             </label>
           )}
           {role !== 'administrator' && (

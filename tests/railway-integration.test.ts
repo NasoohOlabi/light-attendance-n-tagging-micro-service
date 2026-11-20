@@ -107,6 +107,75 @@ integration(
       'INSERT INTO course_enrollments (id, course_id, student_id) VALUES ($1, $2, $3)',
       [enrollmentId, courseId, studentId],
     )
+    await pool.query("UPDATE teachers SET access_mode = 'read_only' WHERE id = $1", [teacherId])
+    await pool.query(
+      "UPDATE course_enrollments SET practical = 91, theory = 82, notes = 'private grade note' WHERE id = $1",
+      [enrollmentId],
+    )
+    await pool.query(
+      'UPDATE courses SET attendance_minimum = 65, practical_minimum = 75, theory_minimum = 85 WHERE id = $1',
+      [courseId],
+    )
+    const updateStudent = (body: unknown) =>
+      fetch(`${origin}/api/student/update`, {
+        method: 'POST',
+        headers: { ...headers, origin, 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    const details = {
+      studentId,
+      firstName: 'Updated',
+      lastName: 'Student',
+      group: '2',
+      whatsapp: '123',
+      location: 'Here',
+      birthYear: 2000,
+      expected: {
+        firstName: 'Synthetic student',
+        lastName: '',
+        group: '',
+        whatsapp: null,
+        location: null,
+        birthYear: null,
+      },
+    }
+    expect((await updateStudent(details)).status).toBe(200)
+    expect((await updateStudent(details)).status).toBe(409)
+    expect((await updateStudent({ ...details, studentId: crypto.randomUUID() })).status).toBe(403)
+    expect((await updateStudent({ ...details, teacherId })).status).toBe(400)
+    const updated = await pool.query(
+      'SELECT name, group_name, whatsapp, location, birth_year FROM students WHERE id = $1',
+      [studentId],
+    )
+    expect(updated.rows[0]).toMatchObject({
+      name: 'Updated Student',
+      group_name: '2',
+      whatsapp: '123',
+      location: 'Here',
+      birth_year: 2000,
+    })
+    const notebook = await (await fetch(`${origin}/api/notebook`, { headers })).json()
+    expect(notebook.enrollments[0]).toMatchObject({
+      practical: null,
+      theory: null,
+      notes: '',
+      gradeDecisions: [],
+    })
+    expect(notebook.courses[0]).toMatchObject({
+      attendanceMinimum: 70,
+      practicalMinimum: 80,
+      theoryMinimum: 80,
+    })
+    expect(notebook.students[0]).toMatchObject({ location: 'Here', birthYear: 2000 })
+    expect(
+      (
+        await fetch(`${origin}/api/admin/enrollments/grades`, {
+          method: 'POST',
+          headers: { ...headers, origin, 'content-type': 'application/json' },
+          body: JSON.stringify({ id: enrollmentId, practical: 0, theory: 0 }),
+        })
+      ).status,
+    ).toBe(403)
     const event = {
       id: crypto.randomUUID(),
       actor: 'Synthetic teacher',

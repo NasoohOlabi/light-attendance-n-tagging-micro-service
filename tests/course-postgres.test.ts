@@ -253,7 +253,7 @@ integration(
       expect(teacherSnapshot.enrollments).toHaveLength(2)
       expect(
         teacherSnapshot.enrollments.find((entry) => entry.id === enrollmentIds[0]),
-      ).toMatchObject({ practical: 0, theory: 100 })
+      ).toMatchObject({ practical: null, theory: null })
       const decision = {
         id: enrollmentIds[0],
         requestId: crypto.randomUUID(),
@@ -759,9 +759,9 @@ integration(
       )
       expect(closedBoard.courses.find((course) => course.id === courseIds[0])?.open).toBe(false)
       expect(closedBoard.enrollments.find((entry) => entry.id === enrollmentIds[0])).toMatchObject({
-        practical: 0,
+        practical: null,
         theory: null,
-        notes: 'First\nSecond',
+        notes: '',
       })
       expect(
         (

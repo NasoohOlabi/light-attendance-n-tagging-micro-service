@@ -16,13 +16,13 @@ Use **Copy message** and send the message privately to the recipient. The screen
 
 At first sign-in the recipient enters their phone number and date of birth, chooses a personal password, and can edit their username. They sign in again with the new credentials. **Profile settings** lets them change those details later. A student invitation creates a fresh, unassigned roster record. To connect someone to an existing student, use the existing signup and account-grant flow and select the correct roster record.
 
-| Role          | Access                                                                                                                                                                               |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Administrator | Full notebook; approve, disable and assign roles; manage students and assignments; reset another credential user's password.                                                         |
-| Teacher       | Active assigned students and their history, subject to active state, expiry and read/write mode. Write-only access does not support the interactive notebook because it needs reads. |
-| Student       | Own effective attendance dates and statuses only; no notes, raw events, peers or staff details.                                                                                      |
+| Role          | Access                                                                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Administrator | Full notebook; approve, disable and assign roles; manage students and assignments; reset another credential user's password.                                 |
+| Teacher       | Read and edit attendance, notebook notes and student information for active assigned students. Grades and roster assignments require the Administrator role. |
+| Student       | Own effective attendance dates and statuses only; no notes, raw events, peers or staff details.                                                              |
 
-Settings is an explicit destination. The Administrator starts on the notebook dashboard. A Student account links to one roster student. The server denies administrative endpoints to Teachers and Students and notebook/event endpoints to Students. The acting Administrator cannot change, disable or reset their own account through the browser. Use the private CLI for bootstrap and recovery.
+Settings is an explicit destination. The Administrator starts on the notebook dashboard. Choosing Teacher grants the role's standard access, including for accounts with a legacy access mode. A Student account links to one roster student. The server denies administrative endpoints to Teachers and Students and notebook/event endpoints to Students. The acting Administrator cannot change, disable or reset their own account through the browser. Use the private CLI for bootstrap and recovery.
 
 To reset another account, open **Settings → Accounts → Manage → Reset password**. The server generates a temporary password, replaces the previous password and signs the recipient out of existing sessions. Select **Copy message** to copy the sign-in link, username or email, and temporary password. Send it privately to the recipient. Closing the box clears the displayed password. The password works until it is changed or reset again. Invited accounts that still need setup finish it using the new password.
 

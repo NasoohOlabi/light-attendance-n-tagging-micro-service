@@ -259,7 +259,7 @@ describe('Neon API boundary', () => {
           operation: contact,
         })
       ).status,
-    ).toBe(403)
+    ).toBe(200)
   })
   test('rejects missing and invalid credentials and foreign origins', async () => {
     const { call, handler } = setup()
@@ -275,18 +275,18 @@ describe('Neon API boundary', () => {
       ).status,
     ).toBe(403)
   })
-  test('enforces disabled, expired and access mode restrictions', async () => {
+  test('enforces disabled and expired grants while legacy teacher modes allow reads and writes', async () => {
     expect((await setup({ active: false }).call('/api/me')).status).toBe(403)
     expect((await setup({ expires: new Date('2020-01-01') }).call('/api/me')).status).toBe(403)
     expect(
       (await setup({ mode: 'read_only' }).call('/api/events', 'valid', { events: [event] })).status,
-    ).toBe(403)
-    expect((await setup({ mode: 'write_only' }).call('/api/notebook')).status).toBe(403)
+    ).toBe(200)
+    expect((await setup({ mode: 'write_only' }).call('/api/notebook')).status).toBe(200)
     expect(
       await (
         await setup({ mode: 'write_only' }).call('/api/events', 'valid', { events: [event] })
       ).json(),
-    ).toEqual({ saved: 1 })
+    ).toMatchObject({ teacher: { canRead: true, canWrite: true } })
   })
   test('rejects foreign students and actor impersonation', async () => {
     expect(

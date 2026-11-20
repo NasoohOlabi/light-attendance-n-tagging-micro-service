@@ -20,7 +20,33 @@ export const neonStudentSchema = z.object({
   firstName: z.string().trim().min(1).max(200).optional(),
   lastName: z.string().trim().max(200).optional(),
   whatsapp: z.string().trim().max(40).nullable().optional(),
+  location: z.string().nullable().optional(),
+  birthYear: z.number().int().nullable().optional(),
 })
+const teacherStudentFieldsSchema = z.strictObject({
+  firstName: z.string().trim().min(1).max(200),
+  lastName: z.string().trim().max(200),
+  group: z.string().trim().max(100),
+  whatsapp: z.string().trim().max(40).nullable(),
+  location: z.string().trim().max(200).nullable(),
+  birthYear: z.number().int().min(1900).max(new Date().getFullYear()).nullable(),
+})
+export const studentProfileVersionSchema = z.strictObject({
+  firstName: z.string().trim(),
+  lastName: z.string().trim(),
+  group: z.string().trim(),
+  whatsapp: z.string().trim().nullable(),
+  location: z.string().nullable(),
+  birthYear: z.number().int().nullable(),
+})
+export const teacherStudentUpdateSchema = teacherStudentFieldsSchema
+  .extend({
+    studentId: z.uuid(),
+    expected: studentProfileVersionSchema,
+  })
+  .refine(
+    ({ firstName, lastName }) => [firstName, lastName].filter(Boolean).join(' ').length <= 200,
+  )
 export type NeonRosterStudent = z.infer<typeof neonStudentSchema>
 export const courseInputSchema = z.object({ id: z.uuid(), name: z.string().trim().min(1).max(200) })
 const percentage = z.number().min(0).max(100)
@@ -131,7 +157,6 @@ export const neonAdminGrantSchema = z.discriminatedUnion('role', [
     role: z.literal('teacher'),
     authUserId,
     name: z.string().trim().min(1).max(100),
-    mode: z.enum(['read_write', 'read_only', 'write_only']).default('read_write'),
     expiresAt: expiry,
   }),
   z.strictObject({
