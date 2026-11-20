@@ -142,6 +142,12 @@ export const neonAdminGrantSchema = z.discriminatedUnion('role', [
   }),
 ])
 export const neonAdminDisableSchema = z.strictObject({ authUserId })
+export const neonAdminGeneratedPasswordResetSchema = z.strictObject({ authUserId })
+export const neonAdminGeneratedPasswordResetResponseSchema = z.object({
+  loginIdentifier: z.string().min(1),
+  loginMethod: z.enum(['username', 'email']),
+  temporaryPassword: z.string().min(8),
+})
 export const neonAdminPasswordResetSchema = z
   .strictObject({
     authUserId,

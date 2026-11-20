@@ -188,8 +188,14 @@ integration(
       role: 'administrator',
     })
     const resetPassword = crypto.randomUUID()
-    const reset = (cookie: string, id: string, body: unknown, requestOrigin = origin) =>
-      fetch(`${origin}/api/admin/accounts/reset-password`, {
+    const reset = (
+      cookie: string,
+      id: string,
+      body: unknown,
+      requestOrigin = origin,
+      path = 'reset-password-generated',
+    ) =>
+      fetch(`${origin}/api/admin/accounts/${path}`, {
         method: 'POST',
         headers: {
           cookie,
@@ -199,7 +205,8 @@ integration(
         },
         body: JSON.stringify(body),
       })
-    const body = {
+    const body = { authUserId: userId }
+    const manualBody = {
       authUserId: userId,
       password: resetPassword,
       passwordConfirmation: resetPassword,
@@ -209,13 +216,30 @@ integration(
     expect((await reset(adminCookie, adminId, body, 'https://evil.example')).status).toBe(403)
     expect((await reset(adminCookie, adminId, { ...body, authUserId: adminId })).status).toBe(403)
     expect(
-      (await reset(adminCookie, adminId, { ...body, passwordConfirmation: 'wrong' })).status,
+      (
+        await reset(
+          adminCookie,
+          adminId,
+          { ...manualBody, passwordConfirmation: 'wrong' },
+          origin,
+          'reset-password',
+        )
+      ).status,
     ).toBe(400)
     const before = await pool.query(
       'SELECT role, active, expires_at, teacher_id, student_id FROM app_accounts WHERE auth_user_id = $1',
       [userId],
     )
-    expect((await reset(adminCookie, adminId, body)).status).toBe(200)
+    const generated = await reset(adminCookie, adminId, body)
+    expect(generated.status).toBe(200)
+    expect(generated.headers.get('cache-control')).toBe('no-store')
+    const credentials = z
+      .object({
+        loginMethod: z.literal('email'),
+        loginIdentifier: z.literal(email),
+        temporaryPassword: z.string().min(16).max(128),
+      })
+      .parse(await generated.json())
     expect(
       (await fetch(`${origin}/api/me`, { headers: { cookie: targetCookie, 'x-user-id': userId } }))
         .status,
@@ -236,6 +260,11 @@ integration(
         body: JSON.stringify({ email, password: value }),
       })
     expect((await login(password)).ok).toBe(false)
+    expect((await login(credentials.temporaryPassword)).status).toBe(200)
+    expect((await reset(adminCookie, adminId, manualBody, origin, 'reset-password')).status).toBe(
+      200,
+    )
+    expect((await login(credentials.temporaryPassword)).ok).toBe(false)
     expect((await login(resetPassword)).status).toBe(200)
   },
   180000,

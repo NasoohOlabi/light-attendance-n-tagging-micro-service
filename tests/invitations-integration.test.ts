@@ -115,6 +115,21 @@ integration(
     expect((await me.json()).account.invitationProfile.requiresSetup).toBe(true)
     expect((await fetch(`${origin}/api/student/attendance`, { headers })).status).toBe(403)
     expect((await post('/api/admin/accounts/invite', body, headers)).status).toBe(403)
+    const reset = async () => {
+      const response = await post(
+        '/api/admin/accounts/reset-password-generated',
+        { authUserId: userId },
+        adminHeaders,
+      )
+      expect(response.status).toBe(200)
+      return z
+        .object({
+          loginMethod: z.literal('username'),
+          loginIdentifier: z.string(),
+          temporaryPassword: z.string().min(16).max(128),
+        })
+        .parse(await response.json())
+    }
     expect(
       (
         await post(
@@ -127,11 +142,19 @@ integration(
     expect(
       (await post('/api/auth/change-email', { newEmail: 'other@example.test' }, headers)).status,
     ).toBe(403)
+    const resetInvitation = await reset()
+    expect(resetInvitation.loginIdentifier).toBe(person.username)
+    expect((await login(person.username, person.temporaryPassword)).status).toBe(401)
+    expect((await fetch(`${origin}/api/me`, { headers })).status).toBe(401)
+    const signedAfterReset = await login(person.username, resetInvitation.temporaryPassword)
+    expect(signedAfterReset.status).toBe(200)
+    headers.cookie = signedAfterReset.headers.get('set-cookie')?.split(';')[0] ?? ''
+    expect((await fetch(`${origin}/api/student/attendance`, { headers })).status).toBe(403)
     const profile = {
       username: `student${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`,
       phone: '12345678',
       birthDate: '2000-01-01',
-      currentPassword: person.temporaryPassword,
+      currentPassword: resetInvitation.temporaryPassword,
       newPassword: 'personal-password-123',
     }
     expect(
@@ -151,14 +174,14 @@ integration(
       (
         await post(
           '/api/me/invitation-profile',
-          { ...profile, newPassword: person.temporaryPassword },
+          { ...profile, newPassword: resetInvitation.temporaryPassword },
           headers,
         )
       ).status,
     ).toBe(400)
     expect((await post('/api/me/invitation-profile', profile, headers)).status).toBe(200)
     expect((await fetch(`${origin}/api/me`, { headers })).status).toBe(401)
-    expect((await login(profile.username, person.temporaryPassword)).status).toBe(401)
+    expect((await login(profile.username, resetInvitation.temporaryPassword)).status).toBe(401)
     expect((await login(person.username, profile.newPassword)).status).toBe(401)
     const fresh = await login(profile.username, profile.newPassword)
     expect(fresh.status).toBe(200)
@@ -171,6 +194,16 @@ integration(
     ).toBe(200)
     expect((await fetch(`${origin}/api/notebook`, { headers: freshHeaders })).status).toBe(403)
     expect((await fetch(`${origin}/api/admin`, { headers: freshHeaders })).status).toBe(403)
+    const resetEstablished = await reset()
+    expect(resetEstablished.loginIdentifier).toBe(profile.username)
+    expect((await login(profile.username, profile.newPassword)).status).toBe(401)
+    expect((await fetch(`${origin}/api/me`, { headers: freshHeaders })).status).toBe(401)
+    const signedEstablished = await login(profile.username, resetEstablished.temporaryPassword)
+    expect(signedEstablished.status).toBe(200)
+    freshHeaders.cookie = signedEstablished.headers.get('set-cookie')?.split(';')[0] ?? ''
+    expect(
+      (await fetch(`${origin}/api/student/attendance`, { headers: freshHeaders })).status,
+    ).toBe(200)
   },
   30000,
 )
