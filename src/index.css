@@ -67,7 +67,7 @@
   outline: none;
 }
 
-summary:focus-visible,
+summary:focus-visible:not(.role-account > summary, .workspace-course-name),
 .role-account summary:focus-visible > .role-manage,
 .workspace-course-name:focus-visible > span {
   text-decoration: underline;
