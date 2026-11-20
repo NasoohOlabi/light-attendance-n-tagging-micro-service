@@ -476,9 +476,21 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     fullPage: true,
   })
   const account = page.locator('details').filter({ hasText: 'student@example.test' })
-  await account.locator('summary').focus()
+  const accountSummary = account.locator('summary')
+  await accountSummary.focus()
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Shift+Tab')
+  await expect(accountSummary).toBeFocused()
+  await expect(accountSummary).toHaveCSS('outline-style', 'none')
+  await expect(accountSummary.locator('.role-manage')).toHaveCSS(
+    'text-decoration-line',
+    'underline',
+  )
   await page.keyboard.press('Enter')
   await expect(account.getByLabel('Role')).toBeVisible()
+  await page.keyboard.press('Tab')
+  await expect(account.getByLabel('Role')).toBeFocused()
+  await expect(account.getByLabel('Role')).toHaveCSS('outline-style', 'solid')
   await page.screenshot({
     path: `.artifacts/verification/settings-editor-${testInfo.project.name}.png`,
     fullPage: true,
@@ -507,8 +519,19 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await expect(
     account.getByRole('button', { name: 'إعادة تعيين كلمة المرور', exact: true }),
   ).toBeVisible()
-  for (const width of [320, 390, 844]) {
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 844 })
+    await accountSummary.focus()
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Shift+Tab')
+    await expect(accountSummary).toBeFocused()
+    await expect(accountSummary).toHaveCSS('outline-style', 'none')
+    await expect(accountSummary.locator('.role-manage')).toHaveCSS(
+      'text-decoration-line',
+      'underline',
+    )
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true,
     )
@@ -531,6 +554,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     path: `.artifacts/verification/settings-editor-ar-${testInfo.project.name}.png`,
     fullPage: true,
   })
+  await page.emulateMedia({ colorScheme: 'light' })
   await clickAccountAction(page, 'English')
   await account.getByLabel('Role').selectOption('student')
   await expect(account.locator('select').nth(1).locator(`option[value="${studentId}"]`)).toHaveText(
@@ -545,6 +569,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   })
   const teacher = page.locator('details').filter({ hasText: 'teacher@example.test' })
   await teacher.locator('summary').click()
+  await expect(teacher.locator('summary')).toHaveCSS('outline-style', 'none')
   const resetRequests: unknown[] = []
   const temporaryPassword = randomBytes(12).toString('base64url')
   await page.route('**/api/admin/accounts/reset-password-generated', async (route) => {
@@ -652,6 +677,12 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     .getByRole('button', { name: 'Students' })
     .click()
   const list = page.getByRole('region', { name: 'Student list' })
+  await list.focus()
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Shift+Tab')
+  await expect(list).toBeFocused()
+  await expect(list).toHaveCSS('outline-style', 'none')
+  await expect(list).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   await expect(
     list.locator('thead th > button.table-sort, thead th:not(:has(button.table-sort))'),
   ).toHaveText([
