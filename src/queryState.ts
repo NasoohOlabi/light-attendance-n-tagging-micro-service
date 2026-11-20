@@ -17,6 +17,7 @@ export function useQueryState() {
   const view =
     z
       .enum([
+        'invitation-message',
         'settings',
         'administration',
         'add-student',
@@ -38,6 +39,7 @@ export function useQueryState() {
     q: query.get('q') ?? '',
     group: query.get('group') ?? '',
     student: query.get('student') ?? '',
+    inviteMessage: z.uuid().safeParse(query.get('inviteMessage')).data ?? '',
     account: z.string().min(1).max(256).safeParse(query.get('account')).data ?? '',
     course: z.uuid().safeParse(query.get('course')).data ?? '',
     courseScope:
@@ -53,6 +55,7 @@ export function useQueryState() {
 }
 const allowedKeys = new Set([
   'page',
+  'inviteMessage',
   'login',
   'tab',
   'view',

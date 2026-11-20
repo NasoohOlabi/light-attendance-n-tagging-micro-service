@@ -10,7 +10,7 @@ Add `https://wartaqi.up.railway.app/mcp` as a remote Streamable HTTP server in y
 | `mcp:write`      | Make the changes available to your role. Admin mutations and offline conflict checks use both scopes. |
 | `offline_access` | Refresh access while the originating Wartaq session remains valid.                                    |
 
-Teachers can read and edit attendance, notebook notes and profile fields for active assigned students. Students see their own effective attendance and can manage their own profile. Administrators manage accounts, the full student register, courses, enrollment, scores, thresholds, handbook receipt and final grade decisions. Account invitations and password resets handle credentials, so only grant write access to a client you trust.
+Teachers can read and edit attendance, notebook notes and profile fields for active assigned students. Students see their own effective attendance and can manage their own profile. Administrators manage accounts, the full student register, courses, enrollment, scores, thresholds, handbook receipt and final grade decisions. Only grant write access to a client you trust. Use Wartaq's Accounts screen to generate a password reset message privately.
 
 ## Tools
 
@@ -20,8 +20,14 @@ Teachers can read and edit attendance, notebook notes and profile fields for act
 - `get_admin_board`, account grant/disable/invite/reset tools, roster tools, and course and enrollment tools use the same restrictions as Settings and Courses.
 - `export_course_report` returns course data as rows or an Excel workbook with the site's report filters. Attendance chart rendering, sharing, offline device storage and display preferences run in the browser.
 
+## Private invitation messages
+
+Create an invitation with `invite_accounts`. Select **Open private invitation** in the MCP app card, or open the Wartaq link returned by the tool. On your phone or desktop browser, sign in as the same Wartaq administrator who created it, then choose **Reveal invitation** and copy each recipient's message. MCP returns only a link and its reference. Wartaq delivers the message directly to your signed-in browser.
+
+The link can reveal the message once within 15 minutes. Copy it before leaving the page. If the link is unavailable or the account was created before this feature, use **Settings → Accounts → Manage → Reset password** for the existing account to generate a fresh copyable message. This replaces the old password and revokes the recipient's sessions.
+
 ## Protocol and local verification
 
 The server supports OAuth authorization-code flow with S256 PKCE, HTTPS client ID metadata documents and dynamic client registration. It advertises the issuer through protected-resource metadata, binds access tokens to `/mcp`, supports DPoP and rotating refresh tokens, and accepts token revocation. Signing out of the originating Wartaq session ends the connection. Role and roster changes apply on the next call.
 
-For a local client, use the configured Bun origin followed by `/mcp`. Apply the Railway Auth and application migrations to a disposable database, then set `TEST_RAILWAY_DATABASE_URL` and run `bun test tests/mcp-integration.test.ts`. Use synthetic accounts for verification and keep traces off.
+For a local client, use the configured Bun origin followed by `/mcp`. Apply the Railway Auth and application migrations to a disposable database, then set `TEST_RAILWAY_DATABASE_URL` and run `bun test tests/mcp-integration.test.ts`. This covers the MCP resource and tool result, role and browser-session checks, encrypted storage, expiry, and one-time redemption. `e2e/invitations.spec.ts` checks the browser viewer and clipboard in English and Arabic. Use synthetic accounts and keep traces off. The link works independently of the MCP client's support for interactive UI.

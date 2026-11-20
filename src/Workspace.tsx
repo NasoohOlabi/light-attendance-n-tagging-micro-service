@@ -42,6 +42,7 @@ import { NeonAuth } from './NeonAuth'
 import { NeonRequestError, request } from './neon'
 import { WorkspaceLoading } from './WorkspaceLoading'
 import { AdminConsole } from './AdminConsole'
+import { InvitationMessageViewer } from './InvitationMessageViewer'
 import { StudentAttendance } from './StudentAttendance'
 import { CourseSections, Courses } from './Courses'
 import type { Profile } from './ProfileMenu'
@@ -90,7 +91,13 @@ export default function Workspace({
         }
       >
         {(userId, account, signOut, profile) =>
-          query.view === 'profile' ? (
+          query.view === 'invitation-message' && account.role === 'administrator' ? (
+            <InvitationMessageViewer
+              key={`${userId}:${query.inviteMessage}`}
+              userId={userId}
+              requestId={query.inviteMessage}
+            />
+          ) : query.view === 'profile' ? (
             <ProfileSettings key={userId} profile={profile} signOut={signOut} role={account.role} />
           ) : account.role === 'student' ? (
             <StudentAttendance key={userId} userId={userId} signOut={signOut} profile={profile} />

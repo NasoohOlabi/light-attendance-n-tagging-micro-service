@@ -678,14 +678,32 @@ export function createHandler(
   verify: (token: string) => Promise<string>,
   origins: string[],
   verifyRequest?: (request: Request) => Promise<string>,
+  invitationReceipt?:
+    | {
+        kind: 'save'
+        save: (db: PoolClient, subject: string, requestId: string, value: unknown) => Promise<void>
+      }
+    | {
+        kind: 'reveal'
+        reveal: (db: PoolClient, subject: string, requestId: string) => Promise<unknown | null>
+      },
 ) {
   return async (request: Request): Promise<Response> => {
     const origin = request.headers.get('origin')
+    const path = new URL(request.url).pathname
     const cors: Record<string, string> =
       origin && origins.includes(origin)
         ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
         : {}
-    const reply = (body: unknown, status = 200) => Response.json(body, { status, headers: cors })
+    const privateResponse =
+      path === '/api/admin/accounts/invite' ||
+      path === '/api/admin/accounts/invite-message' ||
+      path === '/api/admin/accounts/reset-password-generated'
+    const reply = (body: unknown, status = 200) =>
+      Response.json(body, {
+        status,
+        headers: privateResponse ? { ...cors, 'Cache-Control': 'no-store' } : cors,
+      })
     if (origin && !origins.includes(origin)) return reply({ error: 'Forbidden' }, 403)
     if (request.method === 'OPTIONS')
       return new Response(null, {
@@ -696,7 +714,6 @@ export function createHandler(
           'Access-Control-Allow-Headers': 'Authorization, Content-Type',
         },
       })
-    const path = new URL(request.url).pathname
     if (path === '/health' && request.method === 'GET') return reply({ ok: true })
     if (
       ![
@@ -710,6 +727,7 @@ export function createHandler(
         '/api/student/attendance',
         '/api/admin',
         '/api/admin/accounts/invite',
+        '/api/admin/accounts/invite-message',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
@@ -735,6 +753,7 @@ export function createHandler(
         '/api/student/update',
         '/api/me/invitation-profile',
         '/api/admin/accounts/invite',
+        '/api/admin/accounts/invite-message',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
@@ -758,6 +777,7 @@ export function createHandler(
         '/api/student/update',
         '/api/me/invitation-profile',
         '/api/admin/accounts/invite',
+        '/api/admin/accounts/invite-message',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
@@ -980,13 +1000,25 @@ export function createHandler(
         if (path.startsWith('/api/admin')) {
           if (teacher.role !== 'administrator' || !teacher.canRead || !teacher.canWrite)
             throw new HttpError(403)
-          const response =
-            path === '/api/admin'
-              ? await adminBoard(db)
-              : await manage(db, path, await readBody(request), subject)
+          let response: unknown
+          if (path === '/api/admin/accounts/invite-message') {
+            if (invitationReceipt?.kind !== 'reveal') throw new HttpError(404)
+            const { requestId } = z
+              .strictObject({ requestId: z.uuid() })
+              .parse(await readBody(request))
+            response = await invitationReceipt.reveal(db, subject, requestId)
+            if (!response) throw new HttpError(404)
+          } else if (path === '/api/admin') response = await adminBoard(db)
+          else {
+            const body = await readBody(request)
+            response = await manage(db, path, body, subject)
+            if (path === '/api/admin/accounts/invite' && invitationReceipt?.kind === 'save') {
+              const { requestId } = invitationRequestSchema.parse(body)
+              await invitationReceipt.save(db, subject, requestId, response)
+              response = { requestId }
+            }
+          }
           await db.query('COMMIT')
-          if (path === '/api/admin/accounts/reset-password-generated')
-            return Response.json(response, { headers: { ...cors, 'Cache-Control': 'no-store' } })
           return reply(response)
         }
         if (

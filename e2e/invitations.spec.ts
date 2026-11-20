@@ -164,3 +164,106 @@ test('administrator creates one invitation and can safely retry it', async ({
   await page.getByRole('button', { name: 'العودة إلى الحسابات' }).click()
   await expect(invitation).toHaveCount(0)
 })
+
+for (const language of ['en', 'ar']) {
+  test(`MCP invitation opens and reveals privately in ${language}`, async ({
+    page,
+    baseURL,
+  }, testInfo) => {
+    if (testInfo.project.name === 'mobile') await page.setViewportSize({ width: 320, height: 800 })
+    await page.addInitScript((value) => localStorage.setItem('halaqa-language', value), language)
+    await mockAuth(page, adminId)
+    const requestId = crypto.randomUUID()
+    const temporaryPassword = crypto.randomUUID()
+    const otherPassword = crypto.randomUUID()
+    let reveals = 0
+    const account = {
+      role: 'administrator',
+      id: adminId,
+      name: 'Synthetic Admin',
+      canRead: true,
+      canWrite: true,
+      expiresAt: null,
+    }
+    await page.route('**/api/me', (route) => route.fulfill({ json: { account } }))
+    await page.route('**/api/admin/accounts/invite-message', async (route) => {
+      const request = route.request()
+      expect(request.method()).toBe('POST')
+      expect(request.headers()['x-user-id']).toBe(adminId)
+      expect(request.postDataJSON()).toEqual({ requestId })
+      reveals++
+      if (reveals > 1) return route.fulfill({ status: 404, json: { error: 'Not found' } })
+      return route.fulfill({
+        json: {
+          invitations: [
+            {
+              firstName: 'Ava',
+              lastName: 'Example',
+              role: 'teacher',
+              username: 'example1',
+              temporaryPassword,
+            },
+            {
+              firstName: 'Sam',
+              lastName: 'Example',
+              role: 'student',
+              username: 'example2',
+              temporaryPassword: otherPassword,
+            },
+          ],
+        },
+      })
+    })
+
+    await page.goto(`/?page=app&view=invitation-message&inviteMessage=${requestId}`)
+    const reveal = page.getByRole('button', {
+      name: language === 'ar' ? 'إظهار الدعوة' : 'Reveal invitation',
+    })
+    await expect(reveal).toBeVisible()
+    expect(reveals).toBe(0)
+    expect(await page.locator('textarea').count()).toBe(0)
+    await reveal.click()
+    const message = page.getByRole('textbox', { name: 'Ava Example' })
+    await expect(message).toBeVisible()
+    const value = await message.inputValue()
+    expect(value).toContain(temporaryPassword)
+    expect(value).not.toContain(otherPassword)
+    expect(value).toContain('example1')
+    expect(value).toContain(`${baseURL}/?page=app&login=username`)
+    await expect(message).toHaveCSS('direction', language === 'ar' ? 'rtl' : 'ltr')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page
+      .locator('.invite-result')
+      .filter({ has: message })
+      .getByRole('button', { name: language === 'ar' ? 'نسخ الرسالة' : 'Copy message' })
+      .click()
+    await expect
+      .poll(() =>
+        page.evaluate(async () => (await navigator.clipboard.readText()).replaceAll('\r\n', '\n')),
+      )
+      .toBe(value)
+    expect(
+      await page.evaluate(
+        (secret) =>
+          [JSON.stringify(localStorage), JSON.stringify(sessionStorage), location.href].some(
+            (text) => text.includes(secret),
+          ),
+        temporaryPassword,
+      ),
+    ).toBe(false)
+    expect(reveals).toBe(1)
+    await page.evaluate(() =>
+      window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })),
+    )
+    await expect(message).toHaveCount(0)
+
+    await page.reload()
+    await expect(reveal).toBeVisible()
+    await expect(message).toHaveCount(0)
+    await reveal.click()
+    await expect(page.getByRole('alert')).toBeVisible()
+    expect(reveals).toBe(2)
+    await expect(message).toHaveCount(0)
+  })
+}

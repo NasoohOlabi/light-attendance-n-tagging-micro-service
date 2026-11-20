@@ -2107,3 +2107,9 @@ Chromium checked the account editor and saved student profile against the built 
 The owner reported a blue box around an expanded account row. Shared styles remove focus outlines from structural containers and disclosures. Keyboard focus underlines the disclosure action and tints scrollable table regions. Buttons, links and form fields retain their focus indicators.
 
 The Settings test reproduced the account outline before the fix. The focused Chromium checks passed for pointer and keyboard disclosure, role field focus, the student table region, the homepage FAQ and skip-to-content. Browser evidence uses synthetic accounts and emulated phones. The PR records the release and exact-main Railway checks.
+
+## 2026-11-20 16:24 Asia/Damascus (UTC+03:00) - Open MCP invitation messages privately
+
+The owner asked to see a copyable account invitation from an MCP app without exposing the password in chat. `invite_accounts` now returns an MCP card and a browser link. The creating administrator can reveal the encrypted receipt once within 15 minutes. Each recipient has an individual copy control. Existing invitations can be recovered by generating a replacement in Accounts. The change uses the existing Auth verification table and needs no migration.
+
+The disposable PostgreSQL test exercised MCP OAuth, the response envelope, receipt encryption, wrong-account and foreign-origin denial, expiry, concurrent reveal and recipient sign-in. A sandboxed 320px Chromium host exercised the MCP card and the link-denied fallback. The viewer and clipboard passed in English and Arabic on desktop and emulated phones. The PR records release and Railway checks. The owner's hosted chat client and physical phone were outside local verification.

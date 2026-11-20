@@ -45,7 +45,7 @@ export function createMcpHandler(
     const { account } = accountResponse.parse(await access.json())
     const server = new McpServer({ name: 'Wartaq', version: '0.1.0' })
     const transport = new WebStandardStreamableHTTPServerTransport({ enableJsonResponse: true })
-    registerMcpTools(server, call, identity.scopes, account, identity)
+    registerMcpTools(server, call, identity.scopes, account, identity, origin)
     try {
       await server.connect(transport)
       const response = await transport.handleRequest(request)
