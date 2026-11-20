@@ -39,3 +39,14 @@ export const invitationResponseSchema = z.object({
     z.object({ firstName: name, lastName: name, role, username, temporaryPassword: z.string() }),
   ),
 })
+
+export function invitationMessage(
+  item: z.infer<typeof invitationResponseSchema>['invitations'][number],
+  ar: boolean,
+  origin: string,
+) {
+  const url = `${origin}/?page=app&login=username`
+  if (ar)
+    return `مرحباً ${item.firstName} ${item.lastName}،\nهذا رابط الدخول إلى حسابك في وارتق:\n${url}\nاسم المستخدم: ${item.username}\nكلمة المرور المؤقتة: ${item.temporaryPassword}\nعند أول دخول، أدخل رقم هاتفك وتاريخ ميلادك واختر كلمة مرور خاصة بك. يمكنك أيضاً تغيير اسم المستخدم.`
+  return `Hello ${item.firstName} ${item.lastName},\nHere is your Wartaq sign-in link:\n${url}\nUsername: ${item.username}\nTemporary password: ${item.temporaryPassword}\nOn your first sign-in, enter your phone number and date of birth and choose a personal password. You can also change your username.`
+}

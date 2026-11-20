@@ -1,8 +1,12 @@
 import { Copy } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { z } from 'zod'
 import { request } from './neon'
-import { invitationRequestSchema, invitationResponseSchema } from '../shared/invitations'
+import {
+  invitationMessage,
+  invitationRequestSchema,
+  invitationResponseSchema,
+} from '../shared/invitations'
 
 const personSchema = invitationRequestSchema.shape.people.element
 type Person = z.infer<typeof personSchema>
@@ -26,11 +30,8 @@ export function InviteAccounts({
   const [lastName, setLastName] = useState('')
   const [role, setRole] = useState<Person['role']>('teacher')
   const [state, setState] = useState<InviteState>({ kind: 'editing' })
-  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'manual'>('idle')
-  const messageField = useRef<HTMLTextAreaElement>(null)
   const sending = useRef(false)
   const requestId = useRef(crypto.randomUUID())
-  const url = `${window.location.origin}/?page=app&login=username`
   async function submit(person: Person) {
     if (sending.current) return
     sending.current = true
@@ -52,25 +53,7 @@ export function InviteAccounts({
       sending.current = false
     }
   }
-  function message(item: Invitation) {
-    if (ar)
-      return `مرحباً ${item.firstName} ${item.lastName}،\nهذا رابط الدخول إلى حسابك في وارتق:\n${url}\nاسم المستخدم: ${item.username}\nكلمة المرور المؤقتة: ${item.temporaryPassword}\nعند أول دخول، أدخل رقم هاتفك وتاريخ ميلادك واختر كلمة مرور خاصة بك. يمكنك أيضاً تغيير اسم المستخدم.`
-    return `Hello ${item.firstName} ${item.lastName},\nHere is your Wartaq sign-in link:\n${url}\nUsername: ${item.username}\nTemporary password: ${item.temporaryPassword}\nOn your first sign-in, enter your phone number and date of birth and choose a personal password. You can also change your username.`
-  }
-  async function copyMessage(text: string) {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopyStatus('copied')
-    } catch {
-      const field = messageField.current
-      if (!field) return
-      field.focus({ preventScroll: true })
-      field.select()
-      setCopyStatus('manual')
-    }
-  }
   if (state.kind === 'done') {
-    const text = message(state.invitation)
     return (
       <div className="invite-result">
         <h3 className="text-lg font-semibold">{ar ? 'تم إنشاء الحساب' : 'Account created'}</h3>
@@ -79,41 +62,11 @@ export function InviteAccounts({
             ? 'أرسل الرسالة إلى صاحب الحساب بشكل خاص. ستختفي كلمة المرور عند مغادرة هذه الصفحة.'
             : 'Send this message privately to the account holder. The password disappears when you leave this page.'}
         </p>
-        <label>
-          <span>
-            <bdi>
-              {state.invitation.firstName} {state.invitation.lastName}
-            </bdi>
-          </span>
-          <textarea
-            className="invite-message"
-            ref={messageField}
-            readOnly
-            rows={7}
-            dir={ar ? 'rtl' : 'ltr'}
-            value={text}
-          />
-        </label>
-        <p role="status" className="muted">
-          {copyStatus === 'copied' && (ar ? 'تم نسخ الرسالة' : 'Message copied')}
-          {copyStatus === 'manual' &&
-            (ar
-              ? 'تعذّر النسخ التلقائي. الرسالة محدّدة، انسخها يدوياً.'
-              : 'Automatic copy failed. The message is selected. Copy it manually.')}
-        </p>
-        <div className="role-actions">
-          <button
-            type="button"
-            className="primary inline-flex items-center gap-2"
-            onClick={() => void copyMessage(text)}
-          >
-            <Copy size={16} aria-hidden="true" />
-            {ar ? 'نسخ الرسالة' : 'Copy message'}
-          </button>
+        <CopyableInvitation invitation={state.invitation} ar={ar}>
           <button type="button" className="secondary" onClick={done}>
             {ar ? 'العودة إلى الحسابات' : 'Back to accounts'}
           </button>
-        </div>
+        </CopyableInvitation>
       </div>
     )
   }
@@ -186,6 +139,69 @@ export function InviteAccounts({
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+export function CopyableInvitation({
+  invitation,
+  ar,
+  children,
+}: {
+  invitation: Invitation
+  ar: boolean
+  children?: ReactNode
+}) {
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'manual'>('idle')
+  const messageField = useRef<HTMLTextAreaElement>(null)
+  const text = invitationMessage(invitation, ar, window.location.origin)
+  async function copyMessage() {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopyStatus('copied')
+    } catch {
+      const field = messageField.current
+      if (!field) return
+      field.focus({ preventScroll: true })
+      field.select()
+      setCopyStatus('manual')
+    }
+  }
+  return (
+    <div className="invite-result">
+      <label>
+        <span>
+          <bdi>
+            {invitation.firstName} {invitation.lastName}
+          </bdi>
+        </span>
+        <textarea
+          className="invite-message"
+          ref={messageField}
+          readOnly
+          rows={7}
+          dir={ar ? 'rtl' : 'ltr'}
+          value={text}
+        />
+      </label>
+      <p role="status" className="muted">
+        {copyStatus === 'copied' && (ar ? 'تم نسخ الرسالة' : 'Message copied')}
+        {copyStatus === 'manual' &&
+          (ar
+            ? 'تعذّر النسخ التلقائي. الرسالة محدّدة، انسخها يدوياً.'
+            : 'Automatic copy failed. The message is selected. Copy it manually.')}
+      </p>
+      <div className="role-actions">
+        <button
+          type="button"
+          className="primary inline-flex items-center gap-2"
+          onClick={() => void copyMessage()}
+        >
+          <Copy size={16} aria-hidden="true" />
+          {ar ? 'نسخ الرسالة' : 'Copy message'}
+        </button>
+        {children}
+      </div>
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { Pool } from 'pg'
 import { z } from 'zod'
 import { createHandler } from '../functions/notebook-service'
 import { createMcpHandler } from './mcp'
+import { invitationReceipts } from './mcp-invitation'
 import { mcpConsentPage } from './mcp-consent'
 import { createMcpOAuthPlugins } from './mcp-oauth'
 import type { McpOperation } from './mcp-tools'
@@ -180,6 +181,7 @@ function saveAccount(headers: Headers, account: RememberedSession) {
   )
 }
 
+const receipts = invitationReceipts(config.BETTER_AUTH_SECRET)
 const notebook = createHandler(
   pool,
   async () => {
@@ -192,6 +194,7 @@ const notebook = createHandler(
       throw new Error('Unauthorized')
     return session.user.id
   },
+  { kind: 'reveal', reveal: receipts.reveal },
 )
 
 const mcpProfileSchema = z.object({ name: z.string(), image: z.string().nullable() })
@@ -213,6 +216,9 @@ function notebookAsUser(userId: string, operation: McpOperation) {
     authenticated,
     [origin],
     authenticated,
+    operation.path === '/api/admin/accounts/invite'
+      ? { kind: 'save', save: receipts.save }
+      : undefined,
   )(
     new Request(new URL(operation.path, origin), {
       method: operation.method,
@@ -334,7 +340,10 @@ export async function handle(request: Request): Promise<Response> {
       request.method !== 'HEAD' &&
       request.headers.get('origin') !== origin
     )
-      return Response.json({ error: 'Forbidden' }, { status: 403 })
+      return Response.json(
+        { error: 'Forbidden' },
+        { status: 403, headers: { 'Cache-Control': 'no-store' } },
+      )
     if (url.pathname === '/api/auth/oauth2/consent' && request.method === 'POST') {
       const session = await auth.api.getSession({
         headers: request.headers,

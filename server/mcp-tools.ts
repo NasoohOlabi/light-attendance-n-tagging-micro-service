@@ -77,6 +77,7 @@ export function registerMcpTools(
   scopes: readonly string[],
   account: NeonAccount,
   identity: { userId: string },
+  origin: string,
 ) {
   const read = scopes.includes('mcp:read')
   const write = scopes.includes('mcp:write')
@@ -304,11 +305,50 @@ export function registerMcpTools(
     },
   )
   if (!write) return
-  post(
+  const invitationUri = 'ui://wartaq/invitation.html'
+  const mimeType = 'text/html;profile=mcp-app'
+  server.registerResource('Private invitation', invitationUri, { mimeType }, async () => ({
+    contents: [
+      {
+        uri: invitationUri,
+        mimeType,
+        text: invitationApp(origin),
+        _meta: { 'openai/widgetCSP': { redirect_domains: [origin] } },
+      },
+    ],
+  }))
+  server.registerTool(
     'invite_accounts',
-    'Create invited accounts. The response contains temporary credentials; protect them. A request ID cannot be reused after success.',
-    '/api/admin/accounts/invite',
-    invitationRequestSchema,
+    {
+      description:
+        'Create invited accounts and open the private invitation message. A request ID cannot be reused after success.',
+      inputSchema: z.object({ input: invitationRequestSchema }),
+      outputSchema: z.object({ requestId: z.uuid(), url: z.url() }),
+      _meta: { ui: { resourceUri: invitationUri } },
+    },
+    async ({ input }) => {
+      const response = await call({
+        path: '/api/admin/accounts/invite',
+        method: 'POST',
+        body: input,
+      })
+      if (!response.ok)
+        return text(
+          'Invitation could not be confirmed. Check accounts before retrying; reset a password if necessary.',
+          true,
+        )
+      const { requestId } = z.object({ requestId: z.uuid() }).parse(await response.json())
+      const url = new URL('/', origin)
+      url.search = new URLSearchParams({
+        page: 'app',
+        view: 'invitation-message',
+        inviteMessage: requestId,
+      }).toString()
+      return {
+        content: [{ type: 'text', text: `Open the private invitation: ${url.href}` }],
+        structuredContent: { requestId, url: url.href },
+      }
+    },
   )
   post(
     'grant_account',
@@ -382,4 +422,77 @@ export function registerMcpTools(
     '/api/admin/enrollments/handbook',
     enrollmentHandbookSchema,
   )
+}
+
+function invitationApp(origin: string) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font: 16px system-ui; margin: 12px; color-scheme: light dark }
+    button {
+      font: inherit; padding: 10px 16px; border: 1px solid #52645c;
+      border-radius: 8px; background: #195c42; color: white; cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: default }
+  </style>
+</head>
+<body>
+<button id="open" disabled>Open private invitation</button>
+<p id="status" role="status" hidden></p>
+<script>
+const origin = ${JSON.stringify(origin)};
+const openButton = document.getElementById('open');
+const status = document.getElementById('status');
+let url = '';
+const send = (message) => parent.postMessage({ jsonrpc: '2.0', ...message }, '*');
+const resize = () => send({
+  method: 'ui/notifications/size-changed',
+  params: { width: innerWidth, height: document.body.getBoundingClientRect().height + 24 },
+});
+function showStatus(text) {
+  status.textContent = text;
+  status.hidden = !text;
+  resize();
+}
+addEventListener('message', (event) => {
+  if (event.source !== parent || !event.data || event.data.jsonrpc !== '2.0') return;
+  const message = event.data;
+  if (message.id === 1 && message.result) {
+    send({ method: 'ui/notifications/initialized' });
+    resize();
+  }
+  if (message.id === 2 && message.error) showStatus('Open the Wartaq link in the chat.');
+  if (message.method === 'ui/resource-teardown') send({ id: message.id, result: {} });
+  if (message.method !== 'ui/notifications/tool-result') return;
+  url = '';
+  openButton.disabled = true;
+  if (message.params?.isError) {
+    showStatus('Invitation unavailable. Check accounts before retrying.');
+    return;
+  }
+  const id = message.params?.structuredContent?.requestId;
+  if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return;
+  const target = new URL('/', origin);
+  target.search = new URLSearchParams({ page: 'app', view: 'invitation-message', inviteMessage: id }).toString();
+  url = target.href;
+  openButton.disabled = false;
+  showStatus('');
+});
+openButton.addEventListener('click', () => {
+  if (url) send({ id: 2, method: 'ui/open-link', params: { url } });
+});
+send({
+  id: 1,
+  method: 'ui/initialize',
+  params: {
+    appInfo: { name: 'Wartaq invitation', version: '1.0.0' },
+    appCapabilities: {},
+    protocolVersion: '2026-01-26',
+  },
+});
+</script>
+</body>
+</html>`
 }

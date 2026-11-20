@@ -5,6 +5,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { SignJWT, calculateJwkThumbprint, exportJWK, generateKeyPair } from 'jose'
 import { Pool } from 'pg'
 import { z } from 'zod'
+import { invitationResponseSchema } from '../shared/invitations'
 import { startIntegrationServer } from './integration-server'
 
 const databaseUrl = process.env.TEST_RAILWAY_DATABASE_URL
@@ -17,10 +18,14 @@ const studentId = crypto.randomUUID()
 const peerId = crypto.randomUUID()
 const courseId = crypto.randomUUID()
 const enrollmentId = crypto.randomUUID()
+const invitationRequestId = crypto.randomUUID()
+const expiredRequestId = crypto.randomUUID()
+const peerTeacherId = crypto.randomUUID()
 let server: ReturnType<typeof Bun.spawn> | undefined
 let pool: Pool | undefined
 let userId = ''
 let clientId = ''
+let peerUserId = ''
 
 const tokens = z.object({ access_token: z.string(), refresh_token: z.string() })
 const continuation = z.object({ url: z.string() })
@@ -39,6 +44,21 @@ afterAll(async () => {
   await pool.query('DELETE FROM events WHERE student_id = $1', [studentId])
   await pool.query('DELETE FROM course_enrollments WHERE id = $1', [enrollmentId])
   await pool.query('DELETE FROM courses WHERE id = $1', [courseId])
+  const invited = await pool.query(
+    'DELETE FROM app_accounts WHERE invitation_request_id IN ($1, $2) RETURNING auth_user_id, teacher_id',
+    [invitationRequestId, expiredRequestId],
+  )
+  for (const { auth_user_id, teacher_id } of invited.rows) {
+    await pool.query('DELETE FROM teachers WHERE id = $1', [teacher_id])
+    await pool.query('DELETE FROM neon_auth."user" WHERE id = $1', [auth_user_id])
+  }
+  await pool.query('DELETE FROM neon_auth.verification WHERE identifier IN ($1, $2)', [
+    `wartaq:invite-message:${invitationRequestId}:${userId}`,
+    `wartaq:invite-message:${expiredRequestId}:${userId}`,
+  ])
+  if (peerUserId) await pool.query('DELETE FROM app_accounts WHERE auth_user_id = $1', [peerUserId])
+  await pool.query('DELETE FROM teachers WHERE id = $1', [peerTeacherId])
+  if (peerUserId) await pool.query('DELETE FROM neon_auth."user" WHERE id = $1', [peerUserId])
   await pool.query('DELETE FROM app_accounts WHERE auth_user_id = $1', [userId])
   await pool.query('DELETE FROM students WHERE id IN ($1, $2)', [studentId, peerId])
   await pool.query('DELETE FROM teachers WHERE id = $1', [teacherId])
@@ -234,6 +254,7 @@ integration(
       expect(tools).toContain('append_events')
       expect(tools).toContain('update_student')
       expect(tools).not.toContain('save_grades')
+      expect(tools).not.toContain('invite_accounts')
       const details = {
         studentId,
         firstName: 'MCP',
@@ -333,6 +354,116 @@ integration(
       expect(JSON.stringify(workbook.content)).toContain(
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       )
+
+      const inviteTool = (await client.listTools()).tools.find(
+        ({ name }) => name === 'invite_accounts',
+      )
+      const { ui } = z
+        .object({ ui: z.object({ resourceUri: z.string().startsWith('ui://') }) })
+        .parse(inviteTool?._meta)
+      const widget = (await client.readResource({ uri: ui.resourceUri })).contents[0]
+      expect(widget.mimeType).toBe('text/html;profile=mcp-app')
+      expect('text' in widget && widget.text).toContain('Open private invitation')
+      const person = { firstName: 'Invited', lastName: 'Fixture', role: 'teacher' }
+      const invite = (requestId: string) =>
+        client.callTool({
+          name: 'invite_accounts',
+          arguments: { input: { requestId, people: [person] } },
+        })
+      const invitation = await invite(invitationRequestId)
+      expect(invitation.isError).not.toBe(true)
+      const { url } = z
+        .strictObject({ url: z.url(), requestId: z.literal(invitationRequestId) })
+        .parse(invitation.structuredContent)
+      expect(url).toBe(
+        `${origin}/?page=app&view=invitation-message&inviteMessage=${invitationRequestId}`,
+      )
+      expect(JSON.stringify(invitation.content)).toContain(url)
+      const inviteId = { requestId: invitationRequestId }
+      const revealPath = '/api/admin/accounts/invite-message'
+      expect(
+        (await fetch(`${origin}${revealPath}`, { headers: { cookie, 'x-user-id': userId } }))
+          .status,
+      ).toBe(405)
+      expect((await browserPost(revealPath, inviteId)).status).toBe(401)
+      expect((await browserPost(revealPath, inviteId, cookie, crypto.randomUUID())).status).toBe(
+        401,
+      )
+      expect(
+        (
+          await fetch(`${origin}${revealPath}`, {
+            method: 'POST',
+            headers: {
+              origin: 'https://example.test',
+              'content-type': 'application/json',
+              cookie,
+              'x-user-id': userId,
+            },
+            body: JSON.stringify(inviteId),
+          })
+        ).status,
+      ).toBe(403)
+
+      const peerSignup = await browserPost('/api/auth/sign-up/email', {
+        name: 'Synthetic administrator',
+        email: `mcp-peer-${crypto.randomUUID()}@example.test`,
+        password: randomBytes(32).toString('base64url'),
+      })
+      expect(peerSignup.status).toBe(200)
+      const peerCookie = sessionCookie(peerSignup)
+      peerUserId = z.object({ user: z.object({ id: z.uuid() }) }).parse(await peerSignup.json())
+        .user.id
+      await pool.query(
+        "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, $3, 'read_write')",
+        [peerTeacherId, peerUserId, 'Other administrator'],
+      )
+      await pool.query(
+        "INSERT INTO app_accounts (auth_user_id, role, teacher_id) VALUES ($1, 'administrator', $2)",
+        [peerUserId, peerTeacherId],
+      )
+      expect((await browserPost(revealPath, inviteId, peerCookie, peerUserId)).status).toBe(404)
+      await pool.query('UPDATE app_accounts SET active = false WHERE auth_user_id = $1', [userId])
+      expect((await browserPost(revealPath, inviteId, cookie, userId)).status).toBe(403)
+      await pool.query('UPDATE app_accounts SET active = true WHERE auth_user_id = $1', [userId])
+
+      const encrypted = z
+        .object({ value: z.string() })
+        .parse(
+          (
+            await pool.query('SELECT value FROM neon_auth.verification WHERE identifier = $1', [
+              `wartaq:invite-message:${invitationRequestId}:${userId}`,
+            ])
+          ).rows[0],
+        ).value
+      const reveals = await Promise.all(
+        [1, 2].map(() => browserPost(revealPath, inviteId, cookie, userId)),
+      )
+      expect(reveals.map(({ status }) => status).sort()).toEqual([200, 404])
+      const reveal = reveals.find(({ ok }) => ok)
+      if (!reveal) throw new Error('The creator did not receive the invitation')
+      expect(reveal.headers.get('cache-control')).toBe('no-store')
+      const {
+        invitations: [message],
+      } = invitationResponseSchema.parse(await reveal.json())
+      expect(message).toMatchObject(person)
+      expect(JSON.stringify(invitation)).not.toContain(message.temporaryPassword)
+      expect(JSON.stringify(invitation)).not.toContain(message.username)
+      expect(encrypted).not.toContain(message.temporaryPassword)
+      expect(encrypted).not.toContain(message.username)
+      const invitedSignIn = await browserPost('/api/auth/sign-in/username', {
+        username: message.username,
+        password: message.temporaryPassword,
+      })
+      expect(invitedSignIn.status).toBe(200)
+      expect((await invite(expiredRequestId)).isError).not.toBe(true)
+      await pool.query(
+        'UPDATE neon_auth.verification SET "expiresAt" = now() WHERE identifier = $1',
+        [`wartaq:invite-message:${expiredRequestId}:${userId}`],
+      )
+      expect(
+        (await browserPost(revealPath, { requestId: expiredRequestId }, cookie, userId)).status,
+      ).toBe(404)
+
       await pool.query(
         "UPDATE app_accounts SET role = 'student', teacher_id = NULL, student_id = $2 WHERE auth_user_id = $1",
         [userId, studentId],
