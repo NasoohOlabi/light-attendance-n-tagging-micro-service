@@ -544,13 +544,84 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   })
   const teacher = page.locator('details').filter({ hasText: 'teacher@example.test' })
   await teacher.locator('summary').click()
-  await teacher.getByLabel('New password').fill('synthetic-password-one')
-  await teacher.getByLabel('Confirm password').fill('synthetic-password-two')
-  await teacher.getByRole('button', { name: 'Reset password' }).click()
-  await expect(teacher.getByRole('alert')).toHaveText(
-    'Passwords must match and contain 8 to 128 characters.',
-  )
-  expect(posts.some((post) => post.path === '/api/admin/accounts/reset-password')).toBe(false)
+  const resetRequests: unknown[] = []
+  const temporaryPassword = 'Synthetic-reset-8f04e32b'
+  await page.route('**/api/admin/accounts/reset-password-generated', async (route) => {
+    resetRequests.push(route.request().postDataJSON())
+    return route.fulfill({
+      json: {
+        loginIdentifier: 'teacher@example.test',
+        loginMethod: 'email',
+        temporaryPassword,
+      },
+    })
+  })
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  for (const locale of ['English', 'العربية']) {
+    await clickAccountAction(page, locale)
+    const arabic = locale === 'العربية'
+    const reset = teacher.getByRole('button', {
+      name: arabic ? 'إعادة تعيين كلمة المرور' : 'Reset password',
+    })
+    await expect(teacher.locator('input[type=password]')).toHaveCount(0)
+    await reset.click()
+    const dialog = page.getByRole('dialog')
+    const message = dialog.getByRole('textbox')
+    await expect(message).toBeVisible()
+    await expect(message).toHaveAttribute('readonly')
+    await expect(message).toHaveCSS('direction', arabic ? 'rtl' : 'ltr')
+    const value = await message.inputValue()
+    expect(value).toContain('teacher@example.test')
+    expect(value).toContain(temporaryPassword)
+    expect(value).toContain(`${origin}/?page=app`)
+    for (const width of testInfo.project.name === 'mobile' ? [320, 390] : [1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      )
+      const box = await dialog.boundingBox()
+      expect(box?.x).toBeGreaterThanOrEqual(0)
+      expect(box ? box.x + box.width : Infinity).toBeLessThanOrEqual(width)
+      expect(await message.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+        true,
+      )
+    }
+    await dialog.screenshot({
+      path: `.artifacts/verification/password-reset-${testInfo.project.name}-${arabic ? 'ar' : 'en'}.png`,
+    })
+    const copy = dialog.getByRole('button', { name: arabic ? 'نسخ الرسالة' : 'Copy message' })
+    await copy.click()
+    await expect
+      .poll(() =>
+        page.evaluate(async () => (await navigator.clipboard.readText()).replaceAll('\r\n', '\n')),
+      )
+      .toBe(value)
+    if (arabic) {
+      await page.evaluate(() => {
+        Object.defineProperty(navigator.clipboard, 'writeText', {
+          configurable: true,
+          value: () => Promise.reject(new DOMException('Clipboard denied', 'NotAllowedError')),
+        })
+      })
+      await copy.click()
+      await expect(dialog.getByRole('status')).toContainText('انسخها يدوياً')
+      await expect(message).toBeFocused()
+      expect(
+        await message.evaluate((field) =>
+          field instanceof HTMLTextAreaElement
+            ? field.value.slice(field.selectionStart, field.selectionEnd)
+            : '',
+        ),
+      ).toBe(value)
+      await dialog.getByRole('button', { name: 'إغلاق' }).click()
+    } else {
+      await page.keyboard.press('Escape')
+    }
+    await expect(dialog).toHaveCount(0)
+    await expect(reset).toBeFocused()
+  }
+  expect(resetRequests).toEqual([{ authUserId: teacherId }, { authUserId: teacherId }])
+  await clickAccountAction(page, 'English')
   await teacher.locator('select').nth(1).selectOption('read_only')
   await teacher.getByRole('button', { name: 'Save role' }).click()
   await expect.poll(() => posts.length).toBe(2)

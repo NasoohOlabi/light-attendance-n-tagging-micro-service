@@ -4,15 +4,15 @@ import { formatLevel } from './levelFormat'
 import { PhoneNumber } from './PhoneNumber'
 import { TableHeader, TableToolbar } from './DataTable'
 import { useDataTable } from './useDataTable'
-import { RefreshCw } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Copy, RefreshCw } from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { z } from 'zod'
 import {
   accountProfileLabel,
   neonAdminBoardSchema,
   neonAdminDisableSchema,
   neonAdminGrantSchema,
-  neonAdminPasswordResetSchema,
+  neonAdminGeneratedPasswordResetResponseSchema,
   neonAdminStudentSchema,
 } from '../shared/neon'
 import { useLanguage } from './useLanguage'
@@ -236,6 +236,7 @@ export function AdminConsole({
                         <AccountForm
                           key={account.authUserId}
                           account={account}
+                          userId={userId}
                           students={board.students}
                           busy={busy}
                           save={save}
@@ -258,6 +259,7 @@ export function AdminConsole({
                         <AccountForm
                           key={`${account.authUserId}:${account.role}:${account.active}`}
                           account={account}
+                          userId={userId}
                           students={board.students}
                           busy={busy}
                           save={save}
@@ -415,6 +417,7 @@ export function AdminConsole({
 }
 function AccountForm({
   account,
+  userId,
   students,
   busy,
   save,
@@ -422,6 +425,7 @@ function AccountForm({
   expanded = false,
 }: {
   account: Account
+  userId: string
   expanded?: boolean
   students: Student[]
   busy: boolean
@@ -432,9 +436,11 @@ function AccountForm({
     account.role ?? 'teacher',
   )
   const [name, setName] = useState(account.name)
-  const [password, setPassword] = useState('')
-  const [passwordConfirmation, setPasswordConfirmation] = useState('')
-  const [passwordError, setPasswordError] = useState('')
+  const [reset, setReset] = useState<
+    | { kind: 'idle' | 'pending' | 'failed' }
+    | { kind: 'done'; credentials: z.infer<typeof neonAdminGeneratedPasswordResetResponseSchema> }
+  >({ kind: 'idle' })
+  const resetButton = useRef<HTMLButtonElement>(null)
   const [studentId, setStudentId] = useState(account.studentId ?? '')
   const [mode, setMode] = useState<'read_write' | 'read_only' | 'write_only' | ''>('')
   const [expires, setExpires] = useState(() => {
@@ -442,7 +448,21 @@ function AccountForm({
     const date = new Date(account.expiresAt)
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
   })
-  return (
+  const saving = busy || reset.kind === 'pending'
+  async function resetPassword() {
+    setReset({ kind: 'pending' })
+    try {
+      const credentials = neonAdminGeneratedPasswordResetResponseSchema.parse(
+        await request('/api/admin/accounts/reset-password-generated', userId, {
+          authUserId: account.authUserId,
+        }),
+      )
+      setReset({ kind: 'done', credentials })
+    } catch {
+      setReset({ kind: 'failed' })
+    }
+  }
+  const editor = (
     <details className="role-account" open={expanded || undefined}>
       <summary>
         <span>
@@ -474,6 +494,7 @@ function AccountForm({
         className="role-editor"
         onSubmit={(event) => {
           event.preventDefault()
+          if (saving) return
           const expiresAt = expires ? new Date(expires).toISOString() : null
           const input =
             role === 'administrator'
@@ -554,65 +575,23 @@ function AccountForm({
             </label>
           )}
         </div>
-        <div className="role-fields">
-          <label>
-            {ar ? 'كلمة المرور الجديدة' : 'New password'}
-            <input
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              maxLength={128}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
-          <label>
-            {ar ? 'تأكيد كلمة المرور' : 'Confirm password'}
-            <input
-              type="password"
-              autoComplete="new-password"
-              maxLength={128}
-              value={passwordConfirmation}
-              onChange={(e) => setPasswordConfirmation(e.target.value)}
-            />
-          </label>
-          <button
-            type="button"
-            className="secondary"
-            disabled={busy}
-            onClick={async () => {
-              const parsed = neonAdminPasswordResetSchema.safeParse({
-                authUserId: account.authUserId,
-                password,
-                passwordConfirmation,
-              })
-              if (!parsed.success) {
-                setPasswordError(
-                  ar
-                    ? 'يجب تطابق كلمتي المرور وأن تتكون من 8 إلى 128 حرفاً.'
-                    : 'Passwords must match and contain 8 to 128 characters.',
-                )
-                return
-              }
-              setPasswordError('')
-              if (await save('/api/admin/accounts/reset-password', parsed.data)) {
-                setPassword('')
-                setPasswordConfirmation('')
-              }
-            }}
-          >
-            {ar ? 'إعادة تعيين كلمة المرور' : 'Reset password'}
-          </button>
-          {passwordError && <p role="alert">{passwordError}</p>}
-        </div>
         <div className="role-actions">
-          <button className="primary" disabled={busy}>
+          <button className="primary" disabled={saving}>
             {ar ? 'حفظ الدور' : 'Save role'}
           </button>
           <button
+            ref={resetButton}
             type="button"
             className="secondary"
-            disabled={busy || !account.active}
+            disabled={saving}
+            onClick={() => void resetPassword()}
+          >
+            {ar ? 'إعادة تعيين كلمة المرور' : 'Reset password'}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={saving || !account.active}
             onClick={() =>
               void save(
                 '/api/admin/accounts/disable',
@@ -623,10 +602,106 @@ function AccountForm({
             {ar ? 'تعطيل الوصول' : 'Disable access'}
           </button>
         </div>
+        {reset.kind === 'failed' && (
+          <p role="alert">
+            {ar
+              ? 'تعذر تأكيد إعادة التعيين. قد تكون كلمة المرور قد تغيرت. حاول مجدداً.'
+              : 'The reset could not be confirmed. The password may have changed. Try again.'}
+          </p>
+        )}
       </form>
     </details>
   )
+  return (
+    <>
+      {editor}
+      {reset.kind === 'done' && (
+        <PasswordResetMessage
+          ar={ar}
+          name={account.name}
+          credentials={reset.credentials}
+          dismiss={() => {
+            setReset({ kind: 'idle' })
+            resetButton.current?.focus()
+          }}
+        />
+      )}
+    </>
+  )
 }
+
+function PasswordResetMessage({
+  ar,
+  name,
+  credentials,
+  dismiss,
+}: {
+  ar: boolean
+  name: string
+  credentials: z.infer<typeof neonAdminGeneratedPasswordResetResponseSchema>
+  dismiss: () => void
+}) {
+  const titleId = useId()
+  const dialog = useRef<HTMLDialogElement>(null)
+  const message = useRef<HTMLTextAreaElement>(null)
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'manual'>('idle')
+  useEffect(() => dialog.current?.showModal(), [])
+  const usernameLogin = credentials.loginMethod === 'username'
+  const url = `${window.location.origin}/?page=app${usernameLogin ? '&login=username' : ''}`
+  const text = ar
+    ? `مرحباً ${name}،\nتمت إعادة تعيين كلمة المرور لحسابك في وارتق.\n${url}\n${usernameLogin ? 'اسم المستخدم' : 'البريد الإلكتروني'}: ${credentials.loginIdentifier}\nكلمة المرور المؤقتة: ${credentials.temporaryPassword}`
+    : `Hello ${name},\nYour Wartaq password has been reset.\n${url}\n${usernameLogin ? 'Username' : 'Email'}: ${credentials.loginIdentifier}\nTemporary password: ${credentials.temporaryPassword}`
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopyStatus('copied')
+    } catch {
+      message.current?.focus({ preventScroll: true })
+      message.current?.select()
+      setCopyStatus('manual')
+    }
+  }
+  return (
+    <dialog ref={dialog} className="grade-dialog" aria-labelledby={titleId} onClose={dismiss}>
+      <div className="grid gap-2">
+        <h3 id={titleId} className="text-lg font-semibold">
+          {ar ? 'تمت إعادة تعيين كلمة المرور' : 'Password reset'}
+        </h3>
+        <p className="muted">
+          {ar
+            ? 'أرسل هذه الرسالة إلى صاحب الحساب بشكل خاص.'
+            : 'Send this message privately to the account holder.'}
+        </p>
+        <label>
+          {ar ? 'رسالة إعادة التعيين' : 'Reset message'}
+          <textarea
+            ref={message}
+            className="invite-message"
+            readOnly
+            rows={7}
+            dir={ar ? 'rtl' : 'ltr'}
+            value={text}
+          />
+        </label>
+        <p role="status" className="muted">
+          {copyStatus === 'copied' && (ar ? 'تم نسخ الرسالة' : 'Message copied')}
+          {copyStatus === 'manual' &&
+            (ar ? 'الرسالة محددة، انسخها يدوياً.' : 'The message is selected. Copy it manually.')}
+        </p>
+        <div className="role-actions">
+          <button type="button" className="primary inline-flex items-center gap-2" onClick={copy}>
+            <Copy size={16} aria-hidden="true" />
+            {ar ? 'نسخ الرسالة' : 'Copy message'}
+          </button>
+          <button type="button" className="secondary" onClick={() => dialog.current?.close()}>
+            {ar ? 'إغلاق' : 'Close'}
+          </button>
+        </div>
+      </div>
+    </dialog>
+  )
+}
+
 function StudentForm({
   student,
   teachers,

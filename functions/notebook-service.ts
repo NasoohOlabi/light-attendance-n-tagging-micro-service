@@ -22,6 +22,7 @@ import {
   neonAdminDisableSchema,
   neonAdminGrantSchema,
   neonAdminPasswordResetSchema,
+  neonAdminGeneratedPasswordResetSchema,
   neonAdminStudentSchema,
   neonAdminStudentEnrollSchema,
   neonBatchSchema,
@@ -248,6 +249,10 @@ async function adminBoard(db: PoolClient) {
   return neonAdminBoardSchema.parse({ accounts, teachers, students })
 }
 
+function generateTemporaryPassword() {
+  return Buffer.from(crypto.getRandomValues(new Uint8Array(12))).toString('base64url')
+}
+
 async function manage(db: PoolClient, path: string, body: unknown, subject: string) {
   if (path === '/api/admin/accounts/invite') {
     const { requestId, people } = invitationRequestSchema.parse(body)
@@ -269,9 +274,7 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
           .replace(/[^a-z0-9]/g, '')
           .slice(0, 12) || person.role
       const username = `${stem}-${Buffer.from(crypto.getRandomValues(new Uint8Array(5))).toString('hex')}`
-      const temporaryPassword = Buffer.from(crypto.getRandomValues(new Uint8Array(12))).toString(
-        'base64url',
-      )
+      const temporaryPassword = generateTemporaryPassword()
       const hash = await hashPassword(temporaryPassword)
       const name = `${person.firstName} ${person.lastName}`
       await db.query(
@@ -546,8 +549,18 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
       )
     }
     return { saved: true }
-  } else if (path === '/api/admin/accounts/reset-password') {
-    const { authUserId, password } = neonAdminPasswordResetSchema.parse(body)
+  } else if (
+    path === '/api/admin/accounts/reset-password' ||
+    path === '/api/admin/accounts/reset-password-generated'
+  ) {
+    const generated = path === '/api/admin/accounts/reset-password-generated'
+    const input = generated
+      ? {
+          ...neonAdminGeneratedPasswordResetSchema.parse(body),
+          password: generateTemporaryPassword(),
+        }
+      : neonAdminPasswordResetSchema.parse(body)
+    const { authUserId, password } = input
     if (authUserId === subject) throw new HttpError(403)
     const hash = await hashPassword(password)
     await db.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
@@ -558,6 +571,20 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
     )
     if (updated.rowCount !== 1) throw new HttpError(400)
     await db.query('DELETE FROM neon_auth.session WHERE "userId"::text = $1', [authUserId])
+    if (generated) {
+      const result = await db.query(
+        'SELECT a.invitation_username, u.email FROM neon_auth."user" u LEFT JOIN app_accounts a ON a.auth_user_id = u.id::text WHERE u.id::text = $1',
+        [authUserId],
+      )
+      const identity = z
+        .object({ invitation_username: z.string().nullable(), email: z.string().min(1) })
+        .parse(result.rows[0])
+      return {
+        loginIdentifier: identity.invitation_username ?? identity.email,
+        loginMethod: identity.invitation_username ? 'username' : 'email',
+        temporaryPassword: password,
+      }
+    }
   } else if (path === '/api/admin/accounts/disable') {
     const { authUserId } = neonAdminDisableSchema.parse(body)
     if (authUserId === subject) throw new HttpError(403)
@@ -669,6 +696,7 @@ export function createHandler(
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
+        '/api/admin/accounts/reset-password-generated',
         '/api/admin/students',
         '/api/admin/courses',
         '/api/admin/courses/status',
@@ -692,6 +720,7 @@ export function createHandler(
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
+        '/api/admin/accounts/reset-password-generated',
         '/api/admin/students',
         '/api/admin/courses',
         '/api/admin/courses/status',
@@ -713,6 +742,7 @@ export function createHandler(
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
+        '/api/admin/accounts/reset-password-generated',
         '/api/admin/students',
         '/api/admin/courses',
         '/api/admin/courses/status',
@@ -901,6 +931,8 @@ export function createHandler(
               ? await adminBoard(db)
               : await manage(db, path, await readBody(request), subject)
           await db.query('COMMIT')
+          if (path === '/api/admin/accounts/reset-password-generated')
+            return Response.json(response, { headers: { ...cors, 'Cache-Control': 'no-store' } })
           return reply(response)
         }
         if (
