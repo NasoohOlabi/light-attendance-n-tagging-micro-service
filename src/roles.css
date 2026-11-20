@@ -5,9 +5,6 @@
   min-height: 100svh;
   overflow-wrap: anywhere;
 }
-.workspace main.role-page:focus {
-  outline: none;
-}
 .role-header,
 .role-heading,
 .role-row,

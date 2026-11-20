@@ -2101,3 +2101,9 @@ GitGuardian flagged the hardcoded browser-test password. The fixture now generat
 The owner asked to remove the account permissions selector and give Teachers read and write access to their students' attendance, notes and information. The Teacher role now grants that access for active assigned students, including accounts with a legacy access mode. Online profile edits check for concurrent changes. Offline attendance, notes and phone updates use their existing queues. Grade scores, thresholds, performance notes and decisions require Administrator access. Roster assignment and activation also stay with Administrators.
 
 Chromium checked the account editor and saved student profile against the built application and disposable PostgreSQL in English and Arabic at 320px and 1440px. The API and MCP checks cover legacy grants, scoped writes, stale edits and grade privacy. No database migration is required. The PR records release checks and Railway rollout evidence.
+
+## 2026-11-20 16:04 Asia/Damascus (UTC+03:00) - Remove container focus outlines
+
+The owner reported a blue box around an expanded account row. Shared styles remove focus outlines from structural containers and disclosures. Keyboard focus underlines the disclosure action and tints scrollable table regions. Buttons, links and form fields retain their focus indicators.
+
+The Settings test reproduced the account outline before the fix. The focused Chromium checks passed for pointer and keyboard disclosure, role field focus, the student table region, the homepage FAQ and skip-to-content. Browser evidence uses synthetic accounts and emulated phones. The PR records the release and exact-main Railway checks.
