@@ -16,6 +16,7 @@ import {
   enrollmentHandbookSchema,
   enrollmentMembershipSchema,
   gradeDecisionInputSchema,
+  teacherStudentUpdateSchema,
   neonAdminBoardSchema,
   neonAdminDisableSchema,
   neonAdminGrantSchema,
@@ -166,6 +167,14 @@ export function registerMcpTools(
     )
   }
   if (write && account.canWrite) {
+    server.registerTool(
+      'update_student',
+      {
+        description: 'Update information for an active assigned student.',
+        inputSchema: teacherStudentUpdateSchema,
+      },
+      (student) => result('/api/student/update', 'POST', student),
+    )
     server.registerTool(
       'append_events',
       {

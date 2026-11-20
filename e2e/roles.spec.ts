@@ -623,7 +623,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   }
   expect(resetRequests).toEqual([{ authUserId: teacherId }, { authUserId: teacherId }])
   await clickAccountAction(page, 'English')
-  await teacher.locator('select').nth(1).selectOption('read_only')
+  await expect(teacher.getByLabel('Access')).toHaveCount(0)
   await teacher.getByRole('button', { name: 'Save role' }).click()
   await expect.poll(() => posts.length).toBe(2)
   expect(posts[1]).toEqual({
@@ -632,7 +632,6 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
       role: 'teacher',
       authUserId: teacherId,
       name: 'Synthetic Teacher',
-      mode: 'read_only',
       expiresAt: null,
     },
   })

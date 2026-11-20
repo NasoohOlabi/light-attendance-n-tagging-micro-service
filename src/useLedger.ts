@@ -106,15 +106,17 @@ export function useLedger(
   }, [key, neonUserId, applySnapshot])
 
   const refresh = useCallback(async () => {
-    if (!neonUserId || locked.current) return
+    if (!neonUserId || locked.current) return false
     locked.current = true
     setBusy(true)
     try {
       const snapshot = await getNotebook(neonUserId)
       applySnapshot(snapshot)
       setError('')
+      return true
     } catch (cause) {
       setError(errorText(cause))
+      return false
     } finally {
       locked.current = false
       setBusy(false)

@@ -39,13 +39,14 @@ import { NotebookDashboard } from './NotebookDashboard'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
 import { useLedger } from './useLedger'
 import { NeonAuth } from './NeonAuth'
+import { NeonRequestError, request } from './neon'
 import { WorkspaceLoading } from './WorkspaceLoading'
 import { AdminConsole } from './AdminConsole'
 import { StudentAttendance } from './StudentAttendance'
 import { CourseSections, Courses } from './Courses'
 import type { Profile } from './ProfileMenu'
 import { ProfileSettings } from './ProfileSettings'
-import { enrollmentSchema, type NeonTeacher } from '../shared/neon'
+import { enrollmentSchema, teacherStudentUpdateSchema, type NeonTeacher } from '../shared/neon'
 import { allowOfflineAccess, clearOfflineAccess, offlineAccess } from './offlineAccess'
 import {
   cacheOfflineRoster,
@@ -60,6 +61,7 @@ type Projection = ReturnType<typeof projectEvents>
 type Save = (payloads: Payload[]) => Promise<boolean>
 
 type Demo = 'editable' | 'assigned'
+const maximumBirthYear = new Date().getFullYear()
 
 export default function Workspace({
   demo,
@@ -617,6 +619,7 @@ function Notebook({
             busy={ledger.busy}
             canWrite={!disabled}
             administrator={administrator}
+            userId={userId}
             onBack={returnToList}
           />
         )}
@@ -845,21 +848,24 @@ function StudentDetails({
   busy,
   canWrite,
   administrator,
+  userId,
   onBack,
 }: {
+  userId?: string
   onBack: () => void
   student: import('../shared/neon').NeonRosterStudent | undefined
   projected: Projection
   courses: import('../shared/neon').Course[]
   enrollments: import('../shared/neon').Enrollment[]
   courseId: string
-  refresh?: () => Promise<void>
+  refresh?: () => Promise<boolean>
   busy: boolean
   canWrite: boolean
   administrator: boolean
 }) {
   const { t, language } = useLanguage()
   const ar = language === 'ar'
+  const [editing, setEditing] = useState(false)
   const detailRecords = projected.attendance.filter(
     ({ value }) => value.studentId === student?.studentId,
   )
@@ -939,7 +945,27 @@ function StudentDetails({
                 : 'Edit student'}
             </button>
           )}
+          {!administrator && userId && canWrite && !editing && (
+            <button className="secondary" onClick={() => setEditing(true)}>
+              {ar
+                ? '\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0637\u0627\u0644\u0628'
+                : 'Edit student'}
+            </button>
+          )}
         </div>
+        {!administrator && userId && editing && (
+          <TeacherStudentForm
+            key={student.studentId}
+            student={student}
+            userId={userId}
+            disabled={!canWrite}
+            cancel={() => setEditing(false)}
+            saved={async () => {
+              if (await refresh?.()) setEditing(false)
+              else throw new Error('Refresh failed')
+            }}
+          />
+        )}
         <dl className="student-detail-fields">
           <div>
             <dt>{ar ? 'الاسم الأول' : 'First name'}</dt>
@@ -964,6 +990,16 @@ function StudentDetails({
           <div>
             <dt>{ar ? 'المستوى' : 'Level'}</dt>
             <dd dir="auto">{studentLevel(student, !!courseId, memberships) || '—'}</dd>
+          </div>
+          <div>
+            <dt>{ar ? '\u0627\u0644\u0645\u0646\u0637\u0642\u0629' : 'Location'}</dt>
+            <dd dir="auto">{student.location || '\u2014'}</dd>
+          </div>
+          <div>
+            <dt>
+              {ar ? '\u0633\u0646\u0629 \u0627\u0644\u0645\u064a\u0644\u0627\u062f' : 'Birth year'}
+            </dt>
+            <dd>{student.birthYear ?? '\u2014'}</dd>
           </div>
         </dl>
         <h2>{ar ? 'معلومات الحضور' : 'Attendance information'}</h2>
@@ -1810,6 +1846,158 @@ function RosterView({
     </section>
   )
 }
+function TeacherStudentForm({
+  student,
+  userId,
+  disabled,
+  cancel,
+  saved,
+}: {
+  student: import('../shared/neon').NeonRosterStudent
+  userId: string
+  disabled: boolean
+  cancel: () => void
+  saved: () => Promise<void>
+}) {
+  const { language } = useLanguage()
+  const ar = language === 'ar'
+  const [expected] = useState(() => ({
+    firstName: student.firstName ?? student.name,
+    lastName: student.lastName ?? '',
+    group: student.group,
+    whatsapp: student.whatsapp ?? null,
+    location: student.location ?? null,
+    birthYear: student.birthYear ?? null,
+  }))
+  const [firstName, setFirstName] = useState(student.firstName ?? student.name)
+  const [lastName, setLastName] = useState(student.lastName ?? '')
+  const [group, setGroup] = useState(student.group)
+  const [whatsapp, setWhatsapp] = useState(student.whatsapp ?? '')
+  const [location, setLocation] = useState(student.location ?? '')
+  const [birthYear, setBirthYear] = useState(student.birthYear?.toString() ?? '')
+  const [busy, setBusy] = useState(false)
+  const [committed, setCommitted] = useState(false)
+  const [error, setError] = useState('')
+  return (
+    <form
+      className="role-editor"
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (disabled || busy || committed) return
+        const input = teacherStudentUpdateSchema.safeParse({
+          studentId: student.studentId,
+          firstName,
+          lastName,
+          group,
+          whatsapp: whatsapp || null,
+          location: location || null,
+          birthYear: birthYear ? Number(birthYear) : null,
+          expected,
+        })
+        if (!input.success) {
+          setError(
+            ar
+              ? '\u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062a'
+              : 'Check the entered information',
+          )
+          return
+        }
+        setBusy(true)
+        void request('/api/student/update', userId, input.data, false)
+          .then(() => {
+            setCommitted(true)
+            return saved().catch(() =>
+              setError(
+                ar
+                  ? 'تم الحفظ. حدّث الصفحة قبل التعديل مجدداً.'
+                  : 'Saved. Refresh before editing again.',
+              ),
+            )
+          })
+          .catch((cause: unknown) =>
+            setError(
+              cause instanceof NeonRequestError && cause.status === 409
+                ? ar
+                  ? '\u062a\u063a\u064a\u0631\u062a \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062a. \u062d\u062f\u062b \u0627\u0644\u0635\u0641\u062d\u0629.'
+                  : 'Information changed. Refresh and reopen the form.'
+                : ar
+                  ? '\u062a\u0639\u0630\u0631 \u0627\u0644\u062d\u0641\u0638'
+                  : 'Could not save. Please try again.',
+            ),
+          )
+          .finally(() => setBusy(false))
+      }}
+    >
+      <div className="role-fields">
+        <label>
+          {ar ? '\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0623\u0648\u0644' : 'First name'}
+          <input
+            required
+            maxLength={200}
+            dir="auto"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+          />
+        </label>
+        <label>
+          {ar ? '\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0626\u0644\u0629' : 'Last name'}
+          <input
+            maxLength={200}
+            dir="auto"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+          />
+        </label>
+        <label>
+          {ar ? '\u0627\u0644\u0645\u0633\u062a\u0648\u0649' : 'Level'}
+          <LevelInput
+            maxLength={100}
+            dir="auto"
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+          />
+        </label>
+        <label>
+          {ar ? '\u0631\u0642\u0645 \u0648\u0627\u062a\u0633\u0627\u0628' : 'WhatsApp number'}
+          <input
+            type="tel"
+            maxLength={40}
+            dir="ltr"
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+          />
+        </label>
+        <label>
+          {ar ? '\u0627\u0644\u0645\u0646\u0637\u0642\u0629' : 'Location'}
+          <input
+            maxLength={200}
+            dir="auto"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          />
+        </label>
+        <label>
+          {ar ? '\u0633\u0646\u0629 \u0627\u0644\u0645\u064a\u0644\u0627\u062f' : 'Birth year'}
+          <input
+            type="number"
+            min={1900}
+            max={maximumBirthYear}
+            value={birthYear}
+            onChange={(e) => setBirthYear(e.target.value)}
+          />
+        </label>
+      </div>
+      {error && <p role="alert">{error}</p>}
+      <button className="primary" disabled={disabled || busy || committed}>
+        {ar ? '\u062d\u0641\u0638' : 'Save'}
+      </button>{' '}
+      <button className="secondary" type="button" disabled={busy} onClick={cancel}>
+        {ar ? '\u0625\u0644\u063a\u0627\u0621' : 'Cancel'}
+      </button>
+    </form>
+  )
+}
+
 function StudentEditor({ student, save }: { student: Student; save: Save }) {
   const { t } = useLanguage()
   const [name, setName] = useState(student.name)

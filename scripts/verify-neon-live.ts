@@ -119,7 +119,7 @@ try {
     await remember()
     const teacherFile = `.local/neon-verify-teacher-${teacherId}.json`
     const studentFile = `.local/neon-verify-student-${studentId}.json`
-    await writeFile(teacherFile, JSON.stringify({ id: teacherId, email, name, mode: 'read_write' }))
+    await writeFile(teacherFile, JSON.stringify({ id: teacherId, email, name }))
     await writeFile(
       studentFile,
       JSON.stringify([
@@ -395,12 +395,12 @@ try {
   check('cross-teacher writes, forged actors and foreign corrections denied')
   await pool.query('UPDATE teachers SET access_mode = $1 WHERE id = $2', ['read_only', a.teacherId])
   assert.equal((await call('/api/notebook', a.token)).status, 200)
-  assert.equal((await call('/api/events', a.token, { events: [event] })).status, 403)
+  assert.equal((await call('/api/events', a.token, { events: [event] })).status, 200)
   await pool.query('UPDATE teachers SET access_mode = $1 WHERE id = $2', [
     'write_only',
     a.teacherId,
   ])
-  assert.equal((await call('/api/notebook', a.token)).status, 403)
+  assert.equal((await call('/api/notebook', a.token)).status, 200)
   assert.equal((await call('/api/events', a.token, { events: [event] })).status, 200)
   await pool.query(
     "UPDATE teachers SET access_mode = $1, expires_at = now() - interval '1 minute' WHERE id = $2",
@@ -412,7 +412,7 @@ try {
   ])
   assert.equal((await call('/api/notebook', a.token)).status, 403)
   await pool.query('UPDATE teachers SET active = true WHERE id = $1', [a.teacherId])
-  check('server-enforced read-only, write-only, expiry and immediate account disable')
+  check('legacy modes retain full teacher access; expiry and immediate account disable enforced')
   assert.equal(
     (
       await call('/api/admin/students', admin.token, {

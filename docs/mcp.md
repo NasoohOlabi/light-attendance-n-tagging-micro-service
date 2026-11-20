@@ -10,13 +10,13 @@ Add `https://wartaqi.up.railway.app/mcp` as a remote Streamable HTTP server in y
 | `mcp:write`      | Make the changes available to your role. Admin mutations and offline conflict checks use both scopes. |
 | `offline_access` | Refresh access while the originating Wartaq session remains valid.                                    |
 
-Teachers work with active assigned students and their configured read/write mode. Students see their own effective attendance and can manage their own profile. Administrators can manage accounts, the full student register, courses, enrollment, scores, thresholds, handbook receipt and final grade decisions. Account invitations and password resets handle credentials, so only grant write access to a client you trust.
+Teachers can read and edit attendance, notebook notes and profile fields for active assigned students. Students see their own effective attendance and can manage their own profile. Administrators manage accounts, the full student register, courses, enrollment, scores, thresholds, handbook receipt and final grade decisions. Account invitations and password resets handle credentials, so only grant write access to a client you trust.
 
 ## Tools
 
 - `get_account`, `get_profile`, `update_profile` and `update_invitation_profile` cover account and profile settings. The invitation tool asks for the current password.
 - `get_my_attendance` serves the Student portal. Staff use `get_notebook` for the authorized roster, courses, event history and tagged notes and `get_attendance_summary` for effective marks and notes.
-- `append_events` records attendance, notes and corrections. Use the same event ID, time and payload for an exact retry. Use `sync_attendance` or `sync_student` when submitting changes against a previously read version.
+- `append_events` records attendance, notes and corrections. Use the same event ID, time and payload for an exact retry. Use `sync_attendance` or `sync_student` when submitting attendance or phone changes against a previously read version. `update_student` saves profile information for an active student within the caller's scope.
 - `get_admin_board`, account grant/disable/invite/reset tools, roster tools, and course and enrollment tools use the same restrictions as Settings and Courses.
 - `export_course_report` returns course data as rows or an Excel workbook with the site's report filters. Attendance chart rendering, sharing, offline device storage and display preferences run in the browser.
 

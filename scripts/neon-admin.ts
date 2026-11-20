@@ -6,7 +6,6 @@ import { neonAdminGrantSchema } from '../shared/neon'
 const teacherFields = {
   id: z.uuid().default(() => crypto.randomUUID()),
   name: z.string().trim().min(1).max(100),
-  mode: z.enum(['read_write', 'read_only', 'write_only']).default('read_write'),
   expiresAt: z.iso.datetime().nullable().default(null),
 }
 const identity = z.union([
@@ -30,7 +29,6 @@ const accountInput = z.union([
           ? {
               role: z.literal(role),
               name: teacherFields.name,
-              mode: teacherFields.mode,
               expiresAt: teacherFields.expiresAt,
             }
           : { role: z.literal(role), name: teacherFields.name }
@@ -100,7 +98,7 @@ async function grant(client: PoolClient, raw: unknown, requestedId: string = cry
       [authUserId, account.studentId, account.expiresAt],
     )
   } else {
-    const mode = account.role === 'teacher' ? account.mode : 'read_write'
+    const mode = 'read_write'
     const expiry = account.role === 'teacher' ? account.expiresAt : null
     const staff = await client.query(
       `INSERT INTO teachers (id, auth_user_id, name, active, access_mode, expires_at) VALUES ($1, $2, $3, true, $4, $5)

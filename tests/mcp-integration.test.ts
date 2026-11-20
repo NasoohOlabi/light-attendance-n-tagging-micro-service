@@ -149,7 +149,7 @@ integration(
     expect(signup.status).toBe(200)
     userId = z.object({ user: z.object({ id: z.uuid() }) }).parse(await signup.json()).user.id
     await pool.query(
-      "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, 'Synthetic teacher', 'read_write')",
+      "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, 'Synthetic teacher', 'read_only')",
       [teacherId, userId],
     )
     await pool.query(
@@ -232,6 +232,36 @@ integration(
       await client.connect(transport)
       const tools = (await client.listTools()).tools.map(({ name }) => name)
       expect(tools).toContain('append_events')
+      expect(tools).toContain('update_student')
+      expect(tools).not.toContain('save_grades')
+      const details = {
+        studentId,
+        firstName: 'MCP',
+        lastName: 'Updated',
+        group: '2',
+        whatsapp: '123',
+        location: 'Here',
+        birthYear: 2000,
+        expected: {
+          firstName: 'MCP fixture',
+          lastName: '',
+          group: '',
+          whatsapp: null,
+          location: null,
+          birthYear: null,
+        },
+      }
+      expect(
+        (await client.callTool({ name: 'update_student', arguments: details })).isError,
+      ).not.toBe(true)
+      expect(
+        (
+          await client.callTool({
+            name: 'update_student',
+            arguments: { ...details, studentId: peerId },
+          })
+        ).isError,
+      ).toBe(true)
       expect(tools).not.toContain('get_admin_board')
       const note = {
         id: crypto.randomUUID(),
@@ -287,6 +317,7 @@ integration(
         ).isError,
       ).toBe(true)
 
+      await pool.query("UPDATE teachers SET access_mode = 'read_write' WHERE id = $1", [teacherId])
       await pool.query("UPDATE app_accounts SET role = 'administrator' WHERE auth_user_id = $1", [
         userId,
       ])

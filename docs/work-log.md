@@ -2095,3 +2095,9 @@ The owner asked to click Reset password and receive a message to send to the rec
 Disposable PostgreSQL checks passed for email and username sign-in, session revocation, administrator authorization and invitation setup. A real browser used the built application and disposable server to reset a synthetic account, copy its message, and sign in using the generated password after the previous password and session were rejected. Browser coverage also checks Arabic and English wrapping, clipboard fallback and focus return at desktop and phone widths. The PR records release checks and production rollout evidence.
 
 GitGuardian flagged the hardcoded browser-test password. The fixture now generates its password at runtime. The value was used only in a mocked response.
+
+## 2026-11-20 15:40 Asia/Damascus (UTC+03:00) - Give teachers standard notebook access
+
+The owner asked to remove the account permissions selector and give Teachers read and write access to their students' attendance, notes and information. The Teacher role now grants that access for active assigned students, including accounts with a legacy access mode. Online profile edits check for concurrent changes. Offline attendance, notes and phone updates use their existing queues. Grade scores, thresholds, performance notes and decisions require Administrator access. Roster assignment and activation also stay with Administrators.
+
+Chromium checked the account editor and saved student profile against the built application and disposable PostgreSQL in English and Arabic at 320px and 1440px. The API and MCP checks cover legacy grants, scoped writes, stale edits and grade privacy. No database migration is required. The PR records release checks and Railway rollout evidence.
