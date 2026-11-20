@@ -119,7 +119,7 @@ test('staff phone links remain usable in both languages', async ({ page }) => {
   await clickAccountAction(page, 'Settings')
   await page
     .getByRole('navigation', { name: 'Settings sections' })
-    .getByRole('button', { name: 'Students', exact: true })
+    .getByRole('link', { name: 'Students', exact: true })
     .click()
   await check()
   await clickAccountAction(page, 'العربية')

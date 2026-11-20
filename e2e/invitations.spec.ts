@@ -186,6 +186,9 @@ for (const language of ['en', 'ar']) {
       expiresAt: null,
     }
     await page.route('**/api/me', (route) => route.fulfill({ json: { account } }))
+    await page.route('**/api/admin', (route) =>
+      route.fulfill({ json: { accounts: [], teachers: [], students: [] } }),
+    )
     await page.route('**/api/admin/accounts/invite-message', async (route) => {
       const request = route.request()
       expect(request.method()).toBe('POST')
@@ -215,7 +218,9 @@ for (const language of ['en', 'ar']) {
       })
     })
 
-    await page.goto(`/?page=app&view=invitation-message&inviteMessage=${requestId}`)
+    await page.goto(
+      `/?page=app&view=invitation-message&inviteMessage=${requestId}&settingsSection=students&account=${adminId}`,
+    )
     const reveal = page.getByRole('button', {
       name: language === 'ar' ? 'إظهار الدعوة' : 'Reveal invitation',
     })
@@ -265,5 +270,12 @@ for (const language of ['en', 'ar']) {
     await expect(page.getByRole('alert')).toBeVisible()
     expect(reveals).toBe(2)
     await expect(message).toHaveCount(0)
+    await page
+      .getByRole('button', { name: language === 'ar' ? 'العودة إلى الحسابات' : 'Back to accounts' })
+      .click()
+    await expect(page).toHaveURL(`${baseURL}/?page=app&view=settings`)
+    await expect(
+      page.getByRole('link', { name: language === 'ar' ? 'الحسابات' : 'Accounts', exact: true }),
+    ).toHaveAttribute('aria-current', 'page')
   })
 }

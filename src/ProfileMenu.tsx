@@ -149,7 +149,7 @@ export function ProfileMenu({
               type="button"
               onClick={() => {
                 setOpen(false)
-                setQuery({ view: 'settings', student: '' }, true)
+                setQuery({ view: 'settings', student: '', settingsSection: '' }, true)
               }}
             >
               <Settings size={18} aria-hidden="true" />{' '}

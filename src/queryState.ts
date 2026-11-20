@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { z } from 'zod'
 
 const tabSchema = z.enum(['dashboard', 'attendance', 'roster', 'summary'])
+const settingsSectionSchema = z.enum(['accounts', 'students']).catch('accounts')
 export type Tab = z.infer<typeof tabSchema>
 export function today() {
   const date = new Date()
@@ -32,6 +33,7 @@ export function useQueryState() {
   return {
     page: z.enum(['home', 'app']).safeParse(query.get('page')).data ?? 'home',
     view: view === 'notebook' && query.get('tab') === 'history' ? 'history' : view,
+    settingsSection: settingsSectionSchema.parse(query.get('settingsSection')),
     tab: tabSchema.safeParse(query.get('tab')).data ?? 'dashboard',
     date: z.iso.date().safeParse(query.get('date')).data ?? today(),
     from: z.iso.date().safeParse(query.get('from')).data ?? today().slice(0, 7) + '-01',
@@ -59,6 +61,7 @@ const allowedKeys = new Set([
   'login',
   'tab',
   'view',
+  'settingsSection',
   'date',
   'from',
   'to',
@@ -83,7 +86,7 @@ export function sanitizedSearch(search: string) {
   }
   return query
 }
-export function setQuery(values: Record<string, string>, push = false) {
+export function queryHref(values: Record<string, string>) {
   const query = sanitizedSearch(window.location.search)
   for (const [key, value] of Object.entries(values)) {
     if (!allowedKeys.has(key)) continue
@@ -91,11 +94,11 @@ export function setQuery(values: Record<string, string>, push = false) {
     else query.delete(key)
   }
   const search = query.toString()
-  window.history[push ? 'pushState' : 'replaceState'](
-    null,
-    '',
-    window.location.pathname + (search ? `?${search}` : ''),
-  )
+  return window.location.pathname + (search ? `?${search}` : '')
+}
+
+export function setQuery(values: Record<string, string>, push = false) {
+  window.history[push ? 'pushState' : 'replaceState'](null, '', queryHref(values))
   window.dispatchEvent(new PopStateEvent('popstate'))
 }
 

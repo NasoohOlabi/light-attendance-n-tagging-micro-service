@@ -2108,8 +2108,18 @@ The owner reported a blue box around an expanded account row. Shared styles remo
 
 The Settings test reproduced the account outline before the fix. The focused Chromium checks passed for pointer and keyboard disclosure, role field focus, the student table region, the homepage FAQ and skip-to-content. Browser evidence uses synthetic accounts and emulated phones. The PR records the release and exact-main Railway checks.
 
+## 2026-11-20 16:19 Asia/Damascus (UTC+03:00) - Clarify Settings navigation
+
+The owner reported that the three Settings controls looked like unrelated buttons. Accounts, Students and History & corrections now share one underlined navigation row using shadcn's Base UI Navigation Menu composition. The current section is marked visually and for assistive technology. Students now has a shareable URL and follows browser Back and reload alongside the existing History route.
+
+The focused Chromium run passed 35 desktop and emulated phone cases with three device-specific skips. It exercised section navigation, keyboard direction, reload, browser Back and history corrections with synthetic data. The PR records the final release suite and exact-main Railway verification.
+
+The new Students URL reproduced a disconnected navigation error with the earlier service worker. Added the section key to the public shell fallback and extended the real service worker test to exercise the link offline. The fallback serves the app shell and leaves private API requests outside the cache.
+
 ## 2026-11-20 16:24 Asia/Damascus (UTC+03:00) - Open MCP invitation messages privately
 
 The owner asked to see a copyable account invitation from an MCP app without exposing the password in chat. `invite_accounts` now returns an MCP card and a browser link. The creating administrator can reveal the encrypted receipt once within 15 minutes. Each recipient has an individual copy control. Existing invitations can be recovered by generating a replacement in Accounts. The change uses the existing Auth verification table and needs no migration.
 
 The disposable PostgreSQL test exercised MCP OAuth, the response envelope, receipt encryption, wrong-account and foreign-origin denial, expiry, concurrent reveal and recipient sign-in. A sandboxed 320px Chromium host exercised the MCP card and the link-denied fallback. The viewer and clipboard passed in English and Arabic on desktop and emulated phones. The PR records release and Railway checks. The owner's hosted chat client and physical phone were outside local verification.
+
+At 16:46 Asia/Damascus, merged `main` (`ec1d777`) and preserved both work-log entries. Chromium reproduced the viewer returning to Students when the link carried the new Settings section selection. **Back to accounts** now clears that selection and opens the Accounts list. The invitation browser cases passed on desktop and emulated phones in English and Arabic. A fresh phone-sized browser also completed the real MCP invite and one-time reveal against disposable PostgreSQL.

@@ -90,7 +90,9 @@ export function InvitationMessageViewer({
       )}
       <button
         className="secondary"
-        onClick={() => setQuery({ view: 'settings', inviteMessage: '' }, true)}
+        onClick={() =>
+          setQuery({ view: 'settings', settingsSection: '', account: '', inviteMessage: '' }, true)
+        }
       >
         {ar ? 'العودة إلى الحسابات' : 'Back to accounts'}
       </button>
