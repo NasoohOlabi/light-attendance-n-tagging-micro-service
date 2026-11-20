@@ -1,5 +1,6 @@
 import { clickAccountAction, openProfile } from './profileActions'
 import { expect, test, type Page } from '@playwright/test'
+import { randomBytes } from 'node:crypto'
 import { mkdir } from 'node:fs/promises'
 import { compactHeader } from './headerLayout'
 
@@ -545,7 +546,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   const teacher = page.locator('details').filter({ hasText: 'teacher@example.test' })
   await teacher.locator('summary').click()
   const resetRequests: unknown[] = []
-  const temporaryPassword = 'Synthetic-reset-8f04e32b'
+  const temporaryPassword = randomBytes(12).toString('base64url')
   await page.route('**/api/admin/accounts/reset-password-generated', async (route) => {
     resetRequests.push(route.request().postDataJSON())
     return route.fulfill({
