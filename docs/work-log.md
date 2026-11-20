@@ -2113,3 +2113,5 @@ The Settings test reproduced the account outline before the fix. The focused Chr
 The owner reported that the three Settings controls looked like unrelated buttons. Accounts, Students and History & corrections now share one underlined navigation row using shadcn's Base UI Navigation Menu composition. The current section is marked visually and for assistive technology. Students now has a shareable URL and follows browser Back and reload alongside the existing History route.
 
 The focused Chromium run passed 35 desktop and emulated phone cases with three device-specific skips. It exercised section navigation, keyboard direction, reload, browser Back and history corrections with synthetic data. The PR records the final release suite and exact-main Railway verification.
+
+The new Students URL reproduced a disconnected navigation error with the earlier service worker. Added the section key to the public shell fallback and extended the real service worker test to exercise the link offline. The fallback serves the app shell and leaves private API requests outside the cache.

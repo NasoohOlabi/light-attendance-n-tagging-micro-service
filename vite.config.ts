@@ -37,7 +37,7 @@ const prefix = 'wartaq-' + encodeURIComponent(scope.pathname) + '-'
 const cacheName = prefix + ${JSON.stringify(version)}
 const urls = ${JSON.stringify(files)}.map((file) => new URL(file, scope).href)
 const index = new URL('index.html', scope).href
-const appNavigationKeys = new Set(['page', 'view', 'tab', 'course', 'date', 'from', 'to', 'courseView', 'all', 'missing', 'unmarked', 'tables', 'q', 'group', 'student', 'account'])
+const appNavigationKeys = new Set(['page', 'view', 'settingsSection', 'tab', 'course', 'date', 'from', 'to', 'courseView', 'all', 'missing', 'unmarked', 'tables', 'q', 'group', 'student', 'account'])
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(urls)).then(() => self.skipWaiting()))
 })
