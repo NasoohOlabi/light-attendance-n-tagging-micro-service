@@ -2179,3 +2179,9 @@ The owner requested a private, bilingual Telegram bot with inline navigation and
 Disposable PostgreSQL verification exercised browser consent, chat-bound code redemption, native student creation, database readback, role changes and access withdrawal. Telegram transport tests exercised stale and duplicate actions, encrypted storage and reconnect behavior. The production Docker image built and its isolated HTTP smoke test returned the expected readiness, invalid callback and missing-route responses. Telegram accepted the bot identity and the English and Arabic command menus. A separate Railway service, volume, domain and verified-main deployment trigger were configured. The PR records the final release checks, exact deployments and live chat evidence. Live school records were excluded from testing.
 
 At 18:26 Asia/Damascus, the CodeQL PR review identified a substring hostname match in the simulated Telegram transport. The test now checks Telegram's exact HTTPS origin. The production transport already uses the fixed Telegram API endpoint.
+
+## 2026-11-21 18:54 Asia/Damascus — Telegram account linking
+
+The owner reported an unstyled confirmation page and a failed return to Telegram. Repeating Start or changing language cancelled the earlier login and discarded a pending code. The worker now preserves the active attempt, prompts for the code on return and uses the newly selected language immediately. The responsive bilingual callback shows one code, a copy action with a manual fallback and a return button.
+
+Runtime tests reproduce the earlier callback failure and exercise successful redemption, cancellation, invalid codes and provider failures. The browser check exercises the production callback HTML and CSP on desktop and a narrow phone with a synthetic code. Disposable PostgreSQL covers actual Wartaq consent and access. The PR records publication and live verification.

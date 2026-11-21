@@ -15,7 +15,7 @@ export function createNavigation(
   api: ReturnType<typeof telegramApi>,
   origin: string,
 ) {
-  const language = (chat: string) => (store.get(`lang:${chat}`) === 'ar' ? 'ar' : 'en')
+  const language = (chat: string): 'en' | 'ar' => (store.get(`lang:${chat}`) === 'ar' ? 'ar' : 'en')
   const say = async (chat: string, text: string) => {
     await api('sendMessage', { chat_id: chat, text })
   }
@@ -26,9 +26,10 @@ export function createNavigation(
     input?: string,
     messageId?: number,
   ) => {
-    const lang = language(chat)
+    let lang = language(chat)
     if (action.route === 'sys.language') {
-      store.set(`lang:${chat}`, lang === 'en' ? 'ar' : 'en')
+      lang = lang === 'en' ? 'ar' : 'en'
+      store.set(`lang:${chat}`, lang)
       action = { route: 'home' }
     }
     if (action.route === 'sys.unlink') {
@@ -43,7 +44,37 @@ export function createNavigation(
     if (!credentials) {
       store.delete(`prompt:${chat}`)
       store.delete(`generation:${chat}`)
-      const url = await auth.begin(chat)
+      const showPending = async () => {
+        await say(
+          chat,
+          lang === 'ar'
+            ? 'أرسل الرمز المكوّن من ٨ أرقام المعروض في المتصفح هنا. للبدء من جديد، استخدم /cancel ثم /start.'
+            : 'Send the eight-digit code shown in your browser here. To start again, use /cancel then /start.',
+        )
+      }
+      if (auth.hasPendingCode(chat)) {
+        await showPending()
+        return
+      }
+      if (auth.isExchanging(chat)) {
+        await say(
+          chat,
+          lang === 'ar'
+            ? 'جارٍ إكمال الربط. انتظر رمز المتصفح، أو استخدم /cancel ثم /start للمحاولة من جديد.'
+            : 'Linking is in progress. Wait for the browser code, or use /cancel then /start to try again.',
+        )
+        return
+      }
+      let url: string
+      try {
+        url = await auth.begin(chat)
+      } catch (error) {
+        if (auth.hasPendingCode(chat)) {
+          await showPending()
+          return
+        }
+        throw error
+      }
       await api('sendMessage', {
         chat_id: chat,
         text:

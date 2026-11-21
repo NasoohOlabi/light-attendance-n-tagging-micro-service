@@ -1,6 +1,6 @@
 # Wartaq on Telegram
 
-Open [@WartaqBot](https://t.me/WartaqBot) in a private chat and tap **Start**. Choose **Link account**, sign in to Wartaq and approve the connection. Send the eight-digit code from the browser back to the same private chat within five minutes. Enter your Wartaq password on the Wartaq sign-in page.
+Open [@WartaqBot](https://t.me/WartaqBot) in a private chat and tap **Start**. Choose **Link account**, sign in to Wartaq and approve the connection. On the confirmation page, choose **Copy code**, then **Open Telegram**. Paste the eight digits into the same private chat and send them within five minutes. Returning to the bot or changing its language keeps the pending link. To discard it, use `/cancel`. Enter your Wartaq password on the Wartaq sign-in page.
 
 Choose a task from the buttons under the message. Type a reply when a screen asks for a name, date, grade or note. The bot follows Telegram's language on first use. The language button switches between Arabic and English. Use the Telegram menu to reopen the notebook, cancel an action or disconnect.
 
