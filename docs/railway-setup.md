@@ -12,7 +12,7 @@ For read-only release verification, GitHub also records Railway deployments for 
 
 Standard releases use the existing GitHub connection and deployment records. This path works across checkouts with GitHub access. If post-merge CI fails, rerun the failed check for that SHA and check Railway's deployment status separately. Railway can leave a skipped deployment inactive after CI passes on retry. When the failure has a repository fix, merge it through a new PR so the resulting `main` commit triggers a new guarded deployment. With existing AppSuite access, Railway can also deploy the already verified commit directly.
 
-During the v0.1.0 development release, all changes deploy from `main`. There is no nightly Railway environment or service; nightly builds and deployments remain disabled until the owner explicitly requests them. Keep the existing production application and Postgres service only.
+During the v0.1.0 development release, all changes deploy from `main`. Nightly builds and deployments remain disabled until the owner explicitly requests them. The production project contains the web application, Postgres and the independently deployed [Telegram worker](telegram.md).
 
 `Dockerfile` builds the frontend and installs frozen production dependencies. Its allowlisted context excludes private inputs and Git history. Configure Docker builds, health path `/health`, and port 3000 on the Railway service. Health verifies database tables. Set server-only `DATABASE_URL` to the private Railway Postgres connection, `BETTER_AUTH_SECRET` to a random value of at least 32 characters, `BETTER_AUTH_URL` to the public HTTPS origin, and `PORT=3000`. No browser endpoint variables are needed. Deploy verified `main` only. Legacy Pages publishing is retired.
 
