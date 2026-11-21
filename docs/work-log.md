@@ -2135,3 +2135,9 @@ Migration 014 adds a unique verified number without copying historical contact d
 The owner asked to drop the birthday question from teacher invitations. Teachers can complete setup and edit contact details without a date of birth. The invitation message points teachers to the password change. Student and Administrator setup requires a date of birth.
 
 Browser coverage exercises first sign-in, the English and Arabic teacher form, and later contact edits. Disposable PostgreSQL coverage checks that a teacher can finish setup without a birthday and that a student still needs one. The PR records release and Railway verification.
+
+## 2026-11-21 15:15 Asia/Damascus (UTC+03:00) - Simplify sign-in and retire the sample notebooks
+
+The owner requested a friendlier sign-in screen and removal of both public samples. Sign in sits to the right of Create account in one row. The sign-in background uses a decorative book, pencil and stars. The homepage and sign-in screen no longer offer the sample notebooks, and the app no longer loads their data or local editing flows.
+
+Browser coverage checks sign-in and account creation controls in English and Arabic, light and dark themes, and desktop and emulated phone widths. End-to-end tests now open signed-in notebooks with synthetic records for attendance, notes and corrections. The PR records the release gate and exact-main Railway verification.

@@ -1,3 +1,4 @@
+import { mockSyntheticNotebook, openNotebookHistory } from './syntheticNotebook'
 import { clickRecordAction } from './recordActions'
 import { clickAccountAction } from './profileActions'
 import { expect, test } from '@playwright/test'
@@ -25,22 +26,16 @@ test.afterEach(async ({ context }, testInfo) => {
   expect(unexpected).toEqual([])
 })
 
-test('sample notebook supports attendance, notes and corrections without network writes', async ({
+test('authenticated notebook supports attendance, notes and corrections', async ({
   hasTouch,
   page,
 }, testInfo) => {
-  await page.route('**/api/auth/**', (route) => route.fulfill({ json: null }))
   const external: string[] = []
   page.on('request', (request) => {
     if (new URL(request.url()).hostname !== '127.0.0.1') external.push(request.url())
   })
-  await page.goto('/')
-  await expect(page.locator('.wartaq-home h1')).toBeVisible()
-  await page.getByRole('button', { name: 'Explore with sample students' }).click()
-  await page.getByRole('button', { name: 'Students', exact: true }).click()
-  await page.getByLabel('Student name').fill('ليلى')
-  await page.getByRole('button', { name: 'Add student' }).click()
-  await expect(page.getByRole('status')).toContainText('saved in this demo')
+  await mockSyntheticNotebook(page, { names: ['أحمد', 'Omar', 'ليلى'] })
+  await page.goto('/?page=app')
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Notes', exact: true })).toHaveCount(0)
   const sessionDate = await page.getByLabel('Session date').inputValue()
@@ -105,7 +100,7 @@ test('sample notebook supports attendance, notes and corrections without network
   }
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Save attendance (1)' }).click()
-  await expect(page.getByRole('status')).toContainText('saved in this demo')
+  await expect(page.getByRole('status')).toContainText('1 record saved.')
   await page.getByRole('button', { name: 'Summary', exact: true }).click()
   const summaryRow = page.getByRole('row', { name: /ليلى/ })
   await expect(summaryRow.locator('td[data-label="absent"]')).toHaveText('1')
@@ -119,7 +114,7 @@ test('sample notebook supports attendance, notes and corrections without network
   await addNote.click()
   await expect(dialog.getByText('Earlier session note')).toBeVisible()
   await page.keyboard.press('Escape')
-  await clickAccountAction(page, 'History & corrections')
+  await openNotebookHistory(page)
   const note = page.locator('li').filter({ hasText: 'راجعت السورة اليوم' })
   await clickRecordAction(note, 'Undo')
   await page.getByLabel('Reason').fill('تصحيح')
@@ -131,22 +126,20 @@ test('sample notebook supports attendance, notes and corrections without network
   await addNote.click()
   await expect(dialog.getByText('راجعت السورة اليوم')).toHaveCount(0)
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Explore with sample students' })).toBeVisible()
-  await page.getByRole('button', { name: 'Explore with sample students' }).click()
-  await page.getByRole('button', { name: 'Students', exact: true }).click()
-  await expect(page.locator('input[value="ليلى"]')).toHaveCount(0)
+  await addNote.click()
+  await expect(dialog.getByText('راجعت السورة اليوم')).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await expect(
+    page.getByLabel('Attendance for ليلى').getByRole('button', { pressed: true }),
+  ).toHaveAccessibleName('absent')
   expect(external).toEqual([])
 })
 
-test('a teacher can finish a partial session without overwriting exceptions or losing their place', async ({
+test('an administrator can finish a partial session without overwriting exceptions or losing their place', async ({
   page,
 }, testInfo) => {
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Explore with sample students' }).click()
-  await page.getByRole('button', { name: 'Students', exact: true }).click()
-  await page.getByLabel('Student name').fill('Lina')
-  await page.getByRole('button', { name: 'Add student', exact: true }).click()
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
+  await mockSyntheticNotebook(page, { names: ['أحمد', 'Omar', 'Lina'] })
+  await page.goto('/?page=app')
   await page.getByRole('button', { name: /Continue attendance.*2/i }).click()
   const roster = page.getByRole('region', { name: 'Attendance list' })
   const unmarked = page.getByRole('button', { name: /Show unmarked/i })
@@ -194,26 +187,24 @@ test('a teacher can finish a partial session without overwriting exceptions or l
 })
 
 test('student search finds a normalized Arabic family name', async ({ page }) => {
-  await page.route('**/api/auth/**', (route) => route.fulfill({ json: null }))
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Explore with sample students' }).click()
+  await mockSyntheticNotebook(page, { names: ['أحمد', 'Omar', 'سلمى إبراهيم'] })
+  await page.goto('/?page=app')
   await page.getByRole('button', { name: 'Students', exact: true }).click()
-  await page.getByLabel('Student name').fill('سلمى إبراهيم')
-  await page.getByRole('button', { name: 'Add student', exact: true }).click()
   await clickAccountAction(page, 'العربية')
   const search = page.getByRole('searchbox', { name: 'ابحث عن طالب' })
-  const names = page.getByRole('textbox', { name: 'الاسم', exact: true })
+  const rows = page.locator('.roster-students-table tbody tr')
+  const matchingStudent = rows.filter({ hasText: 'سلمى إبراهيم' })
   const group = page.getByRole('combobox', { name: 'المجموعة', exact: true })
   for (const term of ['ابرا', 'ابراهم']) {
     await search.fill(term)
-    await expect(names).toHaveValue('سلمى إبراهيم')
+    await expect(matchingStudent).toBeVisible()
   }
   await group.selectOption('الحلقة الأولى')
-  await expect(names).toHaveCount(0)
+  await expect(rows).toHaveCount(0)
   await group.selectOption('')
-  await expect(names).toHaveValue('سلمى إبراهيم')
+  await expect(matchingStudent).toBeVisible()
   await search.fill('unrelated')
-  await expect(names).toHaveCount(0)
+  await expect(rows).toHaveCount(0)
   await search.clear()
-  await expect(names).toHaveCount(3)
+  await expect(rows).toHaveCount(3)
 })

@@ -147,7 +147,7 @@ export function AdminConsole({
   }
   return (
     <div className="workspace">
-      <WorkspaceNavigation administrator assigned profile={profile} leave={signOut} />
+      <WorkspaceNavigation administrator profile={profile} leave={signOut} />
       <main id="main-content" className="workspace-main role-page" tabIndex={-1}>
         <div className="role-heading">
           <div>

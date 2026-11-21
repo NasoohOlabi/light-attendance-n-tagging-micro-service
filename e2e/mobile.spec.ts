@@ -1,3 +1,4 @@
+import { mockSyntheticNotebook, openNotebookHistory } from './syntheticNotebook'
 import { clickAccountAction } from './profileActions'
 import { clickRecordAction } from './recordActions'
 import { expect, test, type Page } from '@playwright/test'
@@ -54,18 +55,16 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.setViewportSize({ width: 320, height: 568 })
   await page.goto('/')
   await usableLayout(page)
-  await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
+  const longName = 'طالب'.repeat(45)
+  await mockSyntheticNotebook(page, { names: ['أحمد', 'Omar', longName] })
+  await page.goto('/?page=app')
   for (const name of ['Students', 'Attendance', 'Summary']) {
     await page.getByRole('button', { name, exact: true }).click()
     await usableLayout(page)
   }
-  await clickAccountAction(page, 'History & corrections')
+  await openNotebookHistory(page)
   await usableLayout(page)
   await page.getByRole('button', { name: 'Students', exact: true }).click()
-  const longName = 'طالب'.repeat(45)
-  await page.getByLabel('Student name').fill(longName)
-  await page.getByRole('button', { name: 'Add student', exact: true }).click()
-  await expect(page.getByRole('status')).toContainText('saved in this demo')
   await usableLayout(page)
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page.getByRole('button', { name: `Add note for ${longName}`, exact: true }).click()
@@ -112,7 +111,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
     await page.getByRole('button', { name, exact: true }).click()
     await usableLayout(page)
   }
-  await clickAccountAction(page, 'السجل والتصحيحات')
+  await openNotebookHistory(page, 'ar')
   await usableLayout(page)
   await page.getByRole('button', { name: 'الحضور', exact: true }).click()
   await page
@@ -134,7 +133,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
     await usableLayout(page)
   }
   await page.keyboard.press('Escape')
-  await clickAccountAction(page, 'السجل والتصحيحات')
+  await openNotebookHistory(page, 'ar')
   const savedNote = page.locator('li').filter({ hasText: 'مسودة مشتركة English draft' })
   await clickRecordAction(savedNote, 'تراجع')
   await page.getByLabel('السبب', { exact: true }).fill('تصحيح تجريبي')
@@ -168,6 +167,7 @@ test('phone layouts keep every notebook view usable in English and Arabic', asyn
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+  await expect(page.getByRole('button', { name: 'الملف الشخصي' })).toBeVisible()
   await clickAccountAction(page, 'English')
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
   expect(errors).toEqual([])

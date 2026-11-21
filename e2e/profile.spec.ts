@@ -1,10 +1,11 @@
+import { mockSyntheticNotebook } from './syntheticNotebook'
 import { clickAccountAction } from './profileActions'
 import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 
 test('profile menu preserves attendance draft and dismisses', async ({ page }) => {
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Explore with sample students' }).click()
+  await mockSyntheticNotebook(page)
+  await page.goto('/?page=app')
   await page.getByRole('button', { name: /Continue attendance/i }).click()
   const attendance = page.getByRole('group', { name: / Omar$/ })
   await attendance.getByRole('button', { name: 'absent', exact: true }).click()
@@ -27,8 +28,8 @@ test('profile menu preserves attendance draft and dismisses', async ({ page }) =
   await expect(page.locator('.profile-panel')).toHaveCount(0)
   await trigger.click()
   await clickAccountAction(page, 'English')
-  await clickAccountAction(page, 'Close session')
-  await expect(page.getByRole('button', { name: 'Explore with sample students' })).toBeVisible()
+  await clickAccountAction(page, 'Sign out')
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
 })
 
 for (const role of ['administrator', 'teacher', 'student']) {

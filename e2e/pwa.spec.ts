@@ -1,3 +1,4 @@
+import { mockSyntheticNotebook } from './syntheticNotebook'
 import { expect, test } from '@playwright/test'
 import { createServer, type Server } from 'node:http'
 import { readFile, readdir, mkdir } from 'node:fs/promises'
@@ -185,8 +186,9 @@ test('repository-scoped PWA installs its real manifest and opens the public shel
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#181a1b')
   await expect(page.getByRole('combobox', { name: 'Color theme' })).toHaveValue('dark')
-  await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
-  await expect(page.locator('.workspace')).toBeVisible()
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.locator('.workspace-loading, .workspace-auth')).toBeVisible()
+  await expect(page.locator('.workspace')).toHaveCount(0)
   await page.goto(origin + prefix + '?page=app&tab=attendance&date=2026-11-18')
   await expect(page.locator('.workspace-loading, .workspace-auth, .workspace')).toBeVisible()
   await page.goto(origin + prefix + '?page=app&view=settings&settingsSection=students')
@@ -236,10 +238,8 @@ test('normal refresh upgrades a legacy worker without disturbing another tab', a
     await page.reload()
     await expect(page.locator('meta[name=test-version]')).toHaveAttribute('content', 'one')
     const secondPage = await context.newPage()
-    await secondPage.goto(origin + prefix)
-    await secondPage
-      .getByRole('button', { name: 'Explore with sample students', exact: true })
-      .click()
+    await mockSyntheticNotebook(secondPage, { role: 'teacher' })
+    await secondPage.goto(origin + prefix + '?page=app')
     await secondPage.getByRole('button', { name: 'Attendance', exact: true }).click()
     await secondPage.getByRole('button', { name: 'Add note for Omar', exact: true }).click()
     await secondPage.getByLabel('Note', { exact: true }).fill('Unsaved synthetic note')
