@@ -1,30 +1,98 @@
 ﻿import { useState } from 'react'
-import type { NeonAccount } from '../shared/neon'
 import { useLanguage } from './useLanguage'
 import type { Profile } from './ProfileMenu'
 import { NeonRequestError, type InvitationProfile } from './neon'
 import { phoneNumber } from './phoneFormat'
 
-export function InvitationProfileForm({
+export function InvitationSetupForm({
   invitation,
-  role,
-  update,
-  setup = false,
+  complete,
   signOut,
 }: {
   invitation: InvitationProfile
-  role: NeonAccount['role']
-  update: NonNullable<Profile['updateInvitation']>
-  setup?: boolean
-  signOut?: () => void
+  complete: (newPassword: string) => Promise<void>
+  signOut: () => void
 }) {
   const { language } = useLanguage()
   const ar = language === 'ar'
-  const needsBirthDate = role !== 'teacher'
+  const [newPassword, setNewPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const identifier = invitation.verifiedPhone ?? invitation.username
+  return (
+    <form
+      className="panel space-y-3"
+      onSubmit={async (event) => {
+        event.preventDefault()
+        if (busy) return
+        setBusy(true)
+        setFailed(false)
+        try {
+          await complete(newPassword)
+          setNewPassword('')
+        } catch {
+          setFailed(true)
+        } finally {
+          setBusy(false)
+        }
+      }}
+    >
+      <h2>{ar ? 'اختر كلمة مرور جديدة' : 'Choose a new password'}</h2>
+      {identifier && (
+        <label>
+          {invitation.verifiedPhone
+            ? ar
+              ? 'رقم الهاتف'
+              : 'Phone'
+            : ar
+              ? 'اسم المستخدم'
+              : 'Username'}
+          <input readOnly dir="ltr" autoComplete="username" value={identifier} />
+        </label>
+      )}
+      <label>
+        {ar ? 'كلمة المرور الجديدة' : 'New password'}
+        <input
+          required
+          minLength={8}
+          maxLength={128}
+          type="password"
+          autoComplete="new-password"
+          dir="ltr"
+          value={newPassword}
+          onChange={(event) => setNewPassword(event.target.value)}
+        />
+      </label>
+      {failed && (
+        <p role="alert">
+          {ar
+            ? 'تعذر حفظ كلمة المرور. اختر كلمة مرور مختلفة عن كلمة المرور المؤقتة وحاول مجدداً.'
+            : 'Could not save your password. Choose a password different from your temporary password and try again.'}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-3">
+        <button className="primary" disabled={busy}>
+          {busy ? (ar ? 'يرجى الانتظار…' : 'Please wait…') : ar ? 'حفظ البيانات' : 'Save details'}
+        </button>
+        <button type="button" className="secondary" disabled={busy} onClick={signOut}>
+          {ar ? 'تسجيل الخروج' : 'Sign out'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+export function InvitationProfileForm({
+  invitation,
+  update,
+}: {
+  invitation: InvitationProfile
+  update: NonNullable<Profile['updateInvitation']>
+}) {
+  const { language } = useLanguage()
+  const ar = language === 'ar'
   const [username, setUsername] = useState(invitation.username)
   const [phone, setPhone] = useState(invitation.phone ?? invitation.verifiedPhone ?? '')
-  const [latestBirthDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const [birthDate, setBirthDate] = useState(invitation.birthDate ?? '')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [error, setError] = useState('')
@@ -32,7 +100,7 @@ export function InvitationProfileForm({
   const [busy, setBusy] = useState(false)
   return (
     <form
-      className={setup ? 'panel space-y-3' : 'space-y-3'}
+      className="space-y-3"
       onSubmit={async (event) => {
         event.preventDefault()
         if (busy) return
@@ -48,7 +116,6 @@ export function InvitationProfileForm({
           await update({
             username,
             phone,
-            ...(needsBirthDate ? { birthDate } : {}),
             currentPassword,
             ...(newPassword ? { newPassword } : {}),
           })
@@ -69,22 +136,7 @@ export function InvitationProfileForm({
         }
       }}
     >
-      <h2>
-        {setup
-          ? ar
-            ? 'أكمل بياناتك'
-            : 'Complete your details'
-          : ar
-            ? 'البيانات الشخصية'
-            : 'Personal details'}
-      </h2>
-      {setup && (
-        <p>
-          {ar
-            ? 'أدخل كلمة المرور المؤقتة واختر كلمة مرورك الشخصية لاستخدامها في مرات الدخول القادمة.'
-            : 'Enter your temporary password and choose a personal password for future sign-ins.'}
-        </p>
-      )}
+      <h2>{ar ? 'البيانات الشخصية' : 'Personal details'}</h2>
       {username !== null && !invitation.verifiedPhone && (
         <label>
           {ar ? 'اسم المستخدم' : 'Username'}
@@ -113,27 +165,8 @@ export function InvitationProfileForm({
           onChange={(event) => setPhone(event.target.value)}
         />
       </label>
-      {needsBirthDate && (
-        <label>
-          {ar ? 'تاريخ الميلاد' : 'Date of birth'}
-          <input
-            required
-            type="date"
-            max={latestBirthDate}
-            autoComplete="bday"
-            value={birthDate}
-            onChange={(event) => setBirthDate(event.target.value)}
-          />
-        </label>
-      )}
       <label>
-        {setup
-          ? ar
-            ? 'كلمة المرور المؤقتة'
-            : 'Temporary password'
-          : ar
-            ? 'كلمة المرور الحالية'
-            : 'Current password'}
+        {ar ? 'كلمة المرور الحالية' : 'Current password'}
         <input
           required
           type="password"
@@ -146,7 +179,6 @@ export function InvitationProfileForm({
       <label>
         {ar ? 'كلمة المرور الجديدة' : 'New password'}
         <input
-          required={setup}
           minLength={8}
           maxLength={128}
           type="password"
@@ -156,23 +188,16 @@ export function InvitationProfileForm({
           onChange={(event) => setNewPassword(event.target.value)}
         />
       </label>
-      {!setup && (
-        <p>
-          {ar
-            ? 'اترك كلمة المرور الجديدة فارغة للاحتفاظ بكلمة المرور الحالية. تغييرها يتطلب تسجيل الدخول مجدداً.'
-            : 'Leave the new password blank to keep your current password. Changing it requires signing in again.'}
-        </p>
-      )}
+      <p>
+        {ar
+          ? 'اترك كلمة المرور الجديدة فارغة للاحتفاظ بكلمة المرور الحالية.'
+          : 'Leave the new password blank to keep your current password.'}
+      </p>
       {error && <p role="alert">{error}</p>}
       {saved && <p role="status">{ar ? 'تم حفظ البيانات.' : 'Details saved.'}</p>}
       <button className="primary" disabled={busy}>
         {busy ? (ar ? 'يرجى الانتظار…' : 'Please wait…') : ar ? 'حفظ البيانات' : 'Save details'}
       </button>
-      {signOut && (
-        <button type="button" className="secondary" onClick={signOut}>
-          {ar ? 'تسجيل الخروج' : 'Sign out'}
-        </button>
-      )}
     </form>
   )
 }

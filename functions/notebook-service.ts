@@ -5,6 +5,7 @@ import {
   invitationRequestSchema,
   invitationProfileInputSchema,
   invitationProfileSchema,
+  invitationSetupInputSchema,
 } from '../shared/invitations'
 import type { Pool, PoolClient } from 'pg'
 import {
@@ -706,7 +707,7 @@ export function createHandler(
   pool: Pool,
   verify: (token: string) => Promise<string>,
   origins: string[],
-  verifyRequest?: (request: Request) => Promise<string>,
+  verifyRequest?: (request: Request) => Promise<{ subject: string; sessionId?: string }>,
   invitationReceipt?:
     | {
         kind: 'save'
@@ -831,8 +832,9 @@ export function createHandler(
     const bearer = request.headers.get('authorization')?.match(/^Bearer (\S+)$/i)
     if (!bearer && !verifyRequest) return reply({ error: 'Unauthorized' }, 401)
     let subject: string
+    let sessionId: string | undefined
     try {
-      if (verifyRequest) subject = await verifyRequest(request)
+      if (verifyRequest) ({ subject, sessionId } = await verifyRequest(request))
       else if (bearer) subject = await verify(bearer[1])
       else return reply({ error: 'Unauthorized' }, 401)
     } catch {
@@ -855,7 +857,7 @@ export function createHandler(
         const result = await db.query(
           `SELECT role, teacher_id, student_id, active, expires_at,
             invitation_request_id, invitation_username AS username, verified_phone AS "verifiedPhone", invitation_phone AS phone,
-            invitation_birth_date::text AS "birthDate", invitation_requires_setup AS "requiresSetup"
+            invitation_requires_setup AS "requiresSetup"
            FROM app_accounts WHERE auth_user_id = $1 FOR UPDATE`,
           [subject],
         )
@@ -878,8 +880,22 @@ export function createHandler(
                 )
           if (!eligible.rowCount) throw new HttpError(403)
           if (!invitationProfile) throw new HttpError(403)
-          const input = invitationProfileInputSchema.parse(await readBody(request))
-          if (account.role !== 'teacher' && !input.birthDate) throw new HttpError(400)
+          if (invitationProfile.requiresSetup && !sessionId) throw new HttpError(403)
+          if (sessionId) {
+            // A reset or sign-out may revoke this session while the request waits for the lock.
+            const session = await db.query(
+              'SELECT 1 FROM neon_auth.session WHERE id = $1 AND "userId" = $2 AND "expiresAt" > statement_timestamp()',
+              [sessionId, subject],
+            )
+            if (!session.rowCount) throw new HttpError(401)
+          }
+          const body = await readBody(request)
+          const edit = invitationProfile.requiresSetup
+            ? null
+            : invitationProfileInputSchema.parse(body)
+          const newPassword = edit
+            ? edit.newPassword
+            : invitationSetupInputSchema.parse(body).newPassword
           const credential = await db.query(
             `SELECT password FROM neon_auth.account WHERE "userId"::text = $1 AND "providerId" = 'credential' FOR UPDATE`,
             [subject],
@@ -887,31 +903,31 @@ export function createHandler(
           const password = z.string().nullable().parse(credential.rows[0]?.password)
           if (
             !password ||
-            !(await verifyPassword({ hash: password, password: input.currentPassword }))
+            (edit && !(await verifyPassword({ hash: password, password: edit.currentPassword }))) ||
+            (newPassword && (await verifyPassword({ hash: password, password: newPassword })))
           )
-            throw new HttpError(400)
-          if (invitationProfile.requiresSetup && !input.newPassword) throw new HttpError(400)
-          if (input.newPassword && input.newPassword === input.currentPassword)
             throw new HttpError(400)
           await db.query(
-            'UPDATE app_accounts SET invitation_username = $2, invitation_phone = $3, invitation_birth_date = $4, invitation_requires_setup = false WHERE auth_user_id = $1',
+            'UPDATE app_accounts SET invitation_username = $2, invitation_phone = $3, invitation_requires_setup = false WHERE auth_user_id = $1',
             [
               subject,
-              invitationProfile.verifiedPhone ? invitationProfile.username : input.username,
-              input.phone,
-              account.role === 'teacher' ? invitationProfile.birthDate : input.birthDate,
+              edit && !invitationProfile.verifiedPhone ? edit.username : invitationProfile.username,
+              edit?.phone ?? invitationProfile.phone,
             ],
           )
-          if (input.newPassword) {
-            const hash = await hashPassword(input.newPassword)
+          if (newPassword) {
+            const hash = await hashPassword(newPassword)
             await db.query(
               `UPDATE neon_auth.account SET password = $2, "updatedAt" = now() WHERE "userId"::text = $1 AND "providerId" = 'credential'`,
               [subject, hash],
             )
-            await db.query('DELETE FROM neon_auth.session WHERE "userId"::text = $1', [subject])
+            await db.query(
+              'DELETE FROM neon_auth.session WHERE "userId"::text = $1 AND id IS DISTINCT FROM $2::uuid',
+              [subject, sessionId ?? null],
+            )
           }
           await db.query('COMMIT')
-          return reply({ saved: true, sessionRevoked: !!input.newPassword })
+          return reply({ saved: true, sessionRevoked: !!newPassword && !sessionId })
         }
         if (invitationProfile?.requiresSetup && path !== '/api/me') throw new HttpError(403)
         if (account.role === 'student') {
