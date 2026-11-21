@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Globe, History, ListChecks, LogOut, Settings, UserRound } from 'lucide-react'
+import { Globe, ListChecks, LogOut, Settings, UserRound } from 'lucide-react'
 import type { z } from 'zod'
 import type { invitationProfileInputSchema } from '../shared/invitations'
 import { ThemeChoices } from './i18n'
@@ -22,15 +22,11 @@ export function ProfileMenu({
   profile,
   administrator = false,
   leave,
-  sample = false,
-  sampleHistory = false,
   disabled = false,
 }: {
   profile?: Profile
   administrator?: boolean
   leave: () => void
-  sample?: boolean
-  sampleHistory?: boolean
   disabled?: boolean
 }) {
   const { language, setLanguage, t } = useLanguage()
@@ -152,19 +148,8 @@ export function ProfileMenu({
               {language === 'ar' ? 'الإعدادات' : 'Settings'}
             </button>
           )}
-          {sampleHistory && (
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false)
-                setQuery({ view: 'history', tab: '' }, true)
-              }}
-            >
-              <History size={18} aria-hidden="true" /> {t('History & corrections')}
-            </button>
-          )}
           <button type="button" disabled={disabled} onClick={leave}>
-            <LogOut size={18} aria-hidden="true" /> {sample ? t('Close session') : t('Sign out')}
+            <LogOut size={18} aria-hidden="true" /> {t('Sign out')}
           </button>
         </div>
       )}

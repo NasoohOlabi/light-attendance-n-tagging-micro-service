@@ -179,7 +179,6 @@ export function ProfileSettings({
     <div className="workspace">
       <WorkspaceNavigation
         administrator={role === 'administrator'}
-        assigned
         profile={profile}
         leave={signOut}
       />

@@ -2142,6 +2142,12 @@ The owner asked recipients to set a new password after their first sign-in. The 
 
 Disposable PostgreSQL tests exercised password-only setup, concurrent requests, verification of the current password for later edits, revocation of the old password and session, and MCP access. Invitation browser tests exercised reload, automatic sign-in, and English and Arabic forms on desktop and emulated phones. A 320px Chromium session on the running Bun app completed a synthetic student invitation against disposable PostgreSQL. The PR records the full release gate and Railway deployment verification.
 
+## 2026-11-21 15:15 Asia/Damascus (UTC+03:00) - Simplify sign-in and retire the sample notebooks
+
+The owner requested a friendlier sign-in screen and removal of both public samples. Sign in sits to the right of Create account in one row. The sign-in background uses a decorative book, pencil and stars. The homepage and sign-in screen no longer offer the sample notebooks, and the app no longer loads their data or local editing flows.
+
+Browser coverage checks sign-in and account creation controls in English and Arabic, light and dark themes, and desktop and emulated phone widths. End-to-end tests now open signed-in notebooks with synthetic records for attendance, notes and corrections. The PR records the release gate and exact-main Railway verification.
+
 ## 2026-11-21 15:18 Asia/Damascus (UTC+03:00) - Stay signed in after setting a password
 
 The owner asked to open the site immediately after setup and to keep people signed in after changing their own password. The verified browser session now survives either operation. The password change and revocation of other sessions remain transactional. The client refreshes workspace access using the existing session. An administrator reset of another account still revokes the recipient's sessions.

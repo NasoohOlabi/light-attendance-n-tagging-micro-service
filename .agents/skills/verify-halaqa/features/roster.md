@@ -2,7 +2,7 @@
 
 ## Sub-features
 
-Administrators manage assignments in Settings. The sample supports local roster edits; authenticated Teachers see their assigned roster.
+Administrators manage assignments in Settings. Teachers see their assigned roster.
 
 In the notebook **Students** list, verify distinct Student, Level, Active and Actions columns rather than concatenated name/level text. With no course selected, Level shows the roster group value. With a course selected, it shows only the matching enrollment level; a blank enrollment shows an em dash. Use one synthetic student with different roster, Course A and Course B levels, switch courses and reload, and verify the exact Level cell and Open student action. Preserve distinctly labelled fields with no horizontal scrolling at 320/390/430px in English and Arabic.
 
@@ -20,17 +20,15 @@ Verify the primary Students columns **First name**, **Last name**, **Phone**, **
 
 The Student portal also keeps Student and Roster level in separate labelled fields; it must not imply that the roster level is every course's level. Account-to-student selectors show only the student's name. Student snapshot history exposes Level and Active as distinct fields, retaining the raw record under Record details. Check these in `e2e/roles.spec.ts` and `e2e/dashboard.spec.ts` alongside attendance so a fix cannot leave another rendering path unchanged.
 
-In the sample, open **Students**. Use **Student name**, optional **Group**, and **Add student**. Each row has Name/Group edits, **Save changes**, **Make inactive** or **Activate**.
-
 ## Driving it with Playwright
 
 On desktop and an emulated Arabic phone, search `ابرا` for a synthetic student with the family name `إبراهيم`. Verify the partial name and a typo both find the student, an unrelated query shows the empty state, and clearing restores the list. Check the search combines with group and course scope, and that free-text column filters handle typos while phone lookups stay literal.
 
-The `sample notebook` test fills **Student name** with ليلى and clicks **Add student**, observes saved feedback, then proves the same name is selectable in Attendance and Notes. Reload proves demo changes disappear. For sample roster edits, scope `getByRole('textbox', { name: 'Name', exact: true })` and **Save changes** to the chosen row form; verify changed group in Group filtering, inactive exclusion, **Include inactive** and Activate. History must retain every snapshot with a stable student ID.
+Run `e2e/roles.spec.ts` for Administrator student creation and editing. Run `e2e/notebook.spec.ts` to verify Arabic roster search and attendance and notes for enrolled students.
 
 ## Gotchas
 
-Use a row-scoped locator because editable names/groups repeat. Renaming must preserve attendance/note references. Deactivation does not delete history. Demo and live notebooks never merge.
+Use a row-scoped locator because editable names/groups repeat. Renaming must preserve attendance/note references. Deactivation does not delete history.
 
 The Administrator register stacks distinctly labelled fields at phone widths. Verify English and Arabic labels, row-scoped Edit, and no horizontal table or page overflow at 320/390/430px. Keep synthetic table screenshots under ignored `.artifacts/verification/`. Apply ordered migrations through `neon/007-student-profiles-handbooks.sql` before testing the updated administrator API against a disposable database; local/synthetic proof does not establish deployed migration status.
 

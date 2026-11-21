@@ -126,5 +126,5 @@ test('Wartaq review switch keeps language and isolates the real notebook', async
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await page.getByRole('link', { name: 'Return to Wartaq' }).click()
   await expect(page.locator('.wartaq-drafts')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Explore with sample students' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
 })
