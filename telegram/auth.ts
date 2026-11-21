@@ -90,13 +90,23 @@ export class Auth {
     return this.registration
   }
   async begin(chat: string) {
-    this.cancel(chat)
     const provider = await this.provider()
-    const client = await this.client(provider)
-    const verifier = nonce()
-    const state = nonce()
-    this.store.set(`oauth-active:${chat}`, state, Date.now() + 10 * 60_000)
-    this.store.set(`oauth:${state}`, { chat, verifier, client }, Date.now() + 10 * 60_000)
+    if (this.hasPendingCode(chat)) throw new Error('OAuth code ready')
+    const active = z
+      .string()
+      .nullable()
+      .parse(this.store.get(`oauth-active:${chat}`))
+    const existing = active ? pendingSchema.safeParse(this.store.get(`oauth:${active}`)) : null
+    // A consumed state may still be exchanging its code. Do not invalidate that exchange.
+    if (active && !existing?.success) throw new Error('OAuth exchange in progress')
+    const state = active ?? nonce()
+    const verifier = existing?.success ? existing.data.verifier : nonce()
+    const client = existing?.success ? existing.data.client : await this.client(provider)
+    if (this.hasPendingCode(chat)) throw new Error('OAuth code ready')
+    if (!active) {
+      this.store.set(`oauth-active:${chat}`, state, Date.now() + 10 * 60_000)
+      this.store.set(`oauth:${state}`, { chat, verifier, client }, Date.now() + 10 * 60_000)
+    }
     const url = new URL(provider.authorization_endpoint)
     url.search = new URLSearchParams({
       response_type: 'code',
@@ -110,6 +120,16 @@ export class Auth {
     }).toString()
     return url.toString()
   }
+  hasPendingCode(chat: string) {
+    return this.store.get(`link:${chat}`) !== null
+  }
+  isExchanging(chat: string) {
+    const active = z
+      .string()
+      .nullable()
+      .parse(this.store.get(`oauth-active:${chat}`))
+    return !!active && this.store.get(`oauth:${active}`) === null
+  }
   async callback(url: URL) {
     const state = url.searchParams.get('state') ?? ''
     const code = url.searchParams.get('code') ?? ''
@@ -117,39 +137,46 @@ export class Auth {
     const pending = pendingSchema.parse(this.store.get(`oauth:${state}`))
     this.store.delete(`oauth:${state}`)
     if (this.store.get(`oauth-active:${pending.chat}`) !== state) throw new Error('Link cancelled')
-    const provider = await this.provider()
-    const response = await fetch(provider.token_endpoint, {
-      method: 'POST',
-      redirect: 'error',
-      signal: AbortSignal.timeout(15_000),
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        client_id: pending.client,
-        code_verifier: pending.verifier,
-        redirect_uri: this.redirect,
-        resource: this.resource,
-      }),
-    })
-    if (!response.ok) throw new Error('OAuth exchange failed')
-    const grant = grantSchema.parse(await response.json())
-    if (this.store.get(`oauth-active:${pending.chat}`) !== state) throw new Error('Link cancelled')
-    this.store.delete(`oauth-active:${pending.chat}`)
-    const challenge = String(randomInt(10000000, 100000000))
-    this.store.set(
-      `link:${pending.chat}`,
-      {
-        challenge,
-        credentials: {
-          ...grant,
-          client: pending.client,
-          expires: Date.now() + (grant.expires_in ?? 3600) * 1000,
+    try {
+      const provider = await this.provider()
+      const response = await fetch(provider.token_endpoint, {
+        method: 'POST',
+        redirect: 'error',
+        signal: AbortSignal.timeout(15_000),
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          client_id: pending.client,
+          code_verifier: pending.verifier,
+          redirect_uri: this.redirect,
+          resource: this.resource,
+        }),
+      })
+      if (!response.ok) throw new Error('OAuth exchange failed')
+      const grant = grantSchema.parse(await response.json())
+      if (this.store.get(`oauth-active:${pending.chat}`) !== state)
+        throw new Error('Link cancelled')
+      this.store.delete(`oauth-active:${pending.chat}`)
+      const challenge = String(randomInt(10000000, 100000000))
+      this.store.set(
+        `link:${pending.chat}`,
+        {
+          challenge,
+          credentials: {
+            ...grant,
+            client: pending.client,
+            expires: Date.now() + (grant.expires_in ?? 3600) * 1000,
+          },
         },
-      },
-      Date.now() + 5 * 60_000,
-    )
-    return challenge
+        Date.now() + 5 * 60_000,
+      )
+      return challenge
+    } catch (error) {
+      if (this.store.get(`oauth-active:${pending.chat}`) === state)
+        this.store.delete(`oauth-active:${pending.chat}`)
+      throw error
+    }
   }
   redeem(chat: string, challenge: string) {
     const pending = z
@@ -173,6 +200,11 @@ export class Auth {
     return true
   }
   cancel(chat: string) {
+    const active = z
+      .string()
+      .nullable()
+      .parse(this.store.get(`oauth-active:${chat}`))
+    if (active) this.store.delete(`oauth:${active}`)
     this.store.delete(`attempts:${chat}`)
     this.store.delete(`oauth-active:${chat}`)
     this.store.delete(`link:${chat}`)

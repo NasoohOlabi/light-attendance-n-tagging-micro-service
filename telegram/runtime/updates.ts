@@ -99,16 +99,17 @@ export function createUpdates(
     const text = message.text.trim()
     if (store.get(`lang:${chat}`) === null && message.from.language_code?.startsWith('ar'))
       store.set(`lang:${chat}`, 'ar')
-    if (/^\d{8}$/.test(text) && auth.redeem(chat, text)) {
+    const hadPendingCode = auth.hasPendingCode(chat)
+    if (/^\d{8}$/.test(text) && hadPendingCode && auth.redeem(chat, text)) {
       await show(chat, message.from.id, { route: 'home' })
       return
     }
-    if (/^\d{8}$/.test(text) && store.get(`link:${chat}`)) {
+    if (/^\d{8}$/.test(text) && (hadPendingCode || !store.get(`credentials:${chat}`))) {
       await say(
         chat,
         language(chat) === 'ar'
-          ? 'الرمز غير صحيح أو انتهت صلاحيته.'
-          : 'That code is incorrect or expired.',
+          ? 'الرمز غير صحيح أو انتهت صلاحيته. حاول مجدداً، أو استخدم /cancel ثم /start لبدء الربط من جديد.'
+          : 'That code is incorrect or expired. Try again, or use /cancel then /start to link again.',
       )
       return
     }
