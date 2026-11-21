@@ -1,4 +1,3 @@
-import { phoneSchema } from '../shared/invitations'
 import { z } from 'zod'
 import { hashPassword, verifyPassword } from 'better-auth/crypto'
 import {
@@ -6,6 +5,7 @@ import {
   invitationProfileInputSchema,
   invitationProfileSchema,
   invitationSetupInputSchema,
+  verifiedPhoneInputSchema,
 } from '../shared/invitations'
 import type { Pool, PoolClient } from 'pg'
 import {
@@ -319,13 +319,7 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
     }
     return { invitations }
   } else if (path === '/api/admin/accounts/verify-phone') {
-    const input = z
-      .strictObject({
-        authUserId: z.string().min(1),
-        phone: phoneSchema,
-        phoneConfirmed: z.literal(true),
-      })
-      .parse(body)
+    const input = verifiedPhoneInputSchema.parse(body)
     if (input.authUserId === subject) throw new HttpError(403)
     const previous = await db.query(
       'SELECT verified_phone FROM app_accounts WHERE auth_user_id = $1',

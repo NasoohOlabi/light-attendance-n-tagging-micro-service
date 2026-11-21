@@ -32,3 +32,9 @@ export function effectiveGradeResult(course: Course, entry: Enrollment, ratio: n
     ? decision.result
     : savedGradeResult(course, entry, ratio)
 }
+
+export function missingCourseScores(entries: Enrollment[]) {
+  return entries.filter(
+    (entry) => entry.active && (entry.practical === null || entry.theory === null),
+  )
+}

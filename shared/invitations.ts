@@ -18,6 +18,12 @@ export const phoneSchema = z
   })
   .pipe(z.string().regex(/^\+[1-9][0-9]{6,14}$/))
 
+export const verifiedPhoneInputSchema = z.strictObject({
+  authUserId: z.string().min(1),
+  phone: phoneSchema,
+  phoneConfirmed: z.literal(true),
+})
+
 const name = z.string().trim().min(1).max(49)
 const role = z.enum(['administrator', 'teacher', 'student'])
 export const invitationRequestSchema = z.strictObject({

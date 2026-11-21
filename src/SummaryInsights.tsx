@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { rankAbsenceSessions } from '../shared/attendanceInsights'
 import { type Attendance, type Student } from '../shared/ledger'
 import { useLanguage } from './useLanguage'
 import './SummaryInsights.css'
@@ -23,9 +24,7 @@ export function SummaryInsights({ students, records }: { students: Student[]; re
     if (status === 'excused') day.excused += 1
     grouped.set(date, day)
   }
-  const dates = [...grouped.values()].sort(
-    (a, b) => b.absent - a.absent || b.date.localeCompare(a.date),
-  )
+  const dates = rankAbsenceSessions([...grouped.values()])
   const max = Math.max(1, ...dates.map((date) => date.absent))
 
   function dateRow(day: (typeof dates)[number]) {

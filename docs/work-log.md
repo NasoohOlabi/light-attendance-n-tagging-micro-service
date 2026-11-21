@@ -2165,3 +2165,9 @@ Disposable PostgreSQL verifies access with the original cookie and rejection of 
 At 15:26 Asia/Damascus, integrated this layout and the sample retirement with phone-only sign-in. The sign-in form retains the decorative background and uses one full-width action. Verification checks the two fields and phone format hint in both languages and themes at 320px and 1440px.
 
 Integrated the password-only invitation flow with phone sign-in on 2026-11-21 Asia/Damascus. The verified phone stays read-only during setup and the active browser session continues into the workspace. Tests cover teacher and student setup and replacement of the sign-in phone by an administrator.
+
+## 2026-11-21 17:51 Asia/Damascus (UTC+03:00) - Bring the MCP tools up to date with Wartaq
+
+The owner requested a website coverage review and a clearer MCP setup. Staff can now find students and courses by name, inspect a student, review a dated session, follow absences and read anonymous chart data. Administrators can page through course membership, grades, readiness and notebook history, confirm a sign-in phone and open a private password reset. Exported rows and Excel workbooks use the same default and explicitly selected columns. The setup guide maps website tasks to tools and explains which actions use the browser.
+
+An OAuth client against disposable PostgreSQL exercised role changes, completion of a pending invitation through the browser session, private invitation redemption, phone replacement and session revocation, scoped reads and report columns. Chromium exercised the setup link in both languages at 320px and 1440px. The PR records the release checks and Railway deployment. Interactive passwords, device preferences, offline drafts and native sharing remain browser operations.

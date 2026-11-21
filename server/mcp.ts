@@ -43,7 +43,13 @@ export function createMcpHandler(
     if (!access.ok)
       return error(access.status === 403 ? 'Forbidden' : 'Server error', access.status)
     const { account } = accountResponse.parse(await access.json())
-    const server = new McpServer({ name: 'Wartaq', version: '0.1.0' })
+    const server = new McpServer(
+      { name: 'Wartaq', title: 'Wartaq attendance notebook', version: '0.1.0', websiteUrl: origin },
+      {
+        instructions:
+          'Tools follow the signed-in Wartaq account and its granted scopes. Start with get_account when available. Staff can use list_courses and find_students to resolve names to IDs. Read the selected session before syncing attendance. Reuse the same IDs, times and payloads on retries. Open private Wartaq links in a browser for setup, passwords and invitation messages.',
+      },
+    )
     const transport = new WebStandardStreamableHTTPServerTransport({ enableJsonResponse: true })
     registerMcpTools(server, call, identity.scopes, account, identity, origin)
     try {
