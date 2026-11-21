@@ -1,13 +1,13 @@
-﻿import { clickAccountAction } from './profileActions'
+import { mockSyntheticNotebook } from './syntheticNotebook'
+import { clickAccountAction } from './profileActions'
 import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 
 test('table filtering limits bulk attendance and preserves hidden drafts', async ({
   page,
 }, testInfo) => {
-  await page.route('**/api/auth/**', (route) => route.fulfill({ json: null }))
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Explore with sample students' }).click()
+  await mockSyntheticNotebook(page, { role: 'teacher' })
+  await page.goto('/?page=app')
   await page.getByRole('button', { name: 'Attendance', exact: true }).click()
   await page.getByLabel('Session date').fill('2026-02-18')
   await page

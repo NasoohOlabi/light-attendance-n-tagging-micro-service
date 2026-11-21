@@ -9,7 +9,6 @@ import {
   type Payload,
 } from '../shared/ledger'
 import { assignedEvents, validateAssignedPayloads } from '../shared/roster'
-import { demoEvents } from './demo'
 import { apiUrl, getNotebook, postEvents } from './neon'
 import type {
   Course,
@@ -41,28 +40,22 @@ async function withPendingLocks<T>(key: string, run: () => Promise<T> | T): Prom
   })
 }
 
-export function useLedger(
-  demo: boolean,
-  assignedDemo = false,
-  neon?: { userId: string; teacher: NeonTeacher },
-) {
+export function useLedger(neon: { userId: string; teacher: NeonTeacher }) {
   const { t } = useLanguage()
-  const neonUserId = neon?.userId
-  const key = neon ? `halaqa-pending-neon:${apiUrl}:${neon.teacher.id}` : ''
-  const [events, setEvents] = useState<LedgerEvent[]>(() => (demo ? demoEvents() : []))
-  const [roster, setRoster] = useState<NeonRosterStudent[]>(() =>
-    assignedDemo ? projectEvents(events).students.slice(0, 1) : [],
-  )
+  const neonUserId = neon.userId
+  const key = `halaqa-pending-neon:${apiUrl}:${neon.teacher.id}`
+  const [events, setEvents] = useState<LedgerEvent[]>([])
+  const [roster, setRoster] = useState<NeonRosterStudent[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [snapshotTeacher, setSnapshotTeacher] = useState<NeonTeacher>()
   const [pending, setPending] = useState<LedgerEvent[]>([])
   const [storageBlocked, setStorageBlocked] = useState(() =>
-    neon && !navigator.locks
+    !navigator.locks
       ? 'This browser cannot safely coordinate saves between tabs. Use a current browser with Web Locks support.'
       : '',
   )
-  const [loaded, setLoaded] = useState(demo)
+  const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const locked = useRef(false)
   const [error, setError] = useState('')
@@ -77,7 +70,6 @@ export function useLedger(
     setLoaded(true)
   }, [])
   useEffect(() => {
-    if (!neonUserId) return
     try {
       const otherKey = hasForeignPending(key)
       const stored = localStorage.getItem(key)
@@ -106,7 +98,7 @@ export function useLedger(
   }, [key, neonUserId, applySnapshot])
 
   const refresh = useCallback(async () => {
-    if (!neonUserId || locked.current) return false
+    if (locked.current) return false
     locked.current = true
     setBusy(true)
     try {
@@ -131,88 +123,76 @@ export function useLedger(
     setMessage('')
     let writeStarted = false
     try {
-      if (neon) {
-        if (!navigator.locks) {
-          setStorageBlocked(
-            'This browser cannot safely coordinate saves between tabs. Use a current browser with Web Locks support.',
-          )
-          return false
+      if (!navigator.locks) {
+        setStorageBlocked(
+          'This browser cannot safely coordinate saves between tabs. Use a current browser with Web Locks support.',
+        )
+        return false
+      }
+      const saved = await withPendingLocks(key, async () => {
+        let foreign: boolean
+        let existing: string | null
+        try {
+          foreign = hasForeignPending(key)
+          existing = localStorage.getItem(key)
+        } catch {
+          const reason =
+            'Could not persist the pending batch. No write was sent; restore browser storage before saving.'
+          setStorageBlocked(reason)
+          throw new Error(reason)
         }
-        const saved = await withPendingLocks(key, async () => {
-          let foreign: boolean
-          let existing: string | null
+        if (foreign) {
+          setStorageBlocked(foreignPendingMessage)
+          throw new Error(foreignPendingMessage)
+        }
+        const serialized = JSON.stringify(batch)
+        if (retry ? existing !== serialized : existing !== null) {
+          const reason = 'The pending batch changed in another tab. Reload before retrying.'
+          setStorageBlocked(reason)
+          throw new Error(reason)
+        }
+        if (!retry) {
           try {
-            foreign = hasForeignPending(key)
-            existing = localStorage.getItem(key)
+            localStorage.setItem(key, serialized)
           } catch {
             const reason =
               'Could not persist the pending batch. No write was sent; restore browser storage before saving.'
             setStorageBlocked(reason)
             throw new Error(reason)
           }
-          if (foreign) {
-            setStorageBlocked(foreignPendingMessage)
-            throw new Error(foreignPendingMessage)
-          }
-          const serialized = JSON.stringify(batch)
-          if (retry ? existing !== serialized : existing !== null) {
-            const reason = 'The pending batch changed in another tab. Reload before retrying.'
-            setStorageBlocked(reason)
-            throw new Error(reason)
-          }
-          if (!retry) {
-            try {
-              localStorage.setItem(key, serialized)
-            } catch {
-              const reason =
-                'Could not persist the pending batch. No write was sent; restore browser storage before saving.'
-              setStorageBlocked(reason)
-              throw new Error(reason)
-            }
-          }
-          setPending(batch)
-          if (!neon.teacher.canWrite) throw new Error('Your account has read-only access.')
-          const current = await getNotebook(neon.userId)
-          applySnapshot(current)
-          if (
-            projectEvents([...current.events, ...batch]).conflicts >
-            projectEvents(current.events).conflicts
+        }
+        setPending(batch)
+        if (!neon.teacher.canWrite) throw new Error('Your account has read-only access.')
+        const current = await getNotebook(neon.userId)
+        applySnapshot(current)
+        if (
+          projectEvents([...current.events, ...batch]).conflicts >
+          projectEvents(current.events).conflicts
+        )
+          throw new Error(
+            'A pending ID conflicts with a saved record. Ask the manager to inspect it before retrying.',
           )
-            throw new Error(
-              'A pending ID conflicts with a saved record. Ask the manager to inspect it before retrying.',
-            )
-          const ids = new Set(current.events.map((event) => event.id))
-          const remaining = batch.filter((event) => !ids.has(event.id))
-          validateAssignedPayloads(
-            remaining.map((event) => event.payload),
-            current.students,
-            current.events,
-            current.enrollments,
-            current.courses,
-          )
-          let snapshot = current
-          if (remaining.length) {
-            writeStarted = true
-            snapshot = await postEvents(neon.userId, remaining)
-          }
-          applySnapshot(snapshot)
-          localStorage.removeItem(key)
-          return true
-        })
-        if (!saved) return false
-      } else if (demo) {
-        if (assignedDemo)
-          validateAssignedPayloads(
-            batch.map((event) => event.payload),
-            roster,
-            events,
-          )
-        setEvents((previous) => [...previous, ...batch])
-      } else throw new Error('Sign in first.')
+        const ids = new Set(current.events.map((event) => event.id))
+        const remaining = batch.filter((event) => !ids.has(event.id))
+        validateAssignedPayloads(
+          remaining.map((event) => event.payload),
+          current.students,
+          current.events,
+          current.enrollments,
+          current.courses,
+        )
+        let snapshot = current
+        if (remaining.length) {
+          writeStarted = true
+          snapshot = await postEvents(neon.userId, remaining)
+        }
+        applySnapshot(snapshot)
+        localStorage.removeItem(key)
+        return true
+      })
+      if (!saved) return false
       setPending([])
-      setMessage(
-        `${batch.length} record${batch.length === 1 ? '' : 's'} saved${demo ? ' in this demo' : ''}.`,
-      )
+      setMessage(`${batch.length} record${batch.length === 1 ? '' : 's'} saved.`)
       return true
     } catch (cause) {
       setError(
@@ -228,9 +208,7 @@ export function useLedger(
   async function save(payloads: Payload[]): Promise<boolean> {
     if (storageBlocked || pending.length || !loaded || !payloads.length) return false
     try {
-      return await send(
-        payloads.map((payload) => makeEvent(neon?.teacher.name ?? 'Demo teacher', payload)),
-      )
+      return await send(payloads.map((payload) => makeEvent(neon.teacher.name, payload)))
     } catch (cause) {
       setError(errorText(cause))
       return false
@@ -264,10 +242,7 @@ export function useLedger(
     }
   }
 
-  const scopedEvents = useMemo(
-    () => (neonUserId || assignedDemo ? assignedEvents(events, roster) : events),
-    [neonUserId, assignedDemo, events, roster],
-  )
+  const scopedEvents = useMemo(() => assignedEvents(events, roster), [events, roster])
   return {
     events: scopedEvents,
     roster,

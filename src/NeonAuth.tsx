@@ -21,6 +21,7 @@ import { WartaqLogo } from './brand/components'
 import { AccountChoices } from './AccountChoices'
 import { offlineAccess, clearOfflineAccess } from './offlineAccess'
 import { OfflineAttendance } from './OfflineAttendance'
+import './auth.css'
 
 const deviceLimitMessage = 'Five accounts are signed in. Sign out of one to add another.'
 
@@ -41,11 +42,9 @@ function AuthHeader() {
 
 export function NeonAuth({
   children,
-  samples,
   onSignOut,
 }: {
   onSignOut: () => void
-  samples: React.ReactNode
   children: (
     userId: string,
     teacher: NeonAccount,
@@ -412,7 +411,7 @@ export function NeonAuth({
     })
   }
   return (
-    <main id="main-content" tabIndex={-1} className="workspace-auth">
+    <main id="main-content" tabIndex={-1} className="workspace-auth auth-welcome">
       <AuthHeader />
       {!addingAccount && <AccountChoices add={addAccount} />}
       {!addingAccount && offlineAccess() && (
@@ -437,7 +436,7 @@ export function NeonAuth({
       )}
       <form
         aria-busy={busy}
-        className="panel space-y-3"
+        className="panel space-y-3 auth-form"
         onSubmit={async (event) => {
           event.preventDefault()
           if (session.isPending || session.error || busy) return
@@ -608,14 +607,17 @@ export function NeonAuth({
           </p>
         )}
         {error && <p role="alert">{errorMessage(error)}</p>}
-        <button className="primary" disabled={busy || session.isPending || Boolean(session.error)}>
-          {busy ? t('Please wait…') : mode === 'sign-up' ? t('Create account') : t('Sign in')}
-        </button>
-        {!addingAccount && (
-          <div className="flex flex-wrap gap-2">
+        <div className="auth-actions">
+          <button
+            className={`primary ${mode === 'sign-in' ? 'auth-sign-in' : ''}`}
+            disabled={busy || session.isPending || Boolean(session.error)}
+          >
+            {busy ? t('Please wait…') : mode === 'sign-up' ? t('Create account') : t('Sign in')}
+          </button>
+          {!addingAccount && (
             <button
               type="button"
-              className="secondary"
+              className={`secondary ${mode === 'sign-up' ? 'auth-sign-in' : ''}`}
               onClick={() => {
                 setMode(mode === 'sign-up' ? 'sign-in' : 'sign-up')
                 setError('')
@@ -623,8 +625,8 @@ export function NeonAuth({
             >
               {mode === 'sign-up' ? t('Sign in') : t('Create account')}
             </button>
-          </div>
-        )}
+          )}
+        </div>
         {mode === 'sign-in' && (
           <p className="muted">
             {language === 'ar'
@@ -638,7 +640,6 @@ export function NeonAuth({
           </p>
         )}
       </form>
-      {!addingAccount && samples}
     </main>
   )
 }

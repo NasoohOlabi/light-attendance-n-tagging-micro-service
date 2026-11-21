@@ -52,7 +52,6 @@ const copy = {
     a3: 'Contact details will be shared once confirmed.',
     contact: 'Contact',
     contactBody: 'Contact information is awaiting confirmation.',
-    tools: 'Already part of a halaqa?',
     footer: 'A space for a thoughtful journey with the Quran.',
   },
   ar: {
@@ -101,23 +100,12 @@ const copy = {
     a3: 'ستُنشر بيانات التواصل بعد تأكيدها.',
     contact: 'التواصل',
     contactBody: 'بيانات التواصل بانتظار التأكيد.',
-    tools: 'هل أنت من أهل الحلقات؟',
     footer: 'مساحة لرحلة متأنية مع القرآن الكريم.',
   },
 }
 
-export function HomePage({
-  onOpenApp,
-  onExplore,
-  onExploreAssigned,
-  error,
-}: {
-  onOpenApp: () => void
-  onExplore: () => void
-  onExploreAssigned: () => void
-  error?: string
-}) {
-  const { language, t } = useLanguage()
+export function HomePage({ onOpenApp, error }: { onOpenApp: () => void; error?: string }) {
+  const { language } = useLanguage()
   const c = copy[language]
   return (
     <div
@@ -244,13 +232,6 @@ export function HomePage({
             </details>
             <h3>{c.contact}</h3>
             <p>{c.contactBody}</p>
-          </div>
-        </section>
-        <section className="home-tools home-wrap">
-          <h2>{c.tools}</h2>
-          <div className="home-tool-actions">
-            <button onClick={onExplore}>{t('Explore with sample students')}</button>
-            <button onClick={onExploreAssigned}>{t('Explore assigned teacher sample')}</button>
           </div>
         </section>
       </main>
