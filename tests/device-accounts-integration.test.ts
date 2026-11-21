@@ -169,7 +169,6 @@ integration(
           {
             username: null,
             phone: teacher.phone,
-            birthDate: '2000-01-01',
             currentPassword: teacher.temporaryPassword,
             newPassword: 'personal-password-123',
           },
@@ -182,6 +181,26 @@ integration(
       password: 'personal-password-123',
     })
     expect(teacherLogin.status).toBe(200)
+    expect(
+      (
+        await call(
+          '/api/me/invitation-profile',
+          {
+            username: null,
+            phone: teacher.phone,
+            birthDate: '2000-01-01',
+            currentPassword: 'personal-password-123',
+          },
+          teacherUserId,
+        )
+      ).status,
+    ).toBe(200)
+    expect(
+      (await (await call('/api/me', undefined, teacherUserId)).json()).account.invitationProfile,
+    ).toMatchObject({
+      birthDate: null,
+      requiresSetup: false,
+    })
     expect((await list()).find((account) => account.userId === teacherUserId)?.identifier).toBe(
       teacher.phone,
     )

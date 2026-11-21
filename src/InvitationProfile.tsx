@@ -1,4 +1,5 @@
 ﻿import { useState } from 'react'
+import type { NeonAccount } from '../shared/neon'
 import { useLanguage } from './useLanguage'
 import type { Profile } from './ProfileMenu'
 import { NeonRequestError, type InvitationProfile } from './neon'
@@ -6,17 +7,20 @@ import { phoneNumber } from './phoneFormat'
 
 export function InvitationProfileForm({
   invitation,
+  role,
   update,
   setup = false,
   signOut,
 }: {
   invitation: InvitationProfile
+  role: NeonAccount['role']
   update: NonNullable<Profile['updateInvitation']>
   setup?: boolean
   signOut?: () => void
 }) {
   const { language } = useLanguage()
   const ar = language === 'ar'
+  const needsBirthDate = role !== 'teacher'
   const [username, setUsername] = useState(invitation.username)
   const [phone, setPhone] = useState(invitation.phone ?? invitation.verifiedPhone ?? '')
   const [latestBirthDate] = useState(() => new Date().toISOString().slice(0, 10))
@@ -44,7 +48,7 @@ export function InvitationProfileForm({
           await update({
             username,
             phone,
-            birthDate,
+            ...(needsBirthDate ? { birthDate } : {}),
             currentPassword,
             ...(newPassword ? { newPassword } : {}),
           })
@@ -109,17 +113,19 @@ export function InvitationProfileForm({
           onChange={(event) => setPhone(event.target.value)}
         />
       </label>
-      <label>
-        {ar ? 'تاريخ الميلاد' : 'Date of birth'}
-        <input
-          required
-          type="date"
-          max={latestBirthDate}
-          autoComplete="bday"
-          value={birthDate}
-          onChange={(event) => setBirthDate(event.target.value)}
-        />
-      </label>
+      {needsBirthDate && (
+        <label>
+          {ar ? 'تاريخ الميلاد' : 'Date of birth'}
+          <input
+            required
+            type="date"
+            max={latestBirthDate}
+            autoComplete="bday"
+            value={birthDate}
+            onChange={(event) => setBirthDate(event.target.value)}
+          />
+        </label>
+      )}
       <label>
         {setup
           ? ar

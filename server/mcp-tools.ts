@@ -117,7 +117,7 @@ export function registerMcpTools(
     if (account.invitationProfile)
       post(
         'update_invitation_profile',
-        'Update your invitation profile with your current password; setting a new password revokes sessions.',
+        'Update your invitation profile with your current password. Teachers omit birthDate. Setting a new password revokes sessions.',
         '/api/me/invitation-profile',
         invitationProfileInputSchema,
       )

@@ -228,6 +228,10 @@ integration(
         )
       ).status,
     ).toBe(400)
+    expect(
+      (await post('/api/me/invitation-profile', { ...profile, birthDate: undefined }, headers))
+        .status,
+    ).toBe(400)
     expect((await post('/api/me/invitation-profile', profile, headers)).status).toBe(200)
     expect((await fetch(`${origin}/api/me`, { headers })).status).toBe(401)
     expect((await login(phone, resetInvitation.temporaryPassword)).status).toBe(401)

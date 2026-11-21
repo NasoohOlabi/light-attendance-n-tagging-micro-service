@@ -368,6 +368,7 @@ export function NeonAuth({
           <AuthHeader />
           <InvitationProfileForm
             invitation={invitation}
+            role={account.value.role}
             update={updateInvitation}
             setup
             signOut={signOut}

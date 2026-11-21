@@ -879,6 +879,7 @@ export function createHandler(
           if (!eligible.rowCount) throw new HttpError(403)
           if (!invitationProfile) throw new HttpError(403)
           const input = invitationProfileInputSchema.parse(await readBody(request))
+          if (account.role !== 'teacher' && !input.birthDate) throw new HttpError(400)
           const credential = await db.query(
             `SELECT password FROM neon_auth.account WHERE "userId"::text = $1 AND "providerId" = 'credential' FOR UPDATE`,
             [subject],
@@ -898,7 +899,7 @@ export function createHandler(
               subject,
               invitationProfile.verifiedPhone ? invitationProfile.username : input.username,
               input.phone,
-              input.birthDate,
+              account.role === 'teacher' ? invitationProfile.birthDate : input.birthDate,
             ],
           )
           if (input.newPassword) {
