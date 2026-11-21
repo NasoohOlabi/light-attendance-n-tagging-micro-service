@@ -156,7 +156,7 @@ test('private updates use bound, single-use choices and never replay a duplicate
           registration_endpoint: 'https://wartaq.example/register',
         })
       if (url.endsWith('/register')) return Response.json({ client_id: 'synthetic-client' })
-      if (url.includes('api.telegram.org')) {
+      if (new URL(url).origin === 'https://api.telegram.org') {
         deliveries.push({ method: url.split('/').at(-1), ...body })
         return Response.json({ ok: true, result: { message_id: body.message_id ?? 10 } })
       }
