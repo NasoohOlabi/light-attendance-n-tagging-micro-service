@@ -28,6 +28,9 @@ export function InviteAccounts({
 }) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [confirmed, setConfirmed] = useState(false)
+  const [phoneError, setPhoneError] = useState(false)
   const [role, setRole] = useState<Person['role']>('teacher')
   const [state, setState] = useState<InviteState>({ kind: 'editing' })
   const sending = useRef(false)
@@ -104,17 +107,59 @@ export function InviteAccounts({
               <option value="administrator">{ar ? 'مسؤول' : 'Administrator'}</option>
             </select>
           </label>
+          <label>
+            {ar ? 'رقم الهاتف' : 'Phone number'}
+            <input
+              type="tel"
+              dir="ltr"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value)
+                setConfirmed(false)
+                setPhoneError(false)
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="secondary"
+            aria-pressed={confirmed}
+            disabled={!phone.trim()}
+            onClick={() => setConfirmed(true)}
+          >
+            {confirmed
+              ? ar
+                ? 'تم تأكيد رقم الهاتف'
+                : 'Phone number confirmed'
+              : ar
+                ? 'أكد رقم الهاتف بعد السؤال مباشرة'
+                : 'Confirm phone number after asking directly'}
+          </button>
           <button
             type="button"
             className="primary"
-            disabled={!firstName.trim() || !lastName.trim()}
+            disabled={!firstName.trim() || !lastName.trim() || !confirmed}
             onClick={() => {
-              const person = personSchema.safeParse({ firstName, lastName, role })
+              const person = personSchema.safeParse({
+                firstName,
+                lastName,
+                role,
+                phone,
+                phoneConfirmed: confirmed,
+              })
               if (person.success) void submit(person.data)
+              else setPhoneError(true)
             }}
           >
             {ar ? 'إنشاء حساب' : 'Create account'}
           </button>
+          {phoneError && (
+            <p role="alert">
+              {ar
+                ? 'أدخل رقم هاتف صحيحاً مع رمز البلد.'
+                : 'Enter a valid phone number with country code.'}
+            </p>
+          )}
         </div>
       )}
       {state.kind === 'sending' && (

@@ -66,6 +66,8 @@ The temporary public Postgres TCP proxy and migration SSH key were removed after
 
 Apply `neon/013-invitations.sql` before deploying account invitations. Its columns are additive and existing accounts continue to sign in with email. Version 12 backups include invitation request IDs, usernames, phone numbers, dates of birth and setup status. Earlier backups can restore to an empty migrated database. Legacy comparisons reject invitation data that the older format cannot represent. Protect these backups as private personal and credential data.
 
+Apply `neon/014-verified-phone.sql` before deploying phone sign-in, using `psql` with `ON_ERROR_STOP=1` and a single transaction over the private Railway connection. The nullable unique column contains only numbers confirmed by an administrator. Historical contact phones require confirmation before they can be used for sign-in. Version 13 backups preserve the verified phone. Older backups can restore into a migrated empty target, and comparison rejects a target containing verified phones if the backup format cannot represent them.
+
 Set `DATABASE_URL_UNPOOLED` to the intended Railway database. Create the first identity through signup, then grant its role using an ignored private JSON file. Synthetic example:
 
 ```json

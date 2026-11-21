@@ -13,7 +13,7 @@ test('account chooser preserves the current session on failed login and cancel',
   const teacher = {
     userId: '10000000-0000-4000-8000-000000000002',
     name: 'Synthetic Teacher',
-    identifier: 'teacher.one',
+    identifier: '+12025550121',
   }
   let current = admin
   let held = [admin]
@@ -27,8 +27,9 @@ test('account chooser preserves the current session on failed login and cancel',
   })
   await page.route('**/api/auth/**', async (route) => {
     const path = new URL(route.request().url()).pathname
-    if (path.endsWith('/sign-in/username')) {
+    if (path.endsWith('/sign-in/phone')) {
       const body = route.request().postDataJSON()
+      expect(body.phone).toBe(teacher.identifier)
       if (body.password !== 'synthetic-password')
         return route.fulfill({ status: 401, json: { error: 'Invalid credentials' } })
       current = teacher
@@ -95,7 +96,7 @@ test('account chooser preserves the current session on failed login and cancel',
   await expect(page.getByText('Current account')).toBeVisible()
   await expect(page.locator('.account-choices')).not.toContainText('secret-session-token')
   await page.getByRole('button', { name: 'Sign in to another account' }).click()
-  await page.getByLabel('Username').fill('teacher.one')
+  await page.getByRole('textbox', { name: 'Phone number', exact: true }).fill(teacher.identifier)
   await page.getByLabel('Password', { exact: true }).fill('wrong')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('alert')).toBeVisible()
@@ -104,7 +105,7 @@ test('account chooser preserves the current session on failed login and cancel',
   expect(current.userId).toBe(admin.userId)
   await page.locator('.profile-trigger').click()
   await page.getByRole('button', { name: 'Sign in to another account' }).click()
-  await page.getByLabel('Username').fill('teacher.one')
+  await page.getByRole('textbox', { name: 'Phone number', exact: true }).fill(teacher.identifier)
   await page.getByLabel('Password', { exact: true }).fill('synthetic-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.locator('.profile-trigger')).toBeVisible()

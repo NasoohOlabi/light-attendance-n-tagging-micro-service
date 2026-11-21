@@ -364,11 +364,27 @@ integration(
       const widget = (await client.readResource({ uri: ui.resourceUri })).contents[0]
       expect(widget.mimeType).toBe('text/html;profile=mcp-app')
       expect('text' in widget && widget.text).toContain('Open private invitation')
-      const person = { firstName: 'Invited', lastName: 'Fixture', role: 'teacher' }
+      const person = {
+        firstName: 'Invited',
+        lastName: 'Fixture',
+        role: 'teacher',
+        phone: '+12025550130',
+      }
       const invite = (requestId: string) =>
         client.callTool({
           name: 'invite_accounts',
-          arguments: { input: { requestId, people: [person] } },
+          arguments: {
+            input: {
+              requestId,
+              people: [
+                {
+                  ...person,
+                  phone: requestId === expiredRequestId ? '+12025550131' : person.phone,
+                  phoneConfirmed: true,
+                },
+              ],
+            },
+          },
         })
       const invitation = await invite(invitationRequestId)
       expect(invitation.isError).not.toBe(true)
@@ -445,13 +461,14 @@ integration(
       const {
         invitations: [message],
       } = invitationResponseSchema.parse(await reveal.json())
+      if (!('phone' in message)) throw new Error('Expected a phone invitation')
       expect(message).toMatchObject(person)
       expect(JSON.stringify(invitation)).not.toContain(message.temporaryPassword)
-      expect(JSON.stringify(invitation)).not.toContain(message.username)
+      expect(JSON.stringify(invitation)).not.toContain(message.phone)
       expect(encrypted).not.toContain(message.temporaryPassword)
-      expect(encrypted).not.toContain(message.username)
-      const invitedSignIn = await browserPost('/api/auth/sign-in/username', {
-        username: message.username,
+      expect(encrypted).not.toContain(message.phone)
+      const invitedSignIn = await browserPost('/api/auth/sign-in/phone', {
+        phone: message.phone,
         password: message.temporaryPassword,
       })
       expect(invitedSignIn.status).toBe(200)

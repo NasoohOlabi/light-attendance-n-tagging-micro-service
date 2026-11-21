@@ -14,7 +14,7 @@ export type Profile = {
   invitation?: InvitationProfile
   openChanges?: () => void
   updateInvitation?: (details: {
-    username: string
+    username: string | null
     phone: string
     birthDate: string
     currentPassword: string

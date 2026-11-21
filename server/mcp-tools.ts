@@ -321,7 +321,7 @@ export function registerMcpTools(
     'invite_accounts',
     {
       description:
-        'Create invited accounts and open the private invitation message. A request ID cannot be reused after success.',
+        'Create invited accounts and open the private invitation message. Set phoneConfirmed to true only after the administrator explicitly confirms they asked each account holder directly. A request ID cannot be reused after success.',
       inputSchema: z.object({ input: invitationRequestSchema }),
       outputSchema: z.object({ requestId: z.uuid(), url: z.url() }),
       _meta: { ui: { resourceUri: invitationUri } },

@@ -1,3 +1,4 @@
+import { phoneSchema } from '../shared/invitations'
 import { z } from 'zod'
 import { hashPassword, verifyPassword } from 'better-auth/crypto'
 import {
@@ -234,7 +235,7 @@ async function adminBoard(db: PoolClient) {
   // ponytail: bounded to 1000 accounts; add pagination when that ceiling matters.
   const accounts = (
     await db.query(`SELECT u.id AS "authUserId", u.email, u.name AS "profileName", COALESCE(t.name, s.name, u.name, '') AS name,
-    a.invitation_username AS username, a.role, COALESCE(a.active, false) AS active, a.expires_at AS "expiresAt", a.teacher_id AS "teacherId", a.student_id AS "studentId"
+    a.invitation_username AS username, a.verified_phone AS "verifiedPhone", a.role, COALESCE(a.active, false) AS active, a.expires_at AS "expiresAt", a.teacher_id AS "teacherId", a.student_id AS "studentId"
     FROM neon_auth."user" u LEFT JOIN app_accounts a ON a.auth_user_id = u.id::text
     LEFT JOIN teachers t ON t.id = a.teacher_id LEFT JOIN students s ON s.id = a.student_id
     ORDER BY u.id LIMIT 1000`)
@@ -276,12 +277,6 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
     const invitations = []
     for (const person of people) {
       const userId = crypto.randomUUID()
-      const stem =
-        person.firstName
-          .toLowerCase()
-          .replace(/[^a-z0-9]/g, '')
-          .slice(0, 12) || person.role
-      const username = `${stem}-${Buffer.from(crypto.getRandomValues(new Uint8Array(5))).toString('hex')}`
       const temporaryPassword = generateTemporaryPassword()
       const hash = await hashPassword(temporaryPassword)
       const name = `${person.firstName} ${person.lastName}`
@@ -300,8 +295,8 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
           [recordId, name, person.firstName, person.lastName],
         )
         await db.query(
-          'INSERT INTO app_accounts (auth_user_id, role, student_id, invitation_request_id, invitation_username, invitation_requires_setup) VALUES ($1, $2, $3, $4, $5, true)',
-          [userId, person.role, recordId, requestId, username],
+          'INSERT INTO app_accounts (auth_user_id, role, student_id, invitation_request_id, verified_phone, invitation_requires_setup) VALUES ($1, $2, $3, $4, $5, true)',
+          [userId, person.role, recordId, requestId, person.phone],
         )
       } else {
         await db.query(
@@ -309,13 +304,40 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
           [recordId, userId, name],
         )
         await db.query(
-          'INSERT INTO app_accounts (auth_user_id, role, teacher_id, invitation_request_id, invitation_username, invitation_requires_setup) VALUES ($1, $2, $3, $4, $5, true)',
-          [userId, person.role, recordId, requestId, username],
+          'INSERT INTO app_accounts (auth_user_id, role, teacher_id, invitation_request_id, verified_phone, invitation_requires_setup) VALUES ($1, $2, $3, $4, $5, true)',
+          [userId, person.role, recordId, requestId, person.phone],
         )
       }
-      invitations.push({ ...person, username, temporaryPassword })
+      invitations.push({
+        firstName: person.firstName,
+        lastName: person.lastName,
+        role: person.role,
+        phone: person.phone,
+        temporaryPassword,
+      })
     }
     return { invitations }
+  } else if (path === '/api/admin/accounts/verify-phone') {
+    const input = z
+      .strictObject({
+        authUserId: z.string().min(1),
+        phone: phoneSchema,
+        phoneConfirmed: z.literal(true),
+      })
+      .parse(body)
+    if (input.authUserId === subject) throw new HttpError(403)
+    const previous = await db.query(
+      'SELECT verified_phone FROM app_accounts WHERE auth_user_id = $1',
+      [input.authUserId],
+    )
+    const updated = await db.query(
+      `UPDATE app_accounts a SET verified_phone = $2 WHERE auth_user_id = $1 AND active AND (expires_at IS NULL OR expires_at > now()) AND ((role = 'student' AND EXISTS (SELECT 1 FROM students s WHERE s.id = a.student_id AND s.active)) OR (role IN ('teacher', 'administrator') AND EXISTS (SELECT 1 FROM teachers t WHERE t.id = a.teacher_id AND t.active AND (t.expires_at IS NULL OR t.expires_at > now())))) RETURNING auth_user_id`,
+      [input.authUserId, input.phone],
+    )
+    if (!updated.rowCount) throw new HttpError(400)
+    if (previous.rows[0]?.verified_phone !== input.phone)
+      await db.query('DELETE FROM neon_auth.session WHERE "userId"::text = $1', [input.authUserId])
+    return adminBoard(db)
   } else if (path === '/api/admin/accounts/grant') {
     const legacyGrant = z
       .object({
@@ -579,7 +601,6 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
     const { authUserId, password } = input
     if (authUserId === subject) throw new HttpError(403)
     const hash = await hashPassword(password)
-    await db.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
     const updated = await db.query(
       `UPDATE neon_auth.account SET password = $2, "updatedAt" = now()
       WHERE "userId"::text = $1 AND "providerId" = 'credential' RETURNING id`,
@@ -589,15 +610,23 @@ async function manage(db: PoolClient, path: string, body: unknown, subject: stri
     await db.query('DELETE FROM neon_auth.session WHERE "userId"::text = $1', [authUserId])
     if (generated) {
       const result = await db.query(
-        'SELECT a.invitation_username, u.email FROM neon_auth."user" u LEFT JOIN app_accounts a ON a.auth_user_id = u.id::text WHERE u.id::text = $1',
+        'SELECT a.invitation_username, a.verified_phone, u.email FROM neon_auth."user" u LEFT JOIN app_accounts a ON a.auth_user_id = u.id::text WHERE u.id::text = $1',
         [authUserId],
       )
       const identity = z
-        .object({ invitation_username: z.string().nullable(), email: z.string().min(1) })
+        .object({
+          invitation_username: z.string().nullable(),
+          verified_phone: z.string().nullable(),
+          email: z.string().min(1),
+        })
         .parse(result.rows[0])
       return {
-        loginIdentifier: identity.invitation_username ?? identity.email,
-        loginMethod: identity.invitation_username ? 'username' : 'email',
+        loginIdentifier: identity.verified_phone ?? identity.invitation_username ?? identity.email,
+        loginMethod: identity.verified_phone
+          ? 'phone'
+          : identity.invitation_username
+            ? 'username'
+            : 'email',
         temporaryPassword: password,
       }
     }
@@ -728,6 +757,7 @@ export function createHandler(
         '/api/admin',
         '/api/admin/accounts/invite',
         '/api/admin/accounts/invite-message',
+        '/api/admin/accounts/verify-phone',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
@@ -754,6 +784,7 @@ export function createHandler(
         '/api/me/invitation-profile',
         '/api/admin/accounts/invite',
         '/api/admin/accounts/invite-message',
+        '/api/admin/accounts/verify-phone',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
@@ -778,6 +809,7 @@ export function createHandler(
         '/api/me/invitation-profile',
         '/api/admin/accounts/invite',
         '/api/admin/accounts/invite-message',
+        '/api/admin/accounts/verify-phone',
         '/api/admin/accounts/grant',
         '/api/admin/accounts/disable',
         '/api/admin/accounts/reset-password',
@@ -810,9 +842,19 @@ export function createHandler(
       const db = await pool.connect()
       try {
         await db.query('BEGIN')
+        if (
+          [
+            '/api/me/invitation-profile',
+            '/api/admin/accounts/invite',
+            '/api/admin/accounts/verify-phone',
+            '/api/admin/accounts/reset-password',
+            '/api/admin/accounts/reset-password-generated',
+          ].includes(path)
+        )
+          await db.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
         const result = await db.query(
           `SELECT role, teacher_id, student_id, active, expires_at,
-            invitation_username AS username, invitation_phone AS phone,
+            invitation_request_id, invitation_username AS username, verified_phone AS "verifiedPhone", invitation_phone AS phone,
             invitation_birth_date::text AS "birthDate", invitation_requires_setup AS "requiresSetup"
            FROM app_accounts WHERE auth_user_id = $1 FOR UPDATE`,
           [subject],
@@ -820,9 +862,10 @@ export function createHandler(
         if (!result.rows.length) throw new HttpError(403)
         const account = accountRow.parse(result.rows[0])
         if (!live(account.active, account.expires_at)) throw new HttpError(403)
-        const invitationProfile = result.rows[0].username
-          ? invitationProfileSchema.parse(result.rows[0])
-          : undefined
+        const invitationProfile =
+          result.rows[0].username || result.rows[0].invitation_request_id
+            ? invitationProfileSchema.parse(result.rows[0])
+            : undefined
         if (path === '/api/me/invitation-profile') {
           const eligible =
             account.role === 'student'
@@ -836,7 +879,6 @@ export function createHandler(
           if (!eligible.rowCount) throw new HttpError(403)
           if (!invitationProfile) throw new HttpError(403)
           const input = invitationProfileInputSchema.parse(await readBody(request))
-          await db.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
           const credential = await db.query(
             `SELECT password FROM neon_auth.account WHERE "userId"::text = $1 AND "providerId" = 'credential' FOR UPDATE`,
             [subject],
@@ -852,7 +894,12 @@ export function createHandler(
             throw new HttpError(400)
           await db.query(
             'UPDATE app_accounts SET invitation_username = $2, invitation_phone = $3, invitation_birth_date = $4, invitation_requires_setup = false WHERE auth_user_id = $1',
-            [subject, input.username, input.phone, input.birthDate],
+            [
+              subject,
+              invitationProfile.verifiedPhone ? invitationProfile.username : input.username,
+              input.phone,
+              input.birthDate,
+            ],
           )
           if (input.newPassword) {
             const hash = await hashPassword(input.newPassword)

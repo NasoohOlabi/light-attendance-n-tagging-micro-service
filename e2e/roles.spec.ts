@@ -612,17 +612,37 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     path: '/api/admin/accounts/grant',
     body: { role: 'student', authUserId: studentUserId, studentId, expiresAt: null },
   })
-  const teacher = page.locator('details').filter({ hasText: 'teacher@example.test' })
+  const teacher = page.locator('details').filter({ hasText: 'Synthetic Teacher' })
   await teacher.locator('summary').click()
   await expect(teacher.locator('summary')).toHaveCSS('outline-style', 'none')
+  const verifiedPhone = '+12025550150'
+  let verification: unknown
+  await page.route('**/api/admin/accounts/verify-phone', async (route) => {
+    verification = route.request().postDataJSON()
+    const savedTeacher = board.accounts.find((account) => account.authUserId === teacherId)
+    Object.assign(savedTeacher ?? {}, { verifiedPhone })
+    return route.fulfill({ json: board })
+  })
+  const verifyPhone = teacher.getByRole('button', {
+    name: 'Confirm phone number after asking directly',
+  })
+  await expect(verifyPhone).toBeDisabled()
+  await teacher.getByLabel('Sign-in phone number').fill(verifiedPhone)
+  await verifyPhone.click()
+  await expect(teacher.locator('summary')).toContainText(verifiedPhone)
+  expect(verification).toEqual({
+    authUserId: teacherId,
+    phone: verifiedPhone,
+    phoneConfirmed: true,
+  })
   const resetRequests: unknown[] = []
   const temporaryPassword = randomBytes(12).toString('base64url')
   await page.route('**/api/admin/accounts/reset-password-generated', async (route) => {
     resetRequests.push(route.request().postDataJSON())
     return route.fulfill({
       json: {
-        loginIdentifier: 'teacher@example.test',
-        loginMethod: 'email',
+        loginIdentifier: verifiedPhone,
+        loginMethod: 'phone',
         temporaryPassword,
       },
     })
@@ -642,9 +662,9 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     await expect(message).toHaveAttribute('readonly')
     await expect(message).toHaveCSS('direction', arabic ? 'rtl' : 'ltr')
     const value = await message.inputValue()
-    expect(value).toContain('teacher@example.test')
+    expect(value).toContain(verifiedPhone)
     expect(value).toContain(temporaryPassword)
-    expect(value).toContain(`${origin}/?page=app`)
+    expect(value).toContain(`${origin}/?page=app&login=phone`)
     for (const width of testInfo.project.name === 'mobile' ? [320, 390] : [1440]) {
       await page.setViewportSize({ width, height: 900 })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(

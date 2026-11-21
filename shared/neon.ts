@@ -170,7 +170,7 @@ export const neonAdminDisableSchema = z.strictObject({ authUserId })
 export const neonAdminGeneratedPasswordResetSchema = z.strictObject({ authUserId })
 export const neonAdminGeneratedPasswordResetResponseSchema = z.object({
   loginIdentifier: z.string().min(1),
-  loginMethod: z.enum(['username', 'email']),
+  loginMethod: z.enum(['username', 'email', 'phone']),
   temporaryPassword: z.string().min(8),
 })
 export const neonAdminPasswordResetSchema = z
@@ -218,6 +218,7 @@ export const neonAdminBoardSchema = z.object({
       name: z.string(),
       profileName: z.string().optional(),
       username: z.string().nullable().optional(),
+      verifiedPhone: z.string().nullable().optional(),
       role: z.enum(['administrator', 'teacher', 'student']).nullable(),
       active: z.boolean(),
       expiresAt: expiry,
