@@ -113,7 +113,7 @@ async function setupCourses(page: Page) {
     accounts: [
       {
         authUserId: otherAdminId,
-        email: 'other-admin@example.test',
+        verifiedPhone: '+12025550173',
         name: 'Other Admin',
         profileName: 'Other Admin',
         role: 'administrator',
@@ -124,7 +124,7 @@ async function setupCourses(page: Page) {
       },
       {
         authUserId: teacherId,
-        email: 'admin@example.test',
+        verifiedPhone: '+12025550174',
         name: 'Administrator',
         profileName: 'Updated Admin',
         role: 'administrator',
@@ -978,23 +978,23 @@ test('grades, attendance, and withdrawal preserve course history', async ({ page
   board.accounts[0].profileName = '   '
   await actorLink.click()
   await expect(page.locator('.role-account strong')).toHaveText('Updated Admin')
-  await expect(page.getByText('admin@example.test')).toBeVisible()
+  await expect(page.getByText('+12025550174')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save role' })).toHaveCount(0)
   await page.reload()
   await expect(page.locator('.role-account strong')).toHaveText('Updated Admin')
-  await expect(page.getByText('admin@example.test')).toBeVisible()
+  await expect(page.getByText('+12025550174')).toBeVisible()
   await page.goBack()
   await clickRecordAction(compactGradeRow, 'Override result')
   await page.getByRole('dialog').getByText('Decision history').click()
-  const emailFallback = page.getByRole('dialog').getByRole('link', {
-    name: 'other-admin@example.test',
+  const phoneFallback = page.getByRole('dialog').getByRole('link', {
+    name: '+12025550173',
   })
-  await expect(emailFallback).toHaveAttribute(
+  await expect(phoneFallback).toHaveAttribute(
     'href',
     `?page=app&view=settings&account=${otherAdminId}`,
   )
-  await emailFallback.click()
-  await expect(page.getByText('other-admin@example.test')).toBeVisible()
+  await phoneFallback.click()
+  await expect(page.getByText('+12025550173')).toBeVisible()
   await expect(page.getByLabel('Role')).toBeVisible()
   board.accounts[0].profileName = 'Other Admin'
   await page.goBack()

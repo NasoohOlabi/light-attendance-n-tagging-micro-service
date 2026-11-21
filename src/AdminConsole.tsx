@@ -200,7 +200,8 @@ export function AdminConsole({
                           <div className="role-account">
                             <strong dir="auto">{accountProfileLabel(account)}</strong>
                             <p dir="ltr">
-                              {account.verifiedPhone || account.username || account.email}
+                              {account.verifiedPhone ||
+                                (ar ? 'رقم الهاتف غير متاح' : 'Phone unavailable')}
                             </p>
                           </div>
                         )
@@ -439,7 +440,9 @@ function AccountForm({
       <summary>
         <span>
           <strong dir="auto">{account.name}</strong>
-          <span dir="ltr">{account.verifiedPhone || account.username || account.email}</span>
+          <span dir="ltr">
+            {account.verifiedPhone || (ar ? 'رقم الهاتف غير متاح' : 'Phone unavailable')}
+          </span>
           <span>
             {account.role === 'administrator'
               ? ar
@@ -559,7 +562,7 @@ function AccountForm({
             ref={resetButton}
             type="button"
             className="secondary"
-            disabled={saving}
+            disabled={saving || !account.verifiedPhone}
             onClick={() => void resetPassword()}
           >
             {ar ? 'إعادة تعيين كلمة المرور' : 'Reset password'}
@@ -622,12 +625,16 @@ function PasswordResetMessage({
   const message = useRef<HTMLTextAreaElement>(null)
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'manual'>('idle')
   useEffect(() => dialog.current?.showModal(), [])
-  const usernameLogin = credentials.loginMethod === 'username'
-  const phoneLogin = credentials.loginMethod === 'phone'
-  const url = `${window.location.origin}/?page=app${phoneLogin ? '&login=phone' : usernameLogin ? '&login=username' : ''}`
+  const url = `${window.location.origin}/?page=app`
+  const phone =
+    credentials.loginMethod === 'phone'
+      ? credentials.loginIdentifier
+      : ar
+        ? 'رقم الهاتف غير متاح'
+        : 'Phone unavailable'
   const text = ar
-    ? `مرحباً ${name}،\nتمت إعادة تعيين كلمة المرور لحسابك في وارتق.\n${url}\n${phoneLogin ? 'رقم الهاتف' : usernameLogin ? 'اسم المستخدم' : 'البريد الإلكتروني'}: ${credentials.loginIdentifier}\nكلمة المرور المؤقتة: ${credentials.temporaryPassword}`
-    : `Hello ${name},\nYour Wartaq password has been reset.\n${url}\n${phoneLogin ? 'Phone' : usernameLogin ? 'Username' : 'Email'}: ${credentials.loginIdentifier}\nTemporary password: ${credentials.temporaryPassword}`
+    ? `مرحباً ${name}?\nتمت إعادة تعيين كلمة المرور.\n${url}\nرقم الهاتف: ${phone}\nكلمة المرور المؤقتة: ${credentials.temporaryPassword}`
+    : `Hello ${name},\nYour Wartaq password has been reset.\n${url}\nPhone: ${phone}\nTemporary password: ${credentials.temporaryPassword}`
   async function copy() {
     try {
       await navigator.clipboard.writeText(text)

@@ -160,7 +160,7 @@ test('administrator creates one invitation and can safely retry it', async ({
   expect(message).toContain('Synthetic-password-1')
   expect(message).toContain('On your first sign-in, choose a personal password.')
   expect(message).toContain(person.phone)
-  expect(message).toContain(`${baseURL}/?page=app&login=phone`)
+  expect(message.split('\n')).toContain(`${baseURL}/?page=app`)
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   const readClipboard = () =>
     page.evaluate(async () => (await navigator.clipboard.readText()).replaceAll('\r\n', '\n'))
@@ -227,7 +227,7 @@ for (const language of ['en', 'ar']) {
               firstName: 'Sam',
               lastName: 'Example',
               role: 'student',
-              username: 'example2',
+              phone: '+12025550104',
               temporaryPassword: otherPassword,
             },
           ],
@@ -251,10 +251,10 @@ for (const language of ['en', 'ar']) {
     expect(value).toContain(temporaryPassword)
     expect(value).not.toContain(otherPassword)
     expect(value).toContain('+12025550103')
-    expect(value).toContain(`${baseURL}/?page=app&login=phone`)
-    expect(await page.getByRole('textbox', { name: 'Sam Example' }).inputValue()).toContain(
-      `${baseURL}/?page=app&login=username`,
-    )
+    expect(value.split('\n')).toContain(`${baseURL}/?page=app`)
+    const otherMessage = await page.getByRole('textbox', { name: 'Sam Example' }).inputValue()
+    expect(otherMessage).toContain('+12025550104')
+    expect(otherMessage.split('\n')).toContain(`${baseURL}/?page=app`)
     await expect(message).toHaveCSS('direction', language === 'ar' ? 'rtl' : 'ltr')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])

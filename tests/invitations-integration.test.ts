@@ -2,6 +2,7 @@ import { afterAll, expect, test } from 'bun:test'
 import { Pool } from 'pg'
 import { z } from 'zod'
 import { startIntegrationServer } from './integration-server'
+import { createIdentity } from './integration-identity'
 
 const databaseUrl = process.env.TEST_RAILWAY_DATABASE_URL
 const integration = databaseUrl ? test : test.skip
@@ -49,25 +50,25 @@ integration(
         headers: { origin, 'content-type': 'application/json', ...headers },
         body: JSON.stringify(body),
       })
-    const signup = await post('/api/auth/sign-up/email', {
-      name: 'Synthetic Admin',
-      email: `${crypto.randomUUID()}@example.test`,
-      password: 'synthetic-password',
-    })
-    expect(signup.status).toBe(200)
-    adminId = z.object({ user: z.object({ id: z.uuid() }) }).parse(await signup.json()).user.id
-    const adminHeaders = {
-      cookie: signup.headers.get('set-cookie')?.split(';')[0] ?? '',
-      'x-user-id': adminId,
-    }
+    const adminPhone = '+12025550202'
+    adminId = await createIdentity(pool, 'Synthetic Admin', 'synthetic-password')
     await pool.query(
       "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, 'Synthetic Admin', 'read_write')",
       [adminTeacherId, adminId],
     )
     await pool.query(
-      "INSERT INTO app_accounts (auth_user_id, role, teacher_id) VALUES ($1, 'administrator', $2)",
-      [adminId, adminTeacherId],
+      "INSERT INTO app_accounts (auth_user_id, role, teacher_id, verified_phone) VALUES ($1, 'administrator', $2, $3)",
+      [adminId, adminTeacherId, adminPhone],
     )
+    const signup = await post('/api/auth/sign-in/phone', {
+      phone: adminPhone,
+      password: 'synthetic-password',
+    })
+    expect(signup.status).toBe(200)
+    const adminHeaders = {
+      cookie: signup.headers.get('set-cookie')?.split(';')[0] ?? '',
+      'x-user-id': adminId,
+    }
     const phone = '+12025550110'
     const teacherPhone = '+12025550111'
     const verified = { phoneConfirmed: true }
@@ -145,7 +146,7 @@ integration(
           password: person.temporaryPassword,
         })
       ).status,
-    ).toBe(401)
+    ).toBe(404)
     const login = (phone: string, password: string) =>
       post('/api/auth/sign-in/phone', { phone, password })
     const signed = await login('+1 (202) 555-0110', person.temporaryPassword)
@@ -158,7 +159,6 @@ integration(
     const me = await fetch(`${origin}/api/me`, { headers })
     expect(me.status).toBe(200)
     expect((await me.json()).account.invitationProfile).toMatchObject({
-      username: null,
       verifiedPhone: phone,
       requiresSetup: true,
     })
@@ -190,7 +190,16 @@ integration(
     ).toBe(403)
     expect(
       (await post('/api/auth/change-email', { newEmail: 'other@example.test' }, headers)).status,
-    ).toBe(403)
+    ).toBe(404)
+    expect(
+      (
+        await post('/api/auth/sign-up/email', {
+          name: 'Synthetic signup',
+          email: 'signup@example.test',
+          password: crypto.randomUUID(),
+        })
+      ).status,
+    ).toBe(404)
     const resetInvitation = await reset()
     expect(resetInvitation.loginIdentifier).toBe(phone)
     expect((await login(phone, person.temporaryPassword)).status).toBe(401)
@@ -242,7 +251,7 @@ integration(
       (
         await post(
           '/api/me/invitation-profile',
-          { username: null, phone: otherPhone, currentPassword: 'wrong' },
+          { phone: otherPhone, currentPassword: 'wrong' },
           freshHeaders,
         )
       ).status,
@@ -253,7 +262,6 @@ integration(
         await post(
           '/api/me/invitation-profile',
           {
-            username: null,
             phone: otherPhone,
             currentPassword: profile.newPassword,
             newPassword: updatedPassword,
@@ -294,12 +302,7 @@ integration(
     const legacyPassword = invitations[1].temporaryPassword
     const legacyLogin = () =>
       post('/api/auth/sign-in/username', { username, password: legacyPassword })
-    const legacySession = await legacyLogin()
-    expect(legacySession.status).toBe(200)
-    const legacyHeaders = {
-      cookie: legacySession.headers.get('set-cookie')?.split(';')[0] ?? '',
-      'x-user-id': legacyUserId,
-    }
+    expect((await legacyLogin()).status).toBe(404)
     expect((await login(teacherPhone, legacyPassword)).status).toBe(401)
     const verifyPhone = (authUserId: string, phone: string, headers: Record<string, string>) =>
       post('/api/admin/accounts/verify-phone', { authUserId, phone, ...verified }, headers)
@@ -311,13 +314,22 @@ integration(
     expect((await confirmed.json()).accounts).toContainEqual(
       expect.objectContaining({ authUserId: legacyUserId, verifiedPhone: teacherPhone }),
     )
-    expect((await fetch(`${origin}/api/me`, { headers: legacyHeaders })).status).toBe(401)
-    expect((await legacyLogin()).status).toBe(401)
-    expect((await login(teacherPhone, legacyPassword)).status).toBe(200)
+    expect((await legacyLogin()).status).toBe(404)
+    const teacherSession = await login(teacherPhone, legacyPassword)
+    expect(teacherSession.status).toBe(200)
+    const teacherHeaders = {
+      cookie: teacherSession.headers.get('set-cookie')?.split(';')[0] ?? '',
+      'x-user-id': legacyUserId,
+    }
+    const changedPhone = '+12025550208'
+    expect((await verifyPhone(legacyUserId, changedPhone, adminHeaders)).status).toBe(200)
+    expect((await fetch(`${origin}/api/me`, { headers: teacherHeaders })).status).toBe(401)
+    expect((await login(teacherPhone, legacyPassword)).status).toBe(401)
+    expect((await login(changedPhone, legacyPassword)).status).toBe(200)
     await pool.query('UPDATE app_accounts SET expires_at = now() WHERE auth_user_id = $1', [
       legacyUserId,
     ])
-    expect((await login(teacherPhone, legacyPassword)).status).toBe(401)
+    expect((await login(changedPhone, legacyPassword)).status).toBe(401)
   },
   30000,
 )

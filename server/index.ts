@@ -15,7 +15,6 @@ import {
   readBoundedBody,
   validProfileRequest,
   validProfileUpdate,
-  validSignupRequest,
 } from './profile'
 
 const config = z
@@ -62,7 +61,7 @@ const auth = betterAuth({
   secret: config.BETTER_AUTH_SECRET,
   database: authPool,
   advanced: { database: { generateId: 'uuid' } },
-  emailAndPassword: { enabled: true },
+  emailAndPassword: { enabled: true, disableSignUp: true },
   plugins: createMcpOAuthPlugins(origin),
 })
 const secureCookies = baseUrl.protocol === 'https:'
@@ -100,18 +99,14 @@ async function remembered(
   const session = await auth.api.getSession({ headers, query: { disableRefresh: true } })
   if (!session?.user.id) return undefined
   const result = await pool.query(
-    'SELECT invitation_username, verified_phone FROM app_accounts WHERE auth_user_id = $1',
+    'SELECT verified_phone FROM app_accounts WHERE auth_user_id = $1',
     [session.user.id],
   )
-  const username = z.string().nullable().optional().parse(result.rows[0]?.invitation_username)
   return {
     value,
     userId: session.user.id,
     name: session.user.name,
-    identifier:
-      z.string().nullable().optional().parse(result.rows[0]?.verified_phone) ??
-      username ??
-      session.user.email,
+    identifier: z.string().nullable().optional().parse(result.rows[0]?.verified_phone) ?? '',
     expiresAt: session.session.expiresAt,
     marker,
   }
@@ -204,15 +199,7 @@ const notebook = createHandler(
 const mcpProfileSchema = z.object({ name: z.string(), image: z.string().nullable() })
 const phoneLoginSchema = z.strictObject({
   phone: phoneSchema,
-  password: z.string().min(1).max(128),
-  oauth_query: z.string().max(6000).optional(),
-})
-const usernameLoginSchema = z.strictObject({
-  username: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .regex(/^[a-z0-9._-]{3,32}$/),
+  rememberMe: z.boolean().optional(),
   password: z.string().min(1).max(128),
   oauth_query: z.string().max(6000).optional(),
 })
@@ -288,6 +275,15 @@ export async function handle(request: Request): Promise<Response> {
   } catch {
     return new Response('Not found', { status: 404 })
   }
+  if (
+    [
+      '/api/auth/sign-in/email',
+      '/api/auth/sign-in/username',
+      '/api/auth/sign-up/email',
+      '/api/auth/change-email',
+    ].includes(authPath)
+  )
+    return new Response('Not found', { status: 404 })
   if (url.pathname === '/mcp') return mcp(request)
   if (url.pathname === '/mcp/login' || url.pathname === '/mcp/consent') {
     if (request.method !== 'GET')
@@ -316,14 +312,7 @@ export async function handle(request: Request): Promise<Response> {
     if (!oauthBrowserPaths.has(url.pathname)) return new Response('Not found', { status: 404 })
   }
   if (
-    [
-      '/api/auth/update-user',
-      '/api/auth/sign-up/email',
-      '/api/auth/sign-in/email',
-      '/api/auth/sign-in/username',
-      '/api/auth/sign-in/phone',
-      '/api/auth/sign-out',
-    ].includes(authPath) &&
+    ['/api/auth/update-user', '/api/auth/sign-in/phone', '/api/auth/sign-out'].includes(authPath) &&
     url.pathname !== authPath
   )
     return new Response('Not found', { status: 404 })
@@ -429,22 +418,11 @@ export async function handle(request: Request): Promise<Response> {
       const session = await auth.api.getSession({ headers: request.headers })
       if (!session?.user.id || request.headers.get('x-user-id') !== session.user.id)
         return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    if (
-      request.method === 'POST' &&
-      (url.pathname === '/api/auth/update-user' || url.pathname === '/api/auth/sign-up/email')
-    ) {
-      const body = url.pathname.endsWith('/update-user')
-        ? await validProfileRequest(request)
-        : await validSignupRequest(request)
+      const body = await validProfileRequest(request)
       if (body === null) return Response.json({ error: 'Invalid account data' }, { status: 400 })
       request = new Request(request.url, { method: request.method, headers: request.headers, body })
     }
-    if (
-      ['/api/auth/change-password', '/api/auth/set-password', '/api/auth/change-email'].includes(
-        authPath,
-      )
-    ) {
+    if (['/api/auth/change-password', '/api/auth/set-password'].includes(authPath)) {
       const session = await auth.api.getSession({ headers: request.headers })
       if (session?.user.id) {
         const invited = await pool.query(
@@ -464,29 +442,10 @@ export async function handle(request: Request): Promise<Response> {
         return Response.json({ error: 'Invalid credentials' }, { status: 400 })
       }
     }
-    let usernameLogin: z.infer<typeof usernameLoginSchema> | undefined
-    if (url.pathname === '/api/auth/sign-in/username' && request.method === 'POST') {
-      try {
-        const body = await readBoundedBody(request, 8192)
-        if (body === null) throw new Error('Invalid request')
-        usernameLogin = usernameLoginSchema.parse(JSON.parse(body))
-      } catch {
-        return Response.json({ error: 'Invalid credentials' }, { status: 400 })
-      }
-    }
-    const isLogin =
-      request.method === 'POST' &&
-      [
-        '/api/auth/sign-in/email',
-        '/api/auth/sign-in/username',
-        '/api/auth/sign-in/phone',
-        '/api/auth/sign-up/email',
-      ].includes(url.pathname)
+    const isLogin = request.method === 'POST' && url.pathname === '/api/auth/sign-in/phone'
     const isSignout = request.method === 'POST' && url.pathname === '/api/auth/sign-out'
     const activeBefore = isLogin || isSignout ? await activeAccount(request) : undefined
     const before = isLogin ? await rememberedAccounts(request, activeBefore) : []
-    if (isLogin && url.pathname === '/api/auth/sign-up/email' && before.length >= slotCount)
-      return Response.json({ error: 'Device account limit reached' }, { status: 409 })
     let response: Response
     if (
       url.pathname.startsWith('/api/auth/') &&
@@ -498,17 +457,17 @@ export async function handle(request: Request): Promise<Response> {
       try {
         await db.query('BEGIN')
         await db.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
-        if (usernameLogin || phoneLogin) {
+        if (phoneLogin) {
           const found = await db.query(
             `SELECT u.email FROM app_accounts a JOIN neon_auth."user" u ON u.id::text = a.auth_user_id
-             WHERE ((a.invitation_username = $1 AND a.verified_phone IS NULL) OR a.verified_phone = $2)
+             WHERE a.verified_phone = $1
                AND a.active AND (a.expires_at IS NULL OR a.expires_at > now())
                AND ((a.role = 'student' AND EXISTS (SELECT 1 FROM students s WHERE s.id = a.student_id AND s.active))
                  OR (a.role IN ('teacher', 'administrator') AND EXISTS (
                    SELECT 1 FROM teachers t WHERE t.id = a.teacher_id AND t.active
                      AND (t.expires_at IS NULL OR t.expires_at > now())
                  )))`,
-            [usernameLogin?.username ?? null, phoneLogin?.phone ?? null],
+            [phoneLogin.phone],
           )
           const email = z.string().safeParse(found.rows[0]?.email)
           request = new Request(new URL('/api/auth/sign-in/email', request.url), {
@@ -516,33 +475,10 @@ export async function handle(request: Request): Promise<Response> {
             headers: request.headers,
             body: JSON.stringify({
               email: email.success ? email.data : 'missing@invitation.invalid',
-              password: (usernameLogin ?? phoneLogin)?.password,
-              oauth_query: (usernameLogin ?? phoneLogin)?.oauth_query,
+              password: phoneLogin.password,
+              rememberMe: phoneLogin.rememberMe,
+              oauth_query: phoneLogin.oauth_query,
             }),
-          })
-        } else if (authPath === '/api/auth/sign-in/email') {
-          const body = await readBoundedBody(request, 8192)
-          let email = ''
-          try {
-            email = request.headers
-              .get('content-type')
-              ?.startsWith('application/x-www-form-urlencoded')
-              ? (new URLSearchParams(body ?? '').get('email') ?? '')
-              : z.object({ email: z.string() }).parse(JSON.parse(body ?? '')).email
-          } catch {
-            /* Better Auth validates the request */
-          }
-          if (email.toLowerCase().endsWith('@invitation.invalid')) {
-            await db.query('COMMIT')
-            return Response.json(
-              { error: 'Invalid credentials' },
-              { status: 401, headers: { 'Cache-Control': 'no-store' } },
-            )
-          }
-          request = new Request(request.url, {
-            method: request.method,
-            headers: request.headers,
-            body,
           })
         }
         response = await auth.handler(request)

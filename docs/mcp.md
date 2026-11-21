@@ -1,6 +1,6 @@
 # Wartaq MCP
 
-Add `https://wartaqi.up.railway.app/mcp` as a remote Streamable HTTP server in your MCP client. Choose OAuth if prompted. Sign in with your verified phone number, existing email or older invitation username, check the selected account and requested permissions, then approve the connection. An approved application role is required for notebook access.
+Add `https://wartaqi.up.railway.app/mcp` as a remote Streamable HTTP server in your MCP client. Choose OAuth if prompted. Sign in with your verified phone number and password, check the selected account and requested permissions, then approve the connection. An approved application role is required for notebook access.
 
 ## Permissions
 

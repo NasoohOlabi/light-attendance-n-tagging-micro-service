@@ -139,7 +139,7 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   expect(failures).toEqual([])
 })
 
-test('sign-in actions share one row in both languages and themes', async ({ page }, testInfo) => {
+test('phone sign-in fits both languages and themes', async ({ page }, testInfo) => {
   await page.route('**/api/auth/**', (route) => route.fulfill({ json: null }))
   await page.route('**/api/device-accounts', (route) => route.fulfill({ json: { accounts: [] } }))
   await page.goto('/?page=app')
@@ -150,34 +150,32 @@ test('sign-in actions share one row in both languages and themes', async ({ page
       name: language === 'ar' ? 'تسجيل الدخول' : 'Sign in',
       exact: true,
     })
-    const createAccount = form.getByRole('button', {
-      name: language === 'ar' ? 'إنشاء حساب' : 'Create account',
+    const phone = form.getByLabel(language === 'ar' ? 'رقم الهاتف' : 'Phone number', {
       exact: true,
     })
+    const password = form.getByLabel(language === 'ar' ? 'كلمة المرور' : 'Password', {
+      exact: true,
+    })
+    await expect(form.locator('input')).toHaveCount(2)
+    await expect(form.getByRole('button')).toHaveCount(1)
+    await expect(phone).toHaveAttribute('type', 'tel')
+    await expect(phone).toHaveAccessibleDescription(/09.*\+9639/)
+    await expect(password).toHaveAttribute('type', 'password')
     await expect(signIn).toBeEnabled()
     for (const width of [320, 1440]) {
       await page.setViewportSize({ width, height: 880 })
       for (const colorScheme of ['light', 'dark'] as const) {
         await page.emulateMedia({ colorScheme })
         const primary = await signIn.boundingBox()
-        const secondary = await createAccount.boundingBox()
-        if (!primary || !secondary) throw new Error('Missing sign-in actions')
-        expect(primary.x).toBeGreaterThanOrEqual(secondary.x + secondary.width)
-        expect(primary.y).toBe(secondary.y)
-        expect(secondary.height).toBeLessThan(56)
+        const field = await phone.boundingBox()
+        if (!primary || !field) throw new Error('Missing sign-in controls')
+        expect(primary.width).toBeCloseTo(field.width, 0)
+        expect(primary.height).toBeGreaterThanOrEqual(44)
         await mobileLayout(page)
         await page.screenshot({
           path: `.artifacts/verification/sign-in-${language}-${colorScheme}-${width}-${testInfo.project.name}.png`,
         })
       }
     }
-    await createAccount.click()
-    await expect(
-      form.getByRole('heading', { name: language === 'ar' ? 'إنشاء حساب' : 'Create an account' }),
-    ).toBeVisible()
-    await signIn.click()
-    await expect(
-      form.getByRole('heading', { name: language === 'ar' ? 'تسجيل الدخول' : 'Sign in' }),
-    ).toBeVisible()
   }
 })

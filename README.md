@@ -2,7 +2,7 @@
 
 **v0.1.0 · In development.** All changes are merged into `main`; nightly builds and deployments are disabled for now.
 
-A React/TypeScript notebook served by Bun with Better Auth and Railway Postgres. Administrators approve accounts and manage assignments; Teachers work with assigned students; Students see only their own attendance. Signup grants no application role. See [roles](docs/roles.md), [assigned roster](docs/assigned-roster.md) and [security](SECURITY.md).
+A React/TypeScript notebook served by Bun with Better Auth and Railway Postgres. Administrators invite users and manage assignments. Teachers work with assigned students, and Students see only their own attendance. Sign in with a verified phone number and password. See [roles](docs/roles.md), [assigned roster](docs/assigned-roster.md) and [security](SECURITY.md).
 
 **Sign in** opens the notebook for approved accounts. English and Arabic interfaces support responsive and right-to-left layouts. The notebook opens on a dashboard with attendance charts and actions to take attendance or add a student. Administrators can add students; **Settings** opens account and roster management.
 

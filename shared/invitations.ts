@@ -1,10 +1,5 @@
 import { z } from 'zod'
 
-const username = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .regex(/^[a-z0-9._-]{3,32}$/)
 export const phoneSchema = z
   .string()
   .trim()
@@ -41,7 +36,6 @@ export const invitationRequestSchema = z.strictObject({
     .max(50),
 })
 export const invitationProfileSchema = z.object({
-  username: username.nullable(),
   verifiedPhone: z.string().nullable(),
   phone: z.string().nullable(),
   requiresSetup: z.boolean(),
@@ -49,7 +43,6 @@ export const invitationProfileSchema = z.object({
 const newPassword = z.string().min(8).max(128)
 export const invitationSetupInputSchema = z.strictObject({ newPassword })
 export const invitationProfileInputSchema = z.strictObject({
-  username: username.nullable(),
   phone: z
     .string()
     .trim()
@@ -63,16 +56,13 @@ export const invitationProfileInputSchema = z.strictObject({
 })
 export const invitationResponseSchema = z.object({
   invitations: z.array(
-    z.union([
-      z.object({
-        firstName: name,
-        lastName: name,
-        role,
-        phone: phoneSchema,
-        temporaryPassword: z.string(),
-      }),
-      z.object({ firstName: name, lastName: name, role, username, temporaryPassword: z.string() }),
-    ]),
+    z.object({
+      firstName: name,
+      lastName: name,
+      role,
+      phone: phoneSchema,
+      temporaryPassword: z.string(),
+    }),
   ),
 })
 
@@ -81,11 +71,10 @@ export function invitationMessage(
   ar: boolean,
   origin: string,
 ) {
-  const isPhone = 'phone' in item
-  const identifier = isPhone ? item.phone : item.username
-  const url = `${origin}/?page=app&login=${isPhone ? 'phone' : 'username'}`
+  const identifier = item.phone
+  const url = `${origin}/?page=app`
   if (ar) {
-    return `مرحباً ${item.firstName} ${item.lastName}،\nهذا رابط الدخول إلى حسابك في وارتق:\n${url}\n${isPhone ? 'رقم الهاتف' : 'اسم المستخدم'}: ${identifier}\nكلمة المرور المؤقتة: ${item.temporaryPassword}\nعند أول دخول، اختر كلمة مرور خاصة بك.`
+    return `مرحباً ${item.firstName} ${item.lastName}،\nهذا رابط الدخول إلى حسابك في وارتق:\n${url}\nرقم الهاتف: ${identifier}\nكلمة المرور المؤقتة: ${item.temporaryPassword}\nعند أول دخول، اختر كلمة مرور خاصة بك.`
   }
-  return `Hello ${item.firstName} ${item.lastName},\nHere is your Wartaq sign-in link:\n${url}\n${isPhone ? 'Phone' : 'Username'}: ${identifier}\nTemporary password: ${item.temporaryPassword}\nOn your first sign-in, choose a personal password.`
+  return `Hello ${item.firstName} ${item.lastName},\nHere is your Wartaq sign-in link:\n${url}\nPhone: ${identifier}\nTemporary password: ${item.temporaryPassword}\nOn your first sign-in, choose a personal password.`
 }

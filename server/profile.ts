@@ -61,29 +61,3 @@ export async function validProfileRequest(request: Request) {
     return null
   }
 }
-
-// Signup does not need an image; reject it there so profile validation cannot be bypassed.
-export async function validSignupRequest(request: Request) {
-  try {
-    const body = await readBoundedBody(request, 8192)
-    if (body === null) return null
-    const contentType = request.headers.get('content-type') ?? ''
-    if (contentType.startsWith('application/x-www-form-urlencoded'))
-      return !new URLSearchParams(body).has('image') &&
-        !new URLSearchParams(body).get('email')?.toLowerCase().endsWith('@invitation.invalid')
-        ? body
-        : null
-    if (!contentType.startsWith('application/json')) return null
-    const value = z.record(z.string(), z.unknown()).safeParse(JSON.parse(body))
-    return value.success &&
-      !Object.hasOwn(value.data, 'image') &&
-      !(
-        typeof value.data.email === 'string' &&
-        value.data.email.toLowerCase().endsWith('@invitation.invalid')
-      )
-      ? body
-      : null
-  } catch {
-    return null
-  }
-}

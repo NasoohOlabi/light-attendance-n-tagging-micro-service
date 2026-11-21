@@ -26,20 +26,8 @@
   margin-bottom: 1.25rem;
 }
 
-.auth-actions {
-  display: flex;
-  direction: ltr;
-  gap: 0.5rem;
-}
-
-.auth-actions button {
-  flex: 1 1 0;
-  min-width: 0;
-  padding-inline: 0.25rem;
-}
-
-.auth-actions .auth-sign-in {
-  order: 1;
+.auth-form .auth-sign-in {
+  width: 100%;
 }
 
 @media (max-width: 600px) {

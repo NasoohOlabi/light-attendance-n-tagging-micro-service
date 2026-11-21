@@ -92,17 +92,6 @@ export function CourtyardDraft({ language }: DraftProps) {
                 setMessage('opened')
               }}
             >
-              <label>
-                {t('البريد الإلكتروني', 'Email address')}
-                <input
-                  type="email"
-                  placeholder="name@example.com"
-                  autoComplete="email"
-                  dir="ltr"
-                  inputMode="email"
-                  enterKeyHint="go"
-                />
-              </label>
               <button className="a-button" type="submit">
                 {t('استكشف النموذج التجريبي', 'Explore the sample')}{' '}
                 <span aria-hidden="true">{ar ? '←' : '→'}</span>
