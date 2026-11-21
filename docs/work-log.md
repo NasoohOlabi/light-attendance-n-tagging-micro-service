@@ -2129,3 +2129,9 @@ At 16:46 Asia/Damascus, merged `main` (`ec1d777`) and preserved both work-log en
 The owner requested phone sign-in, teacher invitations without generated usernames, and password resets using the phone number an administrator confirms directly with the account holder. New invitations use that number and a generated starter password. First sign-in still requires a personal password. Existing email accounts and older invitation usernames retain access, and an administrator can confirm a number under **Manage**. Reset messages use the verified number when available and old sessions are revoked.
 
 Migration 014 adds a unique verified number without copying historical contact details. Backup version 13 retains it. Disposable PostgreSQL exercised provisioning, setup, legacy conversion, reset and session revocation, saved accounts, MCP receipt redemption, and backup compatibility. Browser checks use synthetic accounts and emulated phones. The PR records the release gate, migration and exact-main Railway deployment evidence.
+
+## 2026-11-21 08:03 Asia/Damascus (UTC+03:00) - Remove teacher birthday prompts
+
+The owner asked to drop the birthday question from teacher invitations. Teachers can complete setup and edit contact details without a date of birth. The invitation message points teachers to the password change. Student and Administrator setup requires a date of birth.
+
+Browser coverage exercises first sign-in, the English and Arabic teacher form, and later contact edits. Disposable PostgreSQL coverage checks that a teacher can finish setup without a birthday and that a student still needs one. The PR records release and Railway verification.

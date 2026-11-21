@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Globe, History, ListChecks, LogOut, Settings, UserRound } from 'lucide-react'
+import type { z } from 'zod'
+import type { invitationProfileInputSchema } from '../shared/invitations'
 import { ThemeChoices } from './i18n'
 import { useLanguage } from './useLanguage'
 import { setQuery } from './queryState'
@@ -13,13 +15,7 @@ export type Profile = {
   update: (name: string, image?: string | null) => Promise<void>
   invitation?: InvitationProfile
   openChanges?: () => void
-  updateInvitation?: (details: {
-    username: string | null
-    phone: string
-    birthDate: string
-    currentPassword: string
-    newPassword?: string
-  }) => Promise<void>
+  updateInvitation?: (details: z.input<typeof invitationProfileInputSchema>) => Promise<void>
 }
 
 export function ProfileMenu({

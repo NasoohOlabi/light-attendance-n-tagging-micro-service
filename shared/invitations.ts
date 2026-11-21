@@ -57,7 +57,10 @@ export const invitationProfileInputSchema = z.strictObject({
     .refine(
       (value) => value.replace(/\D/g, '').length >= 7 && value.replace(/\D/g, '').length <= 15,
     ),
-  birthDate: z.iso.date().refine((value) => value <= new Date().toISOString().slice(0, 10)),
+  birthDate: z.iso
+    .date()
+    .refine((value) => value <= new Date().toISOString().slice(0, 10))
+    .optional(),
   currentPassword: z.string().min(1).max(128),
   newPassword: z.string().min(8).max(128).optional(),
 })
@@ -84,7 +87,10 @@ export function invitationMessage(
   const isPhone = 'phone' in item
   const identifier = isPhone ? item.phone : item.username
   const url = `${origin}/?page=app&login=${isPhone ? 'phone' : 'username'}`
-  if (ar)
-    return `مرحباً ${item.firstName} ${item.lastName}،\nهذا رابط الدخول إلى حسابك في وارتق:\n${url}\n${isPhone ? 'رقم الهاتف' : 'اسم المستخدم'}: ${identifier}\nكلمة المرور المؤقتة: ${item.temporaryPassword}\nعند أول دخول، أكمل بياناتك واختر كلمة مرور خاصة بك.`
-  return `Hello ${item.firstName} ${item.lastName},\nHere is your Wartaq sign-in link:\n${url}\n${isPhone ? 'Phone' : 'Username'}: ${identifier}\nTemporary password: ${item.temporaryPassword}\nOn your first sign-in, complete your details and choose a personal password.`
+  if (ar) {
+    const setup = item.role === 'teacher' ? 'اختر' : 'أكمل بياناتك واختر'
+    return `مرحباً ${item.firstName} ${item.lastName}،\nهذا رابط الدخول إلى حسابك في وارتق:\n${url}\n${isPhone ? 'رقم الهاتف' : 'اسم المستخدم'}: ${identifier}\nكلمة المرور المؤقتة: ${item.temporaryPassword}\nعند أول دخول، ${setup} كلمة مرور خاصة بك.`
+  }
+  const setup = item.role === 'teacher' ? 'choose' : 'complete your details and choose'
+  return `Hello ${item.firstName} ${item.lastName},\nHere is your Wartaq sign-in link:\n${url}\n${isPhone ? 'Phone' : 'Username'}: ${identifier}\nTemporary password: ${item.temporaryPassword}\nOn your first sign-in, ${setup} a personal password.`
 }
