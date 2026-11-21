@@ -246,6 +246,41 @@ integration(
     try {
       await client.connect(transport)
       const tools = (await client.listTools()).tools.map(({ name }) => name)
+      expect(client.getInstructions()).toContain('list_courses')
+      expect(tools).toContain('get_course_attendance_view')
+      expect(tools).not.toContain('get_course_workflow')
+      expect(tools).not.toContain('get_notebook_history')
+      expect(tools).not.toContain('verify_account_phone')
+      const matches = await client.callTool({
+        name: 'find_students',
+        arguments: { query: 'fixture' },
+      })
+      expect(JSON.stringify(matches.content)).toContain(studentId)
+      expect(JSON.stringify(matches.content)).not.toContain(peerId)
+      // Pending invitees can open setup in their browser and then keep using the original grant.
+      await pool.query(
+        'UPDATE app_accounts SET invitation_request_id = $2, invitation_requires_setup = true WHERE auth_user_id = $1',
+        [userId, crypto.randomUUID()],
+      )
+      const pendingTools = (await client.listTools()).tools.map(({ name }) => name)
+      expect(pendingTools).toContain('complete_invitation_setup')
+      expect(pendingTools).not.toContain('get_course_attendance_view')
+      expect(
+        JSON.stringify((await client.callTool({ name: 'complete_invitation_setup' })).content),
+      ).toContain(origin + '/?page=app')
+      expect(
+        (
+          await browserPost(
+            '/api/me/invitation-profile',
+            { newPassword: randomBytes(32).toString('base64url') },
+            cookie,
+            userId,
+          )
+        ).status,
+      ).toBe(200)
+      expect((await client.listTools()).tools.map(({ name }) => name)).toContain(
+        'get_course_attendance_view',
+      )
       expect(tools).toContain('append_events')
       expect(tools).toContain('update_student')
       expect(tools).not.toContain('save_grades')
@@ -313,6 +348,11 @@ integration(
       const snapshot = JSON.stringify((await client.callTool({ name: 'get_notebook' })).content)
       expect(snapshot).toContain('Synthetic note')
       expect(snapshot).not.toContain(peerId)
+      const sessionView = await client.callTool({
+        name: 'get_course_attendance_view',
+        arguments: { courseId, date: attendance.payload.date },
+      })
+      expect(JSON.stringify(sessionView.content)).toContain(attendance.id)
       expect(
         (await pool.query('SELECT id FROM events WHERE student_id = $1', [studentId])).rowCount,
       ).toBe(2)
@@ -342,6 +382,32 @@ integration(
         arguments: { courseId, report: 'attendance' },
       })
       expect(JSON.stringify(report.content)).toContain('Present')
+      const readiness = await client.callTool({
+        name: 'get_course_workflow',
+        arguments: { courseId, view: 'readiness' },
+      })
+      expect(JSON.stringify(readiness.content)).toContain(enrollmentId)
+      const history = await client.callTool({
+        name: 'get_notebook_history',
+        arguments: { courseId, kind: 'note' },
+      })
+      expect(JSON.stringify(history.content)).toContain(note.id)
+      const defaultRows = await client.callTool({
+        name: 'export_course_report',
+        arguments: { courseId, report: 'students' },
+      })
+      expect(defaultRows.isError).not.toBe(true)
+      expect(JSON.stringify(defaultRows.content)).not.toContain('whatsapp')
+      const selectedRows = await client.callTool({
+        name: 'export_course_report',
+        arguments: { courseId, report: 'students', columns: ['firstName', 'whatsapp'] },
+      })
+      expect(JSON.stringify(selectedRows.content)).toContain('123')
+      const invalidColumns = await client.callTool({
+        name: 'export_course_report',
+        arguments: { courseId, report: 'grades', columns: ['whatsapp'] },
+      })
+      expect(invalidColumns.isError).toBe(true)
       const workbook = await client.callTool({
         name: 'export_course_report',
         arguments: { courseId, format: 'xlsx' },
@@ -433,6 +499,14 @@ integration(
       expect(peerSignup.status).toBe(200)
       const peerCookie = sessionCookie(peerSignup)
       expect((await browserPost(revealPath, inviteId, peerCookie, peerUserId)).status).toBe(404)
+      const changePhone = await client.callTool({
+        name: 'verify_account_phone',
+        arguments: {
+          input: { authUserId: peerUserId, phone: '+12025550205', phoneConfirmed: true },
+        },
+      })
+      expect(changePhone.isError).not.toBe(true)
+      expect((await browserPost(revealPath, inviteId, peerCookie, peerUserId)).status).toBe(401)
       await pool.query('UPDATE app_accounts SET active = false WHERE auth_user_id = $1', [userId])
       expect((await browserPost(revealPath, inviteId, cookie, userId)).status).toBe(403)
       await pool.query('UPDATE app_accounts SET active = true WHERE auth_user_id = $1', [userId])
@@ -484,6 +558,17 @@ integration(
       expect(studentTools).toContain('get_my_attendance')
       expect(studentTools).not.toContain('get_notebook')
       expect(studentTools).not.toContain('append_events')
+      for (const tool of [
+        'find_students',
+        'list_courses',
+        'get_student_details',
+        'get_course_attendance_view',
+        'get_course_workflow',
+        'get_notebook_history',
+        'verify_account_phone',
+        'open_password_reset',
+      ])
+        expect(studentTools).not.toContain(tool)
       const own = JSON.stringify((await client.callTool({ name: 'get_my_attendance' })).content)
       expect(own).toContain('MCP course')
       expect(own).not.toContain('Synthetic note')

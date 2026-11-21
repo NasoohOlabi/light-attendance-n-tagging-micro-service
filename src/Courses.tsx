@@ -24,7 +24,7 @@ import {
   type Enrollment,
 } from '../shared/neon'
 import { projectEvents, type LedgerEvent } from '../shared/ledger'
-import { courseAttendance, savedGradeResult } from '../shared/courseGrading'
+import { courseAttendance, missingCourseScores, savedGradeResult } from '../shared/courseGrading'
 import { CourseExportDialog } from './CourseExportDialog'
 import { request } from './neon'
 import { useLanguage } from './useLanguage'
@@ -637,9 +637,7 @@ function GradePage({
     if (decisionEntry) dialogRef.current?.showModal()
   }, [decisionEntry])
   const { missingScores: showMissing } = useQueryState()
-  const missing = entries.filter(
-    (entry) => entry.active && (entry.practical === null || entry.theory === null),
-  )
+  const missing = missingCourseScores(entries)
   const [exportOpen, setExportOpen] = useState(false)
   const [decisions, setDecisions] = useState<
     Record<string, { requestId: string; result: 'pass' | 'fail' | 'calculated'; note: string }>
@@ -1174,14 +1172,7 @@ function GradePage({
       {course.open && (
         <button
           className="primary"
-          disabled={
-            busy ||
-            settingsDirty ||
-            !!gradeDirty ||
-            entries.some(
-              (entry) => entry.active && (entry.practical === null || entry.theory === null),
-            )
-          }
+          disabled={busy || settingsDirty || !!gradeDirty || missing.length > 0}
           onClick={() => void save('/api/admin/courses/status', { id: course.id, open: false })}
         >
           {ar ? 'إغلاق الدورة' : 'Close course'}

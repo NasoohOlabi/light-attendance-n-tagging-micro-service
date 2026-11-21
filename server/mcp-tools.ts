@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import {
   courseExportColumns,
+  courseExportDefaultColumns,
   courseExportRows,
   courseWorkbook,
   type CourseExportInput,
@@ -29,6 +30,11 @@ import {
 import { offlineAttendanceRecordSchema } from '../shared/offlineAttendance'
 import { offlineStudentOperationSchema } from '../shared/offlineStudent'
 import { profileUpdateSchema } from './profile'
+import { registerAccountHandoffs } from './mcp-account'
+import { registerCourseWorkflows } from './mcp-courses'
+import { registerDirectoryTools } from './mcp-directory'
+import { registerHistoryTools } from './mcp-history'
+import { registerNotebookWorkflows } from './mcp-notebook'
 
 const eventInput = z.object({
   id: z.uuid(),
@@ -54,20 +60,46 @@ const offlineNote = eventInput.extend({
   }),
 })
 
-const courseReport = z.object({
-  courseId: z.uuid(),
-  report: z.enum(['full', 'grades', 'students', 'attendance', 'participants']).default('full'),
-  format: z.enum(['rows', 'xlsx']).default('rows'),
-  language: z.enum(['en', 'ar']).default('en'),
-  enrollment: z.enum(['all', 'active', 'withdrawn']).optional(),
-  studentId: z.uuid().optional(),
-  level: z.string().max(100).optional(),
-  coverage: z.enum(['all', 'any', 'both', 'theory', 'practical', 'none']).optional(),
-  result: z.enum(['all', 'pass', 'fail', 'pending']).optional(),
-  from: z.iso.date().optional(),
-  to: z.iso.date().optional(),
-  mark: z.union([z.literal('all'), statusSchema]).optional(),
-})
+const courseReport = z
+  .object({
+    courseId: z.uuid(),
+    report: z.enum(['full', 'grades', 'students', 'attendance', 'participants']).default('full'),
+    format: z.enum(['rows', 'xlsx']).default('rows'),
+    language: z.enum(['en', 'ar']).default('en'),
+    columns: z
+      .array(z.enum([...courseExportColumns('full'), 'date', 'mark'] as const))
+      .min(1)
+      .optional()
+      .describe('Columns to include in the requested order. Omit to use the website defaults.'),
+    enrollment: z.enum(['all', 'active', 'withdrawn']).optional(),
+    studentId: z.uuid().optional(),
+    level: z.string().max(200).optional(),
+    coverage: z.enum(['all', 'any', 'both', 'theory', 'practical', 'none']).optional(),
+    result: z.enum(['all', 'pass', 'fail', 'pending']).optional(),
+    from: z.iso.date().optional(),
+    to: z.iso.date().optional(),
+    mark: z.union([z.literal('all'), statusSchema]).optional(),
+  })
+  .refine(
+    ({ report, columns }) =>
+      !columns ||
+      (new Set(columns).size === columns.length &&
+        columns.every((column) => courseExportColumns(report).includes(column))),
+    {
+      message: 'Choose distinct columns supported by this report.',
+      path: ['columns'],
+    },
+  )
+  .refine(
+    ({ report, from, to, mark }) =>
+      report === 'attendance'
+        ? !from || !to || from <= to
+        : !(from || to || (mark && mark !== 'all')),
+    {
+      message:
+        'Date and mark filters apply to attendance reports. The start date must be on or before the end date.',
+    },
+  )
 
 export type McpOperation = { path: string; method: 'GET' | 'POST'; body?: unknown }
 
@@ -103,6 +135,7 @@ export function registerMcpTools(
       result(path, 'POST', schema.parse(z.record(z.string(), z.unknown()).parse(args).input)),
     )
 
+  registerAccountHandoffs(server, call, scopes, account, origin)
   if (read) {
     get('get_account', 'Get the current application account and access permissions.', '/api/me')
     get('get_profile', 'Get your profile name and image.', '/api/mcp/profile')
@@ -117,7 +150,7 @@ export function registerMcpTools(
     if (account.invitationProfile && ready)
       post(
         'update_invitation_profile',
-        'Update your invitation profile with your current password. Setting a new password revokes sessions.',
+        'For interactive changes, use open_invitation_profile to enter passwords privately. This direct operation requires your current password.',
         '/api/me/invitation-profile',
         invitationProfileInputSchema,
       )
@@ -133,6 +166,8 @@ export function registerMcpTools(
     return
   }
   if (read && account.canRead) {
+    registerDirectoryTools(server, call)
+    registerNotebookWorkflows(server, call, origin)
     get(
       'get_notebook',
       'Get your authorized roster, courses, enrollments, event history and notes. Attendance events use enrollment IDs to identify courses.',
@@ -143,6 +178,7 @@ export function registerMcpTools(
       {
         description:
           'Project your authorized notebook events into current attendance and notes; reversed events are excluded and legacy early/late marks count as present.',
+        annotations: { readOnlyHint: true },
       },
       async () => {
         const response = await call({ path: '/api/notebook', method: 'GET' })
@@ -254,6 +290,8 @@ export function registerMcpTools(
     }
   }
   if (!(admin && read)) return
+  registerCourseWorkflows(server, call)
+  registerHistoryTools(server, call)
   get(
     'get_admin_board',
     'Get accounts, teachers and full student register for administration.',
@@ -263,7 +301,7 @@ export function registerMcpTools(
     'export_course_report',
     {
       description:
-        'Export the selected course as rows or as an Excel workbook. Apply the same attendance, student and grade filters available in Wartaq.',
+        'Export a saved course report as rows or an Excel workbook. Both formats use the website’s default columns. Request optional columns explicitly, including contact details for full or student reports.',
       inputSchema: courseReport,
       annotations: { readOnlyHint: true },
     },
@@ -285,7 +323,7 @@ export function registerMcpTools(
         options,
       }
       if (format === 'rows') {
-        const columns = courseExportColumns(options.report)
+        const columns = options.columns ?? courseExportDefaultColumns(options.report)
         const rows = courseExportRows(input).map((row) => columns.map((column) => row[column]))
         return text(JSON.stringify({ course, columns, rows }))
       }
@@ -364,7 +402,7 @@ export function registerMcpTools(
   )
   post(
     'reset_account_password',
-    'Reset an account password and revoke sessions.',
+    'For a privately generated password and copyable message, use open_password_reset. This direct operation sets a supplied password and revokes the recipient’s sessions.',
     '/api/admin/accounts/reset-password',
     neonAdminPasswordResetSchema,
   )
