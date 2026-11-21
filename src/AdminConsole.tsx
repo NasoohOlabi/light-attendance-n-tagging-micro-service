@@ -199,7 +199,9 @@ export function AdminConsole({
                         return (
                           <div className="role-account">
                             <strong dir="auto">{accountProfileLabel(account)}</strong>
-                            <p dir="ltr">{account.username || account.email}</p>
+                            <p dir="ltr">
+                              {account.verifiedPhone || account.username || account.email}
+                            </p>
                           </div>
                         )
                       return (
@@ -406,6 +408,7 @@ function AccountForm({
     account.role ?? 'teacher',
   )
   const [name, setName] = useState(account.name)
+  const [verifiedPhone, setVerifiedPhone] = useState(account.verifiedPhone ?? '')
   const [reset, setReset] = useState<
     | { kind: 'idle' | 'pending' | 'failed' }
     | { kind: 'done'; credentials: z.infer<typeof neonAdminGeneratedPasswordResetResponseSchema> }
@@ -436,7 +439,7 @@ function AccountForm({
       <summary>
         <span>
           <strong dir="auto">{account.name}</strong>
-          <span dir="ltr">{account.username || account.email}</span>
+          <span dir="ltr">{account.verifiedPhone || account.username || account.email}</span>
           <span>
             {account.role === 'administrator'
               ? ar
@@ -525,6 +528,29 @@ function AccountForm({
             </label>
           )}
         </div>
+        <label>
+          {ar ? 'رقم هاتف الدخول' : 'Sign-in phone number'}
+          <input
+            type="tel"
+            dir="ltr"
+            value={verifiedPhone}
+            onChange={(event) => setVerifiedPhone(event.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          className="secondary"
+          disabled={saving || !account.active || !verifiedPhone.trim()}
+          onClick={() =>
+            void save('/api/admin/accounts/verify-phone', {
+              authUserId: account.authUserId,
+              phone: verifiedPhone,
+              phoneConfirmed: true,
+            })
+          }
+        >
+          {ar ? 'أكد رقم الهاتف بعد السؤال مباشرة' : 'Confirm phone number after asking directly'}
+        </button>
         <div className="role-actions">
           <button className="primary" disabled={saving}>
             {ar ? 'حفظ الدور' : 'Save role'}
@@ -597,10 +623,11 @@ function PasswordResetMessage({
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'manual'>('idle')
   useEffect(() => dialog.current?.showModal(), [])
   const usernameLogin = credentials.loginMethod === 'username'
-  const url = `${window.location.origin}/?page=app${usernameLogin ? '&login=username' : ''}`
+  const phoneLogin = credentials.loginMethod === 'phone'
+  const url = `${window.location.origin}/?page=app${phoneLogin ? '&login=phone' : usernameLogin ? '&login=username' : ''}`
   const text = ar
-    ? `مرحباً ${name}،\nتمت إعادة تعيين كلمة المرور لحسابك في وارتق.\n${url}\n${usernameLogin ? 'اسم المستخدم' : 'البريد الإلكتروني'}: ${credentials.loginIdentifier}\nكلمة المرور المؤقتة: ${credentials.temporaryPassword}`
-    : `Hello ${name},\nYour Wartaq password has been reset.\n${url}\n${usernameLogin ? 'Username' : 'Email'}: ${credentials.loginIdentifier}\nTemporary password: ${credentials.temporaryPassword}`
+    ? `مرحباً ${name}،\nتمت إعادة تعيين كلمة المرور لحسابك في وارتق.\n${url}\n${phoneLogin ? 'رقم الهاتف' : usernameLogin ? 'اسم المستخدم' : 'البريد الإلكتروني'}: ${credentials.loginIdentifier}\nكلمة المرور المؤقتة: ${credentials.temporaryPassword}`
+    : `Hello ${name},\nYour Wartaq password has been reset.\n${url}\n${phoneLogin ? 'Phone' : usernameLogin ? 'Username' : 'Email'}: ${credentials.loginIdentifier}\nTemporary password: ${credentials.temporaryPassword}`
   async function copy() {
     try {
       await navigator.clipboard.writeText(text)

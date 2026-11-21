@@ -1,7 +1,6 @@
 import { afterAll, expect, test } from 'bun:test'
 import { Pool } from 'pg'
 import { z } from 'zod'
-import { invitationResponseSchema } from '../shared/invitations'
 import { startIntegrationServer } from './integration-server'
 
 const databaseUrl = process.env.TEST_RAILWAY_DATABASE_URL
@@ -69,17 +68,63 @@ integration(
       "INSERT INTO app_accounts (auth_user_id, role, teacher_id) VALUES ($1, 'administrator', $2)",
       [adminId, adminTeacherId],
     )
+    const phone = '+12025550110'
+    const teacherPhone = '+12025550111'
+    const verified = { phoneConfirmed: true }
     const body = {
       requestId,
       people: [
-        { firstName: 'Test', lastName: 'Student', role: 'student' },
-        { firstName: 'Test', lastName: 'Teacher', role: 'teacher' },
-        { firstName: 'Test', lastName: 'Admin', role: 'administrator' },
+        { firstName: 'Test', lastName: 'Student', role: 'student', phone, ...verified },
+        {
+          firstName: 'Test',
+          lastName: 'Teacher',
+          role: 'teacher',
+          phone: teacherPhone,
+          ...verified,
+        },
+        {
+          firstName: 'Test',
+          lastName: 'Admin',
+          role: 'administrator',
+          phone: '+12025550112',
+          ...verified,
+        },
       ],
     }
+    const [student, teacher] = body.people
+    expect(
+      (
+        await post(
+          '/api/admin/accounts/invite',
+          { requestId, people: [{ ...student, phoneConfirmed: false }] },
+          adminHeaders,
+        )
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await post(
+          '/api/admin/accounts/invite',
+          { requestId, people: [student, { ...teacher, phone: '001 (202) 555-0110' }] },
+          adminHeaders,
+        )
+      ).status,
+    ).toBe(409)
     const invite = await post('/api/admin/accounts/invite', body, adminHeaders)
-    expect(invite.status, await invite.clone().text()).toBe(200)
-    const { invitations } = invitationResponseSchema.parse(await invite.json())
+    expect(invite.status).toBe(200)
+    const { invitations } = z
+      .object({
+        invitations: z.array(
+          z.strictObject({
+            firstName: z.string(),
+            lastName: z.string(),
+            role: z.string(),
+            phone: z.string(),
+            temporaryPassword: z.string().min(8),
+          }),
+        ),
+      })
+      .parse(await invite.json())
     expect((await post('/api/admin/accounts/invite', body, adminHeaders)).status).toBe(409)
     const records = await pool.query(
       'SELECT a.role, a.teacher_id, a.student_id, t.access_mode, s.teacher_id AS assignment FROM app_accounts a LEFT JOIN teachers t ON t.id = a.teacher_id LEFT JOIN students s ON s.id = a.student_id WHERE invitation_request_id = $1',
@@ -90,8 +135,8 @@ integration(
     expect(records.rows.find((row) => row.role === 'teacher').access_mode).toBe('read_write')
     const person = invitations[0]
     const alias = await pool.query(
-      'SELECT u.email FROM neon_auth."user" u JOIN app_accounts a ON a.auth_user_id = u.id::text WHERE a.invitation_username = $1',
-      [person.username],
+      'SELECT u.email FROM neon_auth."user" u JOIN app_accounts a ON a.auth_user_id = u.id::text WHERE a.invitation_request_id = $1 AND a.role = $2',
+      [requestId, 'student'],
     )
     expect(
       (
@@ -101,10 +146,10 @@ integration(
         })
       ).status,
     ).toBe(401)
-    const login = (username: string, password: string) =>
-      post('/api/auth/sign-in/username', { username, password })
-    const signed = await login(person.username, person.temporaryPassword)
-    expect(signed.status, await signed.clone().text()).toBe(200)
+    const login = (phone: string, password: string) =>
+      post('/api/auth/sign-in/phone', { phone, password })
+    const signed = await login('+1 (202) 555-0110', person.temporaryPassword)
+    expect(signed.status).toBe(200)
     const userId = z.object({ user: z.object({ id: z.uuid() }) }).parse(await signed.json()).user.id
     const headers = {
       cookie: signed.headers.get('set-cookie')?.split(';')[0] ?? '',
@@ -112,7 +157,11 @@ integration(
     }
     const me = await fetch(`${origin}/api/me`, { headers })
     expect(me.status).toBe(200)
-    expect((await me.json()).account.invitationProfile.requiresSetup).toBe(true)
+    expect((await me.json()).account.invitationProfile).toMatchObject({
+      username: null,
+      verifiedPhone: phone,
+      requiresSetup: true,
+    })
     expect((await fetch(`${origin}/api/student/attendance`, { headers })).status).toBe(403)
     expect((await post('/api/admin/accounts/invite', body, headers)).status).toBe(403)
     const reset = async () => {
@@ -124,7 +173,7 @@ integration(
       expect(response.status).toBe(200)
       return z
         .object({
-          loginMethod: z.literal('username'),
+          loginMethod: z.literal('phone'),
           loginIdentifier: z.string(),
           temporaryPassword: z.string().min(16).max(128),
         })
@@ -143,16 +192,16 @@ integration(
       (await post('/api/auth/change-email', { newEmail: 'other@example.test' }, headers)).status,
     ).toBe(403)
     const resetInvitation = await reset()
-    expect(resetInvitation.loginIdentifier).toBe(person.username)
-    expect((await login(person.username, person.temporaryPassword)).status).toBe(401)
+    expect(resetInvitation.loginIdentifier).toBe(phone)
+    expect((await login(phone, person.temporaryPassword)).status).toBe(401)
     expect((await fetch(`${origin}/api/me`, { headers })).status).toBe(401)
-    const signedAfterReset = await login(person.username, resetInvitation.temporaryPassword)
+    const signedAfterReset = await login(phone, resetInvitation.temporaryPassword)
     expect(signedAfterReset.status).toBe(200)
     headers.cookie = signedAfterReset.headers.get('set-cookie')?.split(';')[0] ?? ''
     expect((await fetch(`${origin}/api/student/attendance`, { headers })).status).toBe(403)
     const profile = {
-      username: `student${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`,
-      phone: '12345678',
+      username: null,
+      phone: '+12025550119',
       birthDate: '2000-01-01',
       currentPassword: resetInvitation.temporaryPassword,
       newPassword: 'personal-password-123',
@@ -161,11 +210,11 @@ integration(
       (
         await post(
           '/api/me/invitation-profile',
-          { ...profile, username: invitations[1].username },
+          { ...profile, verifiedPhone: profile.phone },
           headers,
         )
       ).status,
-    ).toBe(409)
+    ).toBe(400)
     expect(
       (await post('/api/me/invitation-profile', { ...profile, currentPassword: 'wrong' }, headers))
         .status,
@@ -181,9 +230,9 @@ integration(
     ).toBe(400)
     expect((await post('/api/me/invitation-profile', profile, headers)).status).toBe(200)
     expect((await fetch(`${origin}/api/me`, { headers })).status).toBe(401)
-    expect((await login(profile.username, resetInvitation.temporaryPassword)).status).toBe(401)
-    expect((await login(person.username, profile.newPassword)).status).toBe(401)
-    const fresh = await login(profile.username, profile.newPassword)
+    expect((await login(phone, resetInvitation.temporaryPassword)).status).toBe(401)
+    expect((await login(profile.phone, profile.newPassword)).status).toBe(401)
+    const fresh = await login(phone, profile.newPassword)
     expect(fresh.status).toBe(200)
     const freshHeaders = {
       cookie: fresh.headers.get('set-cookie')?.split(';')[0] ?? '',
@@ -195,15 +244,53 @@ integration(
     expect((await fetch(`${origin}/api/notebook`, { headers: freshHeaders })).status).toBe(403)
     expect((await fetch(`${origin}/api/admin`, { headers: freshHeaders })).status).toBe(403)
     const resetEstablished = await reset()
-    expect(resetEstablished.loginIdentifier).toBe(profile.username)
-    expect((await login(profile.username, profile.newPassword)).status).toBe(401)
+    expect(resetEstablished.loginIdentifier).toBe(phone)
+    expect((await login(phone, profile.newPassword)).status).toBe(401)
     expect((await fetch(`${origin}/api/me`, { headers: freshHeaders })).status).toBe(401)
-    const signedEstablished = await login(profile.username, resetEstablished.temporaryPassword)
+    const signedEstablished = await login(phone, resetEstablished.temporaryPassword)
     expect(signedEstablished.status).toBe(200)
     freshHeaders.cookie = signedEstablished.headers.get('set-cookie')?.split(';')[0] ?? ''
     expect(
       (await fetch(`${origin}/api/student/attendance`, { headers: freshHeaders })).status,
     ).toBe(200)
+
+    const username = `legacy-${crypto.randomUUID().slice(0, 8)}`
+    const legacyUserId = z.object({ auth_user_id: z.uuid() }).parse(
+      (
+        await pool.query(
+          `UPDATE app_accounts SET verified_phone = NULL, invitation_username = $2, invitation_phone = $3
+         WHERE invitation_request_id = $1 AND role = 'teacher' RETURNING auth_user_id`,
+          [requestId, username, teacherPhone],
+        )
+      ).rows[0],
+    ).auth_user_id
+    const legacyPassword = invitations[1].temporaryPassword
+    const legacyLogin = () =>
+      post('/api/auth/sign-in/username', { username, password: legacyPassword })
+    const legacySession = await legacyLogin()
+    expect(legacySession.status).toBe(200)
+    const legacyHeaders = {
+      cookie: legacySession.headers.get('set-cookie')?.split(';')[0] ?? '',
+      'x-user-id': legacyUserId,
+    }
+    expect((await login(teacherPhone, legacyPassword)).status).toBe(401)
+    const verifyPhone = (authUserId: string, phone: string, headers: Record<string, string>) =>
+      post('/api/admin/accounts/verify-phone', { authUserId, phone, ...verified }, headers)
+    expect((await verifyPhone(legacyUserId, teacherPhone, freshHeaders)).status).toBe(403)
+    expect((await verifyPhone(adminId, teacherPhone, adminHeaders)).status).toBe(403)
+    expect((await verifyPhone(legacyUserId, phone, adminHeaders)).status).toBe(409)
+    const confirmed = await verifyPhone(legacyUserId, teacherPhone, adminHeaders)
+    expect(confirmed.status).toBe(200)
+    expect((await confirmed.json()).accounts).toContainEqual(
+      expect.objectContaining({ authUserId: legacyUserId, verifiedPhone: teacherPhone }),
+    )
+    expect((await fetch(`${origin}/api/me`, { headers: legacyHeaders })).status).toBe(401)
+    expect((await legacyLogin()).status).toBe(401)
+    expect((await login(teacherPhone, legacyPassword)).status).toBe(200)
+    await pool.query('UPDATE app_accounts SET expires_at = now() WHERE auth_user_id = $1', [
+      legacyUserId,
+    ])
+    expect((await login(teacherPhone, legacyPassword)).status).toBe(401)
   },
   30000,
 )

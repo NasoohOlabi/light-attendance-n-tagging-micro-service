@@ -4,17 +4,17 @@ Better Auth establishes identity; `app_accounts` grants a server-owned role. Sig
 
 ### Switch between signed-in accounts
 
-Open **Profile → Sign in to another account**. Enter the invited user's username and password, or choose **Sign in with email** for an email account. Cancel returns to the current workspace. For a new invitation, finish the first-login form to open that person's workspace.
+Open **Profile → Sign in to another account**. Enter the phone number and password for a phone account. Email accounts and older invitation usernames remain available. Cancel returns to the current workspace. For a new invitation, finish the first-login form to open that person's workspace.
 
-Open **Profile** again and select a saved name to switch back. Each name includes its username or email, and **Current account** marks the identity in use. This browser can keep up to five signed-in accounts. Switching opens the selected account's default workspace and updates other open app tabs. **Sign out** removes the current account. Other valid accounts remain available on the sign-in screen.
+Open **Profile** again and select a saved name to switch back. Each name includes the sign-in phone number, email or older username. **Current account** marks the identity in use. This browser can keep up to five signed-in accounts. Switching opens the selected account's default workspace and updates other open app tabs. **Sign out** removes the current account. Other valid accounts remain available on the sign-in screen.
 
 ### Invite a user
 
-Open **Settings → Accounts → Create accounts**. Enter a first name and last name, choose the role, and select **Create account**. Teacher is preselected. Create one account at a time.
+Open **Settings → Accounts → Create accounts**. Enter the recipient's name and phone number and choose their role. Teacher is preselected. Ask the recipient directly whether the number is theirs, then select **Confirm phone number after asking directly** and **Create account**. Each invitation uses one verified sign-in number. The form accepts Syrian mobile numbers beginning with `09` and international numbers with `+` or `00`.
 
-Use **Copy message** and send the message privately to the recipient. The screen confirms when it was copied. If the browser blocks clipboard access, copy the selected message manually. The message opens username sign-in and includes the recipient's initial username and temporary password. Leaving the screen clears the displayed message. If the creation response is lost, **Retry safely** uses the same request. Check Accounts for the username and use its password reset if the account was created.
+Use **Copy message** and send the message privately to the recipient. The message contains the phone sign-in link, their number and their temporary password. If the browser blocks clipboard access, copy the selected message manually. Leaving the screen clears the message. If the creation response is lost, **Retry safely** uses the same request. Look up the phone number under Accounts and reset its password if the account was created.
 
-At first sign-in the recipient enters their phone number and date of birth, chooses a personal password, and can edit their username. They sign in again with the new credentials. **Profile settings** lets them change those details later. A student invitation creates a fresh, unassigned roster record. To connect someone to an existing student, use the existing signup and account-grant flow and select the correct roster record.
+At first sign-in the recipient enters their date of birth and replaces the temporary password. They sign in again with the same phone number and their new password. **Profile settings** lets them update personal details. An administrator confirms changes to the sign-in number under **Accounts → Manage**. A student invitation creates a fresh, unassigned roster record. To connect someone to an existing student, use the existing signup and account-grant flow and select the correct roster record.
 
 | Role          | Access                                                                                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -24,7 +24,9 @@ At first sign-in the recipient enters their phone number and date of birth, choo
 
 Settings is an explicit destination. The Administrator starts on the notebook dashboard. Choosing Teacher grants the role's standard access, including for accounts with a legacy access mode. A Student account links to one roster student. The server denies administrative endpoints to Teachers and Students and notebook/event endpoints to Students. The acting Administrator cannot change, disable or reset their own account through the browser. Use the private CLI for bootstrap and recovery.
 
-To reset another account, open **Settings → Accounts → Manage → Reset password**. The server generates a temporary password, replaces the previous password and signs the recipient out of existing sessions. Select **Copy message** to copy the sign-in link, username or email, and temporary password. Send it privately to the recipient. Closing the box clears the displayed password. The password works until it is changed or reset again. Invited accounts that still need setup finish it using the new password.
+For an existing account, open **Settings → Accounts → Manage** and confirm the phone number directly with the account holder. Save it with the phone verification button. An older invited account uses its username until a number is confirmed. Email accounts can continue using email.
+
+To reset another account, select **Reset password** under **Manage**. The server generates a replacement and signs the recipient out of existing sessions. **Copy message** includes the sign-in link, the verified phone number when available, and the replacement password. Accounts awaiting phone confirmation use their existing email or username. Send the message privately. Closing the box clears the displayed password. The password works until it is changed or reset again. Invited accounts that still need setup finish it using the new password.
 
 Access changes take effect on the next request, not by push; already downloaded data cannot be retracted. The administrator directory is limited to 1,000 accounts. See [Railway setup](railway-setup.md) for provisioning and [architecture](architecture.md) for event semantics.
 

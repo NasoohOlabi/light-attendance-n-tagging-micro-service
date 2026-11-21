@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { createHandler } from '../functions/notebook-service'
 import { createMcpHandler } from './mcp'
 import { invitationReceipts } from './mcp-invitation'
+import { phoneSchema } from '../shared/invitations'
 import { mcpConsentPage } from './mcp-consent'
 import { createMcpOAuthPlugins } from './mcp-oauth'
 import type { McpOperation } from './mcp-tools'
@@ -99,7 +100,7 @@ async function remembered(
   const session = await auth.api.getSession({ headers, query: { disableRefresh: true } })
   if (!session?.user.id) return undefined
   const result = await pool.query(
-    'SELECT invitation_username FROM app_accounts WHERE auth_user_id = $1',
+    'SELECT invitation_username, verified_phone FROM app_accounts WHERE auth_user_id = $1',
     [session.user.id],
   )
   const username = z.string().nullable().optional().parse(result.rows[0]?.invitation_username)
@@ -107,7 +108,10 @@ async function remembered(
     value,
     userId: session.user.id,
     name: session.user.name,
-    identifier: username ?? session.user.email,
+    identifier:
+      z.string().nullable().optional().parse(result.rows[0]?.verified_phone) ??
+      username ??
+      session.user.email,
     expiresAt: session.session.expiresAt,
     marker,
   }
@@ -198,6 +202,11 @@ const notebook = createHandler(
 )
 
 const mcpProfileSchema = z.object({ name: z.string(), image: z.string().nullable() })
+const phoneLoginSchema = z.strictObject({
+  phone: phoneSchema,
+  password: z.string().min(1).max(128),
+  oauth_query: z.string().max(6000).optional(),
+})
 const usernameLoginSchema = z.strictObject({
   username: z
     .string()
@@ -312,6 +321,7 @@ export async function handle(request: Request): Promise<Response> {
       '/api/auth/sign-up/email',
       '/api/auth/sign-in/email',
       '/api/auth/sign-in/username',
+      '/api/auth/sign-in/phone',
       '/api/auth/sign-out',
     ].includes(authPath) &&
     url.pathname !== authPath
@@ -320,7 +330,7 @@ export async function handle(request: Request): Promise<Response> {
   if (url.pathname === '/health' && request.method === 'GET') {
     try {
       await pool.query(
-        'SELECT course_enrollments.teacher_id, course_enrollments.active, course_enrollments.handbook_received, course_enrollments.notes, course_enrollments.grade_decisions, app_accounts.invitation_request_id, app_accounts.invitation_username, app_accounts.invitation_phone, app_accounts.invitation_birth_date, app_accounts.invitation_requires_setup, students.whatsapp, students.location, students.birth_year, courses.open, courses.attendance_minimum, courses.practical_minimum, courses.theory_minimum FROM app_accounts, teachers, students, courses, course_enrollments, events, neon_auth."user", neon_auth.account, neon_auth.session, neon_auth.verification LIMIT 0',
+        'SELECT course_enrollments.teacher_id, course_enrollments.active, course_enrollments.handbook_received, course_enrollments.notes, course_enrollments.grade_decisions, app_accounts.invitation_request_id, app_accounts.invitation_username, app_accounts.verified_phone, app_accounts.invitation_phone, app_accounts.invitation_birth_date, app_accounts.invitation_requires_setup, students.whatsapp, students.location, students.birth_year, courses.open, courses.attendance_minimum, courses.practical_minimum, courses.theory_minimum FROM app_accounts, teachers, students, courses, course_enrollments, events, neon_auth."user", neon_auth.account, neon_auth.session, neon_auth.verification LIMIT 0',
       )
       await authPool.query(
         'SELECT 1 FROM "oauthClient", "oauthClientResource", "oauthResource", "oauthAccessToken", "oauthRefreshToken", "oauthConsent", "oauthClientAssertion" LIMIT 0',
@@ -329,6 +339,15 @@ export async function handle(request: Request): Promise<Response> {
         "SELECT is_nullable FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'students' AND column_name = 'teacher_id'",
       )
       if (assignment.rows[0]?.is_nullable !== 'YES') throw new Error('Roster migration required')
+      const phoneIndex = await pool.query(
+        `SELECT 1 FROM pg_index i
+         JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[0]
+         WHERE i.indexrelid = to_regclass('public.app_accounts_verified_phone_idx')
+           AND i.indrelid = 'public.app_accounts'::regclass AND a.attname = 'verified_phone'
+           AND i.indisunique AND i.indisvalid AND i.indisready
+           AND i.indnkeyatts = 1 AND i.indpred IS NULL`,
+      )
+      if (!phoneIndex.rowCount) throw new Error('Phone migration required')
       return Response.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
     } catch {
       return Response.json({ ok: false }, { status: 503, headers: { 'Cache-Control': 'no-store' } })
@@ -429,10 +448,20 @@ export async function handle(request: Request): Promise<Response> {
       const session = await auth.api.getSession({ headers: request.headers })
       if (session?.user.id) {
         const invited = await pool.query(
-          'SELECT 1 FROM app_accounts WHERE auth_user_id = $1 AND invitation_username IS NOT NULL',
+          'SELECT 1 FROM app_accounts WHERE auth_user_id = $1 AND (invitation_username IS NOT NULL OR invitation_request_id IS NOT NULL)',
           [session.user.id],
         )
         if (invited.rowCount) return Response.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
+    let phoneLogin: z.infer<typeof phoneLoginSchema> | undefined
+    if (url.pathname === '/api/auth/sign-in/phone' && request.method === 'POST') {
+      try {
+        const body = await readBoundedBody(request, 8192)
+        if (body === null) throw new Error('Invalid request')
+        phoneLogin = phoneLoginSchema.parse(JSON.parse(body))
+      } catch {
+        return Response.json({ error: 'Invalid credentials' }, { status: 400 })
       }
     }
     let usernameLogin: z.infer<typeof usernameLoginSchema> | undefined
@@ -447,9 +476,12 @@ export async function handle(request: Request): Promise<Response> {
     }
     const isLogin =
       request.method === 'POST' &&
-      ['/api/auth/sign-in/email', '/api/auth/sign-in/username', '/api/auth/sign-up/email'].includes(
-        url.pathname,
-      )
+      [
+        '/api/auth/sign-in/email',
+        '/api/auth/sign-in/username',
+        '/api/auth/sign-in/phone',
+        '/api/auth/sign-up/email',
+      ].includes(url.pathname)
     const isSignout = request.method === 'POST' && url.pathname === '/api/auth/sign-out'
     const activeBefore = isLogin || isSignout ? await activeAccount(request) : undefined
     const before = isLogin ? await rememberedAccounts(request, activeBefore) : []
@@ -466,27 +498,26 @@ export async function handle(request: Request): Promise<Response> {
       try {
         await db.query('BEGIN')
         await db.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
-        if (usernameLogin) {
+        if (usernameLogin || phoneLogin) {
           const found = await db.query(
             `SELECT u.email FROM app_accounts a JOIN neon_auth."user" u ON u.id::text = a.auth_user_id
-            WHERE a.invitation_username = $1 AND a.active AND (a.expires_at IS NULL OR a.expires_at > now())`,
-            [usernameLogin.username],
+             WHERE ((a.invitation_username = $1 AND a.verified_phone IS NULL) OR a.verified_phone = $2)
+               AND a.active AND (a.expires_at IS NULL OR a.expires_at > now())
+               AND ((a.role = 'student' AND EXISTS (SELECT 1 FROM students s WHERE s.id = a.student_id AND s.active))
+                 OR (a.role IN ('teacher', 'administrator') AND EXISTS (
+                   SELECT 1 FROM teachers t WHERE t.id = a.teacher_id AND t.active
+                     AND (t.expires_at IS NULL OR t.expires_at > now())
+                 )))`,
+            [usernameLogin?.username ?? null, phoneLogin?.phone ?? null],
           )
           const email = z.string().safeParse(found.rows[0]?.email)
-          if (!email.success) {
-            await db.query('COMMIT')
-            return Response.json(
-              { error: 'Invalid credentials' },
-              { status: 401, headers: { 'Cache-Control': 'no-store' } },
-            )
-          }
           request = new Request(new URL('/api/auth/sign-in/email', request.url), {
             method: 'POST',
             headers: request.headers,
             body: JSON.stringify({
-              email: email.data,
-              password: usernameLogin.password,
-              oauth_query: usernameLogin.oauth_query,
+              email: email.success ? email.data : 'missing@invitation.invalid',
+              password: (usernameLogin ?? phoneLogin)?.password,
+              oauth_query: (usernameLogin ?? phoneLogin)?.oauth_query,
             }),
           })
         } else if (authPath === '/api/auth/sign-in/email') {

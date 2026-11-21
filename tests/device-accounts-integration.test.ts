@@ -117,41 +117,58 @@ integration(
       {
         requestId,
         people: [
-          { firstName: 'Synthetic', lastName: 'Teacher', role: 'teacher' },
-          { firstName: 'Synthetic', lastName: 'Student', role: 'student' },
-          ...['Four', 'Five', 'Six'].map((lastName) => ({
+          {
+            firstName: 'Synthetic',
+            lastName: 'Teacher',
+            role: 'teacher',
+            phone: '+12025550120',
+            phoneConfirmed: true,
+          },
+          {
+            firstName: 'Synthetic',
+            lastName: 'Student',
+            role: 'student',
+            phone: '+12025550121',
+            phoneConfirmed: true,
+          },
+          ...['Four', 'Five', 'Six'].map((lastName, index) => ({
             firstName: 'Synthetic',
             lastName,
             role: 'teacher',
+            phone: `+1202555012${index + 2}`,
+            phoneConfirmed: true,
           })),
         ],
       },
       adminId,
     )
     expect(invite.status).toBe(200)
-    const { invitations } = invitationResponseSchema.parse(await invite.json())
+    const invitations = invitationResponseSchema
+      .parse(await invite.json())
+      .invitations.map((item) => {
+        if (!('phone' in item)) throw new Error('Expected a phone invitation')
+        return item
+      })
     const teacher = invitations[0]
     const student = invitations[1]
     expect(
-      (await call('/api/auth/sign-in/username', { username: teacher.username, password: 'wrong' }))
-        .status,
+      (await call('/api/auth/sign-in/phone', { phone: teacher.phone, password: 'wrong' })).status,
     ).toBe(401)
     expect((await call('/api/me', undefined, adminId)).status).toBe(200)
-    const signed = await call('/api/auth/sign-in/username', {
-      username: teacher.username,
+    const signed = await call('/api/auth/sign-in/phone', {
+      phone: teacher.phone,
       password: teacher.temporaryPassword,
     })
     expect(signed.status).toBe(200)
     const teacherUserId = z.object({ user: z.object({ id: z.uuid() }) }).parse(await signed.json())
       .user.id
-    const username = `teacher${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`
     expect(
       (
         await call(
           '/api/me/invitation-profile',
           {
-            username,
-            phone: '12345678',
+            username: null,
+            phone: teacher.phone,
             birthDate: '2000-01-01',
             currentPassword: teacher.temporaryPassword,
             newPassword: 'personal-password-123',
@@ -160,11 +177,14 @@ integration(
         )
       ).status,
     ).toBe(200)
-    const teacherLogin = await call('/api/auth/sign-in/username', {
-      username,
+    const teacherLogin = await call('/api/auth/sign-in/phone', {
+      phone: teacher.phone,
       password: 'personal-password-123',
     })
     expect(teacherLogin.status).toBe(200)
+    expect((await list()).find((account) => account.userId === teacherUserId)?.identifier).toBe(
+      teacher.phone,
+    )
     expect((await call('/api/notebook', undefined, teacherUserId)).status).toBe(200)
     expect((await call('/api/admin', undefined, teacherUserId)).status).toBe(403)
     const adminSwitch = await call('/api/device-accounts/switch', { userId: adminId })
@@ -174,22 +194,21 @@ integration(
       .filter((value) => /session_token|device-session-/.test(value) && !/max-age=0/i.test(value)))
       expect(cookie).not.toMatch(/(?:expires|max-age)=/i)
     expect((await call('/api/admin', undefined, adminId)).status).toBe(200)
-    const studentSignIn = await call('/api/auth/sign-in/username', {
-      username: student.username,
+    const studentSignIn = await call('/api/auth/sign-in/phone', {
+      phone: student.phone,
       password: student.temporaryPassword,
     })
     expect(studentSignIn.status).toBe(200)
     const studentId = z
       .object({ user: z.object({ id: z.uuid() }) })
       .parse(await studentSignIn.json()).user.id
-    const studentUsername = `student${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`
     expect(
       (
         await call(
           '/api/me/invitation-profile',
           {
-            username: studentUsername,
-            phone: '12345678',
+            username: null,
+            phone: student.phone,
             birthDate: '2000-01-01',
             currentPassword: student.temporaryPassword,
             newPassword: 'personal-password-123',
@@ -200,8 +219,8 @@ integration(
     ).toBe(200)
     expect(
       (
-        await call('/api/auth/sign-in/username', {
-          username: studentUsername,
+        await call('/api/auth/sign-in/phone', {
+          phone: student.phone,
           password: 'personal-password-123',
         })
       ).status,
@@ -223,8 +242,8 @@ integration(
     for (const extra of invitations.slice(2, 4))
       expect(
         (
-          await call('/api/auth/sign-in/username', {
-            username: extra.username,
+          await call('/api/auth/sign-in/phone', {
+            phone: extra.phone,
             password: extra.temporaryPassword,
           })
         ).status,
@@ -233,8 +252,8 @@ integration(
     const sixth = invitations[4]
     expect(
       (
-        await call('/api/auth/sign-in/username', {
-          username: sixth.username,
+        await call('/api/auth/sign-in/phone', {
+          phone: sixth.phone,
           password: sixth.temporaryPassword,
         })
       ).status,

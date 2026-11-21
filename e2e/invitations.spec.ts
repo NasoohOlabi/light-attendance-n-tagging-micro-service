@@ -36,7 +36,12 @@ test('administrator creates one invitation and can safely retry it', async ({
   await mockAuth(page, adminId)
   let posts = 0
   let requestId = ''
-  const person = { firstName: 'Ava', lastName: 'Example', role: 'administrator' }
+  const person = {
+    firstName: 'Ava',
+    lastName: 'Example',
+    role: 'teacher',
+    phone: '+12025550101',
+  }
   await page.route('**/api/**', async (route) => {
     if (new URL(route.request().url()).pathname.startsWith('/api/auth/')) return route.fallback()
     const req = route.request()
@@ -57,7 +62,7 @@ test('administrator creates one invitation and can safely retry it', async ({
     if (path === '/api/admin/accounts/invite') {
       posts++
       const body = req.postDataJSON()
-      expect(body.people).toEqual([person])
+      expect(body.people).toEqual([{ ...person, phoneConfirmed: true }])
       if (posts === 1) {
         requestId = body.requestId
         return route.abort()
@@ -68,7 +73,6 @@ test('administrator creates one invitation and can safely retry it', async ({
           invitations: [
             {
               ...person,
-              username: 'sample0',
               temporaryPassword: 'Synthetic-password-1',
             },
           ],
@@ -85,6 +89,8 @@ test('administrator creates one invitation and can safely retry it', async ({
   const firstName = page.getByLabel('First name')
   const lastName = page.getByLabel('Last name')
   const role = page.getByRole('combobox', { name: 'Role', exact: true })
+  const phone = page.getByLabel('Phone number')
+  const verify = page.getByRole('button', { name: 'Confirm phone number after asking directly' })
   const create = page.getByRole('button', { name: 'Create account', exact: true })
   await page.locator('.skip-link').press('Enter')
   await expect(main).toBeFocused()
@@ -108,6 +114,14 @@ test('administrator creates one invitation and can safely retry it', async ({
   await expect(lastName).toHaveCSS('outline-style', 'solid')
   await lastName.fill(person.lastName)
   await role.selectOption(person.role)
+  await phone.fill(person.phone)
+  await expect(create).toBeDisabled()
+  await verify.click()
+  await expect(create).toBeEnabled()
+  await phone.fill('+12025550102')
+  await phone.fill(person.phone)
+  await expect(create).toBeDisabled()
+  await verify.click()
   await create.click()
   await expect(page.getByRole('alert')).toContainText('could not be confirmed')
   await page.getByRole('button', { name: 'Retry safely' }).click()
@@ -143,7 +157,8 @@ test('administrator creates one invitation and can safely retry it', async ({
   await clickAccountAction(page, 'English')
   const message = await invitation.inputValue()
   expect(message).toContain('Synthetic-password-1')
-  expect(message).toContain(`${baseURL}/?page=app&login=username`)
+  expect(message).toContain(person.phone)
+  expect(message).toContain(`${baseURL}/?page=app&login=phone`)
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   const readClipboard = () =>
     page.evaluate(async () => (await navigator.clipboard.readText()).replaceAll('\r\n', '\n'))
@@ -203,7 +218,7 @@ for (const language of ['en', 'ar']) {
               firstName: 'Ava',
               lastName: 'Example',
               role: 'teacher',
-              username: 'example1',
+              phone: '+12025550103',
               temporaryPassword,
             },
             {
@@ -233,8 +248,11 @@ for (const language of ['en', 'ar']) {
     const value = await message.inputValue()
     expect(value).toContain(temporaryPassword)
     expect(value).not.toContain(otherPassword)
-    expect(value).toContain('example1')
-    expect(value).toContain(`${baseURL}/?page=app&login=username`)
+    expect(value).toContain('+12025550103')
+    expect(value).toContain(`${baseURL}/?page=app&login=phone`)
+    expect(await page.getByRole('textbox', { name: 'Sam Example' }).inputValue()).toContain(
+      `${baseURL}/?page=app&login=username`,
+    )
     await expect(message).toHaveCSS('direction', language === 'ar' ? 'rtl' : 'ltr')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])

@@ -1,6 +1,6 @@
 # Wartaq MCP
 
-Add `https://wartaqi.up.railway.app/mcp` as a remote Streamable HTTP server in your MCP client. Choose OAuth if prompted. Sign in with your existing Wartaq email or invited username, check the selected account and requested permissions, then approve the connection. An approved application role is required for notebook access.
+Add `https://wartaqi.up.railway.app/mcp` as a remote Streamable HTTP server in your MCP client. Choose OAuth if prompted. Sign in with your verified phone number, existing email or older invitation username, check the selected account and requested permissions, then approve the connection. An approved application role is required for notebook access.
 
 ## Permissions
 
@@ -22,7 +22,7 @@ Teachers can read and edit attendance, notebook notes and profile fields for act
 
 ## Private invitation messages
 
-Create an invitation with `invite_accounts`. Select **Open private invitation** in the MCP app card, or open the Wartaq link returned by the tool. On your phone or desktop browser, sign in as the same Wartaq administrator who created it, then choose **Reveal invitation** and copy each recipient's message. MCP returns only a link and its reference. Wartaq delivers the message directly to your signed-in browser.
+Create an invitation with `invite_accounts` after the administrator confirms each phone number directly with its recipient. Each person in the request needs a `phone` and `phoneConfirmed: true`. Select **Open private invitation** in the MCP app card, or open the Wartaq link returned by the tool. On your phone or desktop browser, sign in as the same Wartaq administrator who created it, then choose **Reveal invitation** and copy each recipient's message. MCP returns only a link and its reference. Wartaq delivers the message directly to your signed-in browser.
 
 The link can reveal the message once within 15 minutes. Copy it before leaving the page. If the link is unavailable or the account was created before this feature, use **Settings → Accounts → Manage → Reset password** for the existing account to generate a fresh copyable message. This replaces the old password and revokes the recipient's sessions.
 

@@ -81,10 +81,10 @@ export function NeonAuth({
   const addAccount = () => {
     clearOfflineAccess()
     setMode('sign-in')
-    setUsernameSignIn(true)
+    setLoginMethod('phone')
     setError('')
     setPassword('')
-    setUsername('')
+    setLoginIdentifier('')
     setEmail('')
     setPasswordChanged(false)
     setAddingAccount(true)
@@ -121,10 +121,11 @@ export function NeonAuth({
     }
   }, [])
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
-  const [usernameSignIn, setUsernameSignIn] = useState(
-    () => new URLSearchParams(window.location.search).get('login') === 'username',
-  )
-  const [username, setUsername] = useState('')
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone' | 'username'>(() => {
+    const login = new URLSearchParams(window.location.search).get('login')
+    return login === 'phone' || login === 'username' ? login : 'email'
+  })
+  const [loginIdentifier, setLoginIdentifier] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -330,11 +331,18 @@ export function NeonAuth({
         }
         if (invitation?.requiresSetup && addedAccount) {
           try {
-            const response = await fetch('/api/auth/sign-in/username', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ username: details.username, password: details.newPassword }),
-            })
+            const response = await fetch(
+              invitation?.verifiedPhone ? '/api/auth/sign-in/phone' : '/api/auth/sign-in/username',
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(
+                  invitation?.verifiedPhone
+                    ? { phone: invitation.verifiedPhone, password: details.newPassword }
+                    : { username: details.username, password: details.newPassword },
+                ),
+              },
+            )
             if (response.ok) {
               resetWorkspace()
               return
@@ -345,9 +353,9 @@ export function NeonAuth({
         }
         setAccount(null)
         announceSessionChange()
-        setUsername(details.username)
+        setLoginIdentifier(invitation?.verifiedPhone ?? details.username ?? '')
         setPassword('')
-        setUsernameSignIn(true)
+        setLoginMethod(invitation?.verifiedPhone ? 'phone' : 'username')
         setPasswordChanged(true)
         await session.refetch()
       } else {
@@ -435,15 +443,29 @@ export function NeonAuth({
           setBusy(true)
           setError('')
           try {
-            if (mode === 'sign-in' && usernameSignIn) {
-              const response = await fetch('/api/auth/sign-in/username', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-              })
+            if (mode === 'sign-in' && loginMethod !== 'email') {
+              const phoneLogin = loginMethod === 'phone'
+              const response = await fetch(
+                phoneLogin ? '/api/auth/sign-in/phone' : '/api/auth/sign-in/username',
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(
+                    phoneLogin
+                      ? { phone: loginIdentifier, password }
+                      : { username: loginIdentifier, password },
+                  ),
+                },
+              )
               if (!response.ok) {
                 setError(
-                  response.status === 409 ? deviceLimitMessage : 'Invalid username or password.',
+                  response.status === 409
+                    ? deviceLimitMessage
+                    : phoneLogin
+                      ? language === 'ar'
+                        ? 'رقم الهاتف أو كلمة المرور غير صحيحة.'
+                        : 'Invalid phone number or password.'
+                      : 'Invalid username or password.',
                 )
                 return
               }
@@ -509,33 +531,43 @@ export function NeonAuth({
           </label>
         )}
         {mode === 'sign-in' && (
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              setUsernameSignIn(!usernameSignIn)
-              setError('')
-            }}
-          >
-            {usernameSignIn
-              ? language === 'ar'
-                ? 'تسجيل الدخول بالبريد الإلكتروني'
-                : 'Sign in with email'
-              : language === 'ar'
-                ? 'تسجيل الدخول باسم المستخدم'
-                : 'Sign in with username'}
-          </button>
+          <div className="space-y-1">
+            <label htmlFor="sign-in-method">
+              {language === 'ar' ? 'طريقة تسجيل الدخول' : 'Sign-in method'}
+            </label>
+            <select
+              id="sign-in-method"
+              className="min-h-11 w-full"
+              value={loginMethod}
+              onChange={(event) => {
+                setLoginMethod(z.enum(['email', 'phone', 'username']).parse(event.target.value))
+                setLoginIdentifier('')
+                setError('')
+              }}
+            >
+              <option value="phone">{language === 'ar' ? 'رقم الهاتف' : 'Phone number'}</option>
+              <option value="email">{t('Email')}</option>
+              <option value="username">{language === 'ar' ? 'اسم المستخدم' : 'Username'}</option>
+            </select>
+          </div>
         )}
-        {mode === 'sign-in' && usernameSignIn ? (
+        {mode === 'sign-in' && loginMethod !== 'email' ? (
           <label>
-            {language === 'ar' ? 'اسم المستخدم' : 'Username'}
+            {loginMethod === 'phone'
+              ? language === 'ar'
+                ? 'رقم الهاتف'
+                : 'Phone number'
+              : language === 'ar'
+                ? 'اسم المستخدم'
+                : 'Username'}
             <input
               required
+              type={loginMethod === 'phone' ? 'tel' : 'text'}
               autoComplete="username"
               autoCapitalize="none"
               dir="ltr"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={loginIdentifier}
+              onChange={(event) => setLoginIdentifier(event.target.value)}
             />
           </label>
         ) : (

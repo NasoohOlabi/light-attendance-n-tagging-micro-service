@@ -14,7 +14,7 @@ integration(
     if (!url) throw new Error('Disposable database required')
     const admin = new Pool({ connectionString: url })
     const names = Array.from(
-      { length: 13 },
+      { length: 14 },
       () => `transfer_${crypto.randomUUID().replaceAll('-', '')}`,
     )
     const pools: Pool[] = []
@@ -27,7 +27,7 @@ integration(
       !localPath.startsWith('transfer-test-')
     )
       throw new Error('Refusing cleanup outside the disposable transfer directory')
-    const files = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((version) =>
+    const files = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((version) =>
       resolve(directory, `v${version}.json`),
     )
     const run = (command: string, file: string, dbUrl: string, succeeds = true) => {
@@ -210,6 +210,14 @@ integration(
       )
       run('compare', files[10], urls[0], false)
       run('export', files[11], urls[0])
+      await migrate(source, 'neon/014-verified-phone.sql')
+      await migrate(source, 'neon/014-verified-phone.sql')
+      run('compare', files[11], urls[0])
+      await source.query(
+        "UPDATE app_accounts SET verified_phone = '+12025550140' WHERE auth_user_id = 'synthetic'",
+      )
+      run('compare', files[11], urls[0], false)
+      run('export', files[12], urls[0])
       for (let index = 0; index < targets.length; index++) {
         await migrate(targets[index], 'neon/003-courses.sql')
         await migrate(targets[index], 'neon/004-student-names.sql')
@@ -233,9 +241,11 @@ integration(
           run('import', files[index], urls[index + 1], false)
           await migrate(targets[index], 'neon/012-enrollment-teacher.sql')
         }
-        if (index === 11) {
+        if (index >= 11) {
           run('import', files[index], urls[index + 1], false)
           await migrate(targets[index], 'neon/013-invitations.sql')
+          if (index === 12) run('import', files[index], urls[index + 1], false)
+          await migrate(targets[index], 'neon/014-verified-phone.sql')
         }
         run('import', files[index], urls[index + 1])
         run('compare', files[index], urls[index + 1])
@@ -248,7 +258,14 @@ integration(
                 .version,
           ),
         ),
-      ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+      ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+      expect(
+        (
+          await targets[12].query(
+            "SELECT verified_phone FROM app_accounts WHERE auth_user_id = 'synthetic'",
+          )
+        ).rows[0],
+      ).toEqual({ verified_phone: '+12025550140' })
       expect(
         (
           await targets[10].query('SELECT teacher_id FROM course_enrollments WHERE id = $1', [

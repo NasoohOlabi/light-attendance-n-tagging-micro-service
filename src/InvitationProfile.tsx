@@ -18,7 +18,7 @@ export function InvitationProfileForm({
   const { language } = useLanguage()
   const ar = language === 'ar'
   const [username, setUsername] = useState(invitation.username)
-  const [phone, setPhone] = useState(invitation.phone ?? '')
+  const [phone, setPhone] = useState(invitation.phone ?? invitation.verifiedPhone ?? '')
   const [latestBirthDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [birthDate, setBirthDate] = useState(invitation.birthDate ?? '')
   const [currentPassword, setCurrentPassword] = useState('')
@@ -81,19 +81,21 @@ export function InvitationProfileForm({
             : 'Enter your temporary password and choose a personal password for future sign-ins.'}
         </p>
       )}
-      <label>
-        {ar ? 'اسم المستخدم' : 'Username'}
-        <input
-          required
-          minLength={3}
-          maxLength={32}
-          pattern="[a-z0-9._\-]+"
-          autoComplete="username"
-          dir="ltr"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-        />
-      </label>
+      {username !== null && !invitation.verifiedPhone && (
+        <label>
+          {ar ? 'اسم المستخدم' : 'Username'}
+          <input
+            required
+            minLength={3}
+            maxLength={32}
+            pattern="[a-z0-9._\-]+"
+            autoComplete="username"
+            dir="ltr"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+          />
+        </label>
+      )}
       <label>
         {ar ? 'رقم الهاتف' : 'Phone'}
         <input

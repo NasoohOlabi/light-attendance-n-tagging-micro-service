@@ -51,7 +51,7 @@ const invitationColumns = [
   'invitation_birth_date',
   'invitation_requires_setup',
 ] as const
-type Version = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
+type Version = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13
 function tablesFor(version: Version) {
   if (version < 3) return [...baseTables]
   return [...baseTables.slice(0, -1), ...courseTables, baseTables[baseTables.length - 1]]
@@ -61,7 +61,7 @@ function columnsFor(
   version: Version,
 ): readonly string[] {
   if (table.name === 'public.app_accounts' && version >= 12)
-    return [...table.columns, ...invitationColumns]
+    return [...table.columns, ...invitationColumns, ...(version >= 13 ? ['verified_phone'] : [])]
   if (table.name === 'public.students' && version >= 2)
     return [
       ...table.columns,
@@ -102,6 +102,7 @@ const backupSchema = z.strictObject({
     z.literal(10),
     z.literal(11),
     z.literal(12),
+    z.literal(13),
   ]),
   createdAt: z.iso.datetime(),
   tables: z.array(z.strictObject({ name: z.string(), rows: z.array(rowSchema) })),
@@ -205,6 +206,7 @@ function validateBackup(backup: Backup) {
 async function schemaVersion(db: PoolClient): Promise<Version> {
   const result = await db.query(
     `SELECT
+    (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'app_accounts' AND column_name = 'verified_phone' AND data_type = 'text' AND is_nullable = 'YES') AS verified_phone,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'app_accounts' AND column_name = ANY($1::text[])) AS invitation_columns,
     (SELECT count(*)::int FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'app_accounts' AND (
       (is_nullable = 'YES' AND ((column_name = 'invitation_request_id' AND data_type = 'uuid')
@@ -236,6 +238,7 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     [invitationColumns],
   )
   const {
+    verified_phone,
     invitation_columns,
     invitation_fields,
     teacher_column,
@@ -261,6 +264,7 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
     grading_columns,
   } = z
     .object({
+      verified_phone: z.number(),
       invitation_columns: z.number(),
       invitation_fields: z.number(),
       teacher_column: z.number(),
@@ -318,7 +322,7 @@ async function schemaVersion(db: PoolClient): Promise<Version> {
   if (invitation_columns > 0) {
     if (!enrollment_teacher || invitation_fields !== invitationColumns.length)
       throw new Error('Incomplete account invitation migration')
-    return 12
+    return verified_phone ? 13 : 12
   }
   if (enrollment_teacher) return 11
   return courses === 2
@@ -465,6 +469,12 @@ async function main() {
           'SELECT 1 FROM app_accounts WHERE invitation_request_id IS NOT NULL OR invitation_username IS NOT NULL OR invitation_phone IS NOT NULL OR invitation_birth_date IS NOT NULL OR invitation_requires_setup LIMIT 1',
         )
         if (invited.rowCount) throw new Error('Legacy backup cannot represent invited accounts')
+      }
+      if (backup.version < 13 && targetVersion >= 13) {
+        const phones = await db.query(
+          'SELECT 1 FROM app_accounts WHERE verified_phone IS NOT NULL LIMIT 1',
+        )
+        if (phones.rowCount) throw new Error('Legacy backup cannot represent verified phones')
       }
       const actual = await snapshot(db, backup.version)
       for (const [index, table] of backup.tables.entries()) {
