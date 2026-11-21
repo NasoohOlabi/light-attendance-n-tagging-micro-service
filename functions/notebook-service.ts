@@ -921,10 +921,13 @@ export function createHandler(
               `UPDATE neon_auth.account SET password = $2, "updatedAt" = now() WHERE "userId"::text = $1 AND "providerId" = 'credential'`,
               [subject, hash],
             )
-            await db.query('DELETE FROM neon_auth.session WHERE "userId"::text = $1', [subject])
+            await db.query(
+              'DELETE FROM neon_auth.session WHERE "userId"::text = $1 AND id IS DISTINCT FROM $2::uuid',
+              [subject, sessionId ?? null],
+            )
           }
           await db.query('COMMIT')
-          return reply({ saved: true, sessionRevoked: !!newPassword })
+          return reply({ saved: true, sessionRevoked: !!newPassword && !sessionId })
         }
         if (invitationProfile?.requiresSetup && path !== '/api/me') throw new HttpError(403)
         if (account.role === 'student') {

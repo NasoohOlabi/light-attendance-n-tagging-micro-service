@@ -2,6 +2,10 @@ import { LanguageSwitch } from './i18n'
 import { useLanguage } from './useLanguage'
 import { useEffect, useRef, useState } from 'react'
 import type { NeonAccount } from '../shared/neon'
+import type {
+  invitationProfileInputSchema,
+  invitationSetupInputSchema,
+} from '../shared/invitations'
 import { z } from 'zod'
 import {
   AccessDeniedEvent,
@@ -86,7 +90,6 @@ export function NeonAuth({
     setPassword('')
     setLoginIdentifier('')
     setEmail('')
-    setPasswordChanged(false)
     setAddingAccount(true)
     setChoosingAccount(false)
   }
@@ -130,7 +133,6 @@ export function NeonAuth({
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [passwordChanged, setPasswordChanged] = useState(false)
   const [busy, setBusy] = useState(false)
   const [stalled, setStalled] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -313,54 +315,13 @@ export function NeonAuth({
     if (!account || account.userId !== userId || account.kind !== 'ready')
       return <WorkspaceLoading message={t('Checking your access…')} />
     const invitation = account.value.invitationProfile
-    const finishPasswordChange = async (newPassword: string, username: string | null) => {
-      // Rotation revoked the setup session. Leave any newly selected account active.
-      const fresh = await authClient.getSession({
-        fetchOptions: { signal: AbortSignal.timeout(15000) },
-      })
-      if (fresh.data?.user.id) {
-        resetWorkspace()
-        return
-      }
-      const verifiedPhone = invitation?.verifiedPhone
-      if (invitation?.requiresSetup && !fresh.error && (verifiedPhone || username)) {
-        try {
-          const response = await fetch(
-            verifiedPhone ? '/api/auth/sign-in/phone' : '/api/auth/sign-in/username',
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(
-                verifiedPhone
-                  ? { phone: verifiedPhone, password: newPassword }
-                  : { username, password: newPassword },
-              ),
-              signal: AbortSignal.timeout(15000),
-            },
-          )
-          if (response.ok) {
-            resetWorkspace()
-            return
-          }
-        } catch {
-          /* Continue with the normal sign-in form. */
-        }
-      }
-      setAccount(null)
-      announceSessionChange()
-      setLoginIdentifier(verifiedPhone ?? username ?? '')
-      setPassword('')
-      setLoginMethod(verifiedPhone ? 'phone' : 'username')
-      setPasswordChanged(true)
-      await session.refetch()
-    }
-    const updateInvitation: NonNullable<Profile['updateInvitation']> = async (details) => {
+    const updateInvitation = async (
+      details:
+        z.input<typeof invitationProfileInputSchema> | z.input<typeof invitationSetupInputSchema>,
+    ) => {
       await request('/api/me/invitation-profile', userId, details, false)
-      if (details.newPassword) {
-        await finishPasswordChange(details.newPassword, details.username)
-      } else {
-        setAccountAttempt((value) => value + 1)
-      }
+      setAccountAttempt((value) => value + 1)
+      if (details.newPassword) announceSessionChange()
     }
     if (invitation?.requiresSetup)
       return (
@@ -369,10 +330,7 @@ export function NeonAuth({
           <InvitationSetupForm
             key={userId}
             invitation={invitation}
-            complete={async (newPassword) => {
-              await request('/api/me/invitation-profile', userId, { newPassword }, false)
-              await finishPasswordChange(newPassword, invitation.username)
-            }}
+            complete={(newPassword) => updateInvitation({ newPassword })}
             signOut={signOut}
           />
           <button className="secondary" onClick={() => setChoosingAccount(true)}>
@@ -596,13 +554,6 @@ export function NeonAuth({
             onChange={(e) => setPassword(e.target.value)}
           />
         </label>
-        {passwordChanged && (
-          <p role="status">
-            {language === 'ar'
-              ? 'تم حفظ بياناتك. سجّل الدخول بكلمة مرورك الجديدة.'
-              : 'Details saved. Sign in with your new password.'}
-          </p>
-        )}
         {error && <p role="alert">{errorMessage(error)}</p>}
         <button className="primary" disabled={busy || session.isPending || Boolean(session.error)}>
           {busy ? t('Please wait…') : mode === 'sign-up' ? t('Create account') : t('Sign in')}

@@ -190,8 +190,8 @@ export function InvitationProfileForm({
       </label>
       <p>
         {ar
-          ? 'اترك كلمة المرور الجديدة فارغة للاحتفاظ بكلمة المرور الحالية. تغييرها يتطلب تسجيل الدخول مجدداً.'
-          : 'Leave the new password blank to keep your current password. Changing it requires signing in again.'}
+          ? 'اترك كلمة المرور الجديدة فارغة للاحتفاظ بكلمة المرور الحالية.'
+          : 'Leave the new password blank to keep your current password.'}
       </p>
       {error && <p role="alert">{error}</p>}
       {saved && <p role="status">{ar ? 'تم حفظ البيانات.' : 'Details saved.'}</p>}

@@ -171,11 +171,6 @@ integration(
         )
       ).status,
     ).toBe(200)
-    const teacherLogin = await call('/api/auth/sign-in/phone', {
-      phone: teacher.phone,
-      password: 'personal-password-123',
-    })
-    expect(teacherLogin.status).toBe(200)
     expect(
       (
         await call(
@@ -221,14 +216,6 @@ integration(
           { newPassword: 'personal-password-123' },
           studentId,
         )
-      ).status,
-    ).toBe(200)
-    expect(
-      (
-        await call('/api/auth/sign-in/phone', {
-          phone: student.phone,
-          password: 'personal-password-123',
-        })
       ).status,
     ).toBe(200)
     expect((await call('/api/student/attendance', undefined, studentId)).status).toBe(200)

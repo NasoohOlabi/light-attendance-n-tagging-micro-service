@@ -27,7 +27,7 @@ async function checkInvitedProfile(page: Page, role: 'teacher' | 'student', isMo
     if (path.endsWith('/sign-in/phone')) {
       const body = route.request().postDataJSON()
       expect(body.phone).toBe(verifiedPhone)
-      expect(body.password).toBe(setup ? 'temporary-password' : 'personal-password')
+      expect(body.password).toBe('temporary-password')
       loginCount += 1
       signedIn = true
       return route.fulfill({ json: { status: true } })
@@ -65,12 +65,12 @@ async function checkInvitedProfile(page: Page, role: 'teacher' | 'student', isMo
     if (setup) {
       expect(body).toEqual({ newPassword: 'personal-password' })
       setup = false
-      signedIn = false
     } else {
       expect(body).toEqual({
         username: null,
         phone: '987654321',
         currentPassword: 'personal-password',
+        newPassword: 'updated-personal-password',
       })
       phone = body.phone
     }
@@ -123,16 +123,18 @@ async function checkInvitedProfile(page: Page, role: 'teacher' | 'student', isMo
   await page.getByRole('button', { name: 'English', exact: true }).click()
   await page.getByLabel('New password').fill('personal-password')
   await save.click()
-  await expect(page).toHaveURL(/\?page=app$/)
-  expect(loginCount).toBe(2)
-  await page.goto('/?page=app&view=profile')
   await expect(page.getByRole('heading', { name: 'Personal details' })).toBeVisible()
+  expect(loginCount).toBe(1)
   await expect(page.locator('input[type=date]')).toHaveCount(0)
   await page.getByLabel('Phone').fill('987654321')
   await page.getByLabel('Current password').fill('personal-password')
+  await page.getByLabel('New password').fill('updated-personal-password')
   await page.getByRole('button', { name: 'Save details' }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Details saved' })).toBeVisible()
   expect(phone).toBe('987654321')
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Personal details' })).toBeVisible()
+  expect(loginCount).toBe(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 }
 

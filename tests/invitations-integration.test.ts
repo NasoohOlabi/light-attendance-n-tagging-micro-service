@@ -198,6 +198,13 @@ integration(
     const signedAfterReset = await login(phone, resetInvitation.temporaryPassword)
     expect(signedAfterReset.status).toBe(200)
     headers.cookie = signedAfterReset.headers.get('set-cookie')?.split(';')[0] ?? ''
+    const secondSession = await login(phone, resetInvitation.temporaryPassword)
+    expect(secondSession.status).toBe(200)
+    const otherHeaders = {
+      ...headers,
+      cookie: secondSession.headers.get('set-cookie')?.split(';')[0] ?? '',
+    }
+    expect((await fetch(`${origin}/api/me`, { headers: otherHeaders })).status).toBe(200)
     expect((await fetch(`${origin}/api/student/attendance`, { headers })).status).toBe(403)
     const profile = { newPassword: 'personal-password-123' }
     const otherPhone = '+12025550119'
@@ -219,8 +226,9 @@ integration(
       post('/api/me/invitation-profile', profile, headers),
       post('/api/me/invitation-profile', profile, headers),
     ])
-    expect(completions.map(({ status }) => status).sort()).toEqual([200, 401])
-    expect((await fetch(`${origin}/api/me`, { headers })).status).toBe(401)
+    expect(completions.map(({ status }) => status).sort()).toEqual([200, 400])
+    expect((await fetch(`${origin}/api/student/attendance`, { headers })).status).toBe(200)
+    expect((await fetch(`${origin}/api/me`, { headers: otherHeaders })).status).toBe(401)
     expect((await login(phone, resetInvitation.temporaryPassword)).status).toBe(401)
     expect((await login(otherPhone, profile.newPassword)).status).toBe(401)
     const fresh = await login(phone, profile.newPassword)
@@ -239,11 +247,17 @@ integration(
         )
       ).status,
     ).toBe(400)
+    const updatedPassword = 'updated-personal-password'
     expect(
       (
         await post(
           '/api/me/invitation-profile',
-          { username: null, phone: otherPhone, currentPassword: profile.newPassword },
+          {
+            username: null,
+            phone: otherPhone,
+            currentPassword: profile.newPassword,
+            newPassword: updatedPassword,
+          },
           freshHeaders,
         )
       ).status,
@@ -253,9 +267,12 @@ integration(
     ).toBe(200)
     expect((await fetch(`${origin}/api/notebook`, { headers: freshHeaders })).status).toBe(403)
     expect((await fetch(`${origin}/api/admin`, { headers: freshHeaders })).status).toBe(403)
+    expect((await fetch(`${origin}/api/me`, { headers })).status).toBe(401)
+    expect((await login(phone, profile.newPassword)).status).toBe(401)
+    expect((await login(phone, updatedPassword)).status).toBe(200)
     const resetEstablished = await reset()
     expect(resetEstablished.loginIdentifier).toBe(phone)
-    expect((await login(phone, profile.newPassword)).status).toBe(401)
+    expect((await login(phone, updatedPassword)).status).toBe(401)
     expect((await fetch(`${origin}/api/me`, { headers: freshHeaders })).status).toBe(401)
     const signedEstablished = await login(phone, resetEstablished.temporaryPassword)
     expect(signedEstablished.status).toBe(200)
