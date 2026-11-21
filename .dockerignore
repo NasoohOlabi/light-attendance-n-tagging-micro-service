@@ -17,3 +17,7 @@
 !functions/
 !functions/notebook-service.ts
 !Dockerfile
+!telegram/
+!telegram/**/
+!telegram/**/*.ts
+!telegram/Dockerfile
