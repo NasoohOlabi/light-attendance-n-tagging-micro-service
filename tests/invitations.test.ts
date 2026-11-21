@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   invitationProfileInputSchema,
   invitationRequestSchema,
+  invitationSetupInputSchema,
   phoneSchema,
 } from '../shared/invitations'
 import { validSignupRequest } from '../server/profile'
@@ -51,13 +52,12 @@ describe('invitation boundaries', () => {
     const profile = {
       username: 'User.Name',
       phone: '12345678',
-      birthDate: '2000-01-01',
       currentPassword: 'temporary',
       newPassword: 'replacement',
     }
     expect(invitationProfileInputSchema.parse(profile).username).toBe('user.name')
     expect(
-      invitationProfileInputSchema.safeParse({ ...profile, birthDate: '2000-02-31' }).success,
+      invitationProfileInputSchema.safeParse({ ...profile, birthDate: '2000-01-01' }).success,
     ).toBe(false)
     expect(
       invitationProfileInputSchema.safeParse({ ...profile, username: 'not valid' }).success,
@@ -68,5 +68,17 @@ describe('invitation boundaries', () => {
       body: JSON.stringify({ email: 'x@invitation.invalid' }),
     })
     expect(await validSignupRequest(request)).toBeNull()
+  })
+
+  test('setup accepts only a valid new password', () => {
+    expect(invitationSetupInputSchema.safeParse({ newPassword: 'replacement' }).success).toBe(true)
+    for (const details of [
+      { newPassword: 'short' },
+      { newPassword: 'replacement', phone: '+12025550110' },
+      { newPassword: 'replacement', currentPassword: 'temporary' },
+      { newPassword: 'replacement', birthDate: '2000-01-01' },
+    ]) {
+      expect(invitationSetupInputSchema.safeParse(details).success).toBe(false)
+    }
   })
 })

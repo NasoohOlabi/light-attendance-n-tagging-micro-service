@@ -2135,3 +2135,9 @@ Migration 014 adds a unique verified number without copying historical contact d
 The owner asked to drop the birthday question from teacher invitations. Teachers can complete setup and edit contact details without a date of birth. The invitation message points teachers to the password change. Student and Administrator setup requires a date of birth.
 
 Browser coverage exercises first sign-in, the English and Arabic teacher form, and later contact edits. Disposable PostgreSQL coverage checks that a teacher can finish setup without a birthday and that a student still needs one. The PR records release and Railway verification.
+
+## 2026-11-21 15:00 Asia/Damascus (UTC+03:00) - Simplify invitation password setup
+
+The owner asked recipients to set a new password after their first sign-in. The form shows the administrator-confirmed phone as read-only and spaces the Save details and Sign out buttons. It uses the signed-in browser session for setup, rotates the password, and opens the workspace with a new session. Older username invitations use their existing username. Date of birth is retired from account setup and personal settings. Historical database values remain available to private backups.
+
+Disposable PostgreSQL tests exercised password-only setup, concurrent requests, verification of the current password for later edits, revocation of the old password and session, and MCP access. Invitation browser tests exercised reload, automatic sign-in, and English and Arabic forms on desktop and emulated phones. A 320px Chromium session on the running Bun app completed a synthetic student invitation against disposable PostgreSQL. The PR records the full release gate and Railway deployment verification.

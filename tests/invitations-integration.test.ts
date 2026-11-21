@@ -199,24 +199,11 @@ integration(
     expect(signedAfterReset.status).toBe(200)
     headers.cookie = signedAfterReset.headers.get('set-cookie')?.split(';')[0] ?? ''
     expect((await fetch(`${origin}/api/student/attendance`, { headers })).status).toBe(403)
-    const profile = {
-      username: null,
-      phone: '+12025550119',
-      birthDate: '2000-01-01',
-      currentPassword: resetInvitation.temporaryPassword,
-      newPassword: 'personal-password-123',
-    }
+    const profile = { newPassword: 'personal-password-123' }
+    const otherPhone = '+12025550119'
+    expect((await post('/api/me/invitation-profile', profile)).status).toBe(401)
     expect(
-      (
-        await post(
-          '/api/me/invitation-profile',
-          { ...profile, verifiedPhone: profile.phone },
-          headers,
-        )
-      ).status,
-    ).toBe(400)
-    expect(
-      (await post('/api/me/invitation-profile', { ...profile, currentPassword: 'wrong' }, headers))
+      (await post('/api/me/invitation-profile', { ...profile, verifiedPhone: otherPhone }, headers))
         .status,
     ).toBe(400)
     expect(
@@ -228,20 +215,39 @@ integration(
         )
       ).status,
     ).toBe(400)
-    expect(
-      (await post('/api/me/invitation-profile', { ...profile, birthDate: undefined }, headers))
-        .status,
-    ).toBe(400)
-    expect((await post('/api/me/invitation-profile', profile, headers)).status).toBe(200)
+    const completions = await Promise.all([
+      post('/api/me/invitation-profile', profile, headers),
+      post('/api/me/invitation-profile', profile, headers),
+    ])
+    expect(completions.map(({ status }) => status).sort()).toEqual([200, 401])
     expect((await fetch(`${origin}/api/me`, { headers })).status).toBe(401)
     expect((await login(phone, resetInvitation.temporaryPassword)).status).toBe(401)
-    expect((await login(profile.phone, profile.newPassword)).status).toBe(401)
+    expect((await login(otherPhone, profile.newPassword)).status).toBe(401)
     const fresh = await login(phone, profile.newPassword)
     expect(fresh.status).toBe(200)
     const freshHeaders = {
       cookie: fresh.headers.get('set-cookie')?.split(';')[0] ?? '',
       'x-user-id': userId,
     }
+    expect((await post('/api/me/invitation-profile', profile, freshHeaders)).status).toBe(400)
+    expect(
+      (
+        await post(
+          '/api/me/invitation-profile',
+          { username: null, phone: otherPhone, currentPassword: 'wrong' },
+          freshHeaders,
+        )
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await post(
+          '/api/me/invitation-profile',
+          { username: null, phone: otherPhone, currentPassword: profile.newPassword },
+          freshHeaders,
+        )
+      ).status,
+    ).toBe(200)
     expect(
       (await fetch(`${origin}/api/student/attendance`, { headers: freshHeaders })).status,
     ).toBe(200)

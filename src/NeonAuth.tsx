@@ -14,7 +14,7 @@ import {
   sessionChangeEvent,
   sessionChangeSource,
 } from './neon'
-import { InvitationProfileForm } from './InvitationProfile'
+import { InvitationSetupForm } from './InvitationProfile'
 import { WorkspaceLoading } from './WorkspaceLoading'
 import type { Profile } from './ProfileMenu'
 import { WartaqLogo } from './brand/components'
@@ -313,51 +313,51 @@ export function NeonAuth({
     if (!account || account.userId !== userId || account.kind !== 'ready')
       return <WorkspaceLoading message={t('Checking your access…')} />
     const invitation = account.value.invitationProfile
-    const updateInvitation: NonNullable<Profile['updateInvitation']> = async (details) => {
-      await request('/api/me/invitation-profile', userId, details, false)
-      if (details.newPassword) {
-        // Password rotation already revoked this session. Never sign out a newer identity.
-        const fresh = await authClient.getSession()
-        if (fresh.data?.user.id) {
-          resetWorkspace()
-          return
-        }
-        let addedAccount = false
+    const finishPasswordChange = async (newPassword: string, username: string | null) => {
+      // Rotation revoked the setup session. Leave any newly selected account active.
+      const fresh = await authClient.getSession({
+        fetchOptions: { signal: AbortSignal.timeout(15000) },
+      })
+      if (fresh.data?.user.id) {
+        resetWorkspace()
+        return
+      }
+      const verifiedPhone = invitation?.verifiedPhone
+      if (invitation?.requiresSetup && !fresh.error && (verifiedPhone || username)) {
         try {
-          addedAccount = sessionStorage.getItem('halaqa-added-account') === userId
-          sessionStorage.removeItem('halaqa-added-account')
+          const response = await fetch(
+            verifiedPhone ? '/api/auth/sign-in/phone' : '/api/auth/sign-in/username',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(
+                verifiedPhone
+                  ? { phone: verifiedPhone, password: newPassword }
+                  : { username, password: newPassword },
+              ),
+              signal: AbortSignal.timeout(15000),
+            },
+          )
+          if (response.ok) {
+            resetWorkspace()
+            return
+          }
         } catch {
           /* Continue with the normal sign-in form. */
         }
-        if (invitation?.requiresSetup && addedAccount) {
-          try {
-            const response = await fetch(
-              invitation?.verifiedPhone ? '/api/auth/sign-in/phone' : '/api/auth/sign-in/username',
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(
-                  invitation?.verifiedPhone
-                    ? { phone: invitation.verifiedPhone, password: details.newPassword }
-                    : { username: details.username, password: details.newPassword },
-                ),
-              },
-            )
-            if (response.ok) {
-              resetWorkspace()
-              return
-            }
-          } catch {
-            /* Continue with the normal sign-in form. */
-          }
-        }
-        setAccount(null)
-        announceSessionChange()
-        setLoginIdentifier(invitation?.verifiedPhone ?? details.username ?? '')
-        setPassword('')
-        setLoginMethod(invitation?.verifiedPhone ? 'phone' : 'username')
-        setPasswordChanged(true)
-        await session.refetch()
+      }
+      setAccount(null)
+      announceSessionChange()
+      setLoginIdentifier(verifiedPhone ?? username ?? '')
+      setPassword('')
+      setLoginMethod(verifiedPhone ? 'phone' : 'username')
+      setPasswordChanged(true)
+      await session.refetch()
+    }
+    const updateInvitation: NonNullable<Profile['updateInvitation']> = async (details) => {
+      await request('/api/me/invitation-profile', userId, details, false)
+      if (details.newPassword) {
+        await finishPasswordChange(details.newPassword, details.username)
       } else {
         setAccountAttempt((value) => value + 1)
       }
@@ -366,11 +366,13 @@ export function NeonAuth({
       return (
         <main id="main-content" tabIndex={-1} className="workspace-auth">
           <AuthHeader />
-          <InvitationProfileForm
+          <InvitationSetupForm
+            key={userId}
             invitation={invitation}
-            role={account.value.role}
-            update={updateInvitation}
-            setup
+            complete={async (newPassword) => {
+              await request('/api/me/invitation-profile', userId, { newPassword }, false)
+              await finishPasswordChange(newPassword, invitation.username)
+            }}
             signOut={signOut}
           />
           <button className="secondary" onClick={() => setChoosingAccount(true)}>
@@ -486,14 +488,8 @@ export function NeonAuth({
                 return
               }
             }
+            setPassword('')
             if (addingAccount) {
-              try {
-                const fresh = await authClient.getSession()
-                if (fresh.data?.user.id)
-                  sessionStorage.setItem('halaqa-added-account', fresh.data.user.id)
-              } catch {
-                /* Onboarding falls back to a password prompt if this tab cannot store state. */
-              }
               resetWorkspace()
             } else {
               announceSessionChange()

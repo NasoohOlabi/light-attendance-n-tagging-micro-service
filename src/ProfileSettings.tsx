@@ -161,11 +161,7 @@ export function ProfileSettings({
         </button>
       </form>
       {profile.invitation && profile.updateInvitation && (
-        <InvitationProfileForm
-          invitation={profile.invitation}
-          role={role}
-          update={profile.updateInvitation}
-        />
+        <InvitationProfileForm invitation={profile.invitation} update={profile.updateInvitation} />
       )}
     </section>
   )
