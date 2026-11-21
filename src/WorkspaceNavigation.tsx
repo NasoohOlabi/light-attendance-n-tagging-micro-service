@@ -17,11 +17,8 @@ export function WorkspaceNavigation({
   currentCourse,
   chooseDefault,
   defaultCourse,
-  assigned,
   profile,
   leave,
-  sample,
-  sampleHistory,
   disabled,
 }: {
   administrator: boolean
@@ -30,11 +27,8 @@ export function WorkspaceNavigation({
   currentCourse?: string
   chooseDefault?: (course: string) => void
   defaultCourse?: string
-  assigned: boolean
   profile?: Profile
   leave: () => void
-  sample?: boolean
-  sampleHistory?: boolean
   disabled?: boolean
 }) {
   const { t, language } = useLanguage()
@@ -81,8 +75,6 @@ export function WorkspaceNavigation({
           profile={profile}
           administrator={administrator}
           leave={leave}
-          sample={sample}
-          sampleHistory={sampleHistory}
           disabled={disabled}
         />
         {courses && chooseDefault && (
@@ -226,7 +218,7 @@ export function WorkspaceNavigation({
                 tab.id,
                 tab.id === 'roster' && query.courseScope === 'all' ? 'all' : notebookCourse,
                 {
-                  ...(tab.id === 'roster' || !assigned ? { student: '' } : {}),
+                  ...(tab.id === 'roster' ? { student: '' } : {}),
                 },
               )
             }

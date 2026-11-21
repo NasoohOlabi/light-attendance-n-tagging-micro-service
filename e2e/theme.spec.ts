@@ -1,4 +1,5 @@
-﻿import { expect, test } from '@playwright/test'
+import { mockSyntheticNotebook } from './syntheticNotebook'
+import { expect, test } from '@playwright/test'
 
 import { clickAccountAction } from './profileActions'
 
@@ -28,7 +29,8 @@ test('theme follows the device, persists a choice, and works in the notebook on 
     true,
   )
   await page.screenshot({ path: `.artifacts/theme-home-arabic-phone-${testInfo.project.name}.png` })
-  await page.getByRole('button', { name: /طلاب تجريبيين/ }).click()
+  await mockSyntheticNotebook(page, { role: 'teacher' })
+  await page.goto('/?page=app')
   await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(24, 26, 27)')
   await page.screenshot({
     path: `.artifacts/theme-notebook-arabic-phone-${testInfo.project.name}.png`,
@@ -48,8 +50,8 @@ test('dark attendance uses charcoal surfaces, a blue primary action and red abse
   page,
 }, testInfo) => {
   await page.emulateMedia({ colorScheme: 'dark' })
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Explore with sample students' }).click()
+  await mockSyntheticNotebook(page, { role: 'teacher' })
+  await page.goto('/?page=app')
   await page.getByRole('button', { name: /Continue attendance/ }).click()
   const group = page.getByRole('group', { name: 'Attendance for Omar' })
   const absent = group.getByRole('button', { name: 'absent', exact: true })
@@ -123,7 +125,8 @@ test('theme controls stay synchronized across tabs and tolerate unavailable stor
   await page.getByRole('combobox', { name: 'Color theme' }).selectOption('light')
   await page.emulateMedia({ colorScheme: 'dark' })
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
-  await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
+  await mockSyntheticNotebook(page, { role: 'teacher' })
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByRole('button', { name: 'Profile', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Light', exact: true })).toHaveAttribute(
     'aria-pressed',

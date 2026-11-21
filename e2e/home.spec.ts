@@ -96,15 +96,9 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   await page.keyboard.press('Shift+Tab')
   await expect(question).toBeFocused()
   await expect(question).toHaveCSS('text-decoration-line', 'underline')
-  await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
-  await expect(page).toHaveURL(/page=app/)
-  await expect(page.locator('.workspace')).toBeVisible()
-  await expect(page.getByText('v0.1.0 · In development')).toHaveCount(0)
-  await expect(page).toHaveTitle('Wartaq')
-  await expect(page.getByRole('heading', { name: 'Attendance & notes', level: 1 })).toBeVisible()
-  await expect(page.locator('.profile-trigger')).toHaveCount(1)
-  await page.goBack()
-  await expect(page.locator('.wartaq-home')).toBeVisible()
+  await expect(page.getByRole('button', { name: /sample/i })).toHaveCount(0)
+  await page.route('**/api/auth/**', (route) => route.fulfill({ json: null }))
+  await page.route('**/api/device-accounts', (route) => route.fulfill({ json: { accounts: [] } }))
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.locator('.workspace')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
@@ -112,8 +106,6 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   await expect(page.getByText('v0.1.0 · In development')).toHaveCount(0)
   await mobileLayout(page)
   await page.goBack()
-  await page.getByRole('button', { name: 'Explore with sample students', exact: true }).click()
-  await clickAccountAction(page, 'Close session')
   await expect(page.locator('.wartaq-home')).toBeVisible()
   await expect(page).not.toHaveURL(/page=app/)
   await clickAccountAction(page, 'العربية')
@@ -128,9 +120,9 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
     path: `.artifacts/wartaq-final/home-phone-${testInfo.project.name}.png`,
     fullPage: true,
   })
-  await page.getByRole('button', { name: 'استكشف باستخدام طلاب تجريبيين', exact: true }).click()
+  await page.getByRole('button', { name: 'تسجيل الدخول', exact: true }).click()
   await expect(page).toHaveTitle('وارتق')
-  await expect(page.getByRole('heading', { name: 'الحضور والملاحظات', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'تسجيل الدخول', exact: true })).toBeVisible()
   await expect(page.locator('main')).not.toContainText('دفتر')
   await expect(page.getByText('v0.1.0 · قيد التطوير')).toHaveCount(0)
   await mobileLayout(page)
@@ -145,4 +137,45 @@ test('public Midad homepage is bilingual, phone friendly and separate from the a
   })
   expect(external).toEqual([])
   expect(failures).toEqual([])
+})
+
+test('phone sign-in fits both languages and themes', async ({ page }, testInfo) => {
+  await page.route('**/api/auth/**', (route) => route.fulfill({ json: null }))
+  await page.route('**/api/device-accounts', (route) => route.fulfill({ json: { accounts: [] } }))
+  await page.goto('/?page=app')
+  const form = page.locator('form[aria-busy]')
+  for (const language of ['en', 'ar']) {
+    if (language === 'ar') await clickAccountAction(page, 'العربية')
+    const signIn = form.getByRole('button', {
+      name: language === 'ar' ? 'تسجيل الدخول' : 'Sign in',
+      exact: true,
+    })
+    const phone = form.getByLabel(language === 'ar' ? 'رقم الهاتف' : 'Phone number', {
+      exact: true,
+    })
+    const password = form.getByLabel(language === 'ar' ? 'كلمة المرور' : 'Password', {
+      exact: true,
+    })
+    await expect(form.locator('input')).toHaveCount(2)
+    await expect(form.getByRole('button')).toHaveCount(1)
+    await expect(phone).toHaveAttribute('type', 'tel')
+    await expect(phone).toHaveAccessibleDescription(/09.*\+9639/)
+    await expect(password).toHaveAttribute('type', 'password')
+    await expect(signIn).toBeEnabled()
+    for (const width of [320, 1440]) {
+      await page.setViewportSize({ width, height: 880 })
+      for (const colorScheme of ['light', 'dark'] as const) {
+        await page.emulateMedia({ colorScheme })
+        const primary = await signIn.boundingBox()
+        const field = await phone.boundingBox()
+        if (!primary || !field) throw new Error('Missing sign-in controls')
+        expect(primary.width).toBeCloseTo(field.width, 0)
+        expect(primary.height).toBeGreaterThanOrEqual(44)
+        await mobileLayout(page)
+        await page.screenshot({
+          path: `.artifacts/verification/sign-in-${language}-${colorScheme}-${width}-${testInfo.project.name}.png`,
+        })
+      }
+    }
+  }
 })

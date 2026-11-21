@@ -48,7 +48,7 @@ import { StudentAttendance } from './StudentAttendance'
 import { CourseSections, Courses } from './Courses'
 import type { Profile } from './ProfileMenu'
 import { ProfileSettings } from './ProfileSettings'
-import { enrollmentSchema, teacherStudentUpdateSchema, type NeonTeacher } from '../shared/neon'
+import { teacherStudentUpdateSchema, type NeonTeacher } from '../shared/neon'
 import { allowOfflineAccess, clearOfflineAccess, offlineAccess } from './offlineAccess'
 import {
   cacheOfflineRoster,
@@ -62,85 +62,58 @@ import { syncOfflineAttendance, syncOfflineStudent } from './offlineAttendanceSy
 type Projection = ReturnType<typeof projectEvents>
 type Save = (payloads: Payload[]) => Promise<boolean>
 
-type Demo = 'editable' | 'assigned'
 const maximumBirthYear = new Date().getFullYear()
 
-export default function Workspace({
-  demo,
-  openDemo,
-  goHome,
-}: {
-  demo: Demo | null
-  openDemo: (demo: Demo) => void
-  goHome: () => void
-}) {
-  const { t } = useLanguage()
+export default function Workspace({ goHome }: { goHome: () => void }) {
   const query = useQueryState()
-  if (!demo)
-    return (
-      <NeonAuth
-        onSignOut={goHome}
-        samples={
-          <>
-            <button className="secondary self-start" onClick={() => openDemo('editable')}>
-              {t('Explore with sample students')}
-            </button>
-            <button className="secondary self-start" onClick={() => openDemo('assigned')}>
-              {t('Explore assigned teacher sample')}
-            </button>
-          </>
-        }
-      >
-        {(userId, account, signOut, profile) =>
-          query.view === 'invitation-message' && account.role === 'administrator' ? (
-            <InvitationMessageViewer
-              key={`${userId}:${query.inviteMessage}`}
-              userId={userId}
-              requestId={query.inviteMessage}
-            />
-          ) : query.view === 'profile' ? (
-            <ProfileSettings key={userId} profile={profile} signOut={signOut} role={account.role} />
-          ) : account.role === 'student' ? (
-            <StudentAttendance key={userId} userId={userId} signOut={signOut} profile={profile} />
-          ) : account.role === 'administrator' &&
-            (query.view === 'settings' ||
-              query.view === 'administration' ||
-              query.view === 'add-student') ? (
-            <AdminConsole
-              key={`${userId}:${query.view === 'add-student'}`}
-              userId={userId}
-              signOut={signOut}
-              profile={profile}
-              initialCreateStudent={query.view === 'add-student'}
-              courseId={
-                query.view === 'add-student' && query.courseView === 'students' ? query.course : ''
-              }
-            />
-          ) : (
-            <Notebook
-              key={userId}
-              demo={null}
-              neon={{ userId, teacher: account }}
-              leave={signOut}
-              profile={profile}
-            />
-          )
-        }
-      </NeonAuth>
-    )
-  return <Notebook demo={demo} leave={goHome} />
+  return (
+    <NeonAuth onSignOut={goHome}>
+      {(userId, account, signOut, profile) =>
+        query.view === 'invitation-message' && account.role === 'administrator' ? (
+          <InvitationMessageViewer
+            key={`${userId}:${query.inviteMessage}`}
+            userId={userId}
+            requestId={query.inviteMessage}
+          />
+        ) : query.view === 'profile' ? (
+          <ProfileSettings key={userId} profile={profile} signOut={signOut} role={account.role} />
+        ) : account.role === 'student' ? (
+          <StudentAttendance key={userId} userId={userId} signOut={signOut} profile={profile} />
+        ) : account.role === 'administrator' &&
+          (query.view === 'settings' ||
+            query.view === 'administration' ||
+            query.view === 'add-student') ? (
+          <AdminConsole
+            key={`${userId}:${query.view === 'add-student'}`}
+            userId={userId}
+            signOut={signOut}
+            profile={profile}
+            initialCreateStudent={query.view === 'add-student'}
+            courseId={
+              query.view === 'add-student' && query.courseView === 'students' ? query.course : ''
+            }
+          />
+        ) : (
+          <Notebook
+            key={userId}
+            neon={{ userId, teacher: account }}
+            leave={signOut}
+            profile={profile}
+          />
+        )
+      }
+    </NeonAuth>
+  )
 }
 
 function Notebook({
-  demo,
   leave,
   neon,
   profile,
 }: {
-  neon?: { userId: string; teacher: NeonTeacher }
-  demo: 'editable' | 'assigned' | null
+  neon: { userId: string; teacher: NeonTeacher }
   leave: () => void
-  profile?: Profile
+  profile: Profile
 }) {
   const { t, language, errorMessage } = useLanguage()
   const [offlineView, setOfflineView] = useState(false)
@@ -148,17 +121,16 @@ function Notebook({
   const [hasPendingChanges, setHasPendingChanges] = useState(false)
   const query = useQueryState()
   const changesOrigin = useRef<typeof query.view>('notebook')
-  const administrator = neon?.teacher.role === 'administrator'
-  const canViewHistory = administrator || demo === 'editable'
-  const history = query.view === 'history' && canViewHistory
+  const administrator = neon.teacher.role === 'administrator'
+  const history = query.view === 'history' && administrator
   const tab = history ? 'history' : query.tab
   useEffect(() => {
     if (query.view === 'history') {
-      if (!canViewHistory) setQuery({ view: 'notebook', tab: '' })
+      if (!administrator) setQuery({ view: 'notebook', tab: '' })
       else if (new URLSearchParams(window.location.search).get('tab') === 'history')
         setQuery({ view: 'history', tab: '' })
     }
-  }, [canViewHistory, query.view])
+  }, [administrator, query.view])
   const [sessionDrafts, setSessionDrafts] = useState<Record<string, Record<string, string>>>({})
   const sessionKey = `${query.courseScope}:${query.date}`
   const listOrigin = useRef<{ trigger: HTMLElement; top: number; search: string } | null>(null)
@@ -189,9 +161,9 @@ function Notebook({
       setQuery({ view: 'notebook', tab: 'roster', student: '' }, true)
     }
   }
-  const ledger = useLedger(demo !== null, demo === 'assigned', neon)
-  const userId = neon?.userId
-  const access = ledger.snapshotTeacher ?? neon?.teacher
+  const ledger = useLedger(neon)
+  const userId = neon.userId
+  const access = ledger.snapshotTeacher ?? neon.teacher
   const canCacheOffline = Boolean(access?.canRead && access.canWrite)
   const reviewChanges = query.view === 'changes' && canCacheOffline
   const actor = access?.name
@@ -280,8 +252,7 @@ function Notebook({
       window.removeEventListener('focus', focus)
     }
   }, [userId, canCacheOffline, offlineView, reviewChanges, refresh])
-  const preference = useCoursePreference(neon?.userId, ledger.loaded, ledger.courses)
-  const assigned = !!neon || demo === 'assigned'
+  const preference = useCoursePreference(neon.userId, ledger.loaded, ledger.courses)
   const fullRegister =
     administrator &&
     (query.view === 'notebook' || query.view === 'student') &&
@@ -291,19 +262,7 @@ function Notebook({
   const baseProjection = projectEvents(ledger.events)
   const selectedCourse = ledger.courses.find((course) => course.id === query.course)
   const closedCourse = selectedCourse?.open === false ? selectedCourse : undefined
-  const selectedEnrollments =
-    demo === 'assigned'
-      ? ledger.roster.map((student) =>
-          enrollmentSchema.parse({
-            id: student.studentId,
-            courseId: student.studentId,
-            studentId: student.studentId,
-            level: student.group,
-            practical: null,
-            theory: null,
-          }),
-        )
-      : ledger.enrollments.filter((entry) => entry.courseId === query.course)
+  const selectedEnrollments = ledger.enrollments.filter((entry) => entry.courseId === query.course)
   const activeEnrollments = selectedEnrollments.filter((entry) => entry.active)
   const selectedIds = new Set(selectedEnrollments.map((entry) => entry.id))
   const scopedEvents = baseProjection.events.filter((event) => {
@@ -315,7 +274,6 @@ function Notebook({
     return (
       !target ||
       target.payload.kind !== 'attendance' ||
-      demo === 'assigned' ||
       (query.course
         ? !!target.payload.enrollmentId && selectedIds.has(target.payload.enrollmentId)
         : !target.payload.enrollmentId)
@@ -329,17 +287,14 @@ function Notebook({
         : selectedEnrollments.some((entry) => entry.studentId === student.studentId)
       : includeInactive || student.active,
   )
-  const projected = assigned ? { ...scopedProjection, students: courseStudents } : baseProjection
+  const projected = { ...scopedProjection, students: courseStudents }
   const groups = [
     ...new Set(projected.students.map((student) => student.group).filter(Boolean)),
   ].sort()
   const students = projected.students.filter(
     (student) =>
       (includeInactive || query.all || student.active) &&
-      (tab === 'attendance' ||
-        !assigned ||
-        !query.student ||
-        student.studentId === query.student) &&
+      (tab === 'attendance' || !query.student || student.studentId === query.student) &&
       (tab === 'attendance' || !query.group || student.group === query.group) &&
       (tab === 'attendance' || matchesText(student.name, query.q)),
   )
@@ -356,9 +311,9 @@ function Notebook({
     !!ledger.pending.length ||
     !!ledger.storageBlocked ||
     !ledger.loaded ||
-    !!(neon && !neon.teacher.canWrite)
+    !neon.teacher.canWrite
   const openOfflineLabel = language === 'ar' ? 'فتح الدفتر دون اتصال' : 'Open offline notebook'
-  if (offlineView && neon && canCacheOffline)
+  if (offlineView && canCacheOffline)
     return (
       <OfflineAttendance
         userId={neon.userId}
@@ -385,8 +340,7 @@ function Notebook({
     ) : (
       <WorkspaceLoading message={t('Loading records…')} />
     )
-  const showCourseSwitcher =
-    neon && (query.view === 'notebook' || query.view === 'student' || history)
+  const showCourseSwitcher = query.view === 'notebook' || query.view === 'student' || history
   const navigation = (
     <WorkspaceNavigation
       defaultCourse={preference.defaultCourse}
@@ -403,9 +357,8 @@ function Notebook({
       chooseDefault={showCourseSwitcher ? preference.chooseDefault : undefined}
       courseName={ledger.courses.find((course) => course.id === query.course)?.name}
       administrator={administrator}
-      assigned={assigned}
       profile={
-        profile && canCacheOffline && offlineRoster === roster && hasPendingChanges
+        canCacheOffline && offlineRoster === roster && hasPendingChanges
           ? {
               ...profile,
               openChanges: () => {
@@ -418,12 +371,10 @@ function Notebook({
           : profile
       }
       leave={leave}
-      sample={!neon}
-      sampleHistory={demo === 'editable'}
       disabled={ledger.busy}
     />
   )
-  if (reviewChanges && neon)
+  if (reviewChanges)
     return (
       <div className="workspace">
         {navigation}
@@ -465,13 +416,7 @@ function Notebook({
             </div>
           </header>
         )}
-        {demo && (
-          <p className="mb-5 rounded-lg bg-amber-100 p-3 text-amber-900">
-            {demo === 'assigned' ? t('Assigned teacher sample.') : t('Sample data.')}{' '}
-            {t('Changes stay in memory and disappear when you leave. No server requests are made.')}
-          </p>
-        )}
-        {neon && query.view !== 'courses' && query.course && closedCourse && (
+        {query.view !== 'courses' && query.course && closedCourse && (
           <p role="status">
             <strong dir="auto">{closedCourse.name}</strong>{' '}
             {language === 'ar'
@@ -514,32 +459,20 @@ function Notebook({
               ))}
             </select>
           </label>
-          {!assigned && (
-            <label className="mb-3 min-h-11 flex-row items-center">
-              <input
-                type="checkbox"
-                checked={query.all}
-                onChange={(event) => setQuery({ all: event.target.checked ? '1' : '' })}
-              />
-              {t('Include inactive')}
-            </label>
-          )}
-          {assigned && query.student && (
+          {query.student && (
             <button className="secondary" onClick={() => setQuery({ student: '' }, true)}>
               {t('All my students')}
             </button>
           )}
-          {!demo && (
-            <button
-              className="icon-button"
-              aria-label={t('Refresh')}
-              title={t('Refresh')}
-              disabled={ledger.busy}
-              onClick={() => void ledger.refresh()}
-            >
-              <RefreshCw size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
-            </button>
-          )}
+          <button
+            className="icon-button"
+            aria-label={t('Refresh')}
+            title={t('Refresh')}
+            disabled={ledger.busy}
+            onClick={() => void ledger.refresh()}
+          >
+            <RefreshCw size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
+          </button>
         </div>
         {ledger.storageBlocked && (
           <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">
@@ -554,7 +487,7 @@ function Notebook({
         {ledger.message && (
           <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-4 text-emerald-800">
             {language === 'ar'
-              ? `${ledger.pending.length || (ledger.message.match(/^\d+/)?.[0] ?? '')} سجل محفوظ${demo ? ' في النموذج التجريبي' : ''}.`
+              ? `${ledger.pending.length || (ledger.message.match(/^\d+/)?.[0] ?? '')} سجل محفوظ.`
               : ledger.message}
           </p>
         )}
@@ -584,9 +517,7 @@ function Notebook({
             </p>
             <div className="flex flex-wrap gap-3">
               <button
-                disabled={
-                  ledger.busy || !!ledger.storageBlocked || !!(neon && !neon.teacher.canWrite)
-                }
+                disabled={ledger.busy || !!ledger.storageBlocked || !neon.teacher.canWrite}
                 className="primary"
                 onClick={() => void ledger.retry()}
               >
@@ -602,7 +533,7 @@ function Notebook({
             </div>
           </div>
         )}
-        {query.view === 'courses' && neon?.teacher.role === 'administrator' && (
+        {query.view === 'courses' && administrator && (
           <Courses
             userId={neon.userId}
             courses={ledger.courses}
@@ -620,14 +551,12 @@ function Notebook({
         )}
         {query.view === 'student' && (
           <StudentDetails
-            student={(assigned ? ledger.roster : baseProjection.students).find(
-              (student) => student.studentId === query.student,
-            )}
+            student={ledger.roster.find((student) => student.studentId === query.student)}
             projected={query.course ? scopedProjection : baseProjection}
             courses={ledger.courses}
             enrollments={ledger.enrollments}
             courseId={query.course}
-            refresh={neon ? ledger.refresh : undefined}
+            refresh={ledger.refresh}
             busy={ledger.busy}
             canWrite={!disabled}
             administrator={administrator}
@@ -647,8 +576,8 @@ function Notebook({
               <NotebookDashboard
                 projected={projected}
                 date={query.date}
-                canAdd={administrator || demo === 'editable'}
-                canRecord={!disabled && (!!demo || selectedCourse?.open === true)}
+                canAdd={administrator}
+                canRecord={!disabled && selectedCourse?.open === true}
                 onStudent={openStudent}
                 onAttendance={(unmarked = false) =>
                   navigateNotebook('attendance', query.courseScope || '', {
@@ -658,11 +587,7 @@ function Notebook({
                     unmarked: unmarked ? '1' : '',
                   })
                 }
-                onAdd={() =>
-                  neon
-                    ? setQuery({ view: 'add-student', courseView: '', student: '' }, true)
-                    : setQuery({ tab: 'roster', q: '', group: '' }, true)
-                }
+                onAdd={() => setQuery({ view: 'add-student', courseView: '', student: '' }, true)}
               >
                 {administrator && selectedCourse && (
                   <CourseReadiness
@@ -703,7 +628,7 @@ function Notebook({
                 </button>
               </nav>
             )}
-            {tab === 'attendance' && neon && (!query.course || closedCourse) && (
+            {tab === 'attendance' && (!query.course || closedCourse) && (
               <section className="panel">
                 <p>
                   {language === 'ar'
@@ -728,7 +653,7 @@ function Notebook({
                 </button>
               </section>
             )}
-            {tab === 'attendance' && (!neon || (query.course && !closedCourse)) && (
+            {tab === 'attendance' && query.course && !closedCourse && (
               <AttendanceView
                 key={`${query.date}:${query.course}`}
                 draft={sessionDrafts[sessionKey] ?? {}}
@@ -737,13 +662,7 @@ function Notebook({
                 }
                 enrollments={activeEnrollments}
                 courseSelected={!!query.course}
-                courseName={
-                  demo
-                    ? language === 'ar'
-                      ? '\u062f\u0648\u0631\u0629 \u062a\u062c\u0631\u064a\u0628\u064a\u0629'
-                      : 'Sample course'
-                    : ledger.courses.find((course) => course.id === query.course)?.name
-                }
+                courseName={selectedCourse?.name}
                 students={students.filter(
                   (student) =>
                     student.active &&
@@ -769,15 +688,13 @@ function Notebook({
                 }
                 date={query.date}
                 save={ledger.save}
-                canCorrect={canViewHistory}
+                canCorrect={administrator}
                 onOpenStudent={openStudent}
               />
             )}
             {tab === 'roster' && (
               <RosterView
                 students={students}
-                save={ledger.save}
-                assigned={assigned}
                 courseSelected={!!query.course}
                 enrollments={selectedEnrollments}
                 courses={ledger.courses}
@@ -792,14 +709,8 @@ function Notebook({
                 students={projected.students}
                 projected={projected}
                 scope={
-                  demo
-                    ? language === 'ar'
-                      ? 'دورة تجريبية'
-                      : 'Sample course'
-                    : ledger.courses.find((course) => course.id === query.course)?.name ||
-                      (language === 'ar'
-                        ? '\u0627\u0644\u0633\u062c\u0644 \u0627\u0644\u0633\u0627\u0628\u0642 / \u0628\u0644\u0627 \u062f\u0648\u0631\u0629'
-                        : 'Previous / no course')
+                  selectedCourse?.name ||
+                  (language === 'ar' ? 'السجل السابق / بلا دورة' : 'Previous / no course')
                 }
               />
             )}
@@ -812,12 +723,11 @@ function Notebook({
                 projected={projected}
                 students={students}
                 save={ledger.save}
-                assigned={assigned}
                 inSettings={administrator}
               />
             )}
           </fieldset>
-          {tab === 'attendance' && (!neon || (query.course && !closedCourse)) && (
+          {tab === 'attendance' && query.course && !closedCourse && (
             <aside className="workspace-context" aria-label={t('Summary')}>
               <section className="panel">
                 <h2>{t('Summary')}</h2>
@@ -1563,8 +1473,6 @@ function AttendanceView({
 
 function RosterView({
   students,
-  save,
-  assigned,
   courseSelected,
   enrollments,
   courses,
@@ -1574,8 +1482,6 @@ function RosterView({
 }: {
   onOpenStudent: (studentId: string, element: HTMLElement) => void
   students: import('../shared/neon').NeonRosterStudent[]
-  save: Save
-  assigned: boolean
   courseSelected: boolean
   enrollments: import('../shared/neon').Enrollment[]
   courses: import('../shared/neon').Course[]
@@ -1584,8 +1490,6 @@ function RosterView({
 }) {
   const { t, language } = useLanguage()
   const ar = language === 'ar'
-  const [name, setName] = useState('')
-  const [group, setGroup] = useState('')
   const rosterTable = useDataTable('roster', students, [
     { id: 'first', label: ar ? 'الاسم الأول' : 'First name', value: (s) => s.firstName ?? s.name },
     { id: 'last', label: ar ? 'اسم العائلة' : 'Last name', value: (s) => s.lastName },
@@ -1641,221 +1545,161 @@ function RosterView({
   ])
   return (
     <section className="panel">
-      <TableToolbar model={assigned ? rosterTable : undefined} className="mb-3">
+      <TableToolbar model={rosterTable} className="mb-3">
         <h2 className="title">{t('Your students')}</h2>
       </TableToolbar>
-      {!assigned && (
-        <form
-          className="mb-6 flex flex-wrap items-end gap-3"
-          onSubmit={async (event) => {
-            event.preventDefault()
-            if (
-              await save([
-                { kind: 'student', studentId: crypto.randomUUID(), name, group, active: true },
-              ])
-            )
-              setName('')
-          }}
-        >
-          <label className="grow">
-            {t('Student name')}
-            <input
-              dir="auto"
-              required
-              maxLength={200}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </label>
-          <label>
-            {t('Group')}
-            <input
-              dir="auto"
-              maxLength={100}
-              value={group}
-              onChange={(event) => setGroup(event.target.value)}
-            />
-          </label>
-          <button className="primary">{t('Add student')}</button>
-        </form>
-      )}
-      {assigned ? (
-        <div
-          className="role-table-scroll"
-          role="region"
-          aria-label={ar ? 'قائمة الطلاب' : 'Student list'}
-          tabIndex={0}
-        >
-          <table className="mobile-record-table role-table roster-table roster-students-table">
-            <colgroup>
-              <col className="roster-name-column" />
-              <col className="roster-name-column" />
-              <col className="roster-phone-column" />
-              <col className="roster-summary-column" />
-              <col className="roster-level-column" />
-              <col className="roster-courses-column" />
-              <col className="roster-active-column" />
-              <col className="roster-actions-column" />
-            </colgroup>
-            <TableHeader model={rosterTable} actions />
-            <tbody>
-              {rosterTable.rows.map((student) => (
-                <tr key={student.studentId} data-student-id={student.studentId}>
-                  <td
-                    className="roster-student-name"
-                    data-label={ar ? 'الاسم الأول' : 'First name'}
+      <div
+        className="role-table-scroll"
+        role="region"
+        aria-label={ar ? 'قائمة الطلاب' : 'Student list'}
+        tabIndex={0}
+      >
+        <table className="mobile-record-table role-table roster-table roster-students-table">
+          <colgroup>
+            <col className="roster-name-column" />
+            <col className="roster-name-column" />
+            <col className="roster-phone-column" />
+            <col className="roster-summary-column" />
+            <col className="roster-level-column" />
+            <col className="roster-courses-column" />
+            <col className="roster-active-column" />
+            <col className="roster-actions-column" />
+          </colgroup>
+          <TableHeader model={rosterTable} actions />
+          <tbody>
+            {rosterTable.rows.map((student) => (
+              <tr key={student.studentId} data-student-id={student.studentId}>
+                <td className="roster-student-name" data-label={ar ? 'الاسم الأول' : 'First name'}>
+                  <button
+                    type="button"
+                    className="roster-first-name student-name-link"
+                    onClick={(event) => onOpenStudent(student.studentId, event.currentTarget)}
                   >
-                    <button
-                      type="button"
-                      className="roster-first-name student-name-link"
-                      onClick={(event) => onOpenStudent(student.studentId, event.currentTarget)}
-                    >
-                      <bdi>{student.firstName ?? student.name}</bdi>
-                    </button>
-                    <button
-                      type="button"
-                      className="icon-button roster-mobile-open"
-                      aria-label={`${t('Open student')}: ${student.name}`}
-                      title={t('Open student')}
-                      onClick={(event) => onOpenStudent(student.studentId, event.currentTarget)}
-                    >
-                      <bdi>{student.name}</bdi>
-                      <ChevronRight
-                        className="icon-directional shrink-0"
-                        size={20}
-                        aria-hidden="true"
-                      />
-                    </button>
-                  </td>
-                  <td className="roster-last-name" data-label={ar ? 'اسم العائلة' : 'Last name'}>
-                    <bdi>{student.lastName || '—'}</bdi>
-                  </td>
-                  <td data-label={ar ? 'رقم الهاتف' : 'Phone'}>
-                    {student.whatsapp ? (
-                      <PhoneNumber value={student.whatsapp} />
-                    ) : ar ? (
-                      'غير متوفر'
-                    ) : (
-                      'Not provided'
-                    )}
-                  </td>
-                  <td data-label={ar ? 'الحضور' : 'Attendance'}>
-                    {(() => {
-                      const records = attendance.filter(
-                        ({ value }) => value.studentId === student.studentId,
-                      )
-                      if (!records.length) return ar ? 'غير مسجل' : 'Not recorded'
-                      const present = records.filter(
-                        ({ value }) => value.status === 'present',
-                      ).length
-                      return (
-                        <>
-                          <strong>{((present / records.length) * 100).toFixed(1)}%</strong>
-                          <br />
-                          <small>
-                            {ar ? 'الجلسات المسجلة' : 'Recorded sessions'}: {records.length}
-                          </small>
-                        </>
-                      )
-                    })()}
-                  </td>
-                  <td data-label={ar ? 'المستوى' : 'Level'}>
-                    <bdi>{studentLevel(student, courseSelected, enrollments) || '—'}</bdi>
-                  </td>
-                  <td data-label={ar ? 'الدورات' : 'Courses'}>
-                    {(() => {
-                      const names = courses.filter((course) =>
-                        allEnrollments.some(
-                          (entry) =>
-                            entry.studentId === student.studentId &&
-                            entry.courseId === course.id &&
-                            entry.active,
-                        ),
-                      )
-                      return names.length ? (
-                        <>
-                          <div className="roster-courses-desktop">
+                    <bdi>{student.firstName ?? student.name}</bdi>
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-button roster-mobile-open"
+                    aria-label={`${t('Open student')}: ${student.name}`}
+                    title={t('Open student')}
+                    onClick={(event) => onOpenStudent(student.studentId, event.currentTarget)}
+                  >
+                    <bdi>{student.name}</bdi>
+                    <ChevronRight
+                      className="icon-directional shrink-0"
+                      size={20}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </td>
+                <td className="roster-last-name" data-label={ar ? 'اسم العائلة' : 'Last name'}>
+                  <bdi>{student.lastName || '—'}</bdi>
+                </td>
+                <td data-label={ar ? 'رقم الهاتف' : 'Phone'}>
+                  {student.whatsapp ? (
+                    <PhoneNumber value={student.whatsapp} />
+                  ) : ar ? (
+                    'غير متوفر'
+                  ) : (
+                    'Not provided'
+                  )}
+                </td>
+                <td data-label={ar ? 'الحضور' : 'Attendance'}>
+                  {(() => {
+                    const records = attendance.filter(
+                      ({ value }) => value.studentId === student.studentId,
+                    )
+                    if (!records.length) return ar ? 'غير مسجل' : 'Not recorded'
+                    const present = records.filter(({ value }) => value.status === 'present').length
+                    return (
+                      <>
+                        <strong>{((present / records.length) * 100).toFixed(1)}%</strong>
+                        <br />
+                        <small>
+                          {ar ? 'الجلسات المسجلة' : 'Recorded sessions'}: {records.length}
+                        </small>
+                      </>
+                    )
+                  })()}
+                </td>
+                <td data-label={ar ? 'المستوى' : 'Level'}>
+                  <bdi>{studentLevel(student, courseSelected, enrollments) || '—'}</bdi>
+                </td>
+                <td data-label={ar ? 'الدورات' : 'Courses'}>
+                  {(() => {
+                    const names = courses.filter((course) =>
+                      allEnrollments.some(
+                        (entry) =>
+                          entry.studentId === student.studentId &&
+                          entry.courseId === course.id &&
+                          entry.active,
+                      ),
+                    )
+                    return names.length ? (
+                      <>
+                        <div className="roster-courses-desktop">
+                          {names.map((course) => (
+                            <span key={course.id} className="roster-course-badge" dir="auto">
+                              {course.name}
+                            </span>
+                          ))}
+                        </div>
+                        <details className="roster-courses-mobile">
+                          <summary
+                            aria-label={
+                              ar ? `الدورات (${names.length})` : `Courses (${names.length})`
+                            }
+                          >
+                            {names.length}
+                          </summary>
+                          <div>
                             {names.map((course) => (
                               <span key={course.id} className="roster-course-badge" dir="auto">
                                 {course.name}
                               </span>
                             ))}
                           </div>
-                          <details className="roster-courses-mobile">
-                            <summary
-                              aria-label={
-                                ar ? `الدورات (${names.length})` : `Courses (${names.length})`
-                              }
-                            >
-                              {names.length}
-                            </summary>
-                            <div>
-                              {names.map((course) => (
-                                <span key={course.id} className="roster-course-badge" dir="auto">
-                                  {course.name}
-                                </span>
-                              ))}
-                            </div>
-                          </details>
-                        </>
-                      ) : ar ? (
-                        'لا يوجد'
-                      ) : (
-                        'None'
-                      )
-                    })()}
-                  </td>
-                  <td className="roster-student-status" data-label={ar ? 'الحالة' : 'Active'}>
-                    <span
-                      role="img"
-                      aria-label={
-                        student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'
-                      }
-                      title={student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}
-                    >
-                      {student.active ? (
-                        <CircleCheck className="mx-auto" size={20} aria-hidden="true" />
-                      ) : (
-                        <CircleMinus className="mx-auto" size={20} aria-hidden="true" />
-                      )}
-                    </span>
-                  </td>
-                  <td className="roster-desktop-action" data-label={ar ? 'الإجراءات' : 'Actions'}>
-                    <button
-                      type="button"
-                      className="icon-button"
-                      aria-label={t('Open student')}
-                      title={t('Open student')}
-                      onClick={(event) => onOpenStudent(student.studentId, event.currentTarget)}
-                    >
-                      <UserRound size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="divide-y divide-slate-100">
-          {students.map((student) => (
-            <StudentEditor
-              key={`${student.studentId}:${student.name}:${student.group}:${student.active}`}
-              student={student}
-              save={save}
-            />
-          ))}
-        </div>
-      )}
-      {!students.length && (
-        <Empty
-          text={
-            assigned
-              ? t('No assigned students match this view.')
-              : t('No students yet. Add a name and optional group above.')
-          }
-        />
-      )}
+                        </details>
+                      </>
+                    ) : ar ? (
+                      'لا يوجد'
+                    ) : (
+                      'None'
+                    )
+                  })()}
+                </td>
+                <td className="roster-student-status" data-label={ar ? 'الحالة' : 'Active'}>
+                  <span
+                    role="img"
+                    aria-label={
+                      student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'
+                    }
+                    title={student.active ? (ar ? 'نشط' : 'Active') : ar ? 'غير نشط' : 'Inactive'}
+                  >
+                    {student.active ? (
+                      <CircleCheck className="mx-auto" size={20} aria-hidden="true" />
+                    ) : (
+                      <CircleMinus className="mx-auto" size={20} aria-hidden="true" />
+                    )}
+                  </span>
+                </td>
+                <td className="roster-desktop-action" data-label={ar ? 'الإجراءات' : 'Actions'}>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label={t('Open student')}
+                    title={t('Open student')}
+                    onClick={(event) => onOpenStudent(student.studentId, event.currentTarget)}
+                  >
+                    <UserRound size={20} strokeWidth={1.6} aria-hidden="true" focusable="false" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {!students.length && <Empty text={t('No assigned students match this view.')} />}
     </section>
   )
 }
@@ -2011,51 +1855,6 @@ function TeacherStudentForm({
   )
 }
 
-function StudentEditor({ student, save }: { student: Student; save: Save }) {
-  const { t } = useLanguage()
-  const [name, setName] = useState(student.name)
-  const [group, setGroup] = useState(student.group)
-  return (
-    <form
-      className="flex flex-wrap items-end gap-3 py-4"
-      onSubmit={(event) => {
-        event.preventDefault()
-        void save([{ ...student, name, group }])
-      }}
-    >
-      <label className="grow">
-        {t('Name')}
-        <input
-          dir="auto"
-          required
-          maxLength={200}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-      </label>
-      <label>
-        {t('Group')}
-        <LevelInput
-          dir="auto"
-          maxLength={100}
-          value={group}
-          onChange={(event) => setGroup(event.target.value)}
-        />
-      </label>
-      <button className="secondary" disabled={name === student.name && group === student.group}>
-        {t('Save changes')}
-      </button>
-      <button
-        className="secondary"
-        type="button"
-        onClick={() => void save([{ ...student, active: !student.active }])}
-      >
-        {student.active ? t('Make inactive') : t('Activate')}
-      </button>
-    </form>
-  )
-}
-
 function Summary({
   students,
   projected,
@@ -2138,13 +1937,11 @@ function History({
   projected,
   students,
   save,
-  assigned,
   inSettings,
 }: {
   projected: Projection
   students: Student[]
   save: Save
-  assigned: boolean
   inSettings: boolean
 }) {
   const { t, language } = useLanguage()
@@ -2155,7 +1952,7 @@ function History({
   const ids = new Set(students.map((student) => student.studentId))
   const visible = projected.events.filter((event) => {
     const payload = event.payload
-    if (assigned && query.student) {
+    if (query.student) {
       if (payload.kind === 'reversal') {
         const target = projected.events.find((item) => item.id === payload.targetId)
         return (

@@ -101,8 +101,7 @@
 :root[data-theme='dark'] .home-lede,
 :root[data-theme='dark'] .home-section p,
 :root[data-theme='dark'] .home-curriculum p,
-:root[data-theme='dark'] .home-faq p,
-:root[data-theme='dark'] .home-tools p {
+:root[data-theme='dark'] .home-faq p {
   color: var(--dark-muted);
 }
 :root[data-theme='dark'] .wartaq-home h1,
@@ -129,7 +128,6 @@
 }
 :root[data-theme='dark'] .home-notice,
 :root[data-theme='dark'] .home-curriculum,
-:root[data-theme='dark'] .home-tools,
 :root[data-theme='dark'] .skip-link,
 :root[data-theme='dark'] .role-editor,
 :root[data-theme='dark'] .sort-pill,

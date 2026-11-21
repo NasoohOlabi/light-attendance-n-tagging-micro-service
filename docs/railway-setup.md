@@ -24,7 +24,7 @@ The separate-name student editor requires `neon/004-student-names.sql` before de
 
 The searchable course-membership workflow additionally requires `neon/005-active-enrollments.sql` before deployment. It adds `course_enrollments.active` with an existing-row default of true; the health check requires this column. Membership switches preserve the enrollment ID, attendance and scores. Version 4 backups preserve active/inactive membership; versions 1–3 still import into a compatible empty target. Legacy comparisons refuse to hide inactive target enrollments, and partial membership schemas fail closed.
 
-For local authenticated use, set private server variables against a disposable database and run `bun run build`, then `bun run server/index.ts`. Open port 3000 directly so Auth and notebook share the configured origin. Plain Vite preview supports the public shell/sample; authenticated operation needs Bun.
+For local authenticated use, set private server variables against a disposable database and run `bun run build`, then `bun run server/index.ts`. Open port 3000 directly so Auth and notebook share the configured origin. Plain Vite preview supports the public shell; authenticated operation needs Bun.
 
 ## Transfer and recovery
 

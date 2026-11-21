@@ -1,0 +1,46 @@
+.auth-welcome {
+  position: relative;
+  isolation: isolate;
+  min-height: 90svh;
+  padding-block: 1.5rem;
+}
+
+.auth-welcome::before {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background-image: url('./auth-background.svg');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.auth-form {
+  border-radius: 1.25rem;
+  box-shadow: 0 18px 55px rgb(0 77 87 / 10%);
+}
+
+.auth-form .title {
+  margin-bottom: 1.25rem;
+}
+
+.auth-form .auth-sign-in {
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .auth-welcome {
+    padding-inline: 1rem;
+  }
+
+  .auth-welcome::before {
+    background-position: 30% 10%;
+    background-size: max(430px, 100%) auto;
+  }
+
+  .auth-form {
+    padding: 1rem;
+  }
+}

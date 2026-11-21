@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { LanguageProvider } from './i18n'
 import { useLanguage } from './useLanguage'
 import { navigatePage, useQueryState } from './queryState'
@@ -26,7 +26,6 @@ export function App() {
 
 function AppContent() {
   const { language, t } = useLanguage()
-  const [demo, setDemo] = useState<'editable' | 'assigned' | null>(null)
   const query = useQueryState()
   useEffect(() => {
     document.title =
@@ -38,28 +37,10 @@ function AppContent() {
           ? 'وارتق'
           : 'Wartaq'
   }, [language, query.page])
-  const openDemo = (kind: 'editable' | 'assigned') => {
-    setDemo(kind)
-    navigatePage('app')
-  }
-  const goHome = () => {
-    setDemo(null)
-    navigatePage('home')
-  }
-  if (query.page === 'home')
-    return (
-      <HomePage
-        onOpenApp={() => {
-          setDemo(null)
-          navigatePage('app')
-        }}
-        onExplore={() => openDemo('editable')}
-        onExploreAssigned={() => openDemo('assigned')}
-      />
-    )
+  if (query.page === 'home') return <HomePage onOpenApp={() => navigatePage('app')} />
   return (
     <Suspense fallback={<WorkspaceLoading message={t('Loading your session…')} />}>
-      <Workspace demo={demo} openDemo={openDemo} goHome={goHome} />
+      <Workspace goHome={() => navigatePage('home')} />
     </Suspense>
   )
 }

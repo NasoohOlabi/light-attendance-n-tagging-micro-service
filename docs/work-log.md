@@ -2143,3 +2143,11 @@ The owner asked to remove email and username sign-in, include a hint for Syrian 
 Applied and read back all nine account mappings on Railway. Seven active Teacher accounts received distinct reserved fictional numbers, one retained its previously verified number, and the administrator received the requested phone. The live account directory had zero former sign-in identifiers after the migration. Mapping details stay private. No database schema change was required.
 
 Disposable PostgreSQL exercised account bootstrap, atomic migration rollback on a duplicate phone, password preservation, and administrator phone replacement with session revocation. Chromium checks use synthetic accounts and emulated phones. The PR records the release gate and exact-main Railway verification.
+
+## 2026-11-21 15:15 Asia/Damascus (UTC+03:00) - Simplify sign-in and retire the sample notebooks
+
+The owner requested a friendlier sign-in screen and removal of both public samples. Sign in sits to the right of Create account in one row. The sign-in background uses a decorative book, pencil and stars. The homepage and sign-in screen no longer offer the sample notebooks, and the app no longer loads their data or local editing flows.
+
+Browser coverage checks sign-in and account creation controls in English and Arabic, light and dark themes, and desktop and emulated phone widths. End-to-end tests now open signed-in notebooks with synthetic records for attendance, notes and corrections. The PR records the release gate and exact-main Railway verification.
+
+At 15:26 Asia/Damascus, integrated this layout and the sample retirement with phone-only sign-in. The sign-in form retains the decorative background and uses one full-width action. Verification checks the two fields and phone format hint in both languages and themes at 320px and 1440px.

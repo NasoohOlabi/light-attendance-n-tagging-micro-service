@@ -5,18 +5,10 @@ const arabic = {
   'Could not confirm sign-out. Please try again.': 'تعذّر تأكيد تسجيل الخروج. حاول مجدداً.',
   'Your account is awaiting approval or no longer has access. Contact your manager.':
     'حسابك ينتظر الموافقة أو لم يعد لديه صلاحية. تواصل مع المسؤول.',
-  'Explore with sample students': 'استكشف باستخدام طلاب تجريبيين',
-  'Explore assigned teacher sample': 'استكشف نموذج المعلم المعيّن',
   'الحضور والملاحظات · Arabic names, notes and tags are supported.':
     'الحضور والملاحظات · الأسماء والملاحظات والوسوم العربية مدعومة.',
   'Attendance & notes': 'الحضور والملاحظات',
-  'Demo teacher': 'معلم تجريبي',
   'Sign out': 'تسجيل الخروج',
-  'Close session': 'إغلاق الجلسة',
-  'Assigned teacher sample.': 'نموذج تجريبي للمعلم المعيّن.',
-  'Sample data.': 'بيانات تجريبية.',
-  'Changes stay in memory and disappear when you leave. No server requests are made.':
-    'تبقى التغييرات في الذاكرة وتختفي عند المغادرة. لا تُرسل طلبات إلى الخادم.',
   'Main navigation': 'التنقل الرئيسي',
   Attendance: 'الحضور',
   Notes: 'الملاحظات',

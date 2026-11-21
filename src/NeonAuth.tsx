@@ -21,6 +21,7 @@ import { WartaqLogo } from './brand/components'
 import { AccountChoices } from './AccountChoices'
 import { offlineAccess, clearOfflineAccess } from './offlineAccess'
 import { OfflineAttendance } from './OfflineAttendance'
+import './auth.css'
 
 const deviceLimitMessage = 'Five accounts are signed in. Sign out of one to add another.'
 
@@ -41,11 +42,9 @@ function AuthHeader() {
 
 export function NeonAuth({
   children,
-  samples,
   onSignOut,
 }: {
   onSignOut: () => void
-  samples: React.ReactNode
   children: (
     userId: string,
     teacher: NeonAccount,
@@ -397,7 +396,7 @@ export function NeonAuth({
     })
   }
   return (
-    <main id="main-content" tabIndex={-1} className="workspace-auth">
+    <main id="main-content" tabIndex={-1} className="workspace-auth auth-welcome">
       <AuthHeader />
       {!addingAccount && <AccountChoices add={addAccount} />}
       {!addingAccount && offlineAccess() && (
@@ -422,7 +421,7 @@ export function NeonAuth({
       )}
       <form
         aria-busy={busy}
-        className="panel space-y-3"
+        className="panel space-y-3 auth-form"
         onSubmit={async (event) => {
           event.preventDefault()
           if (session.isPending || session.error || busy) return
@@ -512,7 +511,10 @@ export function NeonAuth({
               : errorMessage(error)}
           </p>
         )}
-        <button className="primary" disabled={busy || session.isPending || Boolean(session.error)}>
+        <button
+          className="primary auth-sign-in"
+          disabled={busy || session.isPending || Boolean(session.error)}
+        >
           {busy ? t('Please wait…') : t('Sign in')}
         </button>
         <p className="muted">
@@ -521,7 +523,6 @@ export function NeonAuth({
             : 'Contact your administrator to reset your password.'}
         </p>
       </form>
-      {!addingAccount && samples}
     </main>
   )
 }
