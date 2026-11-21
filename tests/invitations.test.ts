@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   invitationProfileInputSchema,
   invitationRequestSchema,
+  invitationSetupInputSchema,
   phoneSchema,
 } from '../shared/invitations'
 
@@ -49,16 +50,27 @@ describe('invitation boundaries', () => {
   test('validates invitation profile fields', () => {
     const profile = {
       phone: '12345678',
-      birthDate: '2000-01-01',
       currentPassword: 'temporary',
       newPassword: 'replacement',
     }
     expect(invitationProfileInputSchema.parse(profile).phone).toBe('12345678')
     expect(
-      invitationProfileInputSchema.safeParse({ ...profile, birthDate: '2000-02-31' }).success,
+      invitationProfileInputSchema.safeParse({ ...profile, birthDate: '2000-01-01' }).success,
     ).toBe(false)
     expect(
       invitationProfileInputSchema.safeParse({ ...profile, username: 'not valid' }).success,
     ).toBe(false)
+  })
+
+  test('setup accepts only a valid new password', () => {
+    expect(invitationSetupInputSchema.safeParse({ newPassword: 'replacement' }).success).toBe(true)
+    for (const details of [
+      { newPassword: 'short' },
+      { newPassword: 'replacement', phone: '+12025550110' },
+      { newPassword: 'replacement', currentPassword: 'temporary' },
+      { newPassword: 'replacement', birthDate: '2000-01-01' },
+    ]) {
+      expect(invitationSetupInputSchema.safeParse(details).success).toBe(false)
+    }
   })
 })

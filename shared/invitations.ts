@@ -38,9 +38,10 @@ export const invitationRequestSchema = z.strictObject({
 export const invitationProfileSchema = z.object({
   verifiedPhone: z.string().nullable(),
   phone: z.string().nullable(),
-  birthDate: z.iso.date().nullable(),
   requiresSetup: z.boolean(),
 })
+const newPassword = z.string().min(8).max(128)
+export const invitationSetupInputSchema = z.strictObject({ newPassword })
 export const invitationProfileInputSchema = z.strictObject({
   phone: z
     .string()
@@ -50,12 +51,8 @@ export const invitationProfileInputSchema = z.strictObject({
     .refine(
       (value) => value.replace(/\D/g, '').length >= 7 && value.replace(/\D/g, '').length <= 15,
     ),
-  birthDate: z.iso
-    .date()
-    .refine((value) => value <= new Date().toISOString().slice(0, 10))
-    .optional(),
   currentPassword: z.string().min(1).max(128),
-  newPassword: z.string().min(8).max(128).optional(),
+  newPassword: newPassword.optional(),
 })
 export const invitationResponseSchema = z.object({
   invitations: z.array(
@@ -77,9 +74,7 @@ export function invitationMessage(
   const identifier = item.phone
   const url = `${origin}/?page=app`
   if (ar) {
-    const setup = item.role === 'teacher' ? 'اختر' : 'أكمل بياناتك واختر'
-    return `مرحباً ${item.firstName} ${item.lastName}،\nهذا رابط الدخول إلى حسابك في وارتق:\n${url}\nرقم الهاتف: ${identifier}\nكلمة المرور المؤقتة: ${item.temporaryPassword}\nعند أول دخول، ${setup} كلمة مرور خاصة بك.`
+    return `مرحباً ${item.firstName} ${item.lastName}،\nهذا رابط الدخول إلى حسابك في وارتق:\n${url}\nرقم الهاتف: ${identifier}\nكلمة المرور المؤقتة: ${item.temporaryPassword}\nعند أول دخول، اختر كلمة مرور خاصة بك.`
   }
-  const setup = item.role === 'teacher' ? 'choose' : 'complete your details and choose'
-  return `Hello ${item.firstName} ${item.lastName},\nHere is your Wartaq sign-in link:\n${url}\nPhone: ${identifier}\nTemporary password: ${item.temporaryPassword}\nOn your first sign-in, ${setup} a personal password.`
+  return `Hello ${item.firstName} ${item.lastName},\nHere is your Wartaq sign-in link:\n${url}\nPhone: ${identifier}\nTemporary password: ${item.temporaryPassword}\nOn your first sign-in, choose a personal password.`
 }

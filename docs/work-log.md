@@ -2136,6 +2136,12 @@ The owner asked to drop the birthday question from teacher invitations. Teachers
 
 Browser coverage exercises first sign-in, the English and Arabic teacher form, and later contact edits. Disposable PostgreSQL coverage checks that a teacher can finish setup without a birthday and that a student still needs one. The PR records release and Railway verification.
 
+## 2026-11-21 15:00 Asia/Damascus (UTC+03:00) - Simplify invitation password setup
+
+The owner asked recipients to set a new password after their first sign-in. The form shows the administrator-confirmed phone as read-only and spaces the Save details and Sign out buttons. It uses the signed-in browser session for setup, rotates the password, and opens the workspace with a new session. Older username invitations use their existing username. Date of birth is retired from account setup and personal settings. Historical database values remain available to private backups.
+
+Disposable PostgreSQL tests exercised password-only setup, concurrent requests, verification of the current password for later edits, revocation of the old password and session, and MCP access. Invitation browser tests exercised reload, automatic sign-in, and English and Arabic forms on desktop and emulated phones. A 320px Chromium session on the running Bun app completed a synthetic student invitation against disposable PostgreSQL. The PR records the full release gate and Railway deployment verification.
+
 ## 2026-11-21 15:03 Asia/Damascus (UTC+03:00) - Use phone numbers for sign-in
 
 The owner asked to remove email and username sign-in, include a hint for Syrian mobile numbers, and give teachers missing a verified number a replaceable placeholder. The sign-in page and MCP connection use a phone number and password. Administrators invite users and update sign-in phones under Accounts. The private CLI provisions the first administrator and migrates existing accounts in one transaction. Account IDs, roles, passwords and invitation setup are preserved.
@@ -2150,4 +2156,12 @@ The owner requested a friendlier sign-in screen and removal of both public sampl
 
 Browser coverage checks sign-in and account creation controls in English and Arabic, light and dark themes, and desktop and emulated phone widths. End-to-end tests now open signed-in notebooks with synthetic records for attendance, notes and corrections. The PR records the release gate and exact-main Railway verification.
 
+## 2026-11-21 15:18 Asia/Damascus (UTC+03:00) - Stay signed in after setting a password
+
+The owner asked to open the site immediately after setup and to keep people signed in after changing their own password. The verified browser session now survives either operation. The password change and revocation of other sessions remain transactional. The client refreshes workspace access using the existing session. An administrator reset of another account still revokes the recipient's sessions.
+
+Disposable PostgreSQL verifies access with the original cookie and rejection of other sessions. The desktop and mobile browser scenarios check that setup and a later password change stay in the workspace with one sign-in request, including after reload. A 320px Chromium run with the running Bun app and disposable PostgreSQL confirmed the original cookie across both saves. The PR records release and Railway verification.
+
 At 15:26 Asia/Damascus, integrated this layout and the sample retirement with phone-only sign-in. The sign-in form retains the decorative background and uses one full-width action. Verification checks the two fields and phone format hint in both languages and themes at 320px and 1440px.
+
+Integrated the password-only invitation flow with phone sign-in on 2026-11-21 Asia/Damascus. The verified phone stays read-only during setup and the active browser session continues into the workspace. Tests cover teacher and student setup and replacement of the sign-in phone by an administrator.

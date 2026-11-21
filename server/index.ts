@@ -191,7 +191,7 @@ const notebook = createHandler(
     const session = await auth.api.getSession({ headers: request.headers })
     if (!session?.user.id || request.headers.get('x-user-id') !== session.user.id)
       throw new Error('Unauthorized')
-    return session.user.id
+    return { subject: session.user.id, sessionId: session.session.id }
   },
   { kind: 'reveal', reveal: receipts.reveal },
 )
@@ -211,7 +211,7 @@ function notebookAsUser(userId: string, operation: McpOperation) {
     pool,
     authenticated,
     [origin],
-    authenticated,
+    async () => ({ subject: userId }),
     operation.path === '/api/admin/accounts/invite'
       ? { kind: 'save', save: receipts.save }
       : undefined,

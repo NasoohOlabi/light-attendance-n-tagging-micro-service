@@ -14,7 +14,7 @@ Open **Settings → Accounts → Create accounts**. Enter the recipient's name a
 
 Use **Copy message** and send the message privately to the recipient. The message contains the phone sign-in link, their number and their temporary password. If the browser blocks clipboard access, copy the selected message manually. Leaving the screen clears the message. If the creation response is lost, **Retry safely** uses the same request. Look up the phone number under Accounts and reset its password if the account was created.
 
-At first sign-in the recipient replaces the temporary password. Student and Administrator invitations also ask for a date of birth. The recipient signs in again with the same phone number and their new password. **Profile settings** lets them update personal details. A student invitation creates a fresh, unassigned roster record. To link an account to an existing student, select the correct roster record under **Accounts → Manage**.
+At first sign-in, the recipient sees their read-only sign-in phone and chooses a new password. Saving opens the workspace in the same session. **Profile settings** lets recipients update personal contact details or change their password. A student invitation creates a fresh, unassigned roster record. To link the account to an existing student, select the correct roster record under **Accounts → Manage**.
 
 | Role          | Access                                                                                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
