@@ -25,6 +25,7 @@ const users = [
     id: '10000000-0000-4000-8000-000000000001',
     name: 'Teacher Alpha',
     email: 'alpha@example.test',
+    phone: '+12025550121',
     student: 'Alpha Student',
     studentId: '20000000-0000-4000-8000-000000000001',
   },
@@ -32,6 +33,7 @@ const users = [
     id: '10000000-0000-4000-8000-000000000002',
     name: 'Teacher Beta',
     email: 'beta@example.test',
+    phone: '+12025550122',
     student: 'Beta Student',
     studentId: '20000000-0000-4000-8000-000000000002',
   },
@@ -60,7 +62,7 @@ test('Arabic authentication keeps mobile input semantics and localized feedback'
         route.request().headers()['access-control-request-headers'] ?? 'content-type',
     }
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
-    if (route.request().url().includes('/sign-in/email'))
+    if (route.request().url().includes('/sign-in/phone'))
       return route.fulfill({
         status: 401,
         headers,
@@ -73,28 +75,21 @@ test('Arabic authentication keeps mobile input semantics and localized feedback'
   await compactHeader(page, '.workspace-auth-header')
   await clickAccountAction(page, 'العربية')
   await compactHeader(page, '.workspace-auth-header')
-  const email = page.getByLabel('البريد الإلكتروني', { exact: true })
+  const phone = page.getByLabel('رقم الهاتف', { exact: true })
   const password = page.getByLabel('كلمة المرور', { exact: true })
-  await expect(email).toHaveAttribute('type', 'email')
-  await expect(email).toHaveAttribute('autocomplete', 'email')
+  await expect(phone).toHaveAttribute('type', 'tel')
+  await expect(phone).toHaveAttribute('autocomplete', 'username')
   await expect(password).toHaveAttribute('autocomplete', 'current-password')
-  await email.fill('synthetic@example.test')
+  await expect(page.locator('form input')).toHaveCount(2)
+  await phone.fill('0912345678')
   await password.fill('synthetic-password')
   await page.getByRole('button', { name: 'تسجيل الدخول', exact: true }).click()
-  await expect(page.getByRole('alert')).not.toContainText('Invalid')
   await expect(page.getByRole('alert')).toBeVisible()
   await clickAccountAction(page, 'English')
-  await expect(email).toHaveCount(0)
-  await expect(page.getByLabel('Email', { exact: true })).toHaveValue('synthetic@example.test')
-  await expect(page.getByRole('alert')).toContainText('Invalid email or password')
-  await page.getByRole('button', { name: 'Create account', exact: true }).click()
-  await expect(page.getByLabel('Name', { exact: true })).toHaveAttribute('autocomplete', 'name')
-  await expect(page.getByRole('combobox')).toHaveCount(1)
-  await expect(page.getByRole('combobox', { name: 'Color theme' })).toBeVisible()
-  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute(
-    'autocomplete',
-    'new-password',
-  )
+  await expect(page.getByLabel('Phone number', { exact: true })).toHaveValue('0912345678')
+  await expect(page.getByRole('alert')).toContainText('Invalid phone number or password')
+  await expect(page.getByText('Syrian numbers can start with 09 or +9639.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Create account', exact: true })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
     true,
   )
@@ -129,9 +124,9 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
             request.headers()['access-control-request-headers'] ?? 'content-type',
         },
       })
-    if (path.endsWith('/sign-in/email')) {
+    if (path.endsWith('/sign-in/phone')) {
       const body = request.postDataJSON()
-      current = users.find((user) => user.email === body.email)
+      current = users.find((user) => user.phone === body.phone)
     }
     if (path.endsWith('/sign-out')) {
       current = undefined
@@ -224,7 +219,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
     })
   })
   await page.goto(`${origin}/?page=app`)
-  await page.getByLabel('Email').fill(users[0].email)
+  await page.getByLabel('Phone number').fill(users[0].phone)
   await page.getByLabel('Password').fill('synthetic-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByText('Checking your access…')).toBeVisible()
@@ -304,7 +299,7 @@ test('sign in, reload and switch teacher without mixing notebook data', async ({
   await clickAccountAction(page, 'Sign out')
   await expect(page.locator('.wartaq-home h1')).toBeVisible()
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByLabel('Email').fill(users[1].email)
+  await page.getByLabel('Phone number').fill(users[1].phone)
   await page.getByLabel('Password').fill('synthetic-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByRole('button', { name: 'Take attendance' }).click()
@@ -353,7 +348,7 @@ test('session restoration shows a neutral placeholder until signed out', async (
   )
   await page.goto(`${origin}/?page=app`)
   await expect(page.getByText('Loading your session…')).toBeVisible()
-  await expect(page.getByLabel('Email')).toHaveCount(0)
+  await expect(page.getByLabel('Phone number')).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Explore|Grow|Sign out/ })).toHaveCount(0)
   await mkdir('.artifacts/verification', { recursive: true })
   await page.screenshot({ path: `.artifacts/verification/loading-${test.info().project.name}.png` })
@@ -361,7 +356,7 @@ test('session restoration shows a neutral placeholder until signed out', async (
     true,
   )
   release()
-  await expect(page.getByLabel('Email')).toBeVisible()
+  await expect(page.getByLabel('Phone number')).toBeVisible()
 })
 
 test('Arabic session placeholder fits a narrow screen', async ({ page }) => {
@@ -382,7 +377,7 @@ test('Arabic session placeholder fits a narrow screen', async ({ page }) => {
     path: `.artifacts/verification/loading-ar-${test.info().project.name}.png`,
   })
   await expect(page.getByRole('status')).toBeVisible()
-  await expect(page.getByLabel('Email')).toHaveCount(0)
+  await expect(page.getByLabel('Phone number')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
     true,
   )
@@ -397,10 +392,10 @@ test('failed session check offers retry', async ({ page }) => {
   })
   await page.goto(`${origin}/?page=app`)
   await expect(page.getByRole('alert')).toContainText('Could not check your session')
-  await expect(page.getByLabel('Email')).toHaveCount(0)
+  await expect(page.getByLabel('Phone number')).toHaveCount(0)
   fail = false
   await page.getByRole('button', { name: 'Try again' }).click()
-  await expect(page.getByLabel('Email')).toBeVisible()
+  await expect(page.getByLabel('Phone number')).toBeVisible()
 })
 
 test('stalled session check times out and can recover', async ({ page }) => {

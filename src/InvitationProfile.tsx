@@ -1,8 +1,8 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import type { NeonAccount } from '../shared/neon'
 import { useLanguage } from './useLanguage'
 import type { Profile } from './ProfileMenu'
-import { NeonRequestError, type InvitationProfile } from './neon'
+import type { InvitationProfile } from './neon'
 import { phoneNumber } from './phoneFormat'
 
 export function InvitationProfileForm({
@@ -21,7 +21,6 @@ export function InvitationProfileForm({
   const { language } = useLanguage()
   const ar = language === 'ar'
   const needsBirthDate = role !== 'teacher'
-  const [username, setUsername] = useState(invitation.username)
   const [phone, setPhone] = useState(invitation.phone ?? invitation.verifiedPhone ?? '')
   const [latestBirthDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [birthDate, setBirthDate] = useState(invitation.birthDate ?? '')
@@ -46,7 +45,6 @@ export function InvitationProfileForm({
         setSaved(false)
         try {
           await update({
-            username,
             phone,
             ...(needsBirthDate ? { birthDate } : {}),
             currentPassword,
@@ -55,15 +53,12 @@ export function InvitationProfileForm({
           setCurrentPassword('')
           setNewPassword('')
           setSaved(true)
-        } catch (cause) {
-          if (cause instanceof NeonRequestError && cause.status === 409) {
-            setError(ar ? 'اسم المستخدم مستخدم بالفعل.' : 'That username is already in use.')
-          } else
-            setError(
-              ar
-                ? 'تعذر حفظ البيانات. تحقق من كلمة المرور والبيانات وحاول مجدداً.'
-                : 'Could not save your details. Check your password and details and try again.',
-            )
+        } catch {
+          setError(
+            ar
+              ? 'تعذر حفظ البيانات.'
+              : 'Could not save your details. Check your password and details and try again.',
+          )
         } finally {
           setBusy(false)
         }
@@ -84,21 +79,6 @@ export function InvitationProfileForm({
             ? 'أدخل كلمة المرور المؤقتة واختر كلمة مرورك الشخصية لاستخدامها في مرات الدخول القادمة.'
             : 'Enter your temporary password and choose a personal password for future sign-ins.'}
         </p>
-      )}
-      {username !== null && !invitation.verifiedPhone && (
-        <label>
-          {ar ? 'اسم المستخدم' : 'Username'}
-          <input
-            required
-            minLength={3}
-            maxLength={32}
-            pattern="[a-z0-9._\-]+"
-            autoComplete="username"
-            dir="ltr"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-          />
-        </label>
       )}
       <label>
         {ar ? 'رقم الهاتف' : 'Phone'}

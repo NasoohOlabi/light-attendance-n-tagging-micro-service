@@ -466,7 +466,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
   await navigation.getByRole('button', { name: 'Students' }).click()
   await expect(page.getByRole('heading', { name: 'Your students', exact: true })).toBeVisible()
   await page.goto(`${origin}/?page=app&view=settings&account=${teacherId}`)
-  await expect(page.getByText('teacher@example.test')).toBeVisible()
+  await expect(page.getByText('Phone unavailable')).toBeVisible()
   await expect(page.getByLabel('Role')).toBeVisible()
   await page.reload()
   await expect(page.getByLabel('Role')).toBeVisible()
@@ -509,7 +509,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     path: `.artifacts/verification/settings-overview-${testInfo.project.name}.png`,
     fullPage: true,
   })
-  const account = page.locator('details').filter({ hasText: 'student@example.test' })
+  const account = page.locator('details').filter({ hasText: 'Synthetic Account' })
   const accountSummary = account.locator('summary')
   await accountSummary.focus()
   await page.keyboard.press('Tab')
@@ -664,7 +664,7 @@ test('administrator assigns roles and creates an assigned student', async ({ pag
     const value = await message.inputValue()
     expect(value).toContain(verifiedPhone)
     expect(value).toContain(temporaryPassword)
-    expect(value).toContain(`${origin}/?page=app&login=phone`)
+    expect(value.split('\n')).toContain(`${origin}/?page=app`)
     for (const width of testInfo.project.name === 'mobile' ? [320, 390] : [1440]) {
       await page.setViewportSize({ width, height: 900 })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(

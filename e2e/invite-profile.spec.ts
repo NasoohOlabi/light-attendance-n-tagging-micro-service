@@ -1,4 +1,4 @@
-﻿import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 test.use({ trace: 'off' })
 
@@ -47,7 +47,7 @@ async function checkInvitedProfile(page: Page, role: 'teacher' | 'student') {
   })
   await page.route('**/api/me/invitation-profile', async (route) => {
     const body = route.request().postDataJSON()
-    expect(body.username).toBeNull()
+    expect(body).not.toHaveProperty('username')
     if (role === 'teacher') expect(body).not.toHaveProperty('birthDate')
     phone = body.phone
     birthDate = body.birthDate
@@ -68,7 +68,6 @@ async function checkInvitedProfile(page: Page, role: 'teacher' | 'student') {
           canWrite: role === 'teacher',
           expiresAt: null,
           invitationProfile: {
-            username: null,
             verifiedPhone,
             phone: phone || null,
             birthDate: birthDate || null,
@@ -118,22 +117,20 @@ test('invited teacher completes setup and edits contact details without a birthd
 test('invited student enters a birthday and edits contact details', ({ page }) =>
   checkInvitedProfile(page, 'student'))
 
-test('username sign-in is available in Arabic', async ({ page }) => {
-  const username = '3legacy.user'
+test('phone sign-in is available in Arabic', async ({ page }) => {
   let submitted: unknown
   await page.route('**/api/auth/**', (route) => route.fulfill({ json: null }))
-  await page.route('**/api/auth/sign-in/username', (route) => {
+  await page.route('**/api/auth/sign-in/phone', (route) => {
     submitted = route.request().postDataJSON()
     return route.fulfill({ status: 401, json: { error: 'Invalid credentials' } })
   })
   await page.goto('/?page=app')
   await page.getByRole('button', { name: 'العربية', exact: true }).click()
-  await page.getByLabel('طريقة تسجيل الدخول').selectOption('username')
-  await page.getByRole('textbox', { name: 'اسم المستخدم', exact: true }).fill(username)
+  await page.getByRole('textbox', { name: 'رقم الهاتف', exact: true }).fill('0912345678')
   await page.getByLabel('كلمة المرور', { exact: true }).fill('synthetic-password')
   await page.getByRole('button', { name: 'تسجيل الدخول', exact: true }).click()
   await expect(page.getByRole('alert')).toBeVisible()
-  expect(submitted).toEqual({ username, password: 'synthetic-password' })
+  expect(submitted).toEqual({ phone: '0912345678', password: 'synthetic-password' })
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })

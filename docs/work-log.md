@@ -2135,3 +2135,11 @@ Migration 014 adds a unique verified number without copying historical contact d
 The owner asked to drop the birthday question from teacher invitations. Teachers can complete setup and edit contact details without a date of birth. The invitation message points teachers to the password change. Student and Administrator setup requires a date of birth.
 
 Browser coverage exercises first sign-in, the English and Arabic teacher form, and later contact edits. Disposable PostgreSQL coverage checks that a teacher can finish setup without a birthday and that a student still needs one. The PR records release and Railway verification.
+
+## 2026-11-21 15:03 Asia/Damascus (UTC+03:00) - Use phone numbers for sign-in
+
+The owner asked to remove email and username sign-in, include a hint for Syrian mobile numbers, and give teachers missing a verified number a replaceable placeholder. The sign-in page and MCP connection use a phone number and password. Administrators invite users and update sign-in phones under Accounts. The private CLI provisions the first administrator and migrates existing accounts in one transaction. Account IDs, roles, passwords and invitation setup are preserved.
+
+Applied and read back all nine account mappings on Railway. Seven active Teacher accounts received distinct reserved fictional numbers, one retained its previously verified number, and the administrator received the requested phone. The live account directory had zero former sign-in identifiers after the migration. Mapping details stay private. No database schema change was required.
+
+Disposable PostgreSQL exercised account bootstrap, atomic migration rollback on a duplicate phone, password preservation, and administrator phone replacement with session revocation. Chromium checks use synthetic accounts and emulated phones. The PR records the release gate and exact-main Railway verification.

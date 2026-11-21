@@ -7,11 +7,11 @@ import { Pool } from 'pg'
 import { z } from 'zod'
 import { invitationResponseSchema } from '../shared/invitations'
 import { startIntegrationServer } from './integration-server'
+import { createIdentity } from './integration-identity'
 
 const databaseUrl = process.env.TEST_RAILWAY_DATABASE_URL
 const integration = databaseUrl ? test : test.skip
 const redirectUri = 'http://127.0.0.1:39386/callback'
-const email = `mcp-test-${crypto.randomUUID()}@example.test`
 const password = randomBytes(32).toString('base64url')
 const teacherId = crypto.randomUUID()
 const studentId = crypto.randomUUID()
@@ -161,13 +161,8 @@ integration(
     expect((await fetch(login)).status).toBe(200)
     expect((await fetch(`${origin}/mcp/login?client_id=forged`)).status).toBe(400)
 
-    const signup = await browserPost('/api/auth/sign-up/email', {
-      name: 'Synthetic user',
-      email,
-      password,
-    })
-    expect(signup.status).toBe(200)
-    userId = z.object({ user: z.object({ id: z.uuid() }) }).parse(await signup.json()).user.id
+    const phone = '+12025550203'
+    userId = await createIdentity(pool, 'Synthetic user', password)
     await pool.query(
       "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, 'Synthetic teacher', 'read_only')",
       [teacherId, userId],
@@ -177,8 +172,8 @@ integration(
       [studentId, teacherId, peerId],
     )
     await pool.query(
-      "INSERT INTO app_accounts (auth_user_id, role, teacher_id) VALUES ($1, 'teacher', $2)",
-      [userId, teacherId],
+      "INSERT INTO app_accounts (auth_user_id, role, teacher_id, verified_phone) VALUES ($1, 'teacher', $2, $3)",
+      [userId, teacherId, phone],
     )
     await pool.query("INSERT INTO courses (id, name) VALUES ($1, 'MCP course')", [courseId])
     await pool.query(
@@ -186,8 +181,8 @@ integration(
       [enrollmentId, courseId, studentId],
     )
 
-    const signin = await browserPost('/api/auth/sign-in/email', {
-      email,
+    const signin = await browserPost('/api/auth/sign-in/phone', {
+      phone,
       password,
       oauth_query: login.search.slice(1),
     })
@@ -420,23 +415,23 @@ integration(
         ).status,
       ).toBe(403)
 
-      const peerSignup = await browserPost('/api/auth/sign-up/email', {
-        name: 'Synthetic administrator',
-        email: `mcp-peer-${crypto.randomUUID()}@example.test`,
-        password: randomBytes(32).toString('base64url'),
-      })
-      expect(peerSignup.status).toBe(200)
-      const peerCookie = sessionCookie(peerSignup)
-      peerUserId = z.object({ user: z.object({ id: z.uuid() }) }).parse(await peerSignup.json())
-        .user.id
+      const peerPhone = '+12025550204'
+      const peerPassword = randomBytes(32).toString('base64url')
+      peerUserId = await createIdentity(pool, 'Synthetic administrator', peerPassword)
       await pool.query(
         "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, $3, 'read_write')",
         [peerTeacherId, peerUserId, 'Other administrator'],
       )
       await pool.query(
-        "INSERT INTO app_accounts (auth_user_id, role, teacher_id) VALUES ($1, 'administrator', $2)",
-        [peerUserId, peerTeacherId],
+        "INSERT INTO app_accounts (auth_user_id, role, teacher_id, verified_phone) VALUES ($1, 'administrator', $2, $3)",
+        [peerUserId, peerTeacherId, peerPhone],
       )
+      const peerSignup = await browserPost('/api/auth/sign-in/phone', {
+        phone: peerPhone,
+        password: peerPassword,
+      })
+      expect(peerSignup.status).toBe(200)
+      const peerCookie = sessionCookie(peerSignup)
       expect((await browserPost(revealPath, inviteId, peerCookie, peerUserId)).status).toBe(404)
       await pool.query('UPDATE app_accounts SET active = false WHERE auth_user_id = $1', [userId])
       expect((await browserPost(revealPath, inviteId, cookie, userId)).status).toBe(403)

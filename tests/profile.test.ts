@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { validProfileRequest, validProfileUpdate, validSignupRequest } from '../server/profile'
+import { validProfileRequest, validProfileUpdate } from '../server/profile'
 
 describe('profile boundary', () => {
   const jpeg = `data:image/jpeg;base64,${Buffer.from([255, 216, 255, 224, 255, 217]).toString('base64')}`
@@ -25,23 +25,6 @@ describe('profile boundary', () => {
           body: 'a'.repeat(122_000),
         }),
       ),
-    ).toBeNull()
-  })
-  test('does not allow image injection through signup in JSON or forms', async () => {
-    const request = (body: string, type: string) =>
-      new Request('http://localhost/api/auth/sign-up/email', {
-        method: 'POST',
-        headers: { 'Content-Type': type },
-        body,
-      })
-    expect(await validSignupRequest(request('{"name":"User"}', 'application/json'))).toBe(
-      '{"name":"User"}',
-    )
-    expect(
-      await validSignupRequest(request('{"image":"https://example.test/a"}', 'application/json')),
-    ).toBeNull()
-    expect(
-      await validSignupRequest(request('name=User&image=x', 'application/x-www-form-urlencoded')),
     ).toBeNull()
   })
 })

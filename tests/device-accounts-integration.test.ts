@@ -3,6 +3,7 @@ import { Pool } from 'pg'
 import { z } from 'zod'
 import { invitationResponseSchema } from '../shared/invitations'
 import { startIntegrationServer } from './integration-server'
+import { createIdentity } from './integration-identity'
 
 // Only use a disposable, migrated database.
 const databaseUrl = process.env.TEST_RAILWAY_DATABASE_URL
@@ -69,22 +70,17 @@ integration(
       }
       return response
     }
-    const email = `admin-${crypto.randomUUID()}@example.test`
-    const signup = await call('/api/auth/sign-up/email', {
-      name: 'Synthetic Admin',
-      email,
-      password: 'synthetic-password-123',
-    })
-    expect(signup.status).toBe(200)
-    adminId = z.object({ user: z.object({ id: z.uuid() }) }).parse(await signup.json()).user.id
+    const adminPhone = '+12025550201'
+    adminId = await createIdentity(pool, 'Synthetic Admin', 'synthetic-password-123')
     await pool.query(
       "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, 'Synthetic Admin', 'read_write')",
       [teacherId, adminId],
     )
     await pool.query(
-      "INSERT INTO app_accounts (auth_user_id, role, teacher_id) VALUES ($1, 'administrator', $2)",
-      [adminId, teacherId],
+      "INSERT INTO app_accounts (auth_user_id, role, teacher_id, verified_phone) VALUES ($1, 'administrator', $2, $3)",
+      [adminId, teacherId, adminPhone],
     )
+    await call('/api/auth/sign-in/phone', { phone: adminPhone, password: 'synthetic-password-123' })
     // A session created before this feature has only the original Better Auth cookie.
     for (const name of cookies.keys()) if (!name.includes('session_token')) cookies.delete(name)
     const list = async () => {
@@ -100,8 +96,8 @@ integration(
         .parse(await response.json()).accounts
     }
     expect((await list()).map((account) => account.userId)).toContain(adminId)
-    const adminLogin = await call('/api/auth/sign-in/email', {
-      email,
+    const adminLogin = await call('/api/auth/sign-in/phone', {
+      phone: adminPhone,
       password: 'synthetic-password-123',
       rememberMe: false,
     })
@@ -167,7 +163,6 @@ integration(
         await call(
           '/api/me/invitation-profile',
           {
-            username: null,
             phone: teacher.phone,
             currentPassword: teacher.temporaryPassword,
             newPassword: 'personal-password-123',
@@ -186,7 +181,6 @@ integration(
         await call(
           '/api/me/invitation-profile',
           {
-            username: null,
             phone: teacher.phone,
             birthDate: '2000-01-01',
             currentPassword: 'personal-password-123',
@@ -226,7 +220,6 @@ integration(
         await call(
           '/api/me/invitation-profile',
           {
-            username: null,
             phone: student.phone,
             birthDate: '2000-01-01',
             currentPassword: student.temporaryPassword,

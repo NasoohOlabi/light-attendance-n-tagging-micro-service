@@ -80,12 +80,9 @@ export function NeonAuth({
   const [choosingAccount, setChoosingAccount] = useState(false)
   const addAccount = () => {
     clearOfflineAccess()
-    setMode('sign-in')
-    setLoginMethod('phone')
     setError('')
     setPassword('')
     setLoginIdentifier('')
-    setEmail('')
     setPasswordChanged(false)
     setAddingAccount(true)
     setChoosingAccount(false)
@@ -120,14 +117,7 @@ export function NeonAuth({
       channel?.close()
     }
   }, [])
-  const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone' | 'username'>(() => {
-    const login = new URLSearchParams(window.location.search).get('login')
-    return login === 'phone' || login === 'username' ? login : 'email'
-  })
   const [loginIdentifier, setLoginIdentifier] = useState('')
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [passwordChanged, setPasswordChanged] = useState(false)
@@ -329,20 +319,16 @@ export function NeonAuth({
         } catch {
           /* Continue with the normal sign-in form. */
         }
-        if (invitation?.requiresSetup && addedAccount) {
+        if (invitation?.requiresSetup && invitation.verifiedPhone && addedAccount) {
           try {
-            const response = await fetch(
-              invitation?.verifiedPhone ? '/api/auth/sign-in/phone' : '/api/auth/sign-in/username',
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(
-                  invitation?.verifiedPhone
-                    ? { phone: invitation.verifiedPhone, password: details.newPassword }
-                    : { username: details.username, password: details.newPassword },
-                ),
-              },
-            )
+            const response = await fetch('/api/auth/sign-in/phone', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                phone: invitation.verifiedPhone,
+                password: details.newPassword,
+              }),
+            })
             if (response.ok) {
               resetWorkspace()
               return
@@ -353,9 +339,8 @@ export function NeonAuth({
         }
         setAccount(null)
         announceSessionChange()
-        setLoginIdentifier(invitation?.verifiedPhone ?? details.username ?? '')
+        setLoginIdentifier(invitation?.verifiedPhone ?? '')
         setPassword('')
-        setLoginMethod(invitation?.verifiedPhone ? 'phone' : 'username')
         setPasswordChanged(true)
         await session.refetch()
       } else {
@@ -444,47 +429,16 @@ export function NeonAuth({
           setBusy(true)
           setError('')
           try {
-            if (mode === 'sign-in' && loginMethod !== 'email') {
-              const phoneLogin = loginMethod === 'phone'
-              const response = await fetch(
-                phoneLogin ? '/api/auth/sign-in/phone' : '/api/auth/sign-in/username',
-                {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(
-                    phoneLogin
-                      ? { phone: loginIdentifier, password }
-                      : { username: loginIdentifier, password },
-                  ),
-                },
+            const response = await fetch('/api/auth/sign-in/phone', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phone: loginIdentifier, password }),
+            })
+            if (!response.ok) {
+              setError(
+                response.status === 409 ? deviceLimitMessage : 'Invalid phone number or password.',
               )
-              if (!response.ok) {
-                setError(
-                  response.status === 409
-                    ? deviceLimitMessage
-                    : phoneLogin
-                      ? language === 'ar'
-                        ? 'رقم الهاتف أو كلمة المرور غير صحيحة.'
-                        : 'Invalid phone number or password.'
-                      : 'Invalid username or password.',
-                )
-                return
-              }
-            } else {
-              const result =
-                mode === 'sign-in'
-                  ? await authClient.signIn.email({ email, password })
-                  : await authClient.signUp.email({ name, email, password })
-              if (result.error) {
-                setError(
-                  result.error.status === 409
-                    ? deviceLimitMessage
-                    : mode === 'sign-in'
-                      ? 'Invalid email or password. Check your details and try again.'
-                      : 'Unable to create the account. Check your details and try again.',
-                )
-                return
-              }
+              return
             }
             if (addingAccount) {
               try {
@@ -502,8 +456,8 @@ export function NeonAuth({
           } catch (cause) {
             const failure = z.object({ error: z.object({ status: z.number() }) }).safeParse(cause)
             setError(
-              mode === 'sign-in' && failure.success && failure.data.error.status === 401
-                ? 'Invalid email or password. Check your details and try again.'
+              failure.success && failure.data.error.status === 401
+                ? 'Invalid phone number or password.'
                 : 'The authentication service is unavailable. Please try again.',
             )
           } finally {
@@ -511,83 +465,25 @@ export function NeonAuth({
           }
         }}
       >
-        <h1 className="title">
-          {addingAccount
-            ? t('Sign in to another account')
-            : mode === 'sign-up'
-              ? t('Create an account')
-              : t('Sign in')}
-        </h1>
-        {mode === 'sign-up' && (
-          <label>
-            {t('Name')}
-            <input
-              required
-              autoComplete="name"
-              enterKeyHint="next"
-              dir="auto"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-        )}
-        {mode === 'sign-in' && (
-          <div className="space-y-1">
-            <label htmlFor="sign-in-method">
-              {language === 'ar' ? 'طريقة تسجيل الدخول' : 'Sign-in method'}
-            </label>
-            <select
-              id="sign-in-method"
-              className="min-h-11 w-full"
-              value={loginMethod}
-              onChange={(event) => {
-                setLoginMethod(z.enum(['email', 'phone', 'username']).parse(event.target.value))
-                setLoginIdentifier('')
-                setError('')
-              }}
-            >
-              <option value="phone">{language === 'ar' ? 'رقم الهاتف' : 'Phone number'}</option>
-              <option value="email">{t('Email')}</option>
-              <option value="username">{language === 'ar' ? 'اسم المستخدم' : 'Username'}</option>
-            </select>
-          </div>
-        )}
-        {mode === 'sign-in' && loginMethod !== 'email' ? (
-          <label>
-            {loginMethod === 'phone'
-              ? language === 'ar'
-                ? 'رقم الهاتف'
-                : 'Phone number'
-              : language === 'ar'
-                ? 'اسم المستخدم'
-                : 'Username'}
-            <input
-              required
-              type={loginMethod === 'phone' ? 'tel' : 'text'}
-              autoComplete="username"
-              autoCapitalize="none"
-              dir="ltr"
-              value={loginIdentifier}
-              onChange={(event) => setLoginIdentifier(event.target.value)}
-            />
-          </label>
-        ) : (
-          <label>
-            {t('Email')}
-            <input
-              required
-              type="email"
-              dir="ltr"
-              autoCapitalize="none"
-              spellCheck={false}
-              inputMode="email"
-              enterKeyHint="next"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
-        )}
+        <h1 className="title">{addingAccount ? t('Sign in to another account') : t('Sign in')}</h1>
+        <label>
+          {language === 'ar' ? 'رقم الهاتف' : 'Phone number'}
+          <input
+            required
+            type="tel"
+            autoComplete="username"
+            dir="ltr"
+            placeholder="09xx xxx xxx / +963 9xx xxx xxx"
+            aria-describedby="phone-hint"
+            value={loginIdentifier}
+            onChange={(event) => setLoginIdentifier(event.target.value)}
+          />
+        </label>
+        <span id="phone-hint">
+          {language === 'ar'
+            ? 'يمكن أن يبدأ الرقم السوري بـ 09 أو +9639.'
+            : 'Syrian numbers can start with 09 or +9639.'}
+        </span>
         <label>
           {t('Password')}
           <input
@@ -595,7 +491,7 @@ export function NeonAuth({
             type="password"
             dir="ltr"
             enterKeyHint="go"
-            autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -607,36 +503,23 @@ export function NeonAuth({
               : 'Details saved. Sign in with your new password.'}
           </p>
         )}
-        {error && <p role="alert">{errorMessage(error)}</p>}
+        {error && (
+          <p role="alert">
+            {error === 'Invalid phone number or password.'
+              ? language === 'ar'
+                ? 'رقم الهاتف أو كلمة المرور غير صحيحة.'
+                : error
+              : errorMessage(error)}
+          </p>
+        )}
         <button className="primary" disabled={busy || session.isPending || Boolean(session.error)}>
-          {busy ? t('Please wait…') : mode === 'sign-up' ? t('Create account') : t('Sign in')}
+          {busy ? t('Please wait…') : t('Sign in')}
         </button>
-        {!addingAccount && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => {
-                setMode(mode === 'sign-up' ? 'sign-in' : 'sign-up')
-                setError('')
-              }}
-            >
-              {mode === 'sign-up' ? t('Sign in') : t('Create account')}
-            </button>
-          </div>
-        )}
-        {mode === 'sign-in' && (
-          <p className="muted">
-            {language === 'ar'
-              ? 'تواصل مع المسؤول لإعادة تعيين كلمة المرور.'
-              : 'Contact your administrator to reset your password.'}
-          </p>
-        )}
-        {mode === 'sign-up' && (
-          <p className="muted">
-            {t('Your manager must approve your account before you can use the app.')}
-          </p>
-        )}
+        <p className="muted">
+          {language === 'ar'
+            ? 'تواصل مع المسؤول لإعادة تعيين كلمة المرور.'
+            : 'Contact your administrator to reset your password.'}
+        </p>
       </form>
       {!addingAccount && samples}
     </main>

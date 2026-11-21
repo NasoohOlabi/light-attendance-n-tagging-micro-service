@@ -91,24 +91,16 @@ const arabic = {
   'Checking your access…': 'جارٍ التحقق من صلاحياتك…',
   'Your account has write-only access. Contact your manager for permission to view records.':
     'حسابك يسمح بالكتابة فقط. تواصل مع المسؤول للحصول على صلاحية عرض السجلات.',
-  'Create an account': 'إنشاء حساب',
-  Email: 'البريد الإلكتروني',
   Password: 'كلمة المرور',
   'Please wait…': 'يرجى الانتظار…',
-  'Create account': 'إنشاء حساب',
   'Update password': 'تحديث كلمة المرور',
   'Sign in': 'تسجيل الدخول',
   'Your manager must approve your account before you can use the app.':
     'يجب أن يوافق المسؤول على حسابك قبل استخدام التطبيق.',
   'Password updated. Please sign in.': 'تم تحديث كلمة المرور. سجّل الدخول.',
-  'Invalid username or password.': 'اسم المستخدم أو كلمة المرور غير صحيحة.',
   'Five accounts are signed in. Sign out of one to add another.':
     'تم تسجيل الدخول إلى خمسة حسابات. سجّل الخروج من أحدها لإضافة حساب آخر.',
   'Sign in to another account': 'تسجيل الدخول إلى حساب آخر',
-  'Invalid email or password. Check your details and try again.':
-    'البريد الإلكتروني أو كلمة المرور غير صحيحين. تحقق من بياناتك وحاول مجدداً.',
-  'Unable to create the account. Check your details and try again.':
-    'تعذر إنشاء الحساب. تحقق من بياناتك وحاول مجدداً.',
   'The authentication service is unavailable. Please try again.':
     'خدمة المصادقة غير متاحة. حاول مجدداً.',
   'Could not load your teacher account. Please try again.': 'تعذر تحميل حساب المعلم. حاول مجدداً.',

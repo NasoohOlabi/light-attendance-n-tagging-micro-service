@@ -63,7 +63,11 @@ export function AccountChoices({
             }}
           >
             <span dir="auto">
-              {account.name} <small dir="auto">{account.identifier}</small>
+              {account.name}{' '}
+              <small dir="auto">
+                {account.identifier ||
+                  (language === 'ar' ? 'رقم الهاتف غير متاح' : 'Phone unavailable')}
+              </small>
             </span>
             {account.userId === currentUserId && (
               <small>{language === 'ar' ? 'الحساب الحالي' : 'Current account'}</small>

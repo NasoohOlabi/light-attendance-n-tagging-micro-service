@@ -1,8 +1,9 @@
-﻿import { afterAll, expect, test } from 'bun:test'
+import { afterAll, expect, test } from 'bun:test'
 import { Pool } from 'pg'
 import { z } from 'zod'
 import { neonAdminBoardSchema } from '../shared/neon'
 import { startIntegrationServer } from './integration-server'
+import { createIdentity } from './integration-identity'
 
 // Set only to a disposable database with the Railway and application migrations applied.
 const databaseUrl = process.env.TEST_RAILWAY_DATABASE_URL
@@ -17,7 +18,6 @@ const studentId = crypto.randomUUID()
 const courseId = crypto.randomUUID()
 const enrollmentId = crypto.randomUUID()
 const password = 'synthetic-password-12345'
-const email = `synthetic-${crypto.randomUUID()}@example.test`
 
 afterAll(async () => {
   server?.kill()
@@ -46,15 +46,24 @@ integration(
     pool = new Pool({ connectionString: databaseUrl })
     const { origin, child } = await startIntegrationServer(databaseUrl)
     server = child
-    const signUp = await fetch(`${origin}/api/auth/sign-up/email`, {
+    const phone = '+12025550205'
+    userId = await createIdentity(pool, 'Synthetic user', password)
+    await pool.query(
+      "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, 'Synthetic teacher', 'read_write')",
+      [teacherId, userId],
+    )
+    await pool.query(
+      "INSERT INTO app_accounts (auth_user_id, role, teacher_id, verified_phone) VALUES ($1, 'teacher', $2, $3)",
+      [userId, teacherId, phone],
+    )
+    const signUp = await fetch(`${origin}/api/auth/sign-in/phone`, {
       method: 'POST',
       headers: { origin, 'content-type': 'application/json' },
-      body: JSON.stringify({ name: 'Synthetic user', email, password }),
+      body: JSON.stringify({ phone, password }),
     })
-    expect(signUp.status, await signUp.clone().text()).toBe(200)
-    userId = z.object({ user: z.object({ id: z.uuid() }) }).parse(await signUp.json()).user.id
+    expect(signUp.status).toBe(200)
     const cookie = signUp.headers.get('set-cookie')?.split(';')[0]
-    expect(cookie).toBeTruthy()
+    await pool.query('DELETE FROM app_accounts WHERE auth_user_id = $1', [userId])
     const headers = { cookie: cookie ?? '', 'x-user-id': userId }
     expect((await fetch(`${origin}/api/me`, { headers })).status).toBe(403)
     expect(
@@ -73,16 +82,12 @@ integration(
       ).status,
     ).toBe(403)
     await pool.query(
-      "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, 'Synthetic teacher', 'read_write')",
-      [teacherId, userId],
-    )
-    await pool.query(
       "INSERT INTO students (id, teacher_id, name) VALUES ($1, $2, 'Synthetic student')",
       [studentId, teacherId],
     )
     await pool.query(
-      "INSERT INTO app_accounts (auth_user_id, role, student_id) VALUES ($1, 'student', $2)",
-      [userId, studentId],
+      "INSERT INTO app_accounts (auth_user_id, role, student_id, verified_phone) VALUES ($1, 'student', $2, $3)",
+      [userId, studentId, phone],
     )
     expect((await fetch(`${origin}/api/student/attendance`, { headers })).status).toBe(200)
     expect((await fetch(`${origin}/api/notebook`, { headers })).status).toBe(403)
@@ -214,33 +219,31 @@ integration(
       ).status,
     ).toBe(200)
     expect((await fetch(`${origin}/api/me`, { headers })).status).toBe(401)
-    const signIn = await fetch(`${origin}/api/auth/sign-in/email`, {
+    await pool.query('UPDATE app_accounts SET active = true WHERE auth_user_id = $1', [userId])
+    const signIn = await fetch(`${origin}/api/auth/sign-in/phone`, {
       method: 'POST',
       headers: { origin, 'content-type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ phone, password }),
     })
     expect(signIn.status).toBe(200)
     const targetCookie = signIn.headers.get('set-cookie')?.split(';')[0] ?? ''
-    const adminSignUp = await fetch(`${origin}/api/auth/sign-up/email`, {
-      method: 'POST',
-      headers: { origin, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        name: 'Synthetic administrator',
-        email: `admin-${crypto.randomUUID()}@example.test`,
-        password,
-      }),
-    })
-    expect(adminSignUp.status).toBe(200)
-    adminId = z.object({ user: z.object({ id: z.uuid() }) }).parse(await adminSignUp.json()).user.id
-    const adminCookie = adminSignUp.headers.get('set-cookie')?.split(';')[0] ?? ''
+    const adminPhone = '+12025550206'
+    adminId = await createIdentity(pool, 'Synthetic administrator', password)
     await pool.query(
       "INSERT INTO teachers (id, auth_user_id, name, access_mode) VALUES ($1, $2, 'Administrator', 'read_write')",
       [adminTeacherId, adminId],
     )
     await pool.query(
-      "INSERT INTO app_accounts (auth_user_id, role, teacher_id) VALUES ($1, 'administrator', $2)",
-      [adminId, adminTeacherId],
+      "INSERT INTO app_accounts (auth_user_id, role, teacher_id, verified_phone) VALUES ($1, 'administrator', $2, $3)",
+      [adminId, adminTeacherId, adminPhone],
     )
+    const adminSignUp = await fetch(`${origin}/api/auth/sign-in/phone`, {
+      method: 'POST',
+      headers: { origin, 'content-type': 'application/json' },
+      body: JSON.stringify({ phone: adminPhone, password }),
+    })
+    expect(adminSignUp.status).toBe(200)
+    const adminCookie = adminSignUp.headers.get('set-cookie')?.split(';')[0] ?? ''
     const adminHeaders = { cookie: adminCookie, 'x-user-id': adminId }
     const renamed = await fetch(`${origin}/api/auth/update-user`, {
       method: 'POST',
@@ -304,8 +307,8 @@ integration(
     expect(generated.headers.get('cache-control')).toBe('no-store')
     const credentials = z
       .object({
-        loginMethod: z.literal('email'),
-        loginIdentifier: z.literal(email),
+        loginMethod: z.literal('phone'),
+        loginIdentifier: z.literal(phone),
         temporaryPassword: z.string().min(16).max(128),
       })
       .parse(await generated.json())
@@ -323,10 +326,10 @@ integration(
         .rows[0].count,
     ).toBe(1)
     const login = (value: string) =>
-      fetch(`${origin}/api/auth/sign-in/email`, {
+      fetch(`${origin}/api/auth/sign-in/phone`, {
         method: 'POST',
         headers: { origin, 'content-type': 'application/json' },
-        body: JSON.stringify({ email, password: value }),
+        body: JSON.stringify({ phone, password: value }),
       })
     expect((await login(password)).ok).toBe(false)
     expect((await login(credentials.temporaryPassword)).status).toBe(200)

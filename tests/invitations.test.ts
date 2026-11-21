@@ -4,7 +4,6 @@ import {
   invitationRequestSchema,
   phoneSchema,
 } from '../shared/invitations'
-import { validSignupRequest } from '../server/profile'
 
 describe('invitation boundaries', () => {
   test('normalizes supported phone spellings to a single sign-in identity', () => {
@@ -47,26 +46,19 @@ describe('invitation boundaries', () => {
         .success,
     ).toBe(false)
   })
-  test('validates profile fields and reserves the internal email namespace', async () => {
+  test('validates invitation profile fields', () => {
     const profile = {
-      username: 'User.Name',
       phone: '12345678',
       birthDate: '2000-01-01',
       currentPassword: 'temporary',
       newPassword: 'replacement',
     }
-    expect(invitationProfileInputSchema.parse(profile).username).toBe('user.name')
+    expect(invitationProfileInputSchema.parse(profile).phone).toBe('12345678')
     expect(
       invitationProfileInputSchema.safeParse({ ...profile, birthDate: '2000-02-31' }).success,
     ).toBe(false)
     expect(
       invitationProfileInputSchema.safeParse({ ...profile, username: 'not valid' }).success,
     ).toBe(false)
-    const request = new Request('https://example.test', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: 'x@invitation.invalid' }),
-    })
-    expect(await validSignupRequest(request)).toBeNull()
   })
 })

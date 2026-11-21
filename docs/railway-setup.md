@@ -64,26 +64,26 @@ The temporary public Postgres TCP proxy and migration SSH key were removed after
 
 ## Private CLI inputs
 
-Apply `neon/013-invitations.sql` before deploying account invitations. Its columns are additive and existing accounts continue to sign in with email. Version 12 backups include invitation request IDs, usernames, phone numbers, dates of birth and setup status. Earlier backups can restore to an empty migrated database. Legacy comparisons reject invitation data that the older format cannot represent. Protect these backups as private personal and credential data.
+Apply `neon/013-invitations.sql` before deploying account invitations. Version 12 backups retain the original invitation fields, including request IDs, historical usernames, contact phones, dates of birth and setup status. Earlier backups can restore to an empty migrated database. Legacy comparisons reject invitation data that the older format cannot represent. Protect these backups as private personal and credential data.
 
 Apply `neon/014-verified-phone.sql` before deploying phone sign-in, using `psql` with `ON_ERROR_STOP=1` and a single transaction over the private Railway connection. The nullable unique column contains only numbers confirmed by an administrator. Historical contact phones require confirmation before they can be used for sign-in. Version 13 backups preserve the verified phone. Older backups can restore into a migrated empty target, and comparison rejects a target containing verified phones if the backup format cannot represent them.
 
-Set `DATABASE_URL_UNPOOLED` to the intended Railway database. Create the first identity through signup, then grant its role using an ignored private JSON file. Synthetic example:
+Set `DATABASE_URL_UNPOOLED` to the intended Railway database. After migrating the schema, create the first administrator with `account bootstrap` and an ignored private JSON file containing `name`, `phone`, `phoneConfirmed: true` and a strong `password`. The command creates the identity, credential and role together.
 
-```json
-{ "role": "administrator", "email": "owner@example.com", "name": "Administrator" }
-```
+To migrate or recover an existing account, use `account phone` with an ignored private JSON file containing `authUserId`, `phone` and `phoneConfirmed: true`. For an unmigrated account, the command also accepts its former `email` in place of `authUserId`. An array of mappings applies in one transaction. The command preserves the account, password and role, replaces its former identifiers with an internal Auth address, and signs out existing sessions when the phone changes. Confirm ownership before using a real number. Keep private inputs out of Git.
 
 ```powershell
 bun run db:migrate
-bun run neon:admin account grant .local/administrator.json
+bun run neon:admin account bootstrap .local/administrator.json
+bun run neon:admin account phone .local/account-phone.json
+bun run neon:admin account grant .local/account-role.json
 bun run neon:admin account disable <auth-user-id>
 bun run neon:admin teacher grant .local/teacher.json
 bun run neon:admin students upsert .local/students.json
 bun run neon:admin teacher disable <teacher-uuid>
 ```
 
-A Teacher input contains `id`, an existing signup `email` or `authUserId`, `name`, and optional ISO `expiresAt`. Existing Teacher accounts use the role's standard permissions regardless of the stored legacy access mode. A Student grant uses `role: "student"`, an identity, an existing `studentId`, and optional `expiresAt`. A roster input is an array of objects with `id`, `teacherId`, `name`, `group`, and `active`. Preserve stable IDs and keep real identities and records in private files. The browser Settings screen manages other accounts and roster assignments. The acting Administrator manages their own account from Profile settings.
+A Teacher input contains `id`, an existing `authUserId`, `name`, and optional ISO `expiresAt`. Existing Teacher accounts use the role's standard permissions regardless of the stored legacy access mode. A Student grant uses `role: "student"`, an `authUserId`, an existing `studentId`, and optional `expiresAt`. A roster input is an array of objects with `id`, `teacherId`, `name`, `group`, and `active`. Preserve stable IDs and keep real identities and records in private files. The browser Settings screen manages other accounts and roster assignments. The acting Administrator manages their own contact details from Profile settings and their sign-in phone through the private CLI.
 
 Apply `neon/007-student-profiles-handbooks.sql` before deploying this version. Version 6 backups preserve optional student profile fields and each enrollment handbook flag. Older backups restore blank profiles and false handbook flags; comparisons reject targets containing values older backups cannot represent. Private roster imports accept optional `whatsapp`, `location` and numeric `birthYear`; omitted fields are preserved. Null clears any profile field, and blank text clears WhatsApp or location. Test on a disposable database first.
 

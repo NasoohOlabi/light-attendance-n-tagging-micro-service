@@ -1,6 +1,8 @@
 import { readdir, readFile } from 'node:fs/promises'
+import { hashPassword } from 'better-auth/crypto'
 import { Pool, type PoolClient } from 'pg'
 import { z } from 'zod'
+import { phoneSchema } from '../shared/invitations'
 import { neonAdminGrantSchema } from '../shared/neon'
 
 const teacherFields = {
@@ -12,6 +14,16 @@ const identity = z.union([
   z.strictObject({ authUserId: z.string().trim().min(1).max(200) }),
   z.strictObject({ email: z.email() }),
 ])
+const confirmedPhone = { phone: phoneSchema, phoneConfirmed: z.literal(true) }
+const phoneInput = z.union([
+  identity.options[0].extend(confirmedPhone),
+  identity.options[1].extend(confirmedPhone),
+])
+const bootstrapInput = z.strictObject({
+  ...confirmedPhone,
+  name: teacherFields.name,
+  password: z.string().min(8).max(128),
+})
 const teacherInput = z.union([
   z.strictObject({ ...teacherFields, authUserId: z.string().trim().min(1).max(200) }),
   z.strictObject({ ...teacherFields, email: z.email() }),
@@ -113,6 +125,31 @@ async function grant(client: PoolClient, raw: unknown, requestedId: string = cry
     )
   }
 }
+async function setSignInPhone(client: PoolClient, authUserId: string, phone: string) {
+  await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [authUserId])
+  const account = await client.query(
+    `SELECT a.verified_phone FROM app_accounts a WHERE a.auth_user_id = $1 AND EXISTS (
+      SELECT 1 FROM neon_auth.account c WHERE c."userId"::text = $1
+        AND c."providerId" = 'credential' AND c.password IS NOT NULL
+    ) FOR UPDATE`,
+    [authUserId],
+  )
+  const previous = z.object({ verified_phone: z.string().nullable() }).parse(account.rows[0])
+  await client.query(
+    `UPDATE app_accounts SET verified_phone = $2, invitation_username = NULL,
+       invitation_request_id = CASE WHEN invitation_username IS NOT NULL
+         THEN COALESCE(invitation_request_id, gen_random_uuid()) ELSE invitation_request_id END
+     WHERE auth_user_id = $1`,
+    [authUserId, phone],
+  )
+  await client.query(
+    'UPDATE neon_auth."user" SET email = $2, "updatedAt" = now() WHERE id::text = $1 AND email IS DISTINCT FROM $2',
+    [authUserId, `${authUserId}@invitation.invalid`],
+  )
+  if (previous.verified_phone !== phone)
+    await client.query('DELETE FROM neon_auth.session WHERE "userId"::text = $1', [authUserId])
+}
+
 async function migrate(pool: Pool) {
   const directory = new URL('../neon/', import.meta.url)
   const files = (await readdir(directory)).filter((name) => /^\d+[-_].*\.sql$/.test(name)).sort()
@@ -144,6 +181,46 @@ async function main() {
       const account = accountInput.parse(JSON.parse(await readFile(args[1], 'utf8')))
       await transaction(pool, (client) => grant(client, account))
       console.log('Account granted')
+    } else if (command === 'account' && args[0] === 'phone' && args.length === 2) {
+      const input = z
+        .union([phoneInput, z.array(phoneInput).min(1).max(1000)])
+        .parse(JSON.parse(await readFile(args[1], 'utf8')))
+      const mappings = Array.isArray(input) ? input : [input]
+      await transaction(pool, async (client) => {
+        await client.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
+        const seen = new Set<string>()
+        for (const { phone, phoneConfirmed: _phoneConfirmed, ...account } of mappings) {
+          const authUserId = await resolveIdentity(client, account)
+          if (seen.has(authUserId)) throw new Error('Duplicate account mapping')
+          seen.add(authUserId)
+          await setSignInPhone(client, authUserId, phone)
+        }
+      })
+      console.log(`Sign-in phones saved: ${mappings.length}`)
+    } else if (command === 'account' && args[0] === 'bootstrap' && args.length === 2) {
+      const input = bootstrapInput.parse(JSON.parse(await readFile(args[1], 'utf8')))
+      const passwordHash = await hashPassword(input.password)
+      await transaction(pool, async (client) => {
+        await client.query("SELECT pg_advisory_xact_lock(hashtextextended('halaqa-bootstrap', 0))")
+        await client.query("SELECT pg_advisory_xact_lock(hashtextextended('auth-mutations', 0))")
+        if (
+          (await client.query("SELECT 1 FROM app_accounts WHERE role = 'administrator'")).rowCount
+        )
+          throw new Error('Administrator already exists')
+        const authUserId = crypto.randomUUID()
+        await client.query(
+          'INSERT INTO neon_auth."user" (id, name, email, "emailVerified") VALUES ($1, $2, $3, true)',
+          [authUserId, input.name, `${authUserId}@invitation.invalid`],
+        )
+        await client.query(
+          `INSERT INTO neon_auth.account ("accountId", "providerId", "userId", password)
+           VALUES ($1::text, 'credential', $1::text::uuid, $2)`,
+          [authUserId, passwordHash],
+        )
+        await grant(client, { role: 'administrator', authUserId, name: input.name })
+        await setSignInPhone(client, authUserId, input.phone)
+      })
+      console.log('Administrator created')
     } else if (command === 'account' && args[0] === 'disable' && args.length === 2) {
       const id = z.string().trim().min(1).max(200).parse(args[1])
       await transaction(pool, async (client) => {

@@ -84,11 +84,7 @@ export function InvitationMessageViewer({
               : 'Send each message privately to its recipient. The messages disappear when you leave this page.'}
           </p>
           {state.invitations.map((invitation) => (
-            <CopyableInvitation
-              key={'phone' in invitation ? invitation.phone : invitation.username}
-              invitation={invitation}
-              ar={ar}
-            />
+            <CopyableInvitation key={invitation.phone} invitation={invitation} ar={ar} />
           ))}
         </>
       )}

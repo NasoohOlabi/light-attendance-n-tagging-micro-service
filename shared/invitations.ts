@@ -1,10 +1,5 @@
 import { z } from 'zod'
 
-const username = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .regex(/^[a-z0-9._-]{3,32}$/)
 export const phoneSchema = z
   .string()
   .trim()
@@ -41,14 +36,12 @@ export const invitationRequestSchema = z.strictObject({
     .max(50),
 })
 export const invitationProfileSchema = z.object({
-  username: username.nullable(),
   verifiedPhone: z.string().nullable(),
   phone: z.string().nullable(),
   birthDate: z.iso.date().nullable(),
   requiresSetup: z.boolean(),
 })
 export const invitationProfileInputSchema = z.strictObject({
-  username: username.nullable(),
   phone: z
     .string()
     .trim()
@@ -66,16 +59,13 @@ export const invitationProfileInputSchema = z.strictObject({
 })
 export const invitationResponseSchema = z.object({
   invitations: z.array(
-    z.union([
-      z.object({
-        firstName: name,
-        lastName: name,
-        role,
-        phone: phoneSchema,
-        temporaryPassword: z.string(),
-      }),
-      z.object({ firstName: name, lastName: name, role, username, temporaryPassword: z.string() }),
-    ]),
+    z.object({
+      firstName: name,
+      lastName: name,
+      role,
+      phone: phoneSchema,
+      temporaryPassword: z.string(),
+    }),
   ),
 })
 
@@ -84,13 +74,12 @@ export function invitationMessage(
   ar: boolean,
   origin: string,
 ) {
-  const isPhone = 'phone' in item
-  const identifier = isPhone ? item.phone : item.username
-  const url = `${origin}/?page=app&login=${isPhone ? 'phone' : 'username'}`
+  const identifier = item.phone
+  const url = `${origin}/?page=app`
   if (ar) {
     const setup = item.role === 'teacher' ? 'اختر' : 'أكمل بياناتك واختر'
-    return `مرحباً ${item.firstName} ${item.lastName}،\nهذا رابط الدخول إلى حسابك في وارتق:\n${url}\n${isPhone ? 'رقم الهاتف' : 'اسم المستخدم'}: ${identifier}\nكلمة المرور المؤقتة: ${item.temporaryPassword}\nعند أول دخول، ${setup} كلمة مرور خاصة بك.`
+    return `مرحباً ${item.firstName} ${item.lastName}،\nهذا رابط الدخول إلى حسابك في وارتق:\n${url}\nرقم الهاتف: ${identifier}\nكلمة المرور المؤقتة: ${item.temporaryPassword}\nعند أول دخول، ${setup} كلمة مرور خاصة بك.`
   }
   const setup = item.role === 'teacher' ? 'choose' : 'complete your details and choose'
-  return `Hello ${item.firstName} ${item.lastName},\nHere is your Wartaq sign-in link:\n${url}\n${isPhone ? 'Phone' : 'Username'}: ${identifier}\nTemporary password: ${item.temporaryPassword}\nOn your first sign-in, ${setup} a personal password.`
+  return `Hello ${item.firstName} ${item.lastName},\nHere is your Wartaq sign-in link:\n${url}\nPhone: ${identifier}\nTemporary password: ${item.temporaryPassword}\nOn your first sign-in, ${setup} a personal password.`
 }
